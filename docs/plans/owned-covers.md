@@ -28,7 +28,7 @@ So images stay separate requests. What we can make true:
 1. **The data request carries everything needed to draw the cover at once:** the thumbhash (`books.cover_thumbhash`,
    ~30 bytes) for an instant blurred cover, the two colours, and the stored copy's key and widths. No lookup, no
    redirect, no second round trip to learn an address: the app builds the final image URL from the Book row alone.
-2. **The image requests are the cheapest possible:** one host (`covers.fabkho.dev`), preconnected, HTTP/2 or 3, so all
+2. **The image requests are the cheapest possible:** one host (`covers.betterreads.de`), preconnected, HTTP/2 or 3, so all
    covers of a screen share one connection; answered from Cloudflare's edge cache in tens of milliseconds; small
    (WebP at the width shown: an Apple cover at 120 px is ~5 KB, at 600 px ~25 KB, measured below).
 3. **A reopened Library needs no network for covers:** the service worker keeps our copies cache-first, and the URLs
@@ -57,7 +57,7 @@ what storing removes.
 
 ## 1. How the images are served
 
-**Chosen: the R2 bucket public on a custom domain, `covers.fabkho.dev`.** Cloudflare serves it from its edge cache;
+**Chosen: the R2 bucket public on a custom domain, `covers.betterreads.de`.** Cloudflare serves it from its edge cache;
 no Worker, no Pages Function, no `/cover` invocation is involved, so it costs nothing against the Pages Functions' 100k
 requests a day (shared with `/r` and `/share`), and R2 is only read on a cache miss (Class B reads, 10 M a month free;
 egress free).
@@ -67,10 +67,16 @@ request that is not already in the browser, which is exactly the pool `/cover` a
 every miss. Its one advantage (code decides who may read) is covered by the WAF rule below. **The `r2.dev` address**
 is rate-limited and not for production; it stays off.
 
+**Why `covers.betterreads.de`:** the app is being renamed to BetterReads and already serves at `betterreads.de` (zone
+`betterreads.de`, free plan, same Cloudflare account); `libellus.fabkho.dev` is the older domain. Cover URLs are
+immutable and end up in every device's service-worker cache, so they go on the domain that stays, not one that will be
+retired. The custom domain, the Cache Rule, the Transform Rule and the WAF rule below all live in the `betterreads.de`
+zone.
+
 Settings (all owner steps, see *Production steps*):
 
-- **Custom domain** `covers.fabkho.dev` on the bucket (R2 → bucket → Settings → Custom Domains; zone `fabkho.dev`).
-- **Cache Rule** for `http.host eq "covers.fabkho.dev"`: eligible for cache, edge TTL "use origin's Cache-Control".
+- **Custom domain** `covers.betterreads.de` on the bucket (R2 → bucket → Settings → Custom Domains; zone `betterreads.de`).
+- **Cache Rule** for `http.host eq "covers.betterreads.de"`: eligible for cache, edge TTL "use origin's Cache-Control".
   Needed because our object keys have no file extension (below) and Cloudflare caches only known extensions by default.
 - **Object headers** set at upload: `Content-Type` (`image/webp` or `image/jpeg`) and
   `Cache-Control: public, max-age=31536000, immutable`. The key is content-addressed, so a URL's bytes never change.
@@ -81,11 +87,19 @@ Settings (all owner steps, see *Production steps*):
   `<img>` request would be served without the header to a later CORS request and the texture would fail. A transform
   rule runs on cache hits too. `*` is safe here: the images are not secret and no credentials are involved
   (`crossorigin="anonymous"`).
-- **Hotlinking:** a WAF custom rule on the host blocks a request whose `Referer` is present and is not the app
-  (`libellus.fabkho.dev`, the Pages preview host). A request without `Referer` passes (the reading-page OG renderer and
-  curl send none); what stops guessing is the key itself (an HMAC, below). Free plan: 5 custom rules, one is used by
-  `/cover`.
-- The app adds `<link rel="preconnect" href="https://covers.fabkho.dev" crossorigin>` and the host to the CSP's
+- **Hotlinking:** a WAF custom rule in the `betterreads.de` zone blocks a request to the host whose `Referer` is present
+  and is not one of the app's origins: `https://betterreads.de` and `https://libellus.fabkho.dev` while both serve the
+  app, and, if previews need our copies, `*.libellus-3q1.pages.dev`. For example (free-plan operators only):
+  `http.host eq "covers.betterreads.de" and http.referer ne "" and not (starts_with(http.referer, "https://betterreads.de/")
+  or starts_with(http.referer, "https://libellus.fabkho.dev/") or http.referer contains ".libellus-3q1.pages.dev/")`.
+  Drop the `libellus.fabkho.dev` part once that domain no longer serves the app.
+  A request without `Referer` passes (the reading-page OG renderer and curl send none); what stops guessing is the key
+  itself (an HMAC, below). Free plan: 5 custom rules per zone.
+- **`/cover` on `betterreads.de` is not protected yet.** The existing WAF rule that blocks `/cover` without the app's
+  `Referer` lives in the `fabkho.dev` zone and so only covers `libellus.fabkho.dev/cover`. The same rule is needed in
+  the `betterreads.de` zone for `betterreads.de/cover`, allowing the same origins (owner production step 3; it is
+  needed whatever this plan does, since `/cover` stays for search results).
+- The app adds `<link rel="preconnect" href="https://covers.betterreads.de" crossorigin>` and the host to the CSP's
   `connect-src` (report-only today; `img-src` already allows `https:`), in `web/public/_headers` and `web/e2e/serve.mjs`.
 
 ## 2. Object keys, sizes and formats
@@ -260,7 +274,7 @@ host; else **`/cover`** when the proxy is on and the source is one it serves; el
 never a missing cover. `coverSrc`, `coverSrcset`, `coverChain` and `coverFor` stay for addresses without a Book (search
 results, the edition picker), unchanged.
 
-- **Config:** `runtimeConfig.public.coverHost` (`NUXT_PUBLIC_COVER_HOST`, e.g. `https://covers.fabkho.dev`; unset:
+- **Config:** `runtimeConfig.public.coverHost` (`NUXT_PUBLIC_COVER_HOST`, e.g. `https://covers.betterreads.de`; unset:
   off, so `nuxt dev`, the e2e build and previews without it behave exactly as today) and `useCoverHosts()` next to
   `useCoverProxy()`. Unsetting it in Pages is the client's off switch.
 - **Types:** `BookSnapshot` and `SocialBook` gain `coverKey` and `coverWidths`; `socialShapes.ts`, `readingPage.ts`,
@@ -304,7 +318,7 @@ by several Books). Removing a Book from a Library deletes nothing at once.
 
 - **THIRD-PARTY.md** (PR 7): the *Cover cache* row stays for `/cover`; a new **Own covers** row: what is copied (covers
   of Books in a member's Library, at the sizes the hosts render), where (R2 `libellus-covers`, WEUR, public by key on
-  `covers.fabkho.dev`), how (server side, identified, paced, once per image, never in bulk ahead of a member adding the
+  `covers.betterreads.de`), how (server side, identified, paced, once per image, never in bulk ahead of a member adding the
   book), kept until 30 days after no Library holds the book, and the **owner-accepted risk** (dated, the same position
   as the cache: a private app for the owner and a few friends, no benefit drawn). The Goodreads covers row changes from
   "linked, never copied" to "copied like the others, one line to stop (`COVER_STORE_HOSTS`)". Apple and Open Library
@@ -337,7 +351,7 @@ which PR 2 measures and PR 2's tests pin as a batch size.
 
 **Monitoring:** `owner_cover_status()` (counts above), run after the backfill and when in doubt; the function logs one
 line per run (`stored`, `failed`, `gone`, `ms`); the R2 dashboard (storage, operations) and the zone's analytics for
-`covers.fabkho.dev` (cache hit ratio, 4xx). A warning in `owner_cover_status` when stored bytes pass 5 GB (half the
+`covers.betterreads.de` (cache hit ratio, 4xx). A warning in `owner_cover_status` when stored bytes pass 5 GB (half the
 free tier) or `failed` passes 5 % of catalogue covers.
 
 ## 9. Work, in PRs
@@ -369,20 +383,24 @@ None of these are done by workers. Secrets are entered by the owner and never pa
    the same token into Vault as `cover_store_token`; `private.cover_store_settings.function_url` set (as for the
    import job). Keep `COVER_KEY_SECRET` in the password manager: losing it only means new keys for new covers, but
    changing it duplicates every image.
-3. **Domain and rules** (Cloudflare dashboard, zone `fabkho.dev`): custom domain `covers.fabkho.dev` on the bucket,
-   `r2.dev` stays disabled; the Cache Rule; the Transform Rule (`Access-Control-Allow-Origin: *`,
-   `X-Content-Type-Options: nosniff`); the WAF rule for foreign referers. Check with one test object uploaded by hand:
-   `curl -sI https://covers.fabkho.dev/c/<test>/120` twice (second `cf-cache-status: HIT`), once with
-   `-H 'Origin: https://libellus.fabkho.dev'` after a plain request (the header must be there on the HIT), once with a
-   foreign `Referer` (403). Delete the test object.
+3. **Domain and rules** (Cloudflare dashboard, zone `betterreads.de`): custom domain `covers.betterreads.de` on the
+   bucket, `r2.dev` stays disabled; the Cache Rule; the Transform Rule (`Access-Control-Allow-Origin: *`,
+   `X-Content-Type-Options: nosniff`); the WAF rule for foreign referers (allowed: `https://betterreads.de`,
+   `https://libellus.fabkho.dev`, previews on `*.libellus-3q1.pages.dev` if needed). In the same zone, **the `/cover`
+   rule** that `fabkho.dev` already has for `libellus.fabkho.dev`: block `/cover` on `betterreads.de` without the app's
+   `Referer` (independent of this plan; it can be done now). Check with one test object uploaded by hand:
+   `curl -sI https://covers.betterreads.de/c/<test>/120` twice (second `cf-cache-status: HIT`), once with
+   `-H 'Origin: https://betterreads.de'` after a plain request (the header must be there on the HIT), once with a
+   foreign `Referer` (403); and `curl -sI 'https://betterreads.de/cover?u=…&w=120' -H 'Referer: https://example.com/'`
+   (403). Delete the test object.
 4. **Release** with PRs 1–3 and 6 (migrations applied, function deployed, `enabled` still false). Add
    `[functions.cover-store] verify_jwt = false` to `supabase/config.toml` before this release.
 5. **Turn on and backfill:** `update private.cover_store_settings set enabled = true;` then watch
    `select public.owner_cover_status();` until `queued` is 0 (minutes). Report counts only. Spot-check two stored covers
    in a browser.
-6. **Client:** set `NUXT_PUBLIC_COVER_HOST=https://covers.fabkho.dev` in the Pages project (production) and release
+6. **Client:** set `NUXT_PUBLIC_COVER_HOST=https://covers.betterreads.de` in the Pages project (production) and release
    with PRs 4–5 (and 7). Check the Library, a Book page, a friend's page and the reel on the phone; the network panel
-   should show `covers.fabkho.dev` for catalogue covers and `/cover` only for search.
+   should show `covers.betterreads.de` for catalogue covers and `/cover` only for search.
 7. **Rollback, any time:** unset `NUXT_PUBLIC_COVER_HOST` and redeploy (the app is back on `/cover` and the sources);
    `enabled = false` stops storing; nothing else depends on the copies.
 
