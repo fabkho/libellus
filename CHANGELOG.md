@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.27.0](https://github.com/fabkho/libellus/compare/v1.26.0...v1.27.0) (2026-10-30)
+
+
+### Features
+
+* **covers:** database for owned covers (schema, queue, reconcile, store RPCs), off by default ([#431](https://github.com/fabkho/libellus/issues/431)) ([12b5213](https://github.com/fabkho/libellus/commit/12b5213b7a50dcc220592b0837e879363f136bf1))
+* **covers:** delete stored covers no Library holds (GC), off with the feature (PR 6) ([#435](https://github.com/fabkho/libellus/issues/435)) ([3e51ce5](https://github.com/fabkho/libellus/commit/3e51ce540b8c9475d73e1eae89807b86dd77d90c))
+* **covers:** draw every Book cover through coverImage, the reel through coverAt ([#437](https://github.com/fabkho/libellus/issues/437)) ([4c775c3](https://github.com/fabkho/libellus/commit/4c775c3307fc8cde96c17c6bb1ecafc55f6b1b84))
+* **covers:** serve own covers at /c and read them on the client, off by default ([#434](https://github.com/fabkho/libellus/issues/434)) ([14f6f6f](https://github.com/fabkho/libellus/commit/14f6f6fb05ab3fcd6f1bfb82275a731d5e5dad6f))
+* **covers:** the cover-store edge function and its CI job (PR 2) ([#433](https://github.com/fabkho/libellus/issues/433)) ([5dbe89d](https://github.com/fabkho/libellus/commit/5dbe89db17fef6432abeee44b6645e4a5de501be))
+* **covers:** the read path hands out cover_key / cover_widths, gated as the cover is ([#432](https://github.com/fabkho/libellus/issues/432)) ([d610c95](https://github.com/fabkho/libellus/commit/d610c95b3ba355164492d8f1ffdfbab61d5e84f1))
+* **web:** the Profile chart by month or by week, with a range navigator (WP-08) ([#414](https://github.com/fabkho/libellus/issues/414)) ([a52281a](https://github.com/fabkho/libellus/commit/a52281ad2ff49be6397c847cead55dd3a6b16622))
+
+
+### Fixes
+
+* **a11y:** names that start with what the avatar, the chart and the rows draw ([#438](https://github.com/fabkho/libellus/issues/438)) ([9a115c2](https://github.com/fabkho/libellus/commit/9a115c2abacc68f558d04c1a7c21c2f8a48c4dba))
+
 ## [1.26.0](https://github.com/fabkho/libellus/compare/v1.25.2...v1.26.0) (2026-10-29)
 
 
