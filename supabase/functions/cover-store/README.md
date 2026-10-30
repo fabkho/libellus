@@ -9,14 +9,15 @@ puts them into R2 and writes `books.cover_key` / `cover_widths` (and a missing t
 
 ```
 POST /functions/v1/cover-store   { "action": "run" }      one run (Authorization: Bearer <COVER_STORE_TOKEN>)
+POST /functions/v1/cover-store   { "action": "gc" }       one GC run (below), weekly, from the database
 
 200 { state: 'idle' | 'ran', claimed, stored, failed, throttled, deferred, gone, unsupported, stale, ms, kick? }
 401 unauthorized · 405 method_not_allowed · 400 action_invalid · 503 not_configured (names of what is not set) · 500 failed
+gc: 200 { state: 'idle' | 'ran', claimed, deleted, failed, ms }, the same errors
 ```
 
 Callers: the database (pg_net, `private.cover_store_kick`) with the Vault secret `cover_store_token`, or the owner by hand
-with the same token. **Only a bearer equal to `COVER_STORE_TOKEN` is let in** (not the service-role key). A `gc` action
-comes with the GC PR.
+with the same token. **Only a bearer equal to `COVER_STORE_TOKEN` is let in** (not the service-role key).
 
 ## One run (`runner.ts`)
 
@@ -46,6 +47,36 @@ A run that claimed rows calls `cover_store_kick(true)` at the end: the next run 
 
 Other hosts are not stored in v1 (DNS pinning is not possible on this runtime; plan §3). Apple addresses that are not of
 the `…/<w>x<h>bb.<ext>` shape (the app's `APPLE_PATH`, checked against it in `plan_test.ts`) are `unsupported_url`.
+
+## Deletion (`gc.ts`; plan §6)
+
+A stored image is kept while **any** Book that a `library_entries` row points at has its key. The database does the weighing
+(`supabase/migrations/20261110010000_cover_gc.sql`), the function only deletes:
+
+- **Weekly** (pg_cron `cover-store-gc`, Sunday 02:30): `cover_gc_mark()` sets `orphaned_at` on objects no catalogued Book uses
+  and clears it on objects used again, then `private.cover_gc_kick()` posts `{"action":"gc"}` (pg_net, the Vault secret
+  `cover_store_token`) when an object is past its grace.
+- **Grace: 30 days** (a Book removed and added back within a month finds its copy).
+- **`gc`**: `cover_gc_claim(100)` is one statement: objects orphaned for more than 30 days *as read in that statement* and still
+  unused get `deleting_at` (the lease; it locks the rows) and any Book still pointing at one loses `cover_key`/`cover_widths`.
+  The function deletes `c/<key>/<w>` for every width (`r2.ts` `delete`, a signed DELETE with a 15 s timeout, 4 objects at a
+  time), then `cover_gc_done(keys)` removes the rows. Batches go on until a claim comes back short (at most 20, 120 s).
+- **A failed delete keeps the row**: `cover_gc_failed(keys)` releases it (`deleting_at` null, so a store of that key is accepted
+  and uploads afresh) and the next weekly run tries again (not before six days). A 404 is a failure, not "deleted" (a wrong
+  bucket answers it too); a missing *object* is not one: S3/R2 answer 204.
+- **Store against delete**: reserve and claim lock the same row. A reservation first clears `orphaned_at` and the claim no longer
+  takes the row; after the claim it is refused (`deleting`) until `cover_gc_done`. A Library entry the claim could not see may
+  point at a Book whose key it cleared: the Book has no key, the reconcile queues it, the store uploads again.
+- **The grace restarts when a Library holds the key again**: a trigger on `library_entries` clears the mark of the Book's key when an
+  entry is added (the weekly mark alone would leave an old mark standing if the Book was held and dropped between two marks).
+  A Book outside every Library does not protect its key, by design.
+- **Every width under `c/<key>/` is deleted**, the ones the database knows and whatever a LIST of exactly that prefix finds (a later
+  re-store with another width set); only claimed keys are listed. `cover_gc_done`/`_failed` are tried three times; if `done`
+  still throws the keys go to `failed`, so a row is never left held.
+- **The race with a store between two real sessions** is checked by hand: `gc_race_check.sh` (local stack only; pgTAP is one transaction).
+- **Nothing is deleted while the feature is off**: `cover_gc_claim`, `cover_gc_mark` and the weekly job answer nothing while
+  `private.cover_store_settings.enabled` is false, so even a hand-posted `gc` deletes nothing. **Deletion is irreversible**: an
+  object comes back only by storing the cover again from its source. GC needs only the three R2 secrets.
 
 ## Fetching rules (`fetch.ts`)
 
@@ -119,8 +150,8 @@ Recorded public covers (`fixtures/`, `record_fixtures.ts`: one Apple book at its
 S/M/L, a Goodreads image; never a member's), a stand-in for the hosts' web, for R2 (an S3 that checks the SigV4
 header and keeps what is PUT) and for the database's RPCs. Nothing is fetched live. They cover the variants and real
 widths per host, the key from the largest only, dedup, reserve refused, compare-and-swap miss, every failure kind, a
-redirect off the allowlist, Open Library's 403 / 404 / GIF, odd Apple addresses, the Goodreads cap, the decode budget
-and the token.
+redirect off the allowlist, Open Library's 403 / 404 / GIF, odd Apple addresses, the Goodreads cap, the decode budget,
+the token, and `gc` (`gc_test.ts`: every width deleted, a failure keeps the row, null widths listed, nothing while off).
 
 To run it against the local stack: `supabase functions serve --no-verify-jwt --env-file <env>` with the secrets above
 (`R2_COVERS_ENDPOINT` pointing at any server that answers 200 to a signed PUT), put some Books in a Library, turn

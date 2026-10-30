@@ -82,3 +82,30 @@ export function createStore(rpc: Rpc): Store {
     },
   }
 }
+
+/** One object GC deleted: its key and the widths the database knows (null = a reservation whose upload did not finish). */
+export type GcClaimed = { key: string; widths: number[] | null }
+
+/** The database's side of a GC run (`cover_gc_*`, supabase/migrations/20261110010000_cover_gc.sql). */
+export type GcStore = {
+  /** Holds up to `limit` objects orphaned for 30 days and still unused (and clears the key of any Book still pointing at them). Empty while the feature is off. */
+  claim: (limit: number) => Promise<GcClaimed[]>
+  /** Every width of these keys is deleted from R2: their rows go. */
+  done: (keys: string[]) => Promise<number>
+  /** Deleting these failed: their rows stay (released) and are tried again next week. */
+  failed: (keys: string[]) => Promise<number>
+}
+
+export function createGcStore(rpc: Rpc): GcStore {
+  return {
+    async claim(limit) {
+      return (await call<GcClaimed[] | null>(rpc, 'cover_gc_claim', { p_limit: limit })) ?? []
+    },
+    async done(keys) {
+      return (await call<number>(rpc, 'cover_gc_done', { p_keys: keys })) ?? 0
+    },
+    async failed(keys) {
+      return (await call<number>(rpc, 'cover_gc_failed', { p_keys: keys })) ?? 0
+    },
+  }
+}

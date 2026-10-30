@@ -54,3 +54,58 @@ Deno.test('a PUT that never answers fails after its timeout, and the run\'s sign
   run.abort()
   await pending
 })
+
+Deno.test('a DELETE is signed and removes c/<key>/<width>; an object that is not there is deleted too (204)', async () => {
+  const s3 = fakeS3()
+  const seen: Request[] = []
+  const r2 = createR2({ ...options, fetch: (request) => (seen.push(request.clone()), s3.fetch(request)) })
+  const key = 'a'.repeat(32)
+  await r2.put(key, 114, fixture('apple-120x180.webp'), 'image/webp')
+  await r2.delete(key, 114)
+  assertEquals(seen[1]!.method, 'DELETE')
+  assertEquals(seen[1]!.url, `https://acct123.r2.cloudflarestorage.com/${COVERS_BUCKET}/c/${key}/114`)
+  assert(/^AWS4-HMAC-SHA256 Credential=AKIAFAKE\/\d{8}\/auto\/s3\/aws4_request, SignedHeaders=[^,]+, Signature=[0-9a-f]{64}$/.test(seen[1]!.headers.get('authorization')!))
+  assertEquals([...s3.objects.keys()], [])
+  await r2.delete(key, 114) // not there any more
+  assertEquals(s3.deletes, [`c/${key}/114`, `c/${key}/114`])
+})
+
+Deno.test('a DELETE that fails is an R2Error with the status and no detail; a 404 is not taken for "deleted" (a wrong bucket answers it too)', async () => {
+  for (const code of [403, 404, 500, 503]) {
+    const r2 = createR2({ ...options, fetch: fakeS3({ failDelete: () => code }).fetch })
+    const error = await assertRejects(() => r2.delete('a'.repeat(32), 114), R2Error)
+    assertEquals([error.status, error.message], [code, `delete answered ${code}`])
+  }
+  const unreachable = createR2({ ...options, fetch: () => Promise.reject(new TypeError('connection to acct123.r2.cloudflarestorage.com refused')) })
+  const error = await assertRejects(() => unreachable.delete('a'.repeat(32), 114), R2Error)
+  assertEquals([error.status, error.message], [null, 'delete failed: TypeError'])
+})
+
+Deno.test('a DELETE that never answers fails after its timeout, and the run\'s signal ends it sooner', async () => {
+  const never = (request: Request) => new Promise<Response>((_, reject) => request.signal.addEventListener('abort', () => reject(request.signal.reason)))
+  const slow = createR2({ ...options, fetch: never, deleteTimeoutMs: 30 })
+  const error = await assertRejects(() => slow.delete('e'.repeat(32), 120), R2Error)
+  assertEquals(error.status, null)
+
+  const run = new AbortController()
+  const long = createR2({ ...options, fetch: never, deleteTimeoutMs: 60_000 })
+  const pending = assertRejects(() => long.delete('f'.repeat(32), 120, { signal: run.signal }), R2Error)
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  run.abort()
+  await pending
+})
+
+Deno.test('a LIST by prefix answers the widths under c/<key>/ and nothing of another key', async () => {
+  const s3 = fakeS3()
+  const r2 = createR2({ ...options, fetch: s3.fetch })
+  const key = 'a'.repeat(32)
+  const other = 'b'.repeat(32)
+  for (const width of [568, 114, 227]) await r2.put(key, width, fixture('apple-120x180.webp'), 'image/webp')
+  await r2.put(other, 120, fixture('apple-120x180.webp'), 'image/webp')
+  assertEquals(await r2.list(key), [114, 227, 568])
+  assertEquals(await r2.list('c'.repeat(32)), [])
+  assertEquals(s3.lists, [`c/${key}/`, `c/${'c'.repeat(32)}/`])
+  const failing = createR2({ ...options, fetch: fakeS3({ failList: () => 500 }).fetch })
+  const error = await assertRejects(() => failing.list(key), R2Error)
+  assertEquals([error.status, error.message], [500, 'list answered 500'])
+})
