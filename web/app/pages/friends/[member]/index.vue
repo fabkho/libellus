@@ -6,12 +6,12 @@
 //    after it Requested (a tap withdraws the request);
 //  - a profile she may see (public, or followed): the hero (photo, name, since when, the Library line),
 //    Follow where the account is public and she does not follow yet, then, by her switches, Currently
-//    reading, Want to read (the newest, then See all), the year pills and the four figures, By year or
-//    By month, Ratings, Records, Authors, Recently finished (the newest 3, then See all) and the Years in review. The Profile's own
+//    reading, Want to read (the newest, then See all), the year pills and the four figures, the chart by
+//    month or by week (read-only, its own window), Ratings, Records, Authors, Recently finished (the newest 3, then See all) and the Years in review. The Profile's own
 //    blocks, fed from her record. Never her reading days, a progress, an account row or a shelf.
 // A Book opens its page with the cover flying into it, a Manual book opens nothing (it is not in the
 // Catalogue). Read each time the page shows (stores/memberProfile.ts), online only.
-import { figuresOf, readsInMonth, yearsOf } from '~/data/stats'
+import { figuresOf, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { figuresWithRatings, libraryLine, memberBlocks } from '~/utils/memberProfile'
 import { bothReadKey, useMemberProfileStore } from '~/stores/memberProfile'
@@ -33,7 +33,7 @@ const members = useMemberProfileStore()
 const profileLinks = useProfileLinksStore()
 const memberLinks = computed(() => profileLinks.forMember(id.value))
 const online = useOnline()
-const { count, monthLong, monthLetter } = useFigures()
+const { count } = useFigures()
 
 const id = computed(() => String(route.params.member))
 const view = computed(() => members.viewOf(id.value))
@@ -74,7 +74,6 @@ watch(online, (now) => {
 
 // ------------------------------------------------------------------ her reading, in figures
 const thisYear = Number(isoDay().slice(0, 4))
-const thisMonth = Number(isoDay().slice(5, 7))
 const record = computed(() => view.value.record)
 const reads = computed(() => record.value?.reads ?? [])
 const loading = computed(() => !record.value && view.value.recordLoading)
@@ -91,14 +90,11 @@ const all = computed(() => figuresOf(reads.value, 'all'))
 const yearFigures = computed(() => years.value.map((y) => figuresOf(reads.value, y)))
 const hasRecords = computed(() => !!(figures.value.longest || figures.value.shortest || figures.value.quickest || figures.value.slowest))
 const light = computed(() => (year.value === 'all' ? (figuresOf(reads.value, thisYear).favourite ?? all.value.favourite) : figures.value.favourite)?.book.coverColors ?? null)
-const columns = computed(() =>
-  figures.value.columns.map((c) =>
-    year.value === 'all'
-      ? { ...c, label: `’${String(c.key).slice(2)}`, name: String(c.key) }
-      : { ...c, label: monthLetter(c.key), name: monthLong(c.key) },
-  ),
-)
-const lit = computed(() => (year.value === 'all' ? (years.value.includes(thisYear) ? thisYear : null) : year.value === thisYear ? thisMonth : null))
+// The chart's mode and weeks' window (WP-08; the year is the pills'), kept with the rest of her view while the member opens a book from a bar's sheet.
+const chart = computed({
+  get: () => view.value.chart,
+  set: (value) => members.setChart(id.value, value),
+})
 
 const library = computed(() => {
   const p = open.value
@@ -120,10 +116,6 @@ const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
 const wantOpen = ref(false)
 const finishedOpen = ref(false)
 const { title: sheetTitle, reads: sheetReads, withYear: sheetWithYear } = useStatsSheet(shown, () => reads.value)
-function pickColumn(key: number) {
-  if (year.value === 'all') return void router.push(`/friends/${id.value}/${key}`)
-  sheet.value = { kind: 'month', year: year.value, month: key }
-}
 function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: year.value, star }
 }
@@ -338,12 +330,8 @@ function back() {
               <FriendsBothRead class="pt-xl" :items="bothRead" :name="name" :member="card" :pending="bothReadPending" reel />
             </UiReveal>
 
-            <section id="columns" class="flex flex-col gap-md pt-xl">
-              <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
-                <h2 class="eyebrow">{{ year === 'all' ? t('profile.byYear') : t('profile.byMonth') }}</h2>
-              </div>
-              <ProfileColumns :columns="loading ? null : columns" :placeholders="year === 'all' ? 4 : 12" :lit="lit" testid="profile.columns" @pick="pickColumn" />
-            </section>
+            <!-- The chart follows her year pills (read-only as here): a column per year under All, her months or weeks otherwise; her Ratings switch decides on the Average. -->
+            <ProfileChart v-model="chart" v-model:year="year" class="pt-xl" :reads="reads" :loading="loading" :ratings="open?.sections.ratings ?? true" @pick="(s) => (sheet = s)" @open-year="(y) => router.push(`/friends/${id}/${y}`)" />
 
             <UiReveal :show="blocks.ratings && (loading || figures.rated > 0)">
               <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" @unrated="pickUnrated" />

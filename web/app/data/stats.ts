@@ -235,6 +235,16 @@ export function readsInMonth(reads: readonly StatsRead[], year: number, month: n
     .reverse()
 }
 
+/** The finished reads that ended from `start` to `end` (both `YYYY-MM-DD`, both days counted), in the order they ended; a read without an end date is in none. */
+export function readsBetween(reads: readonly StatsRead[], start: string, end: string): StatsRead[] {
+  return reads.filter((r) => r.outcome === 'finished' && r.endedOn !== null && r.endedOn >= start && r.endedOn <= end)
+}
+
+/** A week's finished reads, the week that starts on `monday` (ISO, Monday first: `mondayOf`), in the order they ended. */
+export function readsInWeek(reads: readonly StatsRead[], monday: string): StatsRead[] {
+  return readsBetween(reads, monday, addDays(monday, 6))
+}
+
 /** The finished reads rated in one whole-star row, best rated first, then newest. */
 export function readsWithStars(reads: readonly StatsRead[], year: StatsYear, star: number): StatsRead[] {
   return finishedIn(reads, year)

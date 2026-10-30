@@ -19,7 +19,7 @@ export function useStatsSheet(
   ofEntry: (entryId: string) => readonly GenreId[] | undefined = () => undefined,
 ) {
   const { t } = useI18n()
-  const { monthLong, dayTitle } = useFigures()
+  const { monthLong, dayLong, dayTitle } = useFigures()
 
   const title = computed(() => {
     const s = shown.value
@@ -27,6 +27,8 @@ export function useStatsSheet(
     switch (s.kind) {
       case 'month':
         return t('profile.sheet.month', { month: monthLong(s.month), year: s.year })
+      case 'week':
+        return t('profile.sheet.week', { date: dayLong(s.start) })
       case 'day':
         return dayTitle(s.day)
       case 'pagesMissing':

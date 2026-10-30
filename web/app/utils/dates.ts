@@ -51,3 +51,18 @@ export function daysBetween(from: string, to: string): number {
 export function daysSpanned(from: string, to: string): number {
   return Math.max(daysBetween(from, to), 0) + 1
 }
+
+/** The Monday of the week a day sits in (ISO 8601, Monday first), as a day. Works on the calendar, so daylight saving never moves it. */
+export function mondayOf(day: string): string {
+  const date = parseDay(day)
+  return isoDay(new Date(date.getFullYear(), date.getMonth(), date.getDate() - ((date.getDay() + 6) % 7)))
+}
+
+/**
+ * The ISO 8601 week number (1–53) of a day: the week's Thursday decides which year the week belongs to, so
+ * 29 Dec 2025 is week 1 (of 2026) and 1 Jan 2027 is week 53 (of 2026). Week 53 exists in the years that have it.
+ */
+export function weekNumberOf(day: string): number {
+  const thursday = addDays(mondayOf(day), 3)
+  return Math.floor(daysBetween(`${thursday.slice(0, 4)}-01-01`, thursday) / 7) + 1
+}
