@@ -48,7 +48,7 @@
     "@pinia/nuxt": "^1.0.2",
     "@supabase/realtime-js": "^2.118.0",
     "@supabase/supabase-js": "^2.117.3",
-    "dompurify": "^3.4.16",
+    "dompurify": "^3.4.17",
     "fflate": "^0.8.3",
     "nuxt": "^4.6.1",
     "papaparse": "^5.7.0",
