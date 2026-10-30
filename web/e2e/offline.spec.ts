@@ -5,48 +5,24 @@ import type { BookSnapshot } from '../app/data/books'
 import { createLibrary } from '../app/data/library'
 import { isoDay } from '../app/utils/dates'
 import { runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
-import { keepShell } from './offlineShell'
-import { goto, openProfile, signedIn } from './support'
+import { goto, signedIn } from './support'
 
 /**
- * Offline (#15): the member loads her Library online, the device loses its
- * connection and the app is opened again. Her Library is still there (from
- * the device's copy), the writes that can wait to sync stay available (#93,
- * offline-sync.spec.ts) while those that need the connection (Change edition)
- * are disabled and say "Offline", and search finds her own Books with one quiet
- * note. Back online, a Book removed leaves the copy at once, and signing out
- * leaves no copy behind.
+ * Offline (#15) as the screens say it: with no connection the writes that can
+ * wait stay available (#93 — Finish on the Library, Remove on her Book's page),
+ * every action that needs the connection is disabled and says "Offline" instead
+ * of failing quietly (Change edition), search answers from her own Library with
+ * one quiet note and offers no Manual add, and back online both are there again
+ * without a reload.
  *
- * The dev server has no service worker, so this flow plays its part: every
- * file of the app the page loaded online is kept and answers the same address
- * offline (`keepShell`). The real service worker and its precache are the
- * build's (nuxt.config.ts, pwa); docs/parity.md (Offline) says how that was
- * checked. Supabase is out of reach offline, as on a phone.
- *
- * Chromium, unlike the other flows: WebKit's driver cannot answer a page load
- * from a route while the context is offline ("WebKit encountered an internal
- * error"), and a reload without a connection is the point here.
+ * What the device's copy is made of — the Library kept after a load, read back on
+ * the next start, one member's, cleared on sign-out, a write refused offline — is
+ * tests/offline.test.ts's and tests/device-data.test.ts's, and offline-sync.spec.ts
+ * and delete-account-offline.spec.ts take a reload offline to show it on Home and on
+ * the Profile. This flow reloads nothing, so it needs no stand-in for the service
+ * worker (e2e/offlineShell.ts): the dev server has none, and a page load answered
+ * from a route is what WebKit cannot do while the context is offline.
  */
-test.use({
-  browserName: 'chromium',
-  // A page the route answered has no address of its own, so Chromium's local
-  // network checks would keep it from the local stack on 127.0.0.1. On a phone
-  // the app and Supabase are both on the internet.
-  launchOptions: { args: ['--disable-features=LocalNetworkAccessChecks'] },
-})
-
-// The page goes on loading the app's files up to the flow's last step (the sign-in page, after
-// signing out), and that page asks for the wall's covers as it draws. A request still in a route's
-// hands when the routes are dropped is continued underneath its handler by Playwright and its
-// answer then lands on a route that is gone ("route.fulfill: Route is already handled!", run
-// 39480808919); a route cut off as the context closes is the other way round (`route.fetch` finds
-// its answer gone, "Response has been disposed", #72). So the flow ends on a page that has drawn,
-// and then the routes are dropped before the context closes, with nothing of the page's in flight.
-test.afterEach(async ({ page }) => {
-  if (!page.isClosed()) await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
-  await page.unrouteAll({ behavior: 'ignoreErrors' })
-})
-
 function book(title: string, author: string): BookSnapshot {
   return {
     title: runTitle(title),
@@ -58,7 +34,7 @@ function book(title: string, author: string): BookSnapshot {
     language: 'en',
     publisher: TEST_PUBLISHER,
     description: null,
-    // Answered by the recorded cover (e2e/support.ts, recordedApple).
+    // Answered by the recorded cover (e2e/fixtures.ts, noLiveApis).
     coverUrl: `https://is1-ssl.mzstatic.com/image/thumb/Offline${title.replace(/\W/g, '')}/600x900bb.jpg`,
     coverThumbhash: null,
     coverColors: null,
@@ -69,8 +45,7 @@ function book(title: string, author: string): BookSnapshot {
   }
 }
 
-test('the Library opens offline, online-only actions say so, and search finds her own books', async ({ page, baseURL }) => {
-  const network = await keepShell(page, baseURL!)
+test('offline the actions that need the connection say so, search finds her own books, and both come back online', async ({ page }) => {
   const member = await signedIn(page)
 
   // Her Library: one Book on each Status.
@@ -80,36 +55,22 @@ test('the Library opens offline, online-only actions say so, and search finds he
   await library.addToLibrary(book('The Night Lamp', 'Pell Ravenscar'), { status: 'reading', startedOn: today })
   await library.addToLibrary(book('Winter Pages', 'Ilse Varga'), { status: 'finished', endedOn: today, rating: 18 })
 
-  // Loaded online once: the Library, and a book page (so its code is on the device too).
+  // Loaded online once: the Library, and a Book's page (so its code is on the device too).
   await goto(page, '/library')
   await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('Halls of Tide'))
   await page.getByTestId('library.entry').click()
-  await expect(page.getByTestId('book.start')).toHaveText(en.book.start)
+  await expect(page.getByTestId('book.title')).toHaveText(runTitle('Halls of Tide'))
   await page.goBack()
   await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('Halls of Tide'))
 
-  // No connection, and the app opened again.
-  await network.goOffline()
-  await page.reload()
+  // No connection from here on, and no reload: what the screens say while the device has none.
+  await page.context().setOffline(true)
 
-  // The Library as it was, from the device.
-  await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('Halls of Tide'))
-  await expect(page.getByTestId('library.loadError')).toBeHidden()
+  // Finishing can wait to sync (#93): the shortcut stays, and does not say Offline.
   await page.getByTestId('library.segment.reading').click()
   await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('The Night Lamp'))
-  // Finishing can wait to sync (#93): the shortcut stays.
   await expect(page.getByTestId('library.finish')).toBeEnabled()
   await expect(page.getByTestId('library.finish')).toHaveText(en.book.finish)
-  await page.getByTestId('library.segment.finished').click()
-  await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('Winter Pages'))
-  await expect(page.getByTestId('library.entryRating')).toBeVisible()
-
-  // Home, from the same copy: Update on the card (#68) is disabled too; the Book's progress itself stays shown.
-  await page.getByTestId('shell.tab.home').click()
-  await expect(page.getByTestId('home.entryTitle')).toHaveText(runTitle('The Night Lamp'))
-  await expect(page.getByTestId('home.update')).toBeEnabled()
-  await expect(page.getByTestId('home.update')).toHaveText(en.book.progress.updateShort)
-  await expect(page.getByTestId('home.progressValue')).toHaveText(en.book.progress.none)
 
   // Search answers from her own Library, and says so once.
   await page.getByTestId('shell.tab.search').click()
@@ -126,49 +87,27 @@ test('the Library opens offline, online-only actions say so, and search finds he
   await expect(page.getByTestId('search.offline')).toHaveText(en.search.offlineNote)
   await expect(page.getByTestId('search.addManually')).toBeHidden()
 
-  // Her Book's page opens from the device's copy; Start reading can wait to sync (#93).
+  // Her Book's page opens from what search found (it remembers the Books it showed);
+  // Remove can wait to sync (#93), and Change edition looks editions up: it needs the connection.
   await page.getByTestId('search.query').fill('halls')
   await page.getByTestId('search.result').click()
   await expect(page.getByTestId('book.title')).toHaveText(runTitle('Halls of Tide'))
   await expect(page.getByTestId('book.start')).toBeEnabled()
   await expect(page.getByTestId('book.start')).toHaveText(en.book.start)
   await expect(page.getByTestId('book.addToCollection')).toBeEnabled()
-  // Removing it from the Library (#11) as well.
   await page.getByTestId('book.options').click()
   await expect(page.getByTestId('bookOptions.remove')).toBeEnabled()
-  // Change edition looks editions up: it needs the connection.
   await expect(page.getByTestId('bookOptions.changeEdition')).toBeDisabled()
   await expect(page.getByTestId('bookOptions.changeEdition')).toContainText(en.common.offline)
   await page.getByTestId('bookOptions.cancel').click()
   await expect(page.getByTestId('bookOptions')).toBeHidden()
 
   // Back online: Change edition is back, without a reload.
-  await network.goOnline()
+  await page.context().setOffline(false)
   await page.getByTestId('book.options').click()
   await expect(page.getByTestId('bookOptions.changeEdition')).toBeEnabled()
   await page.getByTestId('bookOptions.cancel').click()
   await expect(page.getByTestId('bookOptions')).toBeHidden()
-
-  // Removed from the Library (#11): the device's copy forgets it at once too.
-  const savedTitles = () =>
-    page.evaluate(() => {
-      const lists = JSON.parse(localStorage.getItem('libellus.library') ?? '{}').data?.lists ?? {}
-      return Object.values(lists).flat().map((entry) => (entry as { book: { title: string } }).book.title).sort()
-    })
-  expect(await savedTitles()).toContain(runTitle('Halls of Tide'))
-  await page.getByTestId('book.options').click()
-  await page.getByTestId('bookOptions.remove').click()
-  await page.getByTestId('removeEntry.confirm').click()
-  await expect(page.getByTestId('book.title')).toBeHidden()
-  await expect.poll(savedTitles).toEqual([runTitle('The Night Lamp'), runTitle('Winter Pages')])
-
-  // Signing out leaves no copy of her Library on the device.
-  await page.getByTestId('shell.tab.home').click()
-  await openProfile(page)
-  await page.getByTestId('profile.signOut').click()
-  await expect(page).toHaveURL(/\/sign-in$/)
-  expect(await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('libellus.')))).toEqual([])
-  // The wall the flow ends on draws its covers as it appears (components/auth/Frame.vue): the flow
-  // waits for them, so the page it hands over has nothing in flight for the routes to be dropped under.
-  await expect(page.locator('.wall canvas.cover-in').first()).toBeVisible()
+  // The flow ends with nothing in flight, so the context closes on a page that has drawn.
+  await page.waitForLoadState('networkidle', { timeout: 5_000 })
 })
