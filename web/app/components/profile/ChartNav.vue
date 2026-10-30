@@ -15,6 +15,8 @@ const props = defineProps<{
   mode: ChartMode
   /** The window, named short. */
   label: string
+  /** The overview of all years is shown (the Months half): its name for a screen reader is "By year". */
+  overview?: boolean
   canPrev: boolean
   canNext: boolean
   /** Which way the window last moved (a swipe on the chart too): the label slides in from that side. */
@@ -89,7 +91,7 @@ function setMode(next: ChartMode) {
               <UiIcon name="back" :size="15" />
             </button>
             <span class="fit figures" aria-live="polite" :data-testid="mode === m ? 'profile.chart.period' : undefined">
-              <span class="sr-only">{{ m === 'months' ? t('profile.byMonth') : t('profile.byWeek') }} · </span>
+              <span class="sr-only">{{ m === 'weeks' ? t('profile.byWeek') : overview ? t('profile.byYear') : t('profile.byMonth') }} · </span>
               <Transition :name="direction > 0 ? 'step-fwd' : 'step-back'" mode="out-in">
                 <span :key="label" class="whitespace-nowrap" :style="{ '--chars': label.length }">{{ label }}</span>
               </Transition>

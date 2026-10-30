@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest'
-import type { StatsRead } from '@/data/stats'
+import type { StatsRead, StatsYear } from '@/data/stats'
 import { readsInWeek } from '@/data/stats'
 import {
   WEEKS_SHOWN,
@@ -13,6 +13,7 @@ import {
   scopeBounds,
   stepRange,
   stepYear,
+  switchMode,
   windowFigures,
   withMode,
   yearColumnsOf,
@@ -296,19 +297,73 @@ describe('where the windows end', () => {
   describe('under the year pills', () => {
     const bounds = chartBounds([read('first', '2024-09-03')], today)
 
-    it('lists no window under All: the years are columns, the pills pick one', () => {
+    it('lists no window under All: the overview is Months, ‹ goes to the newest year and › has nothing after it', () => {
       const range = defaultRange(today)
-      expect(canStep(range, bounds, all, -1)).toBe(false)
+      expect(canStep(range, bounds, all, -1)).toBe(true)
       expect(canStep(range, bounds, all, 1)).toBe(false)
-      expect(canStep({ ...range, mode: 'weeks' }, bounds, all, -1)).toBe(false)
-      expect(stepRange(range, bounds, all, -1)).toEqual({ range, year: 'all' })
-      expect(stepYear(all, -1)).toBeNull()
+      // A Weeks mode kept from before is not a window under All: the overview steps as Months does.
+      expect(canStep({ ...range, mode: 'weeks' }, bounds, all, -1)).toBe(true)
+      expect(canStep({ ...range, mode: 'weeks' }, bounds, all, 1)).toBe(false)
+      expect(stepRange(range, bounds, all, -1)).toEqual({ range, year: 2026 })
+      expect(stepRange(range, bounds, all, 1)).toEqual({ range, year: 'all' })
+      expect(stepYear(all, -1)).toBe(2026)
+      expect(stepYear(all, 1)).toBeNull()
+      // A record with no finished read has no year to go to.
+      expect(stepYear({ year: 'all', years: [] }, -1)).toBeNull()
+      expect(clampRange({ mode: 'weeks', weekStart: '2026-03-23' }, bounds, all).mode).toBe('months')
+    })
+
+    it('walks the pills along time, the overview after the newest year, and back the same way', () => {
+      let scope: ChartScope = all
+      const range = defaultRange(today)
+      const seen: StatsYear[] = [scope.year]
+      while (canStep(range, bounds, scope, -1)) {
+        scope = { ...scope, year: stepRange(range, bounds, scope, -1).year }
+        seen.push(scope.year)
+      }
+      expect(seen).toEqual(['all', 2026, 2025, 2024]) // ‹ from All to the newest year, then older, stopping at the first year with reads
+      expect(canStep(range, bounds, scope, -1)).toBe(false)
+      const back: StatsYear[] = [scope.year]
+      while (canStep(range, bounds, scope, 1)) {
+        scope = { ...scope, year: stepRange(range, bounds, scope, 1).year }
+        back.push(scope.year)
+      }
+      expect(back).toEqual([2024, 2025, 2026, 'all']) // › up to All, where it stops
+      expect(canStep(range, bounds, scope, 1)).toBe(false)
+      expect(canStep(range, bounds, scope, -1)).toBe(true)
+    })
+
+    it('opens the weeks of the newest year, and moves the pill there, when Weeks is picked under All', () => {
+      const switched = switchMode(defaultRange(today), 'weeks', bounds, all)
+      expect(switched.year).toBe(2026)
+      expect(switched.range).toEqual({ mode: 'weeks', weekStart: '2026-03-23' }) // the newest window, as under the 2026 pill
+      expect(switched.range).toEqual(withMode(defaultRange(today), 'weeks', bounds, in2026))
+      // The newest year is the one with a read, not today's: 2025 here, its newest window the one holding 31 Dec.
+      const older = switchMode(defaultRange(today), 'weeks', bounds, { year: 'all', years: [2025, 2024] })
+      expect(older.year).toBe(2025)
+      expect(older.range.weekStart).toBe('2025-12-22')
+      // Nothing to open without a year; the pill stays.
+      const none = defaultRange(today)
+      expect(switchMode(none, 'weeks', bounds, { year: 'all', years: [] })).toEqual({ range: none, year: 'all' })
+      // Under a year the pill stays, in both directions.
+      expect(switchMode(defaultRange(today), 'weeks', bounds, in2025).year).toBe(2025)
+      expect(switchMode(withMode(defaultRange(today), 'weeks', bounds, in2025), 'months', bounds, in2025).year).toBe(2025)
+    })
+
+    it('goes on stepping from the weeks of the newest year inside it, and back to Months, ‹ › then walk the pills again', () => {
+      const opened = switchMode(defaultRange(today), 'weeks', bounds, all)
+      const scope: ChartScope = { year: opened.year, years: all.years }
+      expect(canStep(opened.range, bounds, scope, 1)).toBe(false) // the newest window of the newest year: nothing newer, the pills move the year
+      expect(stepRange(opened.range, bounds, scope, -1).year).toBe(2026) // the pill stays through the weeks
+      const months = switchMode(opened.range, 'months', bounds, scope)
+      expect(months.year).toBe(2026)
+      expect(stepRange(months.range, bounds, scope, 1).year).toBe('all')
     })
 
     it('steps the months to the neighbouring year the pills list, stopping at both ends', () => {
       const range = defaultRange(today)
-      expect(canStep(range, bounds, in2026, 1)).toBe(false)
-      expect(stepRange(range, bounds, in2026, 1)).toEqual({ range, year: 2026 })
+      expect(canStep(range, bounds, in2026, 1)).toBe(true) // the overview sits after the newest year
+      expect(stepRange(range, bounds, in2026, 1)).toEqual({ range, year: 'all' })
       expect(stepRange(range, bounds, in2026, -1)).toEqual({ range, year: 2025 })
       expect(stepRange(range, bounds, in2025, -1).year).toBe(2024)
       expect(stepRange(range, bounds, in2025, 1).year).toBe(2026)
@@ -321,6 +376,7 @@ describe('where the windows end', () => {
       expect(stepYear({ year: 2023, years: [2026, 2023] }, 1)).toBe(2026)
       // A pill that is not listed (the record changed under it) has nothing to step from.
       expect(stepYear({ year: 2019, years: [2026, 2023] }, 1)).toBeNull()
+      expect(stepYear({ year: 2026, years: [2026, 2023] }, 1)).toBe('all')
     })
 
     it('holds the weeks to the windows touching the selected year', () => {
