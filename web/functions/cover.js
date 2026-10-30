@@ -25,6 +25,7 @@
 // Cloudflare rate-limiting rule on `/cover` (docs/HOSTING.md, "The cover cache"), which no code in a Function can be.
 //
 // Not cached here: anything that is not an image or is over MAX_BYTES (a cover is 10–150 KB).
+import { sender } from '../app/utils/coverSender.ts'
 import { parseCoverRequest } from '../app/utils/coverSize.ts'
 
 /** A year, the age the answer is cacheable for: a cover at an address does not change. */
@@ -45,29 +46,6 @@ const BASE = { 'Cross-Origin-Resource-Policy': 'same-site', 'X-Content-Type-Opti
 
 const failure = (status, message) =>
   new Response(message, { status, headers: { ...BASE, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } })
-
-/** The origin of a header value (`Origin`, or a `Referer`'s address); null when it is not an address (`null`, junk). */
-const originOf = (value) => {
-  try {
-    return new URL(value).origin
-  } catch {
-    return null
-  }
-}
-
-/**
- * Whether the request comes from this app: no `Origin` and no `Referer` (a direct load, curl: nothing to judge), or each
- * one it carries is this host's own origin or one of `env.COVER_ALLOWED_ORIGINS`. Returns the origin to answer with CORS
- * (the page's, when it named itself by `Origin`), `''` for none needed, or `false` for a request from another site.
- */
-function sender(request, url, env) {
-  const allowed = new Set([url.origin, ...String(env?.COVER_ALLOWED_ORIGINS ?? '').split(',').map((entry) => entry.trim()).filter(Boolean)])
-  const origin = request.headers.get('Origin')
-  const referer = request.headers.get('Referer')
-  if (origin !== null && !allowed.has(origin)) return false
-  if (referer !== null && !allowed.has(originOf(referer))) return false
-  return origin ?? ''
-}
 
 /** The cover from the host, as bytes and a type; null when it is not a usable image. */
 async function fromHost(source) {

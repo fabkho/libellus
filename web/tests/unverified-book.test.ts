@@ -31,6 +31,12 @@ describe('unverified Book', () => {
     })
   })
 
+  it('takes its stored copy too (a key beside no cover is not shown), and adds none where the Book carries none', () => {
+    const copy = { ...normal, coverKey: 'c0ffeec0ffeec0ffeec0ffeec0ffeec0', coverWidths: [120, 240], unverified: true }
+    expect(shownBook(copy, 'Outside')).toMatchObject({ coverUrl: null, coverKey: null, coverWidths: null })
+    expect('coverKey' in shownBook({ ...normal, unverified: true }, 'Outside')).toBe(false)
+  })
+
   it('leaves a normal Book alone', () => {
     expect(shownBook(normal, 'Outside the catalogue')).toBe(normal)
   })
@@ -43,6 +49,15 @@ describe('unverified Book', () => {
     const book = socialBookFromJson(json)
     expect(book).toMatchObject({ id: 'b', title: '', authors: [], coverUrl: null, unverified: true, manual: false })
     expect(socialBookFromJson({ ...json, title: 'Dune', unverified: undefined } as never).unverified).toBe(false)
+  })
+
+  it('reads the stored copy of a social answer: both keys always, null when hidden, not stored or an older answer', () => {
+    const key = 'c0ffeec0ffeec0ffeec0ffeec0ffeec0'
+    const json = { id: 'b', title: 'Dune', authors: [], published_year: 1965, cover_url: 'https://x/c.jpg', cover_thumbhash: null, cover_dominant: null, cover_secondary: null, manual: false }
+    expect(socialBookFromJson({ ...json, cover_key: key, cover_widths: [240, 120, 120] } as never)).toMatchObject({ coverKey: key, coverWidths: [120, 240] })
+    expect(socialBookFromJson({ ...json, cover_key: null, cover_widths: null } as never)).toMatchObject({ coverKey: null, coverWidths: null })
+    expect(socialBookFromJson(json as never)).toMatchObject({ coverKey: null, coverWidths: null })
+    expect(socialBookFromJson({ ...json, cover_key: 'DROP TABLE', cover_widths: [240] } as never)).toMatchObject({ coverKey: null, coverWidths: null })
   })
 })
 

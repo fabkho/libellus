@@ -6,6 +6,7 @@ import { NO_PROGRESS, type ProgressValue } from './progress.ts'
 import { dayFromRow, type ProgressDay, type ProgressDayRow } from './progressDays.ts'
 import { isNoAnswer } from './network.ts'
 import { allPages, uniqueById } from './paging.ts'
+import { ownCopy } from '../utils/ownCoverPath.ts'
 import { applyWrite, localId, type QueuedAction, type QueuedWrite, type WriteQueue } from './queuedWrites.ts'
 
 /**
@@ -355,7 +356,7 @@ export type BookRow = {
   cover_thumbhash: string | null
   cover_dominant: string | null
   cover_secondary: string | null
-  /** Our stored copy of `cover_url` (R2), when there is one: not read by any screen yet (docs/plans/owned-covers.md). */
+  /** Our stored copy of `cover_url` (R2), when there is one: `/c/<key>/<width>` for each width (utils/coverRef.ts, docs/plans/owned-covers.md). */
   cover_key?: string | null
   cover_widths?: number[] | null
   source: Book['source']
@@ -447,6 +448,8 @@ export function bookFromRow(row: BookRow): Book {
     openLibraryEditionKey: row.openlibrary_edition_key,
     openLibraryWorkKey: row.openlibrary_work_key,
     format: row.format ?? null,
+    // Absent from a row of a cached Library (written before the columns existed): a Book then reads as it did, with no copy.
+    ...ownCopy(row.cover_key, row.cover_widths),
     // Undefined rather than null without one, so a Book reads the same as before it existed.
     goodreads: ratingFromRow(row.goodreads) ?? undefined,
     ...(row.unverified ? { unverified: true as const } : {}),

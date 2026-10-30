@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CoverColors } from './books'
+import { ownCopy } from '../utils/ownCoverPath'
 import type { YearFigures } from './stats'
 
 /**
@@ -40,6 +41,9 @@ export type PublicBook = {
   coverUrl: string | null
   coverThumbhash: string | null
   coverColors: CoverColors | null
+  /** Our stored copy of the cover, as it is gated (null: hidden, not stored, or an answer without them; utils/coverRef.ts). */
+  coverKey: string | null
+  coverWidths: number[] | null
   /** One the server check could not confirm: no title, authors or cover (utils/unverifiedBook.ts). */
   unverified: boolean
 }
@@ -167,6 +171,8 @@ type PublicBookRow = {
   cover_thumbhash: string | null
   cover_dominant: string | null
   cover_secondary: string | null
+  cover_key?: string | null
+  cover_widths?: number[] | null
   unverified?: boolean | null
 }
 
@@ -220,6 +226,7 @@ export function settingsFromRow(row: SettingsRow | null): ReadingPageSettings {
 }
 
 export function publicBookFromRow(row: PublicBookRow): PublicBook {
+  const copy = ownCopy(row.cover_key, row.cover_widths)
   return {
     id: row.id,
     title: row.title ?? '',
@@ -228,6 +235,8 @@ export function publicBookFromRow(row: PublicBookRow): PublicBook {
     coverUrl: row.cover_url,
     coverThumbhash: row.cover_thumbhash,
     coverColors: row.cover_dominant && row.cover_secondary ? { dominant: row.cover_dominant, secondary: row.cover_secondary } : null,
+    coverKey: copy?.coverKey ?? null,
+    coverWidths: copy?.coverWidths ?? null,
     unverified: Boolean(row.unverified),
   }
 }

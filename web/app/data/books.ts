@@ -39,6 +39,13 @@ export type BookSnapshot = {
   coverUrl: string | null
   coverThumbhash: string | null
   coverColors: CoverColors | null
+  /**
+   * Our stored copy of `coverUrl` (`books.cover_key`, the image at `/c/<key>/<width>` for each of `coverWidths`, ascending
+   * real widths in pixels; utils/coverRef.ts decides what is shown). Absent or null: no copy (yet), a hidden cover, or a card
+   * whose cover is not a Book's own. Absent on a search result (a snapshot has no copy until the Catalogue stores one) and on a copy from before they existed.
+   */
+  coverKey?: string | null
+  coverWidths?: number[] | null
   source: BookSource
   appleId: string | null
   openLibraryEditionKey: string | null
