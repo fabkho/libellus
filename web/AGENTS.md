@@ -13,6 +13,7 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - `pnpm build` / `pnpm generate` — `nuxt generate` to `.output/public`.
 - `pnpm perf` — the client performance harness (production build, throttled Chromium and WebKit, scripted
   journeys, a table): `perf/README.md`; findings in `../docs/perf/`. Needs its own throwaway stack, never the shared one.
+- Sentry (`plugins/sentry.client.ts`, `utils/sentry*.ts`, `utils/uiFrozen.ts`): off without `NUXT_PUBLIC_SENTRY_DSN`; its SDK stays in the lazy `sentry.<hash>.js` chunk, out of the precache. Anything new that can reach an event goes through `scrubEvent` and, if it adds data, into the privacy notice (README, "Sentry").
 - **The shared UI base** (fabkho/ui, a Nuxt layer; `@fabkho/ui` pinned to a tag in `package.json`, never a branch) is
   the app's UI kit. Its components, props, slots, states and accessibility are documented in Storybook
   (https://fabkho.github.io/ui/) and its README (`node_modules/@fabkho/ui/README.md`). Look there before writing a

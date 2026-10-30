@@ -23,9 +23,9 @@ advice; the owner keeps it current when a source is added (the enrichment source
 
 ## Services that process data
 
-The ones that store or process members' data (Supabase, Cloudflare Pages, Cloudflare R2, Resend) are listed with
+The ones that store or process members' data (Supabase, Cloudflare Pages, Cloudflare R2, Resend, Sentry) are listed with
 what each holds in the [README](../README.md) ("Where your data lives"). GitHub holds the code and
-its CI only.
+its CI only. Sentry (Functional Software, Inc.; error reports and performance measurements, EU region Frankfurt, only when a DSN is set, kept 30 days) gets no account id, name, email, IP address or content: what it receives is in README "Sentry" and the privacy notice.
 
 ## Test fixtures: test-only recordings
 

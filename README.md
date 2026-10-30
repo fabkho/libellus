@@ -51,7 +51,8 @@ BetterReads runs as one private, invite-only instance for its owner and a few fr
 One operator, the owner, runs the one instance (libellus.fabkho.dev). This is what that instance
 does with your data.
 
-- **No trackers, no ads, no third-party code in the app.** The session is the only thing it
+- **No trackers, no ads.** The one third-party script is Sentry's error reporter, loaded only when the instance sets a DSN
+  (below, "Sentry"). The session is the only thing it
   stores for sign-in; everything else on the device is your own data, kept for offline use and
   removed when you sign out.
 - **Page loads are counted, nothing more.** This instance uses Cloudflare Web Analytics, which is
@@ -88,7 +89,41 @@ does with your data.
 | [Cloudflare Pages](https://pages.cloudflare.com) | Serves the app's static files and the link previews of a shared reading page; Cloudflare Web Analytics counts page loads from there |
 | [Cloudflare R2](https://developers.cloudflare.com/r2/) | Two private buckets. One holds the nightly database backup, encrypted before it is uploaded with a key only the owner holds; each file is deleted after 35 days (docs/OPERATIONS.md, "Backups"). The other holds the cover images of books in members' Libraries, and nothing else: images only, under names taken from the image itself with a secret, so no name can be traced to a cover or a member, served only through the app's own address, and deleted 30 days after no member's Library holds the book (docs/THIRD-PARTY.md, "Own covers") |
 | Resend (an email provider, over SMTP) | Sends the six-digit sign-in codes and the waitlist invites, so it sees the address it mails |
+| [Sentry](https://sentry.io) (Functional Software, Inc.), EU region (Frankfurt) | Error reports and performance measurements, only when the instance sets `NUXT_PUBLIC_SENTRY_DSN`: error message and stack, app version, browser / system / device family, the screen as a route pattern, the last steps before an error (tags and test ids of taps only), how long a freeze lasted. No account id, name, email, IP address, content or replay; kept 30 days |
 | [GitHub](https://github.com) | The code and its CI. None of your data: the backup job encrypts the dump while it streams and keeps no artifact or log of it |
+
+## Sentry (errors and performance)
+
+`@sentry/nuxt` in `web/`, **off until a DSN is set**: `NUXT_PUBLIC_SENTRY_DSN` empty means no Sentry code is downloaded
+and no request goes out (the SDK sits in its own lazy chunk, `sentry.<hash>.js`, which the service worker does not
+precache and the page does not preload). Only an **EU DSN** (`*.ingest.de.sentry.io`) is accepted; any other is ignored.
+The Supabase edge functions are not covered. It runs next to the app's own error log (docs/OPERATIONS.md, "Client error
+log"), which stays as it is.
+
+- Unhandled errors and rejections and Vue errors; traces for about 10 % of sessions (route changes and requests with
+  status and duration, no headers); release = `version.txt`; environment `production`, `preview` (`*.pages.dev`) or `dev`.
+- No session replay, no feedback widget, no user, no IP, no cookies. `web/app/utils/sentryScrub.ts` strips e-mail
+  addresses, ids, query strings, headers, cookies, bodies, console output and click selectors from every event before it
+  leaves the device; if the scrubber itself throws, a minimal event (tag `scrub.failed`) goes out instead of nothing
+  (`web/tests/sentry.test.ts`). Added back: browser (name, major version), system, device family (never a model), and a tap's
+  place as tag names and `data-testid`s only.
+- **UI frozen:** a one-second timer (`web/app/utils/uiFrozen.ts`) reports an exception `UIFrozen` (warning, fingerprint
+  `ui-frozen`) when the main thread was blocked 5 s or more, at most 3 per page load. Sleep is not a freeze: sleep signals reset
+  the clock, and where the browser has long tasks / long animation frames they must cover half the gap; iOS Safari has
+  neither, so there gaps over 60 s count as sleep.
+
+**Where the DSN goes.** The app is built by Cloudflare Pages from the branch `production` (docs/HOSTING.md), so the DSN
+must be in that build's environment: Cloudflare → Workers & Pages → `libellus` → Settings → Variables and Secrets →
+**Production**: `NUXT_PUBLIC_SENTRY_DSN=<DSN>` (public by nature, baked into the files), then *Retry deployment* or the next
+release. Previews build without it (Sentry off there) unless the variable is also set for Preview. Local: leave it empty;
+to try it, put an EU DSN into `web/.env` and open the app on `localhost` (environment `dev`). Not before the privacy
+notice's Sentry text is approved. Removing the variable and redeploying turns Sentry off.
+
+**Source maps (optional).** GitHub → Settings → Environments → `production`: secret `SENTRY_AUTH_TOKEN` (an organisation
+token, scopes `project:releases`, `org:read`) and variables `SENTRY_ORG=bookretreats-jx`, `SENTRY_PROJECT=libellus`. The
+release workflow's job "source maps to Sentry" then builds the released commit once more with hidden maps
+(`SENTRY_SOURCEMAPS=1`, the same Regal inputs as Pages) and uploads them for the release; without them it does nothing and
+stays green. The maps are never deployed.
 
 ## Tech stack
 

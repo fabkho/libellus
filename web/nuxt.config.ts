@@ -93,9 +93,17 @@ export default defineNuxtConfig({
     // the entry's long frames doubled. Without them, Slow 4G/4x: 56 fewer requests, cold LoAF
     // 1,510 -> 770 ms, LCP -200 ms (docs/perf/client-1-startup.md, F-7).
     'build:manifest': (manifest) => {
-      for (const chunk of Object.values(manifest)) chunk.prefetch = false
+      for (const chunk of Object.values(manifest)) {
+        chunk.prefetch = false
+        // Sentry's chunk (see `vite.build` below) is fetched by plugins/sentry.client.ts alone, and only with a DSN.
+        if (/(^|\/)sentry\.[\w-]+\.js$/.test(chunk.file ?? '')) chunk.preload = false
+      }
     },
   },
+  // Source maps only for the one build that uploads them to Sentry (.github/workflows/release.yml, "Source maps to
+  // Sentry"): `hidden` writes the `.map` files without a `sourceMappingURL` comment, so no chunk changes and the
+  // names equal those of Cloudflare's own build of the same commit. Pages' build never sets this: members get no maps.
+  sourcemap: process.env.SENTRY_SOURCEMAPS ? { client: 'hidden', server: false } : undefined,
   modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt', regalContainment],
   // Accessibility and hints in Nuxt DevTools (docs/ACCESSIBILITY.md): `nuxt dev` only, never in a
   // build (both modules also do nothing outside dev, and `$development` keeps them out of the
@@ -163,7 +171,7 @@ export default defineNuxtConfig({
     // These are the packages the app reaches only from a later screen or a lazy import; bundled at
     // start-up, none is met late. Dev only: a build never asks.
     // `@fabkho/ui > thumbhash` is the shared base's one runtime dependency (its `utils/cloth.ts`), found through the package.
-    optimizeDeps: { include: ['@supabase/supabase-js', 'thumbhash', '@fabkho/ui > thumbhash', 'fflate', 'papaparse', 'zxing-wasm/reader'] },
+    optimizeDeps: { include: ['@supabase/supabase-js', '@sentry/nuxt', 'thumbhash', '@fabkho/ui > thumbhash', 'fflate', 'papaparse', 'zxing-wasm/reader'] },
     build: {
       rolldownOptions: {
         output: {
@@ -187,9 +195,12 @@ export default defineNuxtConfig({
               { name: 'regal-reel', test: isRegalModule, includeDependenciesRecursively: false },
             ],
           },
+          // `sentryInit` (utils/sentryInit.ts, only imported when a DSN is set) is the Sentry SDK's chunk, named `sentry` so
+          // the service worker can leave it out of the precache (pwa.workbox.globIgnores): a precache entry is every
+          // member's download, and the SDK is off without a DSN.
           chunkFileNames: (chunk: { name: string; facadeModuleId?: string | null }) =>
-            chunk.name === 'zxing' || chunk.name === 'regal' || chunk.name === 'regal-reel' || chunk.name === 'regal-preload' || chunk.name === 'ebook-reader' || chunk.name === 'realtime'
-              ? `_nuxt/${chunk.name}.[hash].js`
+            chunk.name === 'zxing' || chunk.name === 'sentryInit' || chunk.name === 'regal' || chunk.name === 'regal-reel' || chunk.name === 'regal-preload' || chunk.name === 'ebook-reader' || chunk.name === 'realtime'
+              ? `_nuxt/${chunk.name === 'sentryInit' ? 'sentry' : chunk.name}.[hash].js`
               : isReaderEntry(chunk.facadeModuleId)
                 ? '_nuxt/ebook-reader-entry.[hash].js'
                 : '_nuxt/[hash].js',
@@ -255,6 +266,10 @@ export default defineNuxtConfig({
       // The client error log (composables/useErrorLog.ts, NUXT_PUBLIC_ERROR_LOG): a build sends
       // its errors unless 'off'; the dev server prints them and sends only with 'send'.
       errorLog: '',
+      // Sentry (utils/sentryConfig.ts, plugins/sentry.client.ts; NUXT_PUBLIC_SENTRY_DSN): errors and performance. Empty
+      // = off: no code downloaded, no request. Only an EU DSN (*.ingest.de.sentry.io) is accepted. Set it for the
+      // production build only, after the privacy notice's Sentry paragraph is approved (README, "Sentry").
+      sentryDsn: '',
       // Regal's setting (its README): the published library file (NUXT_PUBLIC_REGAL_LIBRARY_SRC).
       regal: { librarySrc: REGAL_LIBRARY_SRC },
       // Book links every member of this instance sees on a Book's page before her own
@@ -414,7 +429,7 @@ export default defineNuxtConfig({
       // styles): the app fetches it ahead for a member who has an ebook (data/reader/prefetch.ts) and the
       // cache below keeps it, so a book opened before opens offline too.
       // Nor is the real Realtime client (`realtime`, the import job's live feed): it is fetched while a job of hers is live.
-      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html', '**/zxing*.js', '**/zxing_reader*.wasm', '**/ebook-reader*.js', '**/ebook-reader*.css', '**/realtime.*.js', ...regalAssets().globIgnores],
+      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html', '**/zxing*.js', '**/zxing_reader*.wasm', '**/_nuxt/sentry.*.js', '**/ebook-reader*.js', '**/ebook-reader*.css', '**/realtime.*.js', ...regalAssets().globIgnores],
       runtimeCaching: [
         ...regalAssets().runtimeCaching,
         {
