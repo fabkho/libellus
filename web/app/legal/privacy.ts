@@ -11,7 +11,7 @@ export const PRIVACY: LegalDocument = {
   en: {
     title: 'Privacy notice',
     lead: 'BetterReads is a small book-tracking app, run as an invite-only beta. This notice says what it does with your data, who else is involved, and what you can do about it.',
-    version: 'Version: 28 October 2026',
+    version: 'Version: 30 October 2026',
     sections: [
       {
         id: 'responsible',
@@ -68,7 +68,7 @@ export const PRIVACY: LegalDocument = {
             ul: [
               '**Supabase** (the database, sign-in, profile photo storage and server functions): the project runs in the EU region eu-central-1 (Frankfurt, Germany). It holds everything you save in the app and your email address. The provider is Supabase Pte. Ltd., Singapore.',
               '**Cloudflare Pages** (hosting of the app’s files and of link previews of reading pages; Web Analytics): Cloudflare, Inc., USA. Cloudflare answers from a data centre near you and sees your IP address while it does.',
-              '**Cloudflare R2** (the nightly backup of the database): a private storage space with a location hint for Western Europe. The backup is encrypted before it is uploaded, with a key only I hold, and each file is deleted after 35 days.',
+              '**Cloudflare R2** (the nightly backup of the database and the stored book covers): private storage spaces with a location hint for Western Europe. The backup is encrypted before it is uploaded, with a key only I hold, and each file is deleted after 35 days. The second one holds the cover images of books in members’ Libraries (see *Book lookups* below): images only, no member data, under names derived from the image itself with a secret, so that no name can be traced to a cover or a member; a cover is deleted 30 days after no member’s Library holds its book.',
               '**Resend** (email): Resend (Plus Five Five, Inc., USA) sends the sign-in codes, invites and notification emails. It receives the recipient’s email address, the message content (the code or the invite link) and delivery metadata. The sending region is Ireland (EU). Because the provider is a US company, transfers rest on the EU Standard Contractual Clauses (Module Two, controller to processor) in its [data processing addendum](https://resend.com/legal/dpa), which also records its commitments under the EU-U.S. Data Privacy Framework. Its [sub-processors](https://resend.com/legal/subprocessors) are listed on its site.',
               '**GitHub** (the code, which is public, and its automated tests): none of your data. The backup job encrypts the database dump while it streams and leaves no copy of it in GitHub.',
               '**Other members** see only what you choose to show (see Friends and your reading page above).',
@@ -84,6 +84,7 @@ export const PRIVACY: LegalDocument = {
           {
             ul: [
               '**Apple (iTunes Search) and Open Library**: your browser asks them directly for the words you type into search (from two characters on) or the ISBN you scan, and loads the covers. They therefore see your IP address and what you searched for. A book you imported keeps the cover address of its source, so that host sees your IP address when the cover is shown.',
+              '**The covers of your books**: a cover from Apple, Open Library, Goodreads or my own shelf is loaded by your browser from that host. A cover of a book in a member’s Library is different: my server fetches it once and keeps a copy in one of my private storage spaces (the one above), and your browser loads it from BetterReads itself, so the host sees my server’s address on that one request and never yours. The copy is deleted 30 days after no member’s Library holds the book.',
               '**Wikimedia Commons**: author portraits on author pages are loaded by your browser, so Wikimedia sees your IP address.',
               '**Wikidata, Wikipedia, Open Library, Apple, the German National Library and Goodreads, asked by my server and never by your device**: facts about a book or author, short introductions, German editions (the library’s catalogue data is open, CC0) and the Goodreads community rating, looked up by title, author or ISBN. No member data goes with a lookup, and Goodreads never sees you.',
               '**The ebook reader**: Translate and Define send only the words you select to MyMemory (translated.net), unless your browser translates on the device by itself, and to the English Wiktionary. The ebook itself never leaves your device.',
@@ -151,7 +152,7 @@ export const PRIVACY: LegalDocument = {
   de: {
     title: 'Datenschutzerklärung',
     lead: 'BetterReads ist eine kleine App, mit der man seine gelesenen Bücher festhält, und läuft als Beta nur mit Einladung. Hier steht, was die App mit deinen Daten macht, wer sonst beteiligt ist und was du dagegen oder dafür tun kannst.',
-    version: 'Stand: 28. Oktober 2026',
+    version: 'Stand: 30. Oktober 2026',
     sections: [
       {
         id: 'responsible',
@@ -208,7 +209,7 @@ export const PRIVACY: LegalDocument = {
             ul: [
               '**Supabase** (Datenbank, Anmeldung, Speicher für Profilfotos und Serverfunktionen): Das Projekt läuft in der EU-Region eu-central-1 (Frankfurt, Deutschland). Dort liegt alles, was du in der App speicherst, und deine E-Mail-Adresse. Anbieter ist Supabase Pte. Ltd., Singapur.',
               '**Cloudflare Pages** (Hosting der Dateien der App und der Link-Vorschauen von Leseseiten; Web Analytics): Cloudflare, Inc., USA. Cloudflare antwortet aus einem Rechenzentrum in deiner Nähe und sieht dabei deine IP-Adresse.',
-              '**Cloudflare R2** (die nächtliche Sicherung der Datenbank): ein privater Speicher mit Standort-Hinweis Westeuropa. Die Sicherung wird vor dem Hochladen verschlüsselt, mit einem Schlüssel, den nur ich habe, und jede Datei wird nach 35 Tagen gelöscht.',
+              '**Cloudflare R2** (die nächtliche Sicherung der Datenbank und die gespeicherten Buchcover): private Speicher mit Standort-Hinweis Westeuropa. Die Sicherung wird vor dem Hochladen verschlüsselt, mit einem Schlüssel, den nur ich habe, und jede Datei wird nach 35 Tagen gelöscht. In einem davon liegen die Cover-Bilder der Bücher in den Bibliotheken der Mitglieder (siehe *Buchabfragen* unten): nur Bilder, keine Mitgliedsdaten, unter Namen, die mit einem Geheimnis aus dem Bild selbst abgeleitet sind, sodass sich kein Name auf ein Cover oder ein Mitglied zurückführen lässt; ein Cover wird 30 Tage, nachdem es in keiner Bibliothek mehr liegt, gelöscht.',
               '**Resend** (E-Mail): Resend (Plus Five Five, Inc., USA) verschickt die Anmeldecodes, Einladungen und Benachrichtigungs-E-Mails. Es erhält die E-Mail-Adresse der Empfängerin oder des Empfängers, den Inhalt der Nachricht (den Code oder den Einladungslink) und Zustelldaten. Die Versandregion ist Irland (EU). Weil der Anbieter ein US-Unternehmen ist, beruhen Übermittlungen auf den EU-Standardvertragsklauseln (Modul zwei, Verantwortlicher an Auftragsverarbeiter) in seinem [Auftragsverarbeitungsvertrag](https://resend.com/legal/dpa), der auch seine Verpflichtungen unter dem EU-U.S. Data Privacy Framework festhält. Seine [Unterauftragsverarbeiter](https://resend.com/legal/subprocessors) sind auf seiner Website aufgeführt.',
               '**GitHub** (der Code, der öffentlich ist, und seine automatischen Tests): keine Daten von dir. Der Sicherungs-Job verschlüsselt den Datenbank-Dump, während er läuft, und hinterlässt bei GitHub keine Kopie.',
               '**Andere Mitglieder** sehen nur, was du zeigen willst (siehe Freunde und deine Leseseite oben).',
@@ -224,6 +225,7 @@ export const PRIVACY: LegalDocument = {
           {
             ul: [
               '**Apple (iTunes Search) und Open Library**: Dein Browser fragt sie direkt nach den Wörtern, die du in die Suche tippst (ab zwei Zeichen), oder nach der ISBN, die du scannst, und lädt die Cover. Sie sehen deshalb deine IP-Adresse und wonach du gesucht hast. Ein importiertes Buch behält die Cover-Adresse seiner Quelle; dieser Server sieht deine IP-Adresse, wenn das Cover angezeigt wird.',
+              '**Die Cover deiner Bücher**: Ein Cover von Apple, Open Library, Goodreads oder meinem eigenen Regal lädt dein Browser beim jeweiligen Anbieter. Bei einem Buch in der Bibliothek eines Mitglieds ist es anders: Mein Server holt das Bild einmal und legt eine Kopie in einem meiner privaten Speicher ab (dem oben), und dein Browser lädt es von BetterReads selbst; der Anbieter sieht bei dieser einen Anfrage die Adresse meines Servers und nie deine. Die Kopie wird 30 Tage, nachdem sie in keiner Bibliothek mehr liegt, gelöscht.',
               '**Wikimedia Commons**: Porträts von Autorinnen und Autoren auf deren Seiten lädt dein Browser, Wikimedia sieht dabei deine IP-Adresse.',
               '**Wikidata, Wikipedia, Open Library, Apple, die Deutsche Nationalbibliothek und Goodreads, gefragt von meinem Server und nie von deinem Gerät**: Angaben zu einem Buch oder einer Autorin, kurze Vorstellungen, deutsche Ausgaben (die Katalogdaten der Bibliothek sind offen, CC0) und die Goodreads-Bewertung der Community, nachgeschlagen mit Titel, Autor oder ISBN. Zu einer Abfrage gehören keine Mitgliedsdaten, und Goodreads sieht dich nie.',
               '**Der Ebook-Reader**: Übersetzen und Nachschlagen schicken nur die Wörter, die du auswählst, an MyMemory (translated.net), sofern dein Browser nicht von selbst auf dem Gerät übersetzt, und an das englische Wiktionary. Das Ebook selbst verlässt dein Gerät nie.',

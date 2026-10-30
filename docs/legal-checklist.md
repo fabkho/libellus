@@ -55,7 +55,15 @@ The notice says these; confirm each, or change the text (and the version date) w
 - **Supabase** project region is `eu-central-1` (dashboard → Project settings), and the provider is named correctly
   (Supabase Pte. Ltd., Singapore) with its data processing agreement accepted.
 - **Cloudflare**: Web Analytics stays cookieless and stores nothing on the device (docs/HOSTING.md); the data processing
-  terms are accepted; the R2 bucket `libellus-backups` has its location hint `weur` and the 35-day rule.
+  terms are accepted; the R2 bucket `libellus-backups` has its location hint `weur` and the 35-day rule; and, once the
+  stored covers are on, the bucket `libellus-covers` is private (no public access, no `r2.dev` address, no custom domain),
+  location hint `weur`, with **no lifecycle rule** (the 30-day grace is the cover job's own, docs/OPERATIONS.md) and not in
+  the backup.
+- **The stored covers** (*Own covers* in docs/THIRD-PARTY.md): the notice says my server fetches the covers of books in
+  members' Libraries once and keeps them in a private storage space, that no name in there can be traced to a cover or a
+  member, and that a cover goes 30 days after no Library holds its book. Confirm against
+  `select public.owner_cover_status();` and the take-down steps (docs/OPERATIONS.md, "Own covers") when the feature is
+  turned on.
 - **Resend**: the data processing agreement is accepted, and the notice's lines on its region, transfer basis and sub-processors still match its pages.
 - **Sign-in sessions**: the notice says Supabase Auth keeps time, IP address and browser of sign-ins. That is what its
   session and audit tables hold today; check again after an upgrade.

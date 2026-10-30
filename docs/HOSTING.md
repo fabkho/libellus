@@ -37,11 +37,11 @@ A deploy is atomic and a rollback is one click (Workers & Pages → libellus →
 with its edge functions) is in docs/OPERATIONS.md, "Releases". The same commit can be built again with "Retry deployment", which is also how
 a change to the project's settings (below) reaches the live site without a commit.
 
-## The two Pages Functions
+## The Pages Functions
 
 Pages builds `web/functions/` beside the output by itself (no setting), and generates the
 `_routes.json` that decides which addresses invoke a Function from the files it finds there: with
-the ones below (`/share`, `/r/*`, `/manifest.webmanifest`, `/cover`), everything else stays a free static request.
+the ones below (`/share`, `/r/*`, `/manifest.webmanifest`, `/cover`, `/c/*`), everything else stays a free static request.
 Nitro's `cloudflare-pages-static` preset writes no `_routes.json` of its own, so nothing overrides
 that (checked with `npx wrangler pages functions build --output-routes-path`).
 
@@ -104,7 +104,7 @@ speaks is German, the same file with `lang: de`, a German `description` and Germ
 (no production access here): after the first deploy, `curl -H 'Accept-Language: de' https://<site>/manifest.webmanifest` should
 say `"lang":"de"`.
 
-Everything else stays static, and only `/share`, `/r/*` and `/manifest.webmanifest` invoke a Function.
+Everything else stays static, and only `/share`, `/r/*`, `/manifest.webmanifest`, `/cover` and `/c/*` invoke a Function.
 
 ## The cover cache
 
@@ -120,8 +120,11 @@ load it same-origin, a WebGL texture needs a CORS-clean image, so does a canvas 
   this host or an origin in the Pages project's `COVER_ALLOWED_ORIGINS` variable (comma-separated: a second domain,
   a preview), otherwise it is a 403 with `no-store`, no CORS, and no host asked. A request with neither (curl) is
   not judged. **That keeps other sites from embedding our cache, no more. The guard against a flood burning the 100,000
-  Function requests a day (shared with `/r` and `/share`) is a Cloudflare rate-limiting rule on `/cover`** (Security →
-  WAF → Rate limiting rules, by IP, on the path), which no code in a Function can be; set it up in the dashboard.
+  Function requests a day (shared with `/r`, `/share` and `/c/*`) is a Cloudflare rate-limiting rule on `/cover`**
+  (Security → WAF → Rate limiting rules, by IP, on the path), which no code in a Function can be; set it up in the
+  dashboard. In the `betterreads.de` zone a **WAF custom rule** answers `/cover` with a 403 when the request carries no
+  `Referer` or a foreign one (the app always sends one; `curl` sends none). `/c/` belongs in both rules, in both zones
+  (*Own covers*, below).
 
 - **An allowlist, not a proxy.** `parseCoverRequest` (`web/app/utils/coverSize.ts`, which the browser builds
   addresses with and the Function enforces) accepts `https://<n>.mzstatic.com/image/thumb/…/<w>x<h>bb.jpg` and
@@ -163,18 +166,47 @@ source, so a copy that is missing is never a missing cover. The Function accepts
 object, and **a bucket that is not bound yet** are a 404 with `no-store`. Who may ask is `/cover`'s rule
 (`web/app/utils/coverSender.ts`, `COVER_ALLOWED_ORIGINS`).
 
+- **Where the objects come from: one Supabase edge function, never a device.** `supabase/functions/cover-store` (its
+  README has the detail) writes `c/<key>/<width>` through the S3 API. The **database** decides: the reconcile
+  (`private.cover_store_tick`, pg_cron `cover-store-tick`, every minute) queues every Book in a Library whose `cover_key`
+  is null, the tick kicks the function through pg_net and the Vault secret `cover_store_token`, and the function leases a
+  few, fetches the images from their host (Apple, Open Library, Goodreads, `books.fabkho.dev`) identified and paced, and
+  PUTs every width before it writes the key. **Its secrets live on Supabase, not on Pages** (`R2_COVERS_*`,
+  `COVER_KEY_SECRET`, `COVER_STORE_TOKEN`; docs/SETUP.md, Every setting). Nothing is stored while
+  `private.cover_store_settings.enabled` is false, which is how it ships.
+- **One Supabase setting the owner adds before the release:** `[functions.cover-store] verify_jwt = false` in
+  `supabase/config.toml` — the function checks its own bearer, and the release workflow deploys whatever that file says.
+- **The bucket** is `libellus-covers`, created once (`npx wrangler r2 bucket create libellus-covers --location weur`),
+  **private**: no public access, no `r2.dev` address, no custom domain. It has **no lifecycle rule**: nothing expires by
+  age, because a stored image is kept while any Library holds its Book — the weekly pg_cron job `cover-store-gc`
+  (`cover_gc_mark`, Sunday 02:30) marks what no Book in a Library uses and the function deletes it 30 days later
+  (docs/plans/owned-covers.md §6; docs/OPERATIONS.md, "Own covers"). **The bucket is not in the nightly backup** (the
+  database's record of it is; docs/OPERATIONS.md, "Backups").
 - **The binding is an owner step of the release, not a file in the repo** (this project keeps its Pages settings in the
   dashboard, like `COVER_ALLOWED_ORIGINS`): Pages project → Settings → Bindings → R2 bucket → variable name `COVERS`, bucket
   `libellus-covers`, for production (and previews, if previews should show own covers). Nothing is deployed or created by
   the code.
-- **Rate limiting and the WAF** rule on `/cover` get `/c/` added, in both zones (`fabkho.dev`, `betterreads.de`).
+- **Rate limiting and the WAF.** The `/cover` WAF custom rule (a `/cover` request that does not carry the app's
+  `Referer` is a 403; already in place in the `betterreads.de` zone) and the rate-limiting rule on `/cover` get `/c/`
+  added, **in both zones** (`fabkho.dev` for `libellus.fabkho.dev`, `betterreads.de`). They are the real guard on the
+  100,000 Function requests a day that `/share`, `/r/*`, `/cover` and `/c/*` share; the Function's own sender check only
+  keeps other sites from embedding it.
 - **In the app.** `runtimeConfig.public.ownCovers` (`NUXT_PUBLIC_OWN_COVERS`, `on`/`off`; unset: **off in every build**).
   `coverImage(book, size, useCoverHosts())` is a cover at a token size, `coverAt(book, { height, dpr, origin, ...hosts })` one at
-  any other size. Turning it on is a rebuild of the production deployment, never a release; unset it to go back.
+  any other size; the address is `/c/<cover_key>/<width>` with the stored widths as its `srcset`, and the fallbacks are
+  today's chain for the same artwork. Turning it on is a rebuild of the production deployment, never a release; unset it
+  to go back. **The screens do not call these helpers yet**: the client work that moves the ~45 `UiCover` sites to
+  `coverImage`, the reel to `coverAt` and gives the service worker its `/c/` rule is in progress, so until it lands every
+  screen draws today's addresses whatever the switch says.
+- **What it costs** (plan §8, docs/covers.md): a few hundred objects and a few megabytes for this instance's Library,
+  against R2's free 10 GB and 1 M Class A operations a month; and one Pages Function invocation per image the service
+  worker does not answer — a few thousand a day against the free 100,000. Past it Pages answers an error for those
+  paths, never a bill, and the chain falls back to `/cover`, then the host.
 - **Check it locally** (verified on workerd): `pnpm dlx wrangler r2 object put libellus-covers/c/<key>/<width> --file <image> --content-type image/webp --local --persist-to /tmp/r2`,
   then `pnpm dlx wrangler pages dev <a folder with an index.html> --port 3110 --r2 COVERS=libellus-covers --persist-to /tmp/r2` from `web/`,
   and `curl -si http://127.0.0.1:3110/c/<key>/<width>`: `X-Cover-Cache: miss`, then `hit`. Tests: `tests/cover-own-function.test.ts`,
-  `tests/cover-ref.test.ts`.
+  `tests/cover-ref.test.ts`. The storing half runs against the local stack (supabase/functions/cover-store README, "To run it
+  against the local stack").
 
 ## The reading page's Open Graph image
 

@@ -592,3 +592,48 @@ Apple's artwork: ~100 ms warm, 0.5 s at a size its edge has not rendered yet; `/
 Open Library's `-L` through its redirect chain: 0.8–3.0 s; `/cover` first 0.7–1.6 s, cached 2–3 ms. At the size a 300 px
 reel card at 2× needs (480 px wide) an Apple cover is 49–131 KB instead of the stored 600 × 900's 71–195 KB; a list row's
 120 × 180 is 7–12 KB.
+
+## Own covers (30 Oct 2026)
+
+`/cover` took Apple's and Open Library's slowness down to our edge, but the image is still theirs and it is fetched on the
+member's first request. The owner's decision of 30 October 2026 goes one step further: **the cover of a Book in any
+member's Library is stored by the instance itself** (the private R2 bucket `libellus-covers`) and served from its own
+address, `/c/<key>/<width>`, so a catalogue cover never waits on Apple, Open Library or Goodreads being up. `/cover` stays
+for what is not in a Library: search results, the edition picker, a work's card on an author page, a Book whose copy is
+not stored yet or failed. The serving side is in docs/HOSTING.md ("Own covers"), the terms and the owner-accepted risk in
+docs/THIRD-PARTY.md (*Own covers*), the runbook in docs/OPERATIONS.md ("Own covers").
+
+- **Sizes: the source's own renderer, never an encoder of ours.** Apple renders WebP itself (`…/<w>x<h>bb.webp`), so its
+  covers are copied at 120, 240, 360 and 600 px wide and nothing is resized here: a Pages Function gets about 10 ms of CPU
+  (no codec fits), a Supabase edge function 2 s (the import job already spends none of it on decoding), and a browser
+  cannot cover the server side. Open Library (`-L`, the key, then `-M`), Goodreads and Regal's library (the one image the
+  address names) stay JPEG. **The widths stored are the real ones**, read from each image's header (JPEG SOF, WebP,
+  PNG IHDR: a few bytes, no decoding), because Apple's `bb` box keeps a cover's proportions and Open Library's sizes are
+  not fixed; they go to `books.cover_widths`, so the app's `srcset` is exact.
+- **Measured** (30 Oct 2026, one address, one sample each, public cover URLs from the test fixtures). Apple:
+  `120x180bb.webp` 5,276 B, `.jpg` 7,218 B; `240x360bb.webp` 8,618 B, `.jpg` 21,642 B; `360x540bb.webp` 12,624 B;
+  `600x900bb.webp` 25,312 B, `.jpg` 119,560 B (the size `books.cover_url` stores). Open Library by cover id: `-M`
+  (180 × 254) 16,679 B in 2.2 s through 2 redirects, `-L` (353 × 500) 49,382 B in 2.1 s. Two findings decide the design:
+  **Apple's image server renders WebP itself**, ~4.7× smaller than its JPEG at 600 px, so most covers need no encoding by
+  us; and **Open Library is the slow one**, which is what storing removes.
+- **The widths against what a screen shows** (`COVER_WIDTH` 30, 40, 72, 82, 140 CSS px, the reel's 200 px cards): 120
+  covers `xs`/`sm` up to 3×; 240 covers `md`/`lg` up to ~3× and `xl` at 1.7×; 360 covers `xl` at 2.5× and the reel at
+  1.8×; 600 covers `xl` and the reel at 3×. 960 is not offered: no source stores more than 600 px of a cover worth
+  showing, nothing is upscaled, and no screen draws a cover wider than 200 CSS px.
+- **One Book, one cover is kept.** A stored copy is the Book's own artwork at several widths; one that fails falls back
+  to the same artwork through `/cover`, then at the source (`web/app/utils/coverRef.ts`), never to another picture. A key
+  is content-addressed (an HMAC of the image with a secret, `v1:`-prefixed so a later change of what is stored gets new
+  keys), so an address never changes its bytes: the answer is `immutable` for a year and a service worker may keep it.
+- **When it happens.** Nothing is stored ahead of a member: a Book enters the store only once a `library_entries` row
+  points at it, found by a reconcile in the database (every path that changes a cover ends in `cover_key` null) and stored
+  about a minute later by the `cover-store` edge function, batched, identified and paced (Open Library's keyed covers at
+  0.3 requests a second). Until then the Book shows `/cover` or its source, so a failed store is never a missing cover.
+  Removing a Book from a Library deletes nothing at once: an image goes 30 days after no Library holds it.
+- **The off switches** are `private.cover_store_settings.enabled` (storing stops; nothing is deleted) and
+  `NUXT_PUBLIC_OWN_COVERS` unset, its default in every build (the screens stay on today's addresses). The client work that
+  moves the call sites and the reel to the stored copies and gives the service worker its `/c/` cache is in progress.
+- **Not in v1**: covers on other hosts (a member's own edition, a pasted address). On the Supabase runtime a DNS check and
+  the connection cannot be made to use the same address, so a name with a zero TTL could answer the check publicly and the
+  fetch privately (DNS rebinding, `169.254.169.254`, `10.x`); a Cloudflare Worker fetch, with no private network behind
+  it, is the v2 path. Also not in v1: a WebP re-encode of Open Library's covers (a wasm encoder), unless their bytes ever
+  matter.
