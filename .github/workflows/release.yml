@@ -120,6 +120,9 @@ jobs:
       ) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      target: ${{ steps.branch.outputs.target }}
+      moved: ${{ steps.move.outcome }}
     # The environment's secrets are readable by this job only (docs/OPERATIONS.md,
     # "Releases": what to set up). Its deployment branch rule should allow `main` only.
     environment:
@@ -326,3 +329,82 @@ jobs:
               echo "Branch \`production\` not moved (${MOVED:-not reached}): the live site is unchanged."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Source maps to Sentry (web/README Sentry, README "Sentry"). Only when the environment `production` has the secret
+  # `SENTRY_AUTH_TOKEN` and the variables SENTRY_ORG / SENTRY_PROJECT: without them every step below is skipped and
+  # the job is green. A failure here never fails the release (`continue-on-error`): it only means readable stack
+  # traces are missing for this version.
+  #
+  # Cloudflare Pages builds the live site itself, so this job builds the same commit once more with
+  # `SENTRY_SOURCEMAPS=1` (web/nuxt.config.ts: hidden maps, no change to any chunk) and uploads only the maps,
+  # matched to the live files by release + URL (`~/_nuxt/<same file name>`). Nothing built here is deployed.
+  sentry-sourcemaps:
+    name: source maps to Sentry
+    needs: deploy
+    if: ${{ !cancelled() && needs.deploy.result == 'success' && needs.deploy.outputs.moved == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    # The environment gives this job its secrets (the token is stored there, like the deploy job's).
+    environment:
+      name: production
+      url: https://libellus.fabkho.dev
+    permissions:
+      contents: read
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+      SENTRY_URL: https://de.sentry.io # the EU region
+      SENTRY_CLI: 3.8.1 # pinned
+    steps:
+      - name: Is there a token?
+        id: enabled
+        run: |
+          if [ -n "$SENTRY_AUTH_TOKEN" ] && [ -n "$SENTRY_ORG" ] && [ -n "$SENTRY_PROJECT" ]; then
+            echo "on=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No SENTRY_AUTH_TOKEN / SENTRY_ORG / SENTRY_PROJECT: no source maps to upload."
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: steps.enabled.outputs.on == 'true'
+        with:
+          ref: ${{ needs.deploy.outputs.target }}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: steps.enabled.outputs.on == 'true'
+        with:
+          version: 12
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        if: steps.enabled.outputs.on == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      # The same inputs as Cloudflare's build (docs/HOSTING.md, table): with Regal, so the chunks are the live ones.
+      - name: Build with source maps
+        if: steps.enabled.outputs.on == 'true'
+        working-directory: web
+        env:
+          SENTRY_SOURCEMAPS: '1'
+          LIBELLUS_REGAL: '1'
+          GIGET_AUTH: ${{ github.token }}
+          NUXT_PUBLIC_REGAL_LIBRARY_SRC: https://books.fabkho.dev/v2/library.json
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm generate
+
+      # The release is the app's version (version.txt), the name the app reports (web/app/plugins/sentry.client.ts).
+      - name: Upload the maps
+        if: steps.enabled.outputs.on == 'true'
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < version.txt)"
+          cli() { npx --yes "@sentry/cli@$SENTRY_CLI" "$@"; }
+          cli releases new "$VERSION"
+          cli sourcemaps upload --release "$VERSION" --url-prefix '~/_nuxt' --ext js --ext map web/dist/_nuxt
+          cli releases finalize "$VERSION"
+          echo "Source maps of $VERSION uploaded to Sentry ($SENTRY_ORG/$SENTRY_PROJECT)."

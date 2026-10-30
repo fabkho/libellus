@@ -304,6 +304,7 @@ are off until set.
 | Web build env | `NUXT_PUBLIC_SUPABASE_ANON_KEY` | none (required) | Its anon (publishable) key. Public. |
 | Web build env | `NODE_VERSION` (Pages) | Pages' default | `24`. |
 | Web build env | `NUXT_PUBLIC_LINK_TEMPLATES` | empty | Book links for every member, JSON (above). Public. |
+| Web build env | `NUXT_PUBLIC_SENTRY_DSN` | empty (Sentry off) | Errors and performance to Sentry, EU region only (`*.ingest.de.sentry.io`; another host is ignored). Public. README, "Sentry". |
 | Web build env | `NUXT_PUBLIC_VAPID_PUBLIC_KEY` | empty (no button) | The VAPID public key of the import's Web Push ("Notify me when it's done"). Public; its private half is the `import-job` function's secret `VAPID_PRIVATE_KEY`, with `VAPID_PUBLIC_KEY` and `VAPID_SUBJECT` (`supabase/functions/import-job/README.md`, Web Push). |
 | Web build env | `LIBELLUS_REGAL` | unset (off) | `1` builds with the Regal layer: Your shelf for every member. |
 | Web build env | `GIGET_AUTH` or `REGAL_LAYER` | unset | Where Regal comes from: a GitHub token that can read fabkho/regal (CI: the run's own `github.token`), or a local checkout. With `LIBELLUS_REGAL=1`. |
