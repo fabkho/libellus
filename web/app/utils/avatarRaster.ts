@@ -1,5 +1,5 @@
 import type { AvatarRaster, AvatarType } from '~/data/avatar'
-import type { CropRect } from '~/utils/crop'
+import type { CropRect } from '#layers/ui/app/utils/imageCrop'
 
 /**
  * The browser's `AvatarRaster` (data/avatar.ts): the picked picture's square

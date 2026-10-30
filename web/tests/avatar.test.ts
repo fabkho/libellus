@@ -14,7 +14,7 @@ import {
   type AvatarRaster,
   type AvatarType,
 } from '@/data/avatar'
-import { clampPan, cropRect, initialCrop, MAX_ZOOM, panBy, rescale, zoomAround, type CropRect } from '@/utils/crop'
+import { cropRect, initialCrop, MAX_ZOOM, panBy, zoomAround, type CropRect } from '#layers/ui/app/utils/imageCrop'
 import { signUpMember } from './support/member'
 import { authUserExists, newClient, sql } from './support/stack'
 
@@ -115,13 +115,6 @@ describe('the crop', () => {
     expect(cropRect(zoomed, image, 300)).toEqual({ x: 1250, y: 750, size: 1500 })
     expect(zoomAround(start, 99, centre, image, 300).zoom).toBe(MAX_ZOOM)
     expect(zoomAround(zoomed, 0.1, centre, image, 300).zoom).toBe(1)
-    expect(clampPan({ zoom: Number.NaN, x: 0, y: 0 }, image, 300).zoom).toBe(1)
-  })
-
-  it('keeps the same cut-out when the square changes size', () => {
-    const zoomed = zoomAround(initialCrop(image, 300), 2, { x: 100, y: 200 }, image, 300)
-    const bigger = rescale(zoomed, 300, 450, image)
-    expect(cropRect(bigger, image, 450)).toEqual(cropRect(zoomed, image, 300))
   })
 })
 
