@@ -4839,7 +4839,7 @@
         ]
       },
       "photo.avatarLabel": {
-        "ac8a73189fe33c72": [
+        "efb9a65735327721": [
           "de"
         ]
       },
@@ -5208,6 +5208,11 @@
           "de"
         ]
       },
+      "profile.columnName": {
+        "dfb7cf6f944606a0": [
+          "de"
+        ]
+      },
       "profile.days.dayRead": {
         "ca9578357d77ec0d": [
           "de"
@@ -5430,6 +5435,11 @@
       },
       "profile.reviews.allCard": {
         "d7a8c446069a0585": [
+          "de"
+        ]
+      },
+      "profile.reviews.allCardLabel": {
+        "fa8f6af9198c32df": [
           "de"
         ]
       },
@@ -5995,6 +6005,11 @@
       },
       "reader.slider.page": {
         "0a30a815d67d7dd2": [
+          "de"
+        ]
+      },
+      "reader.slider.where": {
+        "5b21e27664ff8783": [
           "de"
         ]
       },
@@ -7259,12 +7274,12 @@
         ]
       },
       "shell.avatarLabel": {
-        "d696a35bdd1883da": [
+        "26a593da8d90d5fd": [
           "de"
         ]
       },
       "shell.avatarRequest": {
-        "34224c06d3174572": [
+        "218764e680771a20": [
           "de"
         ]
       },

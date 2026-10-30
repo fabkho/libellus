@@ -305,10 +305,11 @@ function onCapsuleClick(event: MouseEvent) {
         @click.capture="onCapsuleClick"
       >
         <UiRoundButton data-reader-morph="item" icon="back" :label="t('reader.back')" data-testid="reader.back" @click="$emit('back')" />
+        <!-- The name starts with the "10 % · 108 left" it draws, then says what the button does (WCAG 2.5.3). -->
         <button
           type="button"
           class="figures min-h-(--size-touch) px-sm text-caption text-ink-muted"
-          :aria-label="t('reader.slider.label')"
+          :aria-label="t('reader.slider.where', { where })"
           data-reader-morph="item"
           data-testid="reader.where"
           @click="openScrubber"

@@ -45,11 +45,15 @@ const open = ref(false)
           <button
             type="button"
             class="all flex flex-col items-start justify-end gap-xs rounded-lg bg-surface-raised p-inset text-left shadow-raised edge-faint active:opacity-80"
-            :aria-label="t('profile.reviews.allLabel', { count: count(reviews.length) })"
+            :aria-label="t('profile.reviews.allCardLabel', { count: count(reviews.length) })"
             data-testid="profile.reviews.allCard"
             @click="open = true"
           >
             <span class="text-figure tabular-nums">{{ count(reviews.length) }}</span>
+            <!-- A space between the count and the words, so the card's name can start with both (WCAG 2.5.3): drawn
+                 with nothing between them they read as one word ("7See all"). A white-space-only flex item is not
+                 rendered, so the column stays as it is. -->
+            {{ ' ' }}
             <span class="flex items-center gap-xs text-subhead text-ink-muted">{{ t('profile.reviews.allCard') }}<UiIcon name="chevron" :size="13" /></span>
           </button>
         </li>

@@ -73,6 +73,8 @@ watch(
       </span>
     </template>
     <template v-else>
+      <!-- The name is the column as it is drawn — the count over the bar, then the label under it ("8 · ’26") —
+           followed by the words the label abbreviates ("2026"), so it starts with what is shown (WCAG 2.5.3). -->
       <component
         :is="still ? 'div' : 'button'"
         v-for="column in columns"
@@ -81,7 +83,7 @@ watch(
         :role="still ? 'img' : undefined"
         class="column flex min-w-0 flex-1 flex-col items-center gap-xs rounded-sm py-xxs"
         :disabled="still ? undefined : !column.count"
-        :aria-label="t('profile.columnLabel', { label: column.name, count: count(column.count) })"
+        :aria-label="t('profile.columnName', { count: count(column.count), label: column.label, name: column.name })"
         :data-testid="`${testid}.${column.key}`"
         @click="!still && $emit('pick', column.key)"
       >
@@ -90,6 +92,10 @@ watch(
           <span class="figures text-meta" :class="[column.key === lit ? 'text-accent-ink' : 'text-ink-muted', { arrive: arriving }]">{{ column.count ? count(column.count) : '' }}</span>
           <span class="bar" :class="{ lit: column.key === lit, none: !column.count }" :style="{ '--h': column.count / top }" />
         </span>
+        <!-- A space between the count and the label: drawn with nothing between them (the bar holds no text) they
+             read as one word ("138" for one book in week 38), which the column's name cannot contain. A flex item
+             of white space alone is not rendered, so the column stays as it is. -->
+        {{ ' ' }}
         <span class="figures text-meta" :class="[column.key === lit ? 'text-accent-ink' : 'text-ink-faint', { arrive: arriving }]" aria-hidden="true">{{ column.label }}</span>
       </component>
     </template>

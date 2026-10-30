@@ -40,6 +40,9 @@ const rows = computed(() => props.figures?.genres.slice(0, props.limit) ?? [])
           @click="$emit('pick', row.genre)"
         >
           <span class="truncate text-body" aria-hidden="true">{{ t(`genre.${row.genre}`) }}</span>
+          <!-- A space between the genre and its percent: drawn with no text between them (the bar in the middle
+               holds none), they read as one word ("Science fiction67"), which the row's name cannot contain. -->
+          {{ ' ' }}
           <span class="relative h-(--stroke-focus) rounded-pill bg-hairline-strong" aria-hidden="true">
             <span class="fill absolute inset-y-0 left-0 rounded-pill bg-accent" :style="{ '--w': row.share }" />
           </span>
