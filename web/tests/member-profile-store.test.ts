@@ -23,21 +23,47 @@ const followed: MemberProfile = {
 
 let answer: MemberProfile | null = followed
 let bothAnswer: { data: unknown[] | null; error: string | null } = { data: [], error: null }
+/** While set, `both_read` does not answer until it is released: the moments between her profile and her answer. */
+let bothGate: Promise<void> | null = null
+/** While set, her profile does not answer until it is released. */
+let answerGate: Promise<void> | null = null
 const bothCalls: (number | null)[] = []
 let recordAnswer: { data: unknown; error: unknown; status: number } = { data: null, error: null, status: 200 }
 vi.mock('~/stores/session', () => ({ useSessionStore: () => reactive({ member: { id: 'ada' } }) }))
 vi.mock('~/stores/social', () => ({
   useSocialStore: () => ({
-    profile: async () => ({ data: answer, error: null }),
+    profile: async () => {
+      if (answerGate) await answerGate
+      return { data: answer, error: null }
+    },
     want: async () => ({ data: null, error: null }),
     bothRead: async (_id: string, year: number | null) => {
       bothCalls.push(year)
+      if (bothGate) await bothGate
       return bothAnswer
     },
   }),
 }))
 
+/** The device's storage, in memory: each test starts with an empty one unless it made its own first. */
+const device = () => {
+  const data = new Map<string, string>()
+  vi.stubGlobal('window', {
+    localStorage: {
+      get length() {
+        return data.size
+      },
+      key: (i: number) => [...data.keys()][i] ?? null,
+      getItem: (k: string) => data.get(k) ?? null,
+      setItem: (k: string, v: string) => void data.set(k, v),
+      removeItem: (k: string) => void data.delete(k),
+    },
+  })
+  return data
+}
+
 async function store() {
+  if (typeof window === 'undefined') device()
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('computed', computed)
   vi.stubGlobal('watch', watch)
@@ -51,8 +77,11 @@ async function store() {
 }
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   bothAnswer = { data: [], error: null }
+  bothGate = null
+  answerGate = null
   bothCalls.length = 0
   recordAnswer = { data: null, error: null, status: 200 }
 })
@@ -129,7 +158,21 @@ describe('You both read (social v2a)', () => {
     bothAnswer = { data: null, error: 'unknown' }
     const members = await store()
     await members.load('ida')
-    expect(members.viewOf('ida')).toMatchObject({ bothRead: {}, error: null, recordError: null, loaded: true })
+    expect(members.viewOf('ida')).toMatchObject({ bothRead: {}, error: null, recordError: null, loaded: true, bothReadLoading: false })
+  })
+
+  it('is pending from the render the profile arrives in until her answer is in, so the page holds the section\'s box', async () => {
+    bothAnswer = { data: [read], error: null }
+    const members = await store()
+    expect(members.viewOf('ida').bothReadLoading).toBe(false)
+    const loading = members.load('ida')
+    await Promise.resolve()
+    await loading
+    expect(members.viewOf('ida')).toMatchObject({ bothRead: { all: [read] }, bothReadLoading: false })
+    // A copy already held is not asked for again as pending: the section stays as it is while it is read afresh.
+    const again = members.load('ida')
+    expect(members.viewOf('ida').bothReadLoading).toBe(false)
+    await again
   })
 
   it('is cleared once her finished section is off, or her profile closes (privacy review L4)', async () => {
@@ -151,11 +194,135 @@ describe('You both read (social v2a)', () => {
     answer = followed
   })
 
-  it('is not asked for a profile that hides her finished Books', async () => {
+  it('uses nothing of the answer asked for with her profile when the profile hides her finished Books', async () => {
+    bothAnswer = { data: [{ book: { id: 'b' } }], error: null }
     answer = { ...followed, sections: { ...OPEN, finished: false } }
     const members = await store()
     await members.load('ida')
     answer = followed
+    expect(members.viewOf('ida')).toMatchObject({ bothRead: {}, bothReadLoading: false })
+    // And it is not kept for a later warm to find.
+    expect(await members.prefetchBothRead('ida')).not.toBeNull()
+    expect(bothCalls).toEqual([null, null])
+  })
+})
+
+describe('You both read, asked for ahead and kept on the device', () => {
+  const read = { book: { id: 'b', title: 'B', authors: [], year: null, coverUrl: null, coverThumbhash: null, coverColors: null, manual: false, unverified: false }, mine: { rating: 12, endedOn: null }, hers: { rating: 16, endedOn: null } }
+  const settle = async () => {
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+  }
+
+  it('asks once for a friend however many ask before and while her page opens, and for a few minutes after', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    bothAnswer = { data: [read], error: null }
+    const members = await store()
+    const [a, b] = await Promise.all([members.prefetchBothRead('ida'), members.prefetchBothRead('ida')])
+    expect(a).toEqual([read])
+    expect(b).toEqual([read])
+    await members.load('ida')
+    expect(bothCalls).toEqual([null])
+    expect(members.viewOf('ida').bothRead).toEqual({ all: [read] })
+    // A tap, or another read of her page, a minute later: still her answer, no second request.
+    vi.setSystemTime(Date.now() + 60_000)
+    await members.prefetchBothRead('ida')
+    await members.load('ida')
+    expect(bothCalls).toEqual([null])
+    // Past its few minutes it is asked for again.
+    vi.setSystemTime(Date.now() + 4 * 60_000)
+    await members.load('ida')
+    expect(bothCalls).toEqual([null, null])
+  })
+
+  it('starts her answer with her profile, not after it', async () => {
+    bothAnswer = { data: [read], error: null }
+    let release!: () => void
+    const held = new Promise<void>((resolve) => (release = resolve))
+    const members = await store()
+    answerGate = held
+    const loading = members.load('ida')
+    await settle()
+    expect(bothCalls, 'both_read asked while the profile is still on its way').toEqual([null])
+    release()
+    await loading
+    expect(bothCalls).toEqual([null])
+    expect(members.viewOf('ida').bothRead).toEqual({ all: [read] })
+  })
+
+  it('does not keep a failed answer: the next ask tries again', async () => {
+    bothAnswer = { data: null, error: 'offline' }
+    const members = await store()
+    expect(await members.prefetchBothRead('ida')).toBeNull()
+    await settle()
+    bothAnswer = { data: [read], error: null }
+    expect(await members.prefetchBothRead('ida')).toEqual([read])
+    expect(bothCalls).toEqual([null, null])
+  })
+
+  it('shows nothing of what was asked for ahead until her profile says it is hers to show', async () => {
+    bothAnswer = { data: [read], error: null }
+    const members = await store()
+    await members.prefetchBothRead('ida')
+    expect(members.viewOf('ida').bothRead).toEqual({})
+    answer = { ...followed, sections: { ...OPEN, finished: false } }
+    await members.load('ida')
+    expect(members.viewOf('ida').bothRead).toEqual({})
+    answer = followed
+  })
+
+  it('does not ask while offline', async () => {
+    const members = await store()
+    vi.stubGlobal('isOnline', () => false)
+    expect(await members.prefetchBothRead('ida')).toBeNull()
     expect(bothCalls).toEqual([])
+  })
+
+  it('draws a return visit from the device in the same render as her profile, and keeps the very same answer when the fresh one is equal', async () => {
+    device()
+    bothAnswer = { data: [read], error: null }
+    await (await store()).load('ida')
+    // Another visit (a new store: the page opened afresh), her answer slow to come.
+    let release!: () => void
+    bothGate = new Promise<void>((resolve) => (release = resolve))
+    const again = await store()
+    const loading = again.load('ida')
+    await settle()
+    expect(again.viewOf('ida')).toMatchObject({ bothRead: { all: [read] }, bothReadLoading: false, loaded: true })
+    const shown = again.viewOf('ida').bothRead.all
+    release()
+    await loading
+    expect(again.viewOf('ida').bothRead.all).toBe(shown)
+    // Changed Books replace it (her answer asked for again once the last has lapsed).
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(Date.now() + 4 * 60_000)
+    bothGate = null
+    bothAnswer = { data: [read, { ...read, book: { ...read.book, id: 'c' } }], error: null }
+    await again.load('ida')
+    expect(again.viewOf('ida').bothRead.all).toHaveLength(2)
+  })
+
+  it('forgets her copy when her section goes off, when a refusal comes, and when the relation ends', async () => {
+    const data = device()
+    bothAnswer = { data: [read], error: null }
+    const members = await store()
+    await members.load('ida')
+    expect(data.size).toBe(1)
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(Date.now() + 4 * 60_000)
+    bothAnswer = { data: null, error: 'unknown' }
+    await members.load('ida')
+    expect(data.size).toBe(0)
+    expect(members.viewOf('ida').bothRead.all).toEqual([])
+    vi.setSystemTime(Date.now() + 8 * 60_000)
+    bothAnswer = { data: [read], error: null }
+    await members.load('ida')
+    expect(data.size).toBe(1)
+    members.relationChanged('ida', { kind: 'unfollow' })
+    expect(data.size).toBe(0)
+    await members.load('ida')
+    answer = { ...followed, sections: { ...OPEN, finished: false } }
+    await members.load('ida')
+    expect(data.size).toBe(0)
+    answer = followed
   })
 })

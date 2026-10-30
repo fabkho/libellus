@@ -178,7 +178,17 @@ Not causes (measured): size derivation (185/185 identical), rotating or expiring
 | **C. One URL everywhere, scaled by CSS** (the stored `600x900bb` / `-L` in every row) | yes for the sizes, by construction; causes 1, 2, 4 untouched | a row's Apple cover 11 KB → ~137 KB (12×); the Library's first screen ~300 KB → ~3.8 MB; a decoded 600 × 900 image is ~2 MB of memory, 50 rows ~100 MB on an iPhone; the sign-in wall's LCP regression (docs/covers.md) | fine | no: the same consistency is had at today's bytes (D) |
 | **D. One stored cover per Book, every size derived from it, falling back only to that picture; every place shows what the Book says now; a row shows the cover of the Book it opens; the server never swaps a cover once a Book has one** | yes, for all five causes | no storage, no service; one more request only after a failed size | unchanged (linked, never copied) | **built** |
 
-What I would **not** do: copy or proxy third-party covers (terms, cost, and it fixes the wrong thing);
+*Update, 2026-10-29 (owner's decision, #417): an edge cache after all, for speed rather than consistency.*
+Third-party covers are now cached at our own edge (`web/functions/cover.js`, `/cover`, Cloudflare's Cache API,
+one year; docs/HOSTING.md, "The cover cache"): the hosts' own sizes, no storage of ours, no paid Cloudflare
+feature, two hosts on an allowlist. The owner accepts the terms risk, as for the Goodreads covers: the app is
+private (him and a few friends), not a public service, and draws no benefit from the covers
+(docs/THIRD-PARTY.md, "Cover cache"). `books.cover_url` still stores the source address, and a cover that does
+not come through the cache falls back to the host's own address. Taken down with
+`NUXT_PUBLIC_COVER_PROXY=off` and by deleting `web/functions/cover.js`. Options A and B above stay what they
+were (a copy in our storage; Image Transformations), and are still not wanted.
+
+What I would **not** do: copy third-party covers into our storage (terms, cost, and it fixes the wrong thing; the edge cache above stores nothing of ours);
 serve the 600 px original in every row; keep a per-device "first cover shown" registry (it would hide data
 drift instead of fixing it); add Open Library's by-ISBN cover as a fallback everywhere (it was the one
 place a surface showed a picture the Book does not have); a blurhash (the thumbhash exists, and comes

@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.26.0](https://github.com/fabkho/libellus/compare/v1.25.2...v1.26.0) (2026-10-29)
+
+
+### Features
+
+* **prototype:** chart by month or by week with a navigator — the animated capsule (WP-08) ([#345](https://github.com/fabkho/libellus/issues/345)) ([357667d](https://github.com/fabkho/libellus/commit/357667d5e5753c85180f796162db9ce045362c3a))
+* **web:** "You both read" slideshow: poster, list, Regal reel, shared figures (W4) ([#412](https://github.com/fabkho/libellus/issues/412)) ([4056f12](https://github.com/fabkho/libellus/commit/4056f1227cceda3c8529a9437f7ccd8aff95da8e))
+
+
+### Performance
+
+* **covers:** sized cover helper and an own edge cache at /cover ([#417](https://github.com/fabkho/libellus/issues/417)) ([d252117](https://github.com/fabkho/libellus/commit/d252117dca779a5b8586783b884bb7f31d3bff3f))
+
 ## [1.25.2](https://github.com/fabkho/libellus/compare/v1.25.1...v1.25.2) (2026-10-28)
 
 

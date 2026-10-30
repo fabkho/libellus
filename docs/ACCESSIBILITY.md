@@ -153,6 +153,17 @@ shimmer stops, the tab bar stays.
   details" because BetterReads' `BookSheet` fills its `#detail` slot) and stars are read as text.
   What is left of Regal's DOM: a Book taken out is a card moved to `<body>`, outside any landmark
   (axe `region`, moderate), and the row's cover-flip is Regal's own.
+- **You both read** (a member's profile; `components/friends/BothRead*.vue`). The slideshow moves by itself, so
+  it has a pause control (WCAG 2.2.2): Regal's round button (our words `member.bothReadPause` / `member.bothReadPlay`),
+  present while the 3D plays and in Manual (then it reads Play), with Regal's own keyboard hint (`member.bothReadKeys`); a swipe, a tap or a key also
+  stops it (Manual), and with Reduce Motion nothing moves at all (the poster). The canvas is not the way in for a
+  screen reader: Regal's own list is off (`accessible-list` false) and the section's own list stands in the page
+  instead, always, hidden from the eye until "Show as a list" (`aria-expanded`): one link for each Book, read out
+  as "Title by Author. Lena: 4.50. You: 5.00." (the ratings only where shown). The poster's neighbours are buttons
+  ("2 of 12: Title"), its front Book a link to the Book's page; the pills are images named by the rating sentence
+  and their avatars decorative; a polite live line says "3 of 12" when the front Book changes. A Book taken out
+  is Regal's dialog with Libellus' content (Show back, Put back, Open book; Escape and the system Back close it,
+  Regal owns that Back entry). The figures line is plain text; its link opens the widest disagreement's Book.
 - **The reading page** (#171) is read by strangers, signed out, often in a messenger's in-app
   browser: one `h1` (her name, or "This page isn't here"), each section a `section` named by its
   `h2`, every cover row a list of links (a cover with its title beside it is decorative; a shelf's

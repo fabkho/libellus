@@ -37,6 +37,8 @@ const { label } = useFeedDay()
 useHead({ title: () => `${t('feed.title')} · ${t('app.name')}` })
 
 onMounted(() => void feed.refresh())
+// Her "You both read" asked for as her row comes into view (composables/useFriendWarm.ts).
+useFriendLinksInView()
 // Kept alive as a tab: coming back asks again (the first activation is the mount's, above).
 let shown = false
 onActivated(() => {

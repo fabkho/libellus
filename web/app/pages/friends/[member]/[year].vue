@@ -130,6 +130,9 @@ function back() {
         <div class="relative flex flex-col px-screen pt-lg" :aria-busy="loading || undefined">
           <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" @unrated="pickUnrated" />
 
+          <!-- Directly under the figures' grid, above the months, as on her profile. -->
+          <FriendsBothRead class="pt-xl" :items="bothRead" :name="name" />
+
           <ProfileMonthBooks class="pt-xl" foreign :months="months" :loading="loading" :gone-by="monthsGoneBy" />
 
           <UiReveal :show="loading || figures.favourites.length > 0">
@@ -147,8 +150,6 @@ function back() {
           <UiReveal :show="loading || figures.authors.length > 0">
             <ProfileAuthors class="pt-xl" foreign :name="view.profile?.member.name?.trim() || undefined" :figures="loading ? null : figures" :limit="3" @pick="pickAuthor" />
           </UiReveal>
-
-          <FriendsBothRead class="pt-xl" :items="bothRead" :name="name" />
 
           <div class="pt-xl">
             <nav class="flex min-h-(--size-button-sm) items-center justify-between" :aria-label="t('profile.year.other')">

@@ -182,6 +182,8 @@ function watchEnd() {
   observer.observe(end.value)
 }
 onMounted(watchEnd)
+// Her "You both read" asked for as her row comes into view (composables/useFriendWarm.ts).
+useFriendLinksInView()
 onBeforeUnmount(() => observer?.disconnect())
 // A page of rows that still leaves the mark in view must ask for the next one: observe it afresh. So must
 // the other list being shown and the connection coming back: `loadMorePeople` does nothing offline, and an

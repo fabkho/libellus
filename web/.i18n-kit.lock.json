@@ -4108,8 +4108,83 @@
           "de"
         ]
       },
+      "member.bothReadAgree": {
+        "be0f2eaee94b6b09": [
+          "de"
+        ]
+      },
+      "member.bothReadDisagree": {
+        "ad8511a6bdd6e750": [
+          "de"
+        ]
+      },
+      "member.bothReadEyebrow": {
+        "866d4c0d4102555d": [
+          "de"
+        ]
+      },
+      "member.bothReadFirst": {
+        "170435f4118a3f4a": [
+          "de"
+        ]
+      },
       "member.bothReadHers": {
         "01bfd4477c1f0931": [
+          "de"
+        ]
+      },
+      "member.bothReadItem": {
+        "5c6fe75353cbcb90": [
+          "de"
+        ]
+      },
+      "member.bothReadKeys": {
+        "fe282faf1693b5c1": [
+          "de"
+        ]
+      },
+      "member.bothReadLabel": {
+        "d2a60b2a57cba3a0": [
+          "de"
+        ]
+      },
+      "member.bothReadList": {
+        "aadb759187f671e8": [
+          "de"
+        ]
+      },
+      "member.bothReadListHide": {
+        "8463171659a31889": [
+          "de"
+        ]
+      },
+      "member.bothReadMine": {
+        "5dd9a35219b015d1": [
+          "de"
+        ]
+      },
+      "member.bothReadOpen": {
+        "224926adb23fd142": [
+          "de"
+        ]
+      },
+      "member.bothReadPause": {
+        "2e5fb84062396fe3": [
+          "de"
+        ]
+      },
+      "member.bothReadPlay": {
+        "3bb11a6c36f8fca9": [
+          "de"
+        ]
+      },
+      "member.bothReadSlide": {
+        "03e1f091f4a7d472": [
+          "de"
+        ]
+      },
+      "member.bothReadYou": {
+        "08b041935798fbf6": [
           "de"
         ]
       },

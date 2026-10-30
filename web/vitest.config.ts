@@ -19,7 +19,7 @@ export default defineConfig({
       // The feed, likes, library, friendsTab and session stores read and write the device's copy only `import.meta.client` (the app is an
       // SPA, so always in the browser); in Node that flag is undefined. Only these stores, so no other test changes.
       name: 'libellus-stores-are-client',
-      transform: (code, id) => (/\/app\/stores\/(feed|likes|library|friendsTab|session)\.ts$/.test(id) ? code.replaceAll('import.meta.client', 'true') : null),
+      transform: (code, id) => (/\/app\/stores\/(feed|likes|library|friendsTab|session|memberProfile)\.ts$/.test(id) ? code.replaceAll('import.meta.client', 'true') : null),
     },
   ],
   resolve: {

@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { themeBootScript, type ThemeColors } from './app/utils/theme'
 import { releaseNotes } from './app/utils/changelog'
 import { uiLayer, uiLayerHolds } from './ui.config'
-import { isRegalModule, regalAssets, regalContainment, regalLayer, REGAL_ENABLED, REGAL_LIBRARY_SRC } from './regal.config'
+import { isRegalModule, isRegalPreloadModule, isRegalShelfModule, regalAssets, regalContainment, regalLayer, REGAL_ENABLED, REGAL_LIBRARY_SRC } from './regal.config'
 import { REALTIME_CLIENT, REALTIME_STUB } from './realtime.config'
 
 // The browser chrome, the installed app's status bar and its splash take their
@@ -180,11 +180,15 @@ export default defineNuxtConfig({
               // only imported while a job of hers is live, left out of the precache. The app's own client is built with the stub.
               { name: 'realtime', test: /node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?@supabase\/(?:realtime-js|phoenix)\//, includeDependenciesRecursively: false },
               // Only what the test names: Regal's modules use the app's Vue and Nuxt, which stay where they are.
-              { name: 'regal', test: isRegalModule, includeDependenciesRecursively: false },
+              // Two chunks (regal.config.ts, `isRegalShelfModule`): the shelf's own (`regal`) first, then the rest, which a
+              // friend's reel needs alone (`regal-reel`).
+              { name: 'regal-preload', test: isRegalPreloadModule, includeDependenciesRecursively: false },
+              { name: 'regal', test: isRegalShelfModule, includeDependenciesRecursively: false },
+              { name: 'regal-reel', test: isRegalModule, includeDependenciesRecursively: false },
             ],
           },
           chunkFileNames: (chunk: { name: string; facadeModuleId?: string | null }) =>
-            chunk.name === 'zxing' || chunk.name === 'regal' || chunk.name === 'ebook-reader' || chunk.name === 'realtime'
+            chunk.name === 'zxing' || chunk.name === 'regal' || chunk.name === 'regal-reel' || chunk.name === 'regal-preload' || chunk.name === 'ebook-reader' || chunk.name === 'realtime'
               ? `_nuxt/${chunk.name}.[hash].js`
               : isReaderEntry(chunk.facadeModuleId)
                 ? '_nuxt/ebook-reader-entry.[hash].js'
@@ -260,6 +264,9 @@ export default defineNuxtConfig({
       // The VAPID public key of the import's Web Push ("Notify me when it's done", NUXT_PUBLIC_VAPID_PUBLIC_KEY; the private half is
       // the `import-job` function's secret, supabase/functions/import-job/README.md). Empty: the import page does not offer it.
       vapidPublicKey: '',
+      // Covers through our own cache (`/cover`, functions/cover.js; composables/useCoverProxy.ts): 'on' / 'off'
+      // (NUXT_PUBLIC_COVER_PROXY). Unset: on in a Cloudflare Pages build (CF_PAGES, where the Function is), else off.
+      coverProxy: process.env.NUXT_PUBLIC_COVER_PROXY ?? (process.env.CF_PAGES ? 'on' : 'off'),
     },
   },
 
@@ -396,7 +403,9 @@ export default defineNuxtConfig({
       // The barcode decoder (a script chunk and a 0.9 MB module) is not part of the app shell: it is
       // fetched when the scanner first opens, and kept by the cache below.
       // Nor is Regal (the owner's shelf, #23): its chunk and styles, its fonts and its model are
-      // fetched when the shelf first opens, and kept by the caches below.
+      // fetched when the shelf first opens, and kept by the caches below. The reel chunk of a friend's "You both read"
+      // (`regal-reel`, ~285 KB br) is left out of the precache on purpose too, and kept warm across releases only for
+      // members who used it (plugins/regal-reel-warm.client.ts): a precache entry is every member's download at every update.
       // Nor is the ebook reader (components/reader, foliate-js, the sanitizer: the `reader` chunk and its
       // styles): the app fetches it ahead for a member who has an ebook (data/reader/prefetch.ts) and the
       // cache below keeps it, so a book opened before opens offline too.
@@ -436,6 +445,20 @@ export default defineNuxtConfig({
             // Bounded: the oldest covers go first, and everything goes before
             // the browser runs out of room for the rest of the app.
             expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 180, purgeOnQuotaError: true },
+          },
+        },
+        {
+          // Covers through our own cache (`/cover`, functions/cover.js, a Pages Function): same origin, so a real
+          // answer (a status 200, readable by a texture's CORS read too), never an opaque one. Cache first: the
+          // address names the cover and its width, and the answer never changes. Only a 200 is kept (a 502 is
+          // `no-store`, and a Pages deployment without the Function answers the app shell, HTML, which is not an
+          // image). Fewer than the host's own: a cover is one entry here at most per width.
+          urlPattern: ({ request, url }) => url.pathname === '/cover' && url.origin === self.location.origin && request.destination !== 'document',
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'libellus-cover-cache',
+            cacheableResponse: { statuses: [200], headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
+            expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 180, purgeOnQuotaError: true },
           },
         },
         {
