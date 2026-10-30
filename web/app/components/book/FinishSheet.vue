@@ -12,6 +12,8 @@ import { pageCountOf } from '~/data/progress'
 import { readSummaryOf } from '~/data/progressDays'
 import { useReadingStore } from '~/stores/reading'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const { t, n } = useI18n()
 const { relativeDay } = useDays()
 const reading = useReadingStore()
@@ -66,7 +68,7 @@ const summary = computed(() => {
       <UiBookLine
         :title="entry.book.title"
         :authors="entry.book.authors"
-        :src="coverSrc(entry.book.coverUrl, 'xs')"
+        v-bind="coverImage(entry.book, 'xs', coverHosts)"
         :thumbhash="entry.book.coverThumbhash"
         :colors="entry.book.coverColors"
       />

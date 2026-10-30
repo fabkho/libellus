@@ -11,6 +11,8 @@
 import { readingPagePath } from '~/data/readingPage'
 import { useReadingPageStore } from '~/stores/readingPage'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 definePageMeta({ layout: 'reading', screen: 'bookCard' })
 
 const { t } = useI18n()
@@ -94,7 +96,7 @@ const status = computed(() => {
             glow
             :title="book.title"
             :authors="book.authors"
-            :src="coverSrc(book.coverUrl, 'xl')"
+            v-bind="coverImage(book, 'xl', coverHosts)"
             :thumbhash="book.coverThumbhash"
             :colors="book.coverColors"
             size="xl"

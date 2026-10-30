@@ -23,6 +23,8 @@ import type { LibraryEntry } from '~/data/library'
 import { isCoverUrl, OWN_EDITION_LANGUAGES, type OwnEditionField } from '~/data/ownEdition'
 import { useOwnEditionStore } from '~/stores/ownEdition'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const emit = defineEmits<{ changed: [entry: LibraryEntry] }>()
 
 const { t, te, locale } = useI18n()
@@ -181,7 +183,7 @@ const errorText = computed(() => {
           decorative
           :title="found.title"
           :authors="found.authors"
-          :src="coverSrc(found.coverUrl, 'md')"
+          v-bind="coverImage(found, 'md', coverHosts)"
           :identity="found.isbn13 ?? found.title"
           :thumbhash="found.coverThumbhash"
           :colors="found.coverColors"

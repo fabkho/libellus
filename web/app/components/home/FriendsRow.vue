@@ -19,6 +19,8 @@ import type { FriendsRow } from '~/utils/friendsView'
 import type { SocialBook } from '~/data/socialShapes'
 import { useBookStore } from '~/stores/book'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const props = defineProps<{ friend: FriendsRow; dayLabel: string; eager?: boolean }>()
 defineEmits<{ open: [] }>()
 
@@ -90,7 +92,7 @@ const PressLink = resolveComponent('UiPressLink')
               decorative
               :title="shown(book).title"
               :authors="shown(book).authors"
-              :src="coverSrc(shown(book).coverUrl, 'sm')"
+              v-bind="coverImage(shown(book), 'sm', coverHosts)"
               :thumbhash="shown(book).coverThumbhash"
               :colors="shown(book).coverColors"
               size="xs"

@@ -2,6 +2,7 @@ import type { CoverColors } from '../data/books'
 import { appleArtwork } from '../data/apple'
 import { openLibraryCoverAt } from '../data/openLibrary'
 import { coverIsCacheable, coverProxyUrl, unproxied } from './coverSize'
+import { OWN_COVER_PATH } from './ownCoverPath'
 
 /**
  * Where a cover's image comes from: the sources' sizes (Apple's CDN, Open Library), the chain of sizes a cover tries
@@ -116,11 +117,17 @@ export function coverChain(url: string | null | undefined, size: CoverSize): str
   return unproxied(url!) !== url ? [...new Set([coverSrc(url, size, true)!, ...direct])] : direct
 }
 
+/** One of our own copies (`/c/<key>/<width>`, utils/coverRef.ts, utils/ownCoverPath.ts), whatever the origin. */
+const OWN_COVER_ARTWORK = /^(?:https?:\/\/[^/]+)?\/c\/([0-9a-f]{32})\/\d{1,4}$/
+
 /**
- * Which artwork a cover URL is of, whatever size it is asked at: Apple's box and
- * OpenLibrary's S/M/L are not part of it. Two URLs of one artwork are one image
- * to the member, at another size; two of another are another image.
+ * Which artwork a cover URL is of, whatever size it is asked at: Apple's box, OpenLibrary's S/M/L and our own copy's
+ * width are not part of it. Two URLs of one artwork are one image to the member, at another size; two of another are
+ * another image. One address of ours (`/c/<key>/<width>`) is the artwork of its key, so switching a cover from one
+ * stored width to another (a `srcset` picking 240 for the retina screen in view) does not start it over.
  */
 export function artworkOf(url: string): string {
+  const own = OWN_COVER_ARTWORK.exec(unproxied(url))
+  if (own) return `${OWN_COVER_PATH}/${own[1]}`
   return openLibraryCoverAt(appleArtwork(unproxied(url), 1, 1), 'M')
 }

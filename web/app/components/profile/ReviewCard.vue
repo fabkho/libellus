@@ -11,6 +11,8 @@
 import type { ProfileReview } from '~/utils/profileReviews'
 import { useBookStore } from '~/stores/book'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const props = withDefaults(defineProps<{ item: ProfileReview; eager?: boolean; testid?: string }>(), { testid: 'profile.reviews.card' })
 defineEmits<{ more: [] }>()
 
@@ -45,7 +47,7 @@ onBeforeUnmount(() => observer?.disconnect())
         decorative
         :title="book.title"
         :authors="book.authors"
-        :src="coverSrc(book.coverUrl, 'md')"
+        v-bind="coverImage(book, 'md', coverHosts)"
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
         size="md"

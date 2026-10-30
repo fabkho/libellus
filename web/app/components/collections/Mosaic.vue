@@ -6,6 +6,8 @@
 import type { Book } from '~/data/books'
 import { MOSAIC_SIZE } from '~/data/collections'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 defineProps<{ covers: readonly Book[]; eager?: boolean }>()
 </script>
 
@@ -17,7 +19,7 @@ defineProps<{ covers: readonly Book[]; eager?: boolean }>()
         v-if="covers[i - 1]"
         :title="covers[i - 1]!.title"
         :authors="covers[i - 1]!.authors"
-        :src="coverSrc(covers[i - 1]!.coverUrl, 'sm')"
+        v-bind="coverImage(covers[i - 1]!, 'sm', coverHosts)"
         :thumbhash="covers[i - 1]!.coverThumbhash"
         :colors="covers[i - 1]!.coverColors"
         size="sm"

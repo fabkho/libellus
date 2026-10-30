@@ -1,5 +1,6 @@
 import { bookColour } from '../utils/bookColour'
-import { coverFor, type CoverFor } from '../utils/coverSize'
+import { coverAt, type CoverHosts } from '../utils/coverRef'
+import type { CoverFor } from '../utils/coverSize'
 import { shownBook } from '../utils/unverifiedBook'
 import { LIBRARY_FILE_VERSION, type LibraryBook, type RegalLibraryFile } from './export/regalLibraryFile'
 import type { BothRead } from './socialShapes'
@@ -41,8 +42,11 @@ export type BothReadReelOptions = {
   limit?: number
   /** `generatedAt`: default now. */
   generatedAt?: string
-  /** How the covers are asked for: the device's pixel ratio, and our own cache's address (`proxy`, with the page's `origin`). */
-  covers?: Pick<CoverFor, 'dpr' | 'proxy' | 'origin'>
+  /**
+   * How the covers are asked for (`coverAt`, utils/coverRef.ts): the device's pixel ratio, our stored copies (`own`) and our own
+   * cache's address (`proxy`, with the page's `origin`, as Regal takes absolute image addresses).
+   */
+  covers?: Pick<CoverFor, 'dpr' | 'proxy' | 'origin'> & CoverHosts
 }
 
 /**
@@ -69,8 +73,9 @@ export function reelItems(items: readonly BothRead[], limit: number = BOTH_READ_
 /** One Book of the document, from nothing but the Book `both_read` gives (and `outside` for an unverified one). */
 export function reelBook(book: BothRead['book'], outside: string, covers: BothReadReelOptions['covers'] = {}): LibraryBook {
   const shown = shownBook(book, outside)
-  // The cover at the size the reel draws it (`REEL_BOOK_HEIGHT`), one address for every use: no separate pile copy.
-  const front = coverFor(shown.coverUrl, { height: REEL_BOOK_HEIGHT, ...covers })
+  // The cover at the size the reel draws it (`REEL_BOOK_HEIGHT`), one address for every use: no separate pile copy. Our stored
+  // copy where the Book has one (`coverAt`), else `/cover` or the source, exactly as the rows show it.
+  const front = coverAt(shown, { height: REEL_BOOK_HEIGHT, ...covers })
   return {
     id: book.id,
     title: shown.title,

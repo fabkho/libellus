@@ -10,6 +10,8 @@
 import type { MemberFinished } from '~/data/social'
 import { likeable } from '~/utils/likes'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const props = defineProps<{ item: MemberFinished; name?: string; memberId?: string }>()
 
 const { t } = useI18n()
@@ -24,7 +26,7 @@ const { formatDay } = useDays()
         decorative
         :title="shown.title"
         :authors="shown.authors"
-        :src="coverSrc(shown.coverUrl, 'sm')"
+        v-bind="coverImage(shown, 'sm', coverHosts)"
         :thumbhash="shown.coverThumbhash"
         :colors="shown.coverColors"
         size="sm"

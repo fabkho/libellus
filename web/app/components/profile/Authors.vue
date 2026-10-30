@@ -6,6 +6,8 @@
 // loading wave (docs/MOTION.md, Loading).
 import type { YearFigures } from '~/data/stats'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 // `foreign`: another member's profile, so the title names her (`name`) instead of saying "you".
 const props = withDefaults(defineProps<{ figures: YearFigures | null; limit?: number; foreign?: boolean; name?: string }>(), { limit: 4, foreign: false, name: undefined })
 defineEmits<{ pick: [name: string] }>()
@@ -43,7 +45,7 @@ const authorsTitle = computed(() => {
               :style="{ '--i': i }"
               :title="book.title"
               :authors="book.authors"
-              :src="coverSrc(book.coverUrl, 'sm')"
+              v-bind="coverImage(book, 'sm', coverHosts)"
               :thumbhash="book.coverThumbhash"
               :colors="book.coverColors"
               size="sm"

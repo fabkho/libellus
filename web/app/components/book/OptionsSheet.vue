@@ -31,6 +31,8 @@ import { useHistoryStore } from '~/stores/history'
 import { useSeriesStore } from '~/stores/series'
 import { useLibraryStore } from '~/stores/library'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 // `shown` is the Book the page shows; `page` its address, which a look at another edition belongs to.
 const props = defineProps<{ entry: LibraryEntry | null; shown: Book | BookSnapshot; page: string }>()
 const emit = defineEmits<{ removed: [] }>()
@@ -149,7 +151,7 @@ async function unlink() {
         v-if="book"
         :title="book.title"
         :authors="book.authors"
-        :src="coverSrc(book.coverUrl, 'xs')"
+        v-bind="coverImage(book, 'xs', coverHosts)"
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
       />

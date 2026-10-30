@@ -12,6 +12,8 @@
 import { ABANDON_REASON_MAX_LENGTH, REVIEW_MAX_LENGTH } from '~/data/library'
 import { useHistoryStore } from '~/stores/history'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const { t } = useI18n()
 const { relativeDay } = useDays()
 const history = useHistoryStore()
@@ -77,7 +79,7 @@ watch(
       <UiBookLine
         :title="entry.book.title"
         :authors="entry.book.authors"
-        :src="coverSrc(entry.book.coverUrl, 'xs')"
+        v-bind="coverImage(entry.book, 'xs', coverHosts)"
         :thumbhash="entry.book.coverThumbhash"
         :colors="entry.book.coverColors"
       />

@@ -27,6 +27,8 @@ import { useSearchStore, type SearchHit } from '~/stores/search'
 import { SEARCH_DEBOUNCE_MS } from '~/data/search'
 import { durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const { t } = useI18n()
 const search = useSearchStore()
 const library = useLibraryStore()
@@ -158,7 +160,7 @@ onBeforeUnmount(() => clearTimeout(arrivingTimer))
 watch(
   () => [...search.own, ...search.others],
   (hits) => {
-    for (const hit of hits.slice(0, FIRST_COVERS)) preloadImage(coverSrc(hit.book.coverUrl, 'sm'))
+    for (const hit of hits.slice(0, FIRST_COVERS)) preloadImage(coverImage(hit.book, 'sm', coverHosts).src)
   },
 )
 </script>

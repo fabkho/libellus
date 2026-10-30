@@ -11,6 +11,8 @@ import { fileAuthors, fileTitle } from '~/data/ebooks/match'
 import type { Book, BookSnapshot } from '~/data/books'
 import { useEbooksStore } from '~/stores/ebooks'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const { t, locale } = useI18n()
 const ebooks = useEbooksStore()
 // Switching writes; linking to hers does not (it stays on the device).
@@ -89,7 +91,7 @@ const action = computed(() => {
             decorative
             :title="row.book.title"
             :authors="row.book.authors"
-            :src="coverSrc(row.book.coverUrl, 'sm')"
+            v-bind="coverImage(row.book, 'sm', coverHosts)"
             :thumbhash="row.book.coverThumbhash"
             :colors="row.book.coverColors"
             size="sm"

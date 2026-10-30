@@ -8,6 +8,8 @@
 // (docs/MOTION.md, Loading).
 import type { YearFigures } from '~/data/stats'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 // `base`: where a year opens, the Profile's own by default (another member's profile: `/friends/<member>`).
 const props = withDefaults(defineProps<{ years: readonly YearFigures[] | null; base?: string }>(), { base: '/profile' })
 const { t } = useI18n()
@@ -53,7 +55,7 @@ const arriving = useArrival(() => !props.years)
             v-if="y.favourite"
             :title="y.favourite.book.title"
             :authors="y.favourite.book.authors"
-            :src="coverSrc(y.favourite.book.coverUrl, 'md')"
+            v-bind="coverImage(y.favourite.book, 'md', coverHosts)"
             :thumbhash="y.favourite.book.coverThumbhash"
             :colors="y.favourite.book.coverColors"
             size="md"

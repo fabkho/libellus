@@ -8,6 +8,8 @@ import { fileAuthors, fileTitle } from '~/data/ebooks/match'
 import type { LibraryEntry } from '~/data/library'
 import { useEbooksStore } from '~/stores/ebooks'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const { t } = useI18n()
 const ebooks = useEbooksStore()
 
@@ -48,7 +50,7 @@ function pick(entry: LibraryEntry) {
               decorative
               :title="entry.book.title"
               :authors="entry.book.authors"
-              :src="coverSrc(entry.book.coverUrl, 'sm')"
+              v-bind="coverImage(entry.book, 'sm', coverHosts)"
               :thumbhash="entry.book.coverThumbhash"
               :colors="entry.book.coverColors"
               size="sm"

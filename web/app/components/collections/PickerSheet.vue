@@ -8,6 +8,8 @@
 import { NAME_MAX } from '~/data/collections'
 import { useCollectionsStore } from '~/stores/collections'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const { t } = useI18n()
 const collections = useCollectionsStore()
 // Putting a Book from the Library on a Collection, or taking it off, works
@@ -77,7 +79,7 @@ async function startCreating() {
       <UiBookLine
         :title="picking.book.title"
         :authors="picking.book.authors"
-        :src="coverSrc(picking.book.coverUrl, 'xs')"
+        v-bind="coverImage(picking.book, 'xs', coverHosts)"
         :thumbhash="picking.book.coverThumbhash"
         :colors="picking.book.coverColors"
       />
@@ -102,7 +104,7 @@ async function startCreating() {
             v-if="collection.covers[0]"
             :title="collection.covers[0].title"
             :authors="collection.covers[0].authors"
-            :src="coverSrc(collection.covers[0].coverUrl, 'xs')"
+            v-bind="coverImage(collection.covers[0], 'xs', coverHosts)"
             :thumbhash="collection.covers[0].coverThumbhash"
             :colors="collection.covers[0].coverColors"
             size="xs"

@@ -13,6 +13,8 @@ import type { LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useCollectionsStore } from '~/stores/collections'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const props = defineProps<{ collectionId: string; entries: readonly LibraryEntry[]; sorted?: boolean }>()
 
 const { t } = useI18n()
@@ -346,7 +348,7 @@ async function onKeydown(event: KeyboardEvent, index: number) {
             decorative
             :title="entry.book.title"
             :authors="entry.book.authors"
-            :src="coverSrc(entry.book.coverUrl, 'xs')"
+            v-bind="coverImage(entry.book, 'xs', coverHosts)"
             :thumbhash="entry.book.coverThumbhash"
             :colors="entry.book.coverColors"
             size="xs"

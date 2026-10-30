@@ -16,6 +16,8 @@
 import { useBookStore } from '~/stores/book'
 import type { SearchHit } from '~/stores/search'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const props = defineProps<{ hit: SearchHit; eager?: boolean; priority?: boolean; linking?: boolean; target?: string | null; onTarget?: boolean; adding?: boolean }>()
 defineEmits<{ add: []; pick: [] }>()
 
@@ -58,7 +60,7 @@ const addLabel = computed(() => {
         decorative
         :title="hit.book.title"
         :authors="hit.book.authors"
-        :src="coverSrc(hit.book.coverUrl, 'sm')"
+        v-bind="coverImage(hit.book, 'sm', coverHosts)"
         :thumbhash="hit.book.coverThumbhash"
         :colors="hit.book.coverColors"
         size="sm"

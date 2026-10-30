@@ -19,6 +19,8 @@ import { formatOf, type Book, type BookFormat, type BookSnapshot } from '~/data/
 import { editionFacts } from '~/data/editions'
 import type { LibraryErrorCode } from '~/data/library'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 export type EditionRow = {
   book: Book | BookSnapshot
   /** The edition the host has now: marked, and the one picked until another is. */
@@ -124,7 +126,7 @@ function says(row: EditionRow): string {
             decorative
             :title="row.book.title"
             :authors="row.book.authors"
-            :src="coverSrc(row.book.coverUrl, 'sm')"
+            v-bind="coverImage(row.book, 'sm', coverHosts)"
             :identity="row.book.isbn13 ?? ('id' in row.book ? row.book.id : row.book.title)"
             :thumbhash="row.book.coverThumbhash"
             :colors="row.book.coverColors"

@@ -6,6 +6,8 @@
 // under the row, not inside the link (a button does not belong in one); the rest of the row is as it was.
 import { bookCardPath, type PublicBook, type PublicReadingPage } from '~/data/readingPage'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 defineProps<{ items: NonNullable<PublicReadingPage['finished']>; token: string; name?: string | null }>()
 
 const { t } = useI18n()
@@ -22,7 +24,7 @@ const { formatDay } = useDays()
           decorative
           :title="shown(item.book).title"
           :authors="shown(item.book).authors"
-          :src="coverSrc(shown(item.book).coverUrl, 'sm')"
+          v-bind="coverImage(shown(item.book), 'sm', coverHosts)"
           :thumbhash="shown(item.book).coverThumbhash"
           :colors="shown(item.book).coverColors"
           size="sm"

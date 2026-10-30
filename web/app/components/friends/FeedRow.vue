@@ -23,6 +23,8 @@ import { useBookStore } from '~/stores/book'
 import { likeable } from '~/utils/likes'
 import { carriesWantToRead } from '~/utils/wantToRead'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const props = defineProps<{
   entry: FeedEntry
   testid: string
@@ -85,7 +87,7 @@ async function unfold() {
         decorative
         :title="book.title"
         :authors="book.authors"
-        :src="coverSrc(book.coverUrl, 'sm')"
+        v-bind="coverImage(book, 'sm', coverHosts)"
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
         size="sm"
@@ -97,7 +99,7 @@ async function unfold() {
         decorative
         :title="book.title"
         :authors="book.authors"
-        :src="coverSrc(book.coverUrl, 'sm')"
+        v-bind="coverImage(book, 'sm', coverHosts)"
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
         size="sm"

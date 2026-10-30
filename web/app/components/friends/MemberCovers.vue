@@ -5,6 +5,8 @@
 // Each cover carries its Book's title as its name.
 import type { SocialBook } from '~/data/social'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const props = withDefaults(defineProps<{ books: readonly SocialBook[]; size?: 'sm' | 'md'; testid: string }>(), { size: 'md' })
 const { t } = useI18n()
 const shown = computed(() => props.books.map((b) => shownBook(b, t('book.outsideCatalogue'))))
@@ -18,7 +20,7 @@ const width = computed(() => (props.size === 'md' ? 'w-(--size-cover-md)' : 'w-(
         <UiCover
           :title="book.title"
           :authors="book.authors"
-          :src="coverSrc(book.coverUrl, props.size)"
+          v-bind="coverImage(book, props.size, coverHosts)"
           :thumbhash="book.coverThumbhash"
           :colors="book.coverColors"
           :size="props.size"

@@ -9,6 +9,8 @@
 // (or null, a Book that opens nothing) in place of the reading page's card under `token`.
 import { bookCardPath, type PublicBook } from '~/data/readingPage'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 type RowBook = Pick<PublicBook, 'id' | 'title' | 'authors' | 'coverUrl' | 'coverThumbhash' | 'coverColors'> & { unverified?: boolean }
 
 const props = withDefaults(
@@ -40,7 +42,7 @@ const size = computed(() => (props.compact ? 'md' : 'lg'))
           :decorative="!compact"
           :title="shown(item.book).title"
           :authors="shown(item.book).authors"
-          :src="coverSrc(shown(item.book).coverUrl, size)"
+          v-bind="coverImage(shown(item.book), size, coverHosts)"
           :thumbhash="shown(item.book).coverThumbhash"
           :colors="shown(item.book).coverColors"
           :size="size"

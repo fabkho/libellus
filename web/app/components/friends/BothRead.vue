@@ -31,6 +31,8 @@ import { reelWanted, saveDataOn, webglAvailable } from '~/utils/bothReadReel'
 import { preloadReelCovers } from '~/utils/regalReelPreload'
 import { prefersReducedMotion } from '#layers/ui/app/utils/motion'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const props = defineProps<{ items: readonly BothRead[]; name: string; member?: MemberCard | null; reel?: boolean; pending?: boolean }>()
 const { t } = useI18n()
 // A Book the check could not confirm is the one string, on the Placeholder, and opens nothing (utils/unverifiedBook.ts).
@@ -76,7 +78,6 @@ const picture = computed(() => Boolean(props.reel) && built && !chunkFailed.valu
 // object, held here until the Books really change (a new object is another Library: the reel starts over), so the covers
 // asked for below and the reel the card mounts are about the same Library.
 const covers = useReelCovers()
-const coverProxy = useCoverProxy()
 const library = shallowRef(bothReadReelDocument(slides.value, { outside: t('book.outsideCatalogue'), covers }))
 watch(
   () => [slides.value, t('book.outsideCatalogue')] as const,
@@ -196,7 +197,7 @@ const listOpen = ref(false)
           <UiCover
             :title="shown(item.book).title"
             :authors="shown(item.book).authors"
-            :src="coverSrc(shown(item.book).coverUrl, 'md', coverProxy)"
+            v-bind="coverImage(shown(item.book), 'md', coverHosts)"
             :thumbhash="shown(item.book).coverThumbhash"
             :colors="shown(item.book).coverColors"
             size="md"

@@ -144,7 +144,7 @@ function memberAUsedTheDevice() {
   databases.databases.set(LOCAL_DATABASE, stores)
   databases.databases.set('workbox-expiration', new Map([['cache-entries', new Map([['covers', 'https://covers.openlibrary.org/ada-private-search.jpg']])]]))
 
-  const caches = cacheStorage(['libellus-covers', 'libellus-cover-cache', 'libellus-portraits', 'libellus-shared-ebooks', 'libellus-reader', 'libellus-barcode-decoder'])
+  const caches = cacheStorage(['libellus-covers', 'libellus-cover-cache', 'libellus-own-covers', 'libellus-portraits', 'libellus-shared-ebooks', 'libellus-reader', 'libellus-barcode-decoder'])
   let removed: string[] = []
   const files = { getDirectory: async () => ({ removeEntry: async (name: string) => void removed.push(name) }) as unknown as FileSystemDirectoryHandle }
   const env: DeviceEnvironment = { storage: local, indexedDB: databases, caches, files }
@@ -194,7 +194,7 @@ describe('signing out (F10)', () => {
   })
 
   it('also empties the browsed covers on their own (clearLocalFiles)', async () => {
-    const caches = cacheStorage(['libellus-covers', 'libellus-cover-cache', 'libellus-portraits', 'libellus-reader'])
+    const caches = cacheStorage(['libellus-covers', 'libellus-cover-cache', 'libellus-own-covers', 'libellus-portraits', 'libellus-reader'])
     await clearLocalFiles({ caches })
     expect([...caches.held]).toEqual(['libellus-reader'])
   })

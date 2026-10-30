@@ -7,6 +7,8 @@
 // the row's tap), `<testid>Member` (her avatar and name).
 import type { FeedRow } from '~/data/feed'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 type Batch = Extract<FeedRow, { type: 'batch' }>
 
 const props = defineProps<{ batch: Batch; testid: string; dayLabel?: string | null; eager?: boolean }>()
@@ -36,7 +38,7 @@ const what = computed(() => t(`feed.${feedBatchKey(props.batch.kind)}`, { count:
           decorative
           :title="entry.book.title"
           :authors="entry.book.authors"
-          :src="coverSrc(entry.book.coverUrl, 'sm')"
+          v-bind="coverImage(entry.book, 'sm', coverHosts)"
           :thumbhash="entry.book.coverThumbhash"
           :colors="entry.book.coverColors"
           size="sm"

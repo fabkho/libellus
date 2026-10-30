@@ -12,6 +12,8 @@ import type { StatsRead } from '~/data/stats'
 import { useBookStore } from '~/stores/book'
 import { bookPathOf } from '~/utils/memberProfile'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 defineOptions({ inheritAttrs: false })
 const props = withDefaults(defineProps<{ reads: readonly StatsRead[] | null; foreign?: boolean; name?: string; testid?: string }>(), { foreign: false, name: undefined, testid: 'yearInReview.favourite' })
 const { t } = useI18n()
@@ -42,7 +44,7 @@ const to = (book: { id: string }) => {
       class="relative"
       :title="read.book.title"
       :authors="read.book.authors"
-      :src="coverSrc(read.book.coverUrl, 'lg')"
+      v-bind="coverImage(read.book, 'lg', coverHosts)"
       :thumbhash="read.book.coverThumbhash"
       :colors="read.book.coverColors"
       size="lg"

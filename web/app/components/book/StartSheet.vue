@@ -7,6 +7,8 @@
 // read, "Start again" after an abandoned one, with the words of that action.
 import { useReadingStore } from '~/stores/reading'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const TITLE_KEYS = { start: 'start.title', again: 'start.titleAgain', restart: 'start.titleRestart' } as const
 const ACTION_KEYS = { start: 'start.action', again: 'start.actionAgain', restart: 'start.actionRestart' } as const
 
@@ -46,7 +48,7 @@ const label = computed(() =>
       <UiBookLine
         :title="entry.book.title"
         :authors="entry.book.authors"
-        :src="coverSrc(entry.book.coverUrl, 'xs')"
+        v-bind="coverImage(entry.book, 'xs', coverHosts)"
         :thumbhash="entry.book.coverThumbhash"
         :colors="entry.book.coverColors"
       />

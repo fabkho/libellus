@@ -106,4 +106,20 @@ describe('what is one artwork', () => {
       artworkOf('https://covers.openlibrary.org/b/isbn/9780593983768-M.jpg?default=false'),
     )
   })
+
+  // Our own stored copies (docs/plans/owned-covers.md §1, §5): one key's widths are one artwork, so a cover switching
+  // from the 120 it showed to the 240 its screen needs (`srcset`) is another size of the image in view, never another
+  // picture; another key is another artwork.
+  it('is the key of one of our copies, whatever the width or the origin', () => {
+    const key = 'c0ffeec0ffeec0ffeec0ffeec0ffeec0'
+    const other = '0123456789abcdef0123456789abcdef'
+    expect(artworkOf(`/c/${key}/120`)).toBe(artworkOf(`/c/${key}/240`))
+    expect(artworkOf(`https://libellus.example/c/${key}/600`)).toBe(artworkOf(`/c/${key}/120`))
+    expect(artworkOf(`/c/${key}/120`)).not.toBe(artworkOf(`/c/${other}/120`))
+    // And a cover that keeps the image in view across the two widths: one loaded at 120, then asked for the 240.
+    const at = (width: number) => input(`/c/${key}/${width}`)
+    const next = coverInputChanged(coverShown(startCover(at(120)), `/c/${key}/120`), at(240), artworkOf)
+    expect(next.shown).toBe(`/c/${key}/120`)
+    expect(coverNow(next)).toBe(`/c/${key}/240`)
+  })
 })

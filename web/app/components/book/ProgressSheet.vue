@@ -15,6 +15,8 @@ import { PAGE_CEILING, type ProgressMode } from '~/data/progress'
 import { useReadingStore } from '~/stores/reading'
 import { stepTick } from '#layers/ui/app/utils/haptics'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const { t, n } = useI18n()
 const reading = useReadingStore()
 // Saving works offline too: it waits to sync (#93).
@@ -96,7 +98,7 @@ watch(
       <UiBookLine
         :title="entry.book.title"
         :authors="entry.book.authors"
-        :src="coverSrc(entry.book.coverUrl, 'xs')"
+        v-bind="coverImage(entry.book, 'xs', coverHosts)"
         :thumbhash="entry.book.coverThumbhash"
         :colors="entry.book.coverColors"
       />

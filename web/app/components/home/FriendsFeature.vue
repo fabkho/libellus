@@ -15,6 +15,8 @@ import type { FriendsCard } from '~/utils/friendsView'
 import { useBookStore } from '~/stores/book'
 import { likeable } from '~/utils/likes'
 
+const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+
 const props = defineProps<{ card: FriendsCard; eager?: boolean }>()
 // Her "You both read" asked for as her name comes into view (composables/useFriendWarm.ts).
 useFriendLinksInView()
@@ -76,10 +78,10 @@ async function unfold() {
       data-testid="home.friendsFeature.cover"
       @press="books.prefetch(book.id)"
     >
-      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="onFallback" />
+      <UiCover decorative :title="book.title" :authors="book.authors" v-bind="coverImage(book, 'lg', coverHosts)" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="onFallback" />
     </UiPressLink>
     <span v-else class="relative shrink-0">
-      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="onFallback" />
+      <UiCover decorative :title="book.title" :authors="book.authors" v-bind="coverImage(book, 'lg', coverHosts)" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="onFallback" />
     </span>
 
     <div class="relative flex min-w-0 flex-1 flex-col items-start gap-xs">
