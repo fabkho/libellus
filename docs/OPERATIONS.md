@@ -1,8 +1,9 @@
 # Operations
 
 Looking after the running app: how a release reaches production, who the owner is and what only the
-owner may read, what to read where when something went wrong on a member's device, and the nightly
-backup of the database.
+owner may read, what to read where when something went wrong on a member's device, the nightly
+backup of the database, and the covers it stores for members' Books (what they cost, how to turn them
+off, how to rotate what protects them).
 
 ## Releases
 
@@ -375,8 +376,8 @@ the same: a cron that stops leaves no red run behind, only a gap in Actions → 
 
 | In it | Not in it |
 | --- | --- |
-| `public`: every Library, Book, Reading session, Collection, reader place and highlight (the member's own selected words, #131), invite code, Goodreads cache, … (schema and data) | Storage objects: the members' profile photos in the bucket `avatars` (#156; Covers are links, not files). See below |
-| `private`: the error log, the shelf's publish state, the error log's salt | Vault secrets (`github_dispatch_token`): encrypted with the project's own key, useless anywhere else |
+| `public`: every Library, Book, Reading session, Collection, reader place and highlight (the member's own selected words, #131), invite code, Goodreads cache, … (schema and data) | Storage objects: the members' profile photos in the bucket `avatars` (#156) and the stored covers in the bucket `libellus-covers` (*Own covers*). See below |
+| `private`: the error log, the shelf's publish state, the error log's salt, the cover queue and the record of the stored covers | Vault secrets (`github_dispatch_token`, `cover_store_token`): encrypted with the project's own key, useless anywhere else |
 | `auth.users` and `auth.identities`: the members and their sign-in records, with their ids, so every row that names a member still does | Sign-in sessions, refresh tokens, one-time codes, MFA challenges, the auth audit log: they belong to the project they came from (members sign in again) |
 | The rest of `auth`'s data (MFA factors, SSO, OAuth clients; all empty here) and its schema, restored only by `--mode full` | Auth settings, SMTP, email templates (dashboard; docs/SETUP.md) |
 | `supabase_migrations.schema_migrations`: which migrations the data belongs to | Edge functions and their secrets (`supabase/functions/`, `supabase secrets set`) |
@@ -394,6 +395,14 @@ keep the photos of a project you are leaving, download the bucket first with the
 old project (`supabase storage cp -r ss:///avatars ./avatars --linked --experimental`) and copy the
 folders back into the new project's `avatars` bucket the same way; the paths stay the same, so the
 restored accounts find their photos again.
+
+**The stored covers are not in the backup either**, though the database's side of them is (`private.cover_objects`, one
+row per stored image with its key, widths and size). A restore from a backup older than some objects leaves those objects
+in the bucket with no row naming them: GC works from the rows, so it never deletes them (a small leak at ~50 KB a cover,
+not a fault), and their Books, restored with no `cover_key`, are queued and stored again under the same key (the key is an
+HMAC of the image), which only puts the same bytes there once more. If the bucket itself is lost, delete the keys and the
+rows and let the job store everything again from the hosts: `update public.books set cover_key = null, cover_widths =
+null; delete from private.cover_objects;` ([Own covers](#own-covers)).
 
 The reader's highlights (`public.reader_highlights`, #131) are in the nightly backup like the rest of
 `public`, and so are their words: a member's own selected sentences (at most 1000 characters each), kept
@@ -549,6 +558,89 @@ Two small tables keep the import and its upstreams from running into their limit
 - **`edge_pace`**: one row per upstream (`openlibrary`, `dnb`): `next_at` is when the next request may go out. A
   `next_at` far in the future (an upstream's `Retry-After`, capped at a minute in the function) clears itself; to clear it by
   hand: `update edge_pace set next_at = now();`.
+
+## Own covers
+
+The stored copies of the covers of Books in members' Libraries: what they are, why, and the terms in docs/HOSTING.md,
+"Own covers" and docs/THIRD-PARTY.md, *Own covers*; the design in docs/covers.md, "Own covers". Two halves (storing, and
+deleting 30 days after no Library holds a Book), two off switches, and a serving half that needs nothing here:
+
+- **Storing** is the database plus one edge function. pg_cron `cover-store-tick` runs `private.cover_store_tick()` every
+  minute (nothing while `private.cover_store_settings.enabled` is false): it queues every Book in a Library whose
+  `cover_key` is null and kicks `supabase/functions/cover-store` with `{"action":"run"}` through pg_net, its bearer the
+  Vault secret `cover_store_token`, its address `private.cover_store_settings.function_url`. The function leases up to 8
+  Books, fetches the images from their host and PUTs them into the bucket (supabase/functions/cover-store/README.md).
+- **Deleting** is pg_cron `cover-store-gc`, Sunday 02:30, `private.cover_gc_weekly()`: `cover_gc_mark()` marks every
+  stored image no Library holds any more (and clears a mark it finds used); when an object has been orphaned for **30
+  days** the job kicks the function with `{"action":"gc"}`, and `cover_gc_claim()` hands it the keys, which it deletes for
+  every width. `cover_gc_done` then removes the rows; a failed delete keeps its row for the next week. Nothing is deleted
+  while the feature is off.
+- **Serving** is the Pages Function `/c/<key>/<width>` and needs no maintenance here; it reads the bucket through the
+  Pages binding `COVERS` (docs/HOSTING.md).
+
+**Is it working?** In the SQL editor, as the owner:
+
+```sql
+select public.owner_cover_status();
+```
+
+It answers counts only, and `not_owner` to anyone else (as the error log does, [The owner](#the-owner)): `enabled`,
+`with_cover` (Books in a Library that have a cover), `stored` (of those, the ones whose copy is ours), `queued`, `leased`,
+`throttled` (waiting out an Open Library 403 or a GC lease), `failed` with `failed_by_reason`, `gone` (the host has no
+cover any more) and `unsupported` (a host or address not stored in v1), `unqueued` (storable but not in the queue yet:
+the next tick takes them), `not_storable` (Books on other hosts, never stored in v1), `objects`, `bytes`, `orphaned`,
+`deleting`, and `warnings`: `stored_bytes_over_5gb` and `failed_over_5_percent`. A backfill is done when `queued` is 0.
+Each run writes one line to the function's log (Supabase dashboard → Edge Functions → cover-store → Logs): `stored`,
+`failed`, `throttled`, `deferred`, `gone`, `unsupported`, `stale`, `ms`, `decode_ms` — with Book ids and error kinds,
+never titles, ISBNs or cover addresses.
+
+**The two off switches**, and what each stops:
+
+- **Storing:** `update private.cover_store_settings set enabled = false;`. The tick, the kick and the GC job then do
+  nothing (a hand-posted `gc` deletes nothing either) and no cover is stored or deleted; the copies that are there stay
+  served. `enabled = true` is the backfill: the reconcile queues everything missing and the job works through it.
+- **The app:** unset `NUXT_PUBLIC_OWN_COVERS` in the Pages project (production) and retry the production deployment; every
+  screen draws today's addresses again (`/cover`, then the source). Unset is the default in every build, so this switch
+  is only ever a step back.
+
+**Re-run what failed:** `update private.cover_store_queue set state = 'queued', due_at = now() where state = 'failed';`
+(failed rows are also retried once a week on their own). `throttled` rows wait ten minutes by themselves. `gone` and
+`unsupported` are terminal until the Book's cover changes — to retry one after a host came back, the same statement with
+`state = 'gone'`. To start a run without waiting for the tick: `select public.cover_store_kick(true);`, or POST
+`{"action":"run"}` to the function's address with `Authorization: Bearer <COVER_STORE_TOKEN>`; it answers what it did
+(`stored`, `failed`, `throttled`, `deferred`, `gone`, `unsupported`, `stale`, `ms`) or `503 not_configured` with the names
+of the secrets that are missing.
+
+**One host off** (for example Goodreads): `supabase secrets set COVER_STORE_HOSTS=apple,openlibrary,regal` (unset means
+all four), then clear the keys of that host's Books, `update public.books set cover_key = null, cover_widths = null where
+cover_url like 'https://i.gr-assets.com/%';`. Their objects become orphans at the next weekly mark and GC deletes them
+after the grace; every one of those Books shows `/cover` and then its source meanwhile. Never delete objects by hand: the
+bucket is written and deleted by the two runs, which know what a Library still holds.
+
+**Rotate the R2 API token** (a leak, or a token being replaced): R2 → Manage API tokens → create a new one with Object
+Read & Write **on `libellus-covers` only**, `supabase secrets set R2_COVERS_ACCOUNT_ID=… R2_COVERS_ACCESS_KEY_ID=…
+R2_COVERS_SECRET_ACCESS_KEY=…`, check that a run still stores (`owner_cover_status` above, or one `run`), then delete the
+old token. The bucket and the database do not change.
+
+**Rotate `COVER_KEY_SECRET`: irreversible, and the most invasive step here.** It is the HMAC key of every object name, so
+every key changes, every Book is stored again and every device downloads each cover once more:
+
+1. `supabase secrets set COVER_KEY_SECRET=$(openssl rand -hex 32)` — at least 32 characters; a shorter one makes the
+   function answer `503 not_configured` rather than store under a guessable key. Keep the value in the password manager.
+2. `select private.cover_store_rekey();` — every Book loses `cover_key` and `cover_widths` (it answers how many). The
+   reconcile queues them all and the job stores each cover under its new key; storage roughly doubles for a month.
+3. `private.cover_objects` keeps the old rows, so the old objects become orphans: the weekly mark takes them and GC
+   deletes them after the 30-day grace. **Once that has run the old keys cannot be recovered**; a cover comes back only
+   by storing it again from its host (which the next reconcile does as soon as a Library holds the Book).
+
+**GC deletes for good.** A deleted object returns only when the store fetches the cover again from its host, and the grace
+is 30 days, so a Book removed and added back within a month finds its copy (a mark is cleared by the weekly mark and by a
+trigger the moment a Library entry is added). The whole sequence, both races with a store included, is exercised by
+`supabase/functions/cover-store/gc_race_check.sh` on the local stack.
+
+**Backups.** The nightly backup holds the database's side of the covers (the settings row, the queue, the record of the
+stored images) and **not the bucket's objects** ([Backups](#backups) above: what a restore leaves behind, and how to
+store everything again if the bucket is lost).
 
 ## Supabase advisors: what we accept and why
 

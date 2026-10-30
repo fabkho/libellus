@@ -86,7 +86,7 @@ does with your data.
 | --- | --- |
 | [Supabase](https://supabase.com), region `eu-central-1` | The database (Postgres), sign-in (Auth), profile photos (Storage) and the edge functions: everything you save, your email address, the waitlist and the error log |
 | [Cloudflare Pages](https://pages.cloudflare.com) | Serves the app's static files and the link previews of a shared reading page; Cloudflare Web Analytics counts page loads from there |
-| [Cloudflare R2](https://developers.cloudflare.com/r2/) | A private bucket with the nightly database backup, encrypted before it is uploaded with a key only the owner holds; each file is deleted after 35 days (docs/OPERATIONS.md, "Backups") |
+| [Cloudflare R2](https://developers.cloudflare.com/r2/) | Two private buckets. One holds the nightly database backup, encrypted before it is uploaded with a key only the owner holds; each file is deleted after 35 days (docs/OPERATIONS.md, "Backups"). The other holds the cover images of books in members' Libraries, and nothing else: images only, under names taken from the image itself with a secret, so no name can be traced to a cover or a member, served only through the app's own address, and deleted 30 days after no member's Library holds the book (docs/THIRD-PARTY.md, "Own covers") |
 | Resend (an email provider, over SMTP) | Sends the six-digit sign-in codes and the waitlist invites, so it sees the address it mails |
 | [GitHub](https://github.com) | The code and its CI. None of your data: the backup job encrypts the dump while it streams and keeps no artifact or log of it |
 

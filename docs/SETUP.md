@@ -168,6 +168,48 @@ supabase functions deploy reading-page-og                         # verify_jwt =
 No secrets: the runtime provides `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Without it the preview
 falls back to the Book's cover or the app icon.
 
+**Stored covers** (off until the owner turns it on). The cover of a Book in a member's Library is copied into the private R2
+bucket `libellus-covers` and served from the app's own address `/c/…`, so it no longer waits on Apple, Open Library or
+Goodreads (docs/HOSTING.md, "Own covers"; the design in docs/covers.md, "Own covers"). Everything is optional: with none of
+it the app draws the hosts' covers through `/cover`, as before.
+
+```sh
+npx wrangler r2 bucket create libellus-covers --location weur    # once: private, no public access, no lifecycle rule
+supabase secrets set R2_COVERS_ACCOUNT_ID=<account id> \
+  R2_COVERS_ACCESS_KEY_ID=<key id> R2_COVERS_SECRET_ACCESS_KEY=<secret>
+supabase secrets set COVER_KEY_SECRET=$(openssl rand -hex 32) \
+  COVER_STORE_TOKEN=$(openssl rand -hex 32)
+supabase functions deploy cover-store
+```
+
+```sql
+-- The Vault twin of COVER_STORE_TOKEN, which the tick sends: the same value, and nothing else.
+select vault.create_secret('<the COVER_STORE_TOKEN value>', 'cover_store_token');
+-- Where the function is: null = off, nothing is sent.
+update private.cover_store_settings
+   set function_url = 'https://<ref>.supabase.co/functions/v1/cover-store';
+-- The backfill: the reconcile queues every Book in a Library and the job stores it.
+update private.cover_store_settings set enabled = true;
+```
+
+Four things to know:
+
+- **The R2 token** is an R2 API token with **Object Read & Write on `libellus-covers` only** (no account-wide token): its
+  three values are the three `R2_COVERS_*` secrets. It is the only credential that writes the bucket.
+- **`COVER_KEY_SECRET`** is the HMAC key of the stored names, **at least 32 characters**; a shorter one makes the function
+  answer `503 not_configured` rather than store under a guessable key. Keep it in the password manager: changing it later
+  re-stores every cover, and the old objects go (docs/OPERATIONS.md, "Own covers" — irreversible).
+- **`COVER_STORE_TOKEN`** and the Vault secret `cover_store_token` must be the same value, and the Pages project needs the
+  R2 binding `COVERS` → `libellus-covers` for `/c/…` (docs/HOSTING.md, "Own covers"). `COVER_STORE_HOSTS` is optional:
+  `apple,openlibrary,goodreads,regal`, all by default; one line drops a host.
+- **`[functions.cover-store] verify_jwt = false`** belongs in `supabase/config.toml` before the release (the function
+  checks its own bearer, and the database's token is no JWT): the entry is the owner's to add, like the release's other
+  production steps (the plan, docs/plans/owned-covers.md). Without it Supabase's gateway refuses every call and nothing is
+  stored. In the dashboard the same switch is *Edge Functions → cover-store → Settings → Enforce JWT verification* off.
+  Then set `NUXT_PUBLIC_OWN_COVERS=on` in the Pages project if the app should draw the copies, and retry the production
+  deployment. From there, docs/OPERATIONS.md, "Own covers", is the runbook: status, the off switches, a failed run, a
+  token, the key.
+
 **Invites from the waitlist.** A reading page's visitors can leave their address; the owner reads them in
 Profile → Account → Waitlist ([OPERATIONS.md, Waitlist](OPERATIONS.md#waitlist)). Its **Invite** button asks the `waitlist-invite`
 edge function, which gets the entry a one-use code, mails it over SMTP and marks the entry invited
@@ -276,9 +318,14 @@ are off until set.
 | Function secrets | `LIBELLUS_SITE_URL` | unset | `goodreads-rating`: the instance's address, named in its User-Agent; `waitlist-invite`: the sign-up link in the invite mail. Optional. |
 | Function secrets | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_FROM_NAME` | unset (no mail: Invite shows the code only) | `waitlist-invite`: the SMTP server that mails waitlist invites. Port 465 or the provider's alternative; 25 and 587 are blocked on hosted Supabase. `SMTP_FROM_NAME` optional. |
 | Function secrets | `REGAL_EXPORT_TOKEN`, `REGAL_OWNER_EMAIL`, `REGAL_OWNER_NAME`, `REGAL_*` | unset | `regal-export`, owner only ([OWNER.md](OWNER.md)). |
+| Function secrets | `R2_COVERS_ACCOUNT_ID`, `R2_COVERS_ACCESS_KEY_ID`, `R2_COVERS_SECRET_ACCESS_KEY` | unset (nothing is stored) | `cover-store`: the R2 API token that writes the covers bucket, **Object Read & Write on `libellus-covers` only**. Optional (Optional pieces, Stored covers; [OPERATIONS.md, Own covers](OPERATIONS.md#own-covers)). |
+| Function secrets | `COVER_KEY_SECRET` | unset (nothing is stored) | `cover-store`: the HMAC key of the stored covers' names, **at least 32 characters** (`openssl rand -hex 32`). Keep it: changing it later is the irreversible re-key ([OPERATIONS.md, Own covers](OPERATIONS.md#own-covers)). |
+| Function secrets | `COVER_STORE_TOKEN` | unset (nobody is let in) | `cover-store`: the bearer the database sends; its Vault twin is `cover_store_token`. `COVER_STORE_HOSTS` is optional (`apple,openlibrary,goodreads,regal`, all by default). |
 | Database | `private.instance_owner.owner_id` | empty (nobody) | Who may read the client error log through `owner_client_errors` ([OPERATIONS.md, The owner](OPERATIONS.md#the-owner)). Set once by SQL. |
 | Database | `private.shelf_publish.owner_id`, Vault `github_dispatch_token` | empty | The shelf's publish trigger, owner only; does nothing while empty. |
+| Database | `private.cover_store_settings.function_url`, `enabled`, Vault `cover_store_token` | null, `false` (off), unset | `cover-store`: where the function is, whether covers are stored at all, and the token the tick sends ([OPERATIONS.md, Own covers](OPERATIONS.md#own-covers)). Optional. |
 | Pages project | Custom domain, Web Analytics | none, off | Step 4; Optional pieces. |
+| Pages project | R2 binding `COVERS`, `NUXT_PUBLIC_OWN_COVERS` | none, unset (off) | The binding `COVERS` → `libellus-covers` that `/c/…` reads ([HOSTING.md, Own covers](HOSTING.md#own-covers)); the build variable turns the app's own covers on. Optional. |
 | GitHub Actions secrets | `SUPABASE_DB_URL`, `R2_BACKUP_ACCESS_KEY_ID`, `R2_BACKUP_SECRET_ACCESS_KEY` | unset | Nightly backups: the session pooler's connection string, an R2 token for the bucket. Optional ([OPERATIONS.md](OPERATIONS.md#backups)). |
 | GitHub Actions variables | `BACKUP_AGE_RECIPIENT`, `CLOUDFLARE_ACCOUNT_ID`, `BACKUP_R2_BUCKET`, `BACKUP_MIN_BYTES` | unset (backup skipped), `libellus-backups`, `50000` | Nightly backups: the owner's age public key, where the bucket is. |
 | Restore script | `LIBELLUS_PRODUCTION_REF` | the instance's project ref | The project `scripts/restore-backup.sh` refuses without `--i-know`: set it to the new ref after the project is replaced. |
@@ -294,7 +341,9 @@ in this order:
 1. `supabase db push`: new migrations first. They only ever add (new tables, columns, functions)
    or change functions, so the running app keeps working with the new schema.
 2. `supabase functions deploy goodreads-rating`, when `supabase/functions/goodreads-rating/` changed;
-   `supabase functions deploy reading-page-og` for `supabase/functions/reading-page-og/`.
+   `supabase functions deploy reading-page-og` for `supabase/functions/reading-page-og/`;
+   `supabase functions deploy cover-store` for `supabase/functions/cover-store/` (with the feature on: without it
+   the queue keeps its rows until the next deploy).
 3. Push to the production branch: Pages builds and deploys the app. Installed apps pick up the new
    version on their next start (the service worker updates itself).
 
