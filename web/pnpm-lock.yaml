@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@fabkho/ui':
-        specifier: github:fabkho/ui#v0.10.5
-        version: https://codeload.github.com/fabkho/ui/tar.gz/41bb76d54f8911199effb4f050eb00f0db23b296(f6ceb54993c33bebd9e12c09dcb4b8dd)
+        specifier: github:fabkho/ui#v0.10.6
+        version: https://codeload.github.com/fabkho/ui/tar.gz/11dd8ab16f281f5ab163dbb3d26930cd0c361f35(f6ceb54993c33bebd9e12c09dcb4b8dd)
       '@fontsource/geist':
         specifier: ^5.3.0
         version: 5.3.0
@@ -1103,9 +1103,9 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@fabkho/ui@https://codeload.github.com/fabkho/ui/tar.gz/41bb76d54f8911199effb4f050eb00f0db23b296':
-    resolution: {gitHosted: true, integrity: sha512-1YiC8539SvBtm5Rt3JHUuFnaHq6YaOBZ4lwqiQC5Gh8jlcEuikvnaQ7/mE+czlLsmb0qm7bXq7l/i5jqO9Ijvg==, tarball: https://codeload.github.com/fabkho/ui/tar.gz/41bb76d54f8911199effb4f050eb00f0db23b296}
-    version: 0.10.5
+  '@fabkho/ui@https://codeload.github.com/fabkho/ui/tar.gz/11dd8ab16f281f5ab163dbb3d26930cd0c361f35':
+    resolution: {gitHosted: true, integrity: sha512-ynYGSwjAwuqZcqK5f2o+4aGoMTmfOZwaH+Whddhf3tDj0TcYAY8xqaLb8JivTqEYwTZyGaN2D6mumAF4ZCTfEw==, tarball: https://codeload.github.com/fabkho/ui/tar.gz/11dd8ab16f281f5ab163dbb3d26930cd0c361f35}
+    version: 0.10.6
     peerDependencies:
       nuxt: ^4.5.2
       vue: ^3.5.43
@@ -2686,26 +2686,14 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
-  '@vue/compiler-core@3.5.43':
-    resolution: {integrity: sha512-zdiLhnbe1QQqgDT8xZMpNmyqZ3qlI+/Q/FHQco57Kwl/b05HhCzN6eVGN9QU9rbga4CrS0H5SYY8VGHZCt/1Hg==}
-
   '@vue/compiler-core@3.5.44':
     resolution: {integrity: sha512-k34nCytbK8PQ1gR2mGROYOw6Pnv/mumqIdrZ3x2tbyXZDWm7ViKGLTfdB+DRrWqEQsLgGJvn0WN9jBif5zCTLQ==}
-
-  '@vue/compiler-dom@3.5.43':
-    resolution: {integrity: sha512-PEZoAk3NQmsn/ejMzSOCyTYqwGqczrWm70PuhBKjjv1+TCoQAaO/zOqNwjV+honlNstT5ILxtc+8r8UUfj+iEQ==}
 
   '@vue/compiler-dom@3.5.44':
     resolution: {integrity: sha512-W5AoBFWdw1lQAKiHowkfgFKFab82oSRT6sGsPfw/q1GRjsy/ZJFLHGhJyBRIFN9APLTUduDH9U2JAiPOIyKuYg==}
 
-  '@vue/compiler-sfc@3.5.43':
-    resolution: {integrity: sha512-FCbrG3XNCRl+js3huuKx4IVHBLTvMkJhVepjbxSPu1gn4yWLaYtGNQdjJGZaMytXB6qb76qQDDmDSLy/vkmleQ==}
-
   '@vue/compiler-sfc@3.5.44':
     resolution: {integrity: sha512-dzHmQ4jXTpdr5FjIQUeykVakN/uzqFbUo9/C5ikBFg3a3PeM6uRxeczx1ZbXBML0/zJstEh3ygYipzR5Z7b2Pw==}
-
-  '@vue/compiler-ssr@3.5.43':
-    resolution: {integrity: sha512-GF62orf7KiJX9RqrHNGrYBudsQGD0OhJ5nDs90O8UiDuS40+YMYomiXu6w6EuvtXuRDc3MSNis3EaaSKAVSWpg==}
 
   '@vue/compiler-ssr@3.5.44':
     resolution: {integrity: sha512-xr5gb1JVHlfXJwSlRz1FeP6uxoazdzHuMTVLE7up+4Vrqxk219CvxLPxD9NXBt47yvZW7+p4DXfyp4O1fkByIA==}
@@ -2738,9 +2726,6 @@ packages:
 
   '@vue/server-renderer@3.5.44':
     resolution: {integrity: sha512-R4S1UoH4h5Frrauv8Z5XE5TxV9oBiUSgWIC4TyVK1FK+RocRnOLwFA5Xcmo2011RlgJp+AbZCnw6afrhlgRuUQ==}
-
-  '@vue/shared@3.5.43':
-    resolution: {integrity: sha512-uksS7YGMR5NZyr4JNq0Rp+QyLns0ueaz20KwzIPW9R0LH1Vnt4E+XUM29PNseEbf1www2gOuhuDi5AKOIXag9Q==}
 
   '@vue/shared@3.5.44':
     resolution: {integrity: sha512-H82XLH0DjmSOdbEwO15x3QTo1f5PWEtv237eLpYKc0mqLu+B8hnq16lFWmuBmNurkeiG3wr+oM1FhOll/YVFRg==}
@@ -6960,7 +6945,7 @@ snapshots:
 
   '@exodus/bytes@1.16.0': {}
 
-  '@fabkho/ui@https://codeload.github.com/fabkho/ui/tar.gz/41bb76d54f8911199effb4f050eb00f0db23b296(f6ceb54993c33bebd9e12c09dcb4b8dd)':
+  '@fabkho/ui@https://codeload.github.com/fabkho/ui/tar.gz/11dd8ab16f281f5ab163dbb3d26930cd0c361f35(f6ceb54993c33bebd9e12c09dcb4b8dd)':
     dependencies:
       nuxt: 4.6.3(@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.29.7(supports-color@10.2.2)))(@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.7(supports-color@10.2.2)))(@oxc-project/types@0.152.0)(@rollup/plugin-babel@6.1.0(@babel/core@7.29.7(supports-color@10.2.2))(rollup@4.65.1)(supports-color@10.2.2))(@types/node@26.6.4)(@vue/compiler-sfc@3.5.44)(acorn@8.18.0)(confbox@0.2.4)(db0@0.3.4)(dotenv@17.4.2)(esbuild@0.28.2)(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(giget@3.3.1)(ioredis@5.11.1(supports-color@10.2.2))(lightningcss@1.33.0)(mlly@1.8.2)(optionator@0.9.4)(oxc-parser@0.141.0)(pinia@4.1.0(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.44(typescript@6.0.3)))(rolldown@1.2.15)(rollup-plugin-visualizer@7.1.1(rolldown@1.2.15)(rollup@4.65.1))(rollup@4.65.1)(srvx@1.0.5)(supports-color@10.2.2)(terser@5.51.2)(tsx@4.23.15)(typescript@6.0.3)(vite@8.3.5(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(yaml@2.9.1)
       thumbhash: 0.1.1
@@ -8714,14 +8699,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vue/compiler-core@3.5.43':
-    dependencies:
-      '@babel/parser': 7.29.9
-      '@vue/shared': 3.5.43
-      entities: 7.0.1
-      estree-walker: 2.0.2
-      source-map-js: 1.2.2
-
   '@vue/compiler-core@3.5.44':
     dependencies:
       '@babel/parser': 7.29.9
@@ -8730,27 +8707,10 @@ snapshots:
       estree-walker: 2.0.2
       source-map-js: 1.2.2
 
-  '@vue/compiler-dom@3.5.43':
-    dependencies:
-      '@vue/compiler-core': 3.5.43
-      '@vue/shared': 3.5.43
-
   '@vue/compiler-dom@3.5.44':
     dependencies:
       '@vue/compiler-core': 3.5.44
       '@vue/shared': 3.5.44
-
-  '@vue/compiler-sfc@3.5.43':
-    dependencies:
-      '@babel/parser': 7.29.9
-      '@vue/compiler-core': 3.5.43
-      '@vue/compiler-dom': 3.5.43
-      '@vue/compiler-ssr': 3.5.43
-      '@vue/shared': 3.5.43
-      estree-walker: 2.0.2
-      magic-string: 0.30.21
-      postcss: 8.5.32
-      source-map-js: 1.2.2
 
   '@vue/compiler-sfc@3.5.44':
     dependencies:
@@ -8763,11 +8723,6 @@ snapshots:
       magic-string: 0.30.21
       postcss: 8.5.32
       source-map-js: 1.2.2
-
-  '@vue/compiler-ssr@3.5.43':
-    dependencies:
-      '@vue/compiler-dom': 3.5.43
-      '@vue/shared': 3.5.43
 
   '@vue/compiler-ssr@3.5.44':
     dependencies:
@@ -8816,8 +8771,6 @@ snapshots:
       '@vue/compiler-ssr': 3.5.44
       '@vue/runtime-dom': 3.5.44
       '@vue/shared': 3.5.44
-
-  '@vue/shared@3.5.43': {}
 
   '@vue/shared@3.5.44': {}
 

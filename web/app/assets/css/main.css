@@ -425,18 +425,9 @@ html[data-glass='off'] *::after {
 html[data-profile-transition] [data-profile-avatar] {
   view-transition-name: profile-avatar;
 }
-/* The photo in the ring is simply there while it runs: the avatar's own fade-in for a photo that mounts with it
-   (on Back, the tab's header is new) would otherwise put the new state's ring on initials and fade the photo in on top of it. */
+/* The photo in the ring is simply there while it runs: UiAvatar fades in a photo that comes while it is on screen (the
+   first download, a new photo), over the visible initials; a ring caught mid-fade would show them under the new state. */
 html[data-profile-transition] [data-profile-avatar] img {
-  opacity: 1 !important;
-  transition: none !important;
-}
-/* The header's avatar that mounted with her photo known (components/shell/Header.vue): the photo is there from the first
-   frame (decoded by the store), so UiAvatar's mount fade (`opacity-0` until `load`) and the initials under it are not shown. */
-[data-profile-avatar][data-photo-settled] {
-  color: transparent;
-}
-[data-profile-avatar][data-photo-settled] img {
   opacity: 1 !important;
   transition: none !important;
 }
