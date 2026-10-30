@@ -16,6 +16,7 @@ Deno.test('what cannot be decoded gives null, never a throw: WebP, a header with
   assertEquals(describeJpeg(jpegOf(100, 100)), null)
   assertEquals(describeJpeg(new TextEncoder().encode('<html>')), null)
   assertEquals(describeJpeg(jpegOf(3000, 3000)), null)
+  assertEquals(describeJpeg(jpegOf(1200, 1000)), null) // over 1 MP: not decoded, whatever the bytes after the header
 })
 
 Deno.test('shrink: a box filter to at most 100 px on the longer side, the proportions kept; small images untouched', () => {

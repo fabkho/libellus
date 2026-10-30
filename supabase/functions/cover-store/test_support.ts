@@ -126,7 +126,7 @@ export function row(n: number, sourceUrl: string, options: { thumbhash?: boolean
 }
 
 /** The database's RPCs over an in-memory queue. `cas` answers `cover_store_done`, `deleting` are the keys GC is deleting. */
-export function fakeStore(rows: Claimed[], options: { cas?: (done: Done) => boolean; deleting?: Set<string> } = {}) {
+export function fakeStore(rows: Claimed[], options: { cas?: (done: Done) => boolean; deleting?: Set<string>; claimDelayMs?: number } = {}) {
   const calls = {
     claims: [] as { runner: string; limit: number }[],
     reserved: [] as string[],
@@ -136,9 +136,10 @@ export function fakeStore(rows: Claimed[], options: { cas?: (done: Done) => bool
     kicks: 0,
   }
   const store: Store = {
-    claim(runner, limit) {
+    async claim(runner, limit) {
       calls.claims.push({ runner, limit })
-      return Promise.resolve(rows.slice(0, limit))
+      if (options.claimDelayMs) await new Promise((resolve) => setTimeout(resolve, options.claimDelayMs))
+      return rows.slice(0, limit)
     },
     reserve(key) {
       calls.reserved.push(key)

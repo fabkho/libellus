@@ -52,6 +52,8 @@ export type FetcherOptions = {
   timeoutMs?: number
   maxBytes?: number
   log?: (message: string) => void
+  /** The clock for the keyed hold (tests move it). */
+  now?: () => number
 }
 
 const OPEN_LIBRARY = 'covers.openlibrary.org'
@@ -90,12 +92,18 @@ export function createFetcher(options: FetcherOptions): CoverFetcher {
   const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS
   const maxBytes = options.maxBytes ?? MAX_BYTES
   const log = options.log ?? ((message: string) => console.error(message))
-  let keyedBlocked = false
+  const now = options.now ?? (() => Date.now())
+  // Open Library's keyed limit answered 403: no keyed request until then (the fetcher lives as long as a warm isolate).
+  let keyedBlockedUntil = 0
 
-  async function request(url: URL, signal: AbortSignal): Promise<Response | FailKind> {
+  /**
+   * One request. The turn at the pace comes FIRST (a keyed Open Library request may wait 7-10 s for it), and only then
+   * does the request's own timeout start: the wait must not use up the time the request has.
+   */
+  async function request(url: URL, outer: AbortSignal | undefined): Promise<{ response: Response; signal: AbortSignal } | FailKind> {
     const keyed = url.hostname === OPEN_LIBRARY && KEYED_PATH.test(url.pathname)
     if (url.hostname === OPEN_LIBRARY) {
-      if (keyed && keyedBlocked) return 'throttled'
+      if (keyed && now() < keyedBlockedUntil) return 'throttled'
       try {
         await (keyed ? options.paces.keyed : options.paces.id).take()
       } catch (error) {
@@ -105,13 +113,15 @@ export function createFetcher(options: FetcherOptions): CoverFetcher {
         return 'throttled'
       }
     }
+    if (outer?.aborted) return 'timeout'
+    const signal = outer ? AbortSignal.any([AbortSignal.timeout(timeoutMs), outer]) : AbortSignal.timeout(timeoutMs)
     try {
-      return await options.fetch(url.href, {
+      return { response: await options.fetch(url.href, {
         method: 'GET',
         redirect: 'manual',
         signal,
         headers: { 'user-agent': options.userAgent, accept: 'image/webp,image/jpeg,image/png,image/*;q=0.8' },
-      })
+      }), signal }
     } catch (error) {
       if (signal.aborted || (error instanceof DOMException && (error.name === 'TimeoutError' || error.name === 'AbortError'))) return 'timeout'
       // The host and the kind of error, never the address (it can name a member's book).
@@ -122,7 +132,6 @@ export function createFetcher(options: FetcherOptions): CoverFetcher {
 
   return {
     async get(start, { signal: outer } = {}) {
-      const signal = outer ? AbortSignal.any([AbortSignal.timeout(timeoutMs), outer]) : AbortSignal.timeout(timeoutMs)
       const redirects: string[] = []
       let url: URL
       try {
@@ -135,8 +144,9 @@ export function createFetcher(options: FetcherOptions): CoverFetcher {
           return { ok: false, kind: 'host_error' }
         }
         const keyed = url.hostname === OPEN_LIBRARY && KEYED_PATH.test(url.pathname)
-        const response = await request(url, signal)
-        if (typeof response === 'string') return { ok: false, kind: response }
+        const sent = await request(url, outer)
+        if (typeof sent === 'string') return { ok: false, kind: sent }
+        const { response, signal } = sent
 
         const status = response.status
         if (status >= 300 && status < 400) {
@@ -158,7 +168,7 @@ export function createFetcher(options: FetcherOptions): CoverFetcher {
         if (url.hostname === OPEN_LIBRARY && (status === 403 || status === 429)) {
           await response.body?.cancel().catch(() => {})
           if (keyed) {
-            keyedBlocked = true
+            keyedBlockedUntil = now() + KEYED_HOLD_MS
             await options.paces.keyed.hold(KEYED_HOLD_MS).catch(() => {})
           }
           return { ok: false, kind: 'throttled' }

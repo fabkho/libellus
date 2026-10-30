@@ -171,6 +171,7 @@ jobs:
               - *ci
               - 'supabase/functions/cover-store/**'
               - 'supabase/functions/_shared/**'
+              - 'supabase/functions/openlibrary/**'
               - 'web/app/data/**'
               - 'web/app/utils/**'
 

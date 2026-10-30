@@ -49,7 +49,7 @@ the `…/<w>x<h>bb.<ext>` shape (the app's `APPLE_PATH`, checked against it in `
 
 ## Fetching rules (`fetch.ts`)
 
-Identified (`User-Agent: Libellus/1.0 (<OPENLIBRARY_CONTACT>)`), 8 s timeout, at most 2 MB, format by magic bytes (the
+Identified (`User-Agent: Libellus/1.0 (<OPENLIBRARY_CONTACT>)`), 8 s timeout, at most 2 MB (the timeout starts when the request goes out, after its pace turn), format by magic bytes (the
 `Content-Type` is not believed), 4 concurrent at most. **Redirects by hand**, at most 3 hops, each `Location` https, no
 port or credentials, on the allowlist (`*.mzstatic.com`, `covers.openlibrary.org`, `archive.org`, `*.archive.org`,
 `i.gr-assets.com`, `books.fabkho.dev`): anything else is `host_error`.
@@ -57,7 +57,7 @@ port or credentials, on the allowlist (`*.mzstatic.com`, `covers.openlibrary.org
 - **Open Library**: covers by `isbn`, `oclc`, `lccn` are limited (100 per address per 5 minutes) and are paced on the
   `edge_pace` bucket `openlibrary-covers-keyed` at **0.3 requests a second**; `id`/`olid` covers on `openlibrary-covers`
   at 2 a second. **403 (or 429) is retry-later**: `throttled`, no attempt counted, never `gone`; after a keyed 403 the
-  keyed pace is held 5 minutes and the rest of the run asks no keyed cover. When the first redirect of a keyed address names
+  keyed pace is held 5 minutes and no keyed cover is asked until then (a hold with an end, kept by the warm isolate). When the first redirect of a keyed address names
   the cover id (`…/0009363399-L.jpg` at archive.org) the second size is asked by id, so the Book costs one keyed request;
   an address that answers the image directly (a cached one) costs two.
 - **Missing covers**: 404/410, a GIF (Open Library's 1 × 1 placeholder) or an image under 16 px on a side is `gone`.
@@ -83,15 +83,19 @@ container's cgroup `usage_usec` before and after the request, so it includes the
 **325–616 ms for the whole run** (four runs: 616, 574, 445, 325 ms; the first was a cold isolate), of which the decodes are
 145–201 ms; a run of Books that already have a thumbhash costs ~100 ms. Supabase's limit is 2 s. Wall clock 3.7–9 s.
 
+The worst case for the pace is a run of 8 **Open Library ISBN-keyed** covers (every request waits for its 0.3 a second turn,
+the timeout starts only after the turn): 8 of 8 stored, wall clock 33.6–36.7 s, **201–462 ms of CPU** (three runs: 462 cold,
+219, 201), decodes 48–115 ms. A run of 8 Books each needing two keyed requests is ~53 s of turns, inside the 125 s deadline.
+
 ## Secrets (`supabase secrets set`, never in the repo; entered by the owner)
 
 | name | |
 | --- | --- |
 | `COVER_STORE_TOKEN` | the bearer the kick carries (its Vault twin: `cover_store_token`) |
-| `COVER_KEY_SECRET` | HMAC key of the object keys. **Changing it later is the irreversible rotation** (plan, runbook) |
+| `COVER_KEY_SECRET` | HMAC key of the object keys, **at least 32 characters** (`openssl rand -hex 32`; a shorter one answers 503 `not_configured`). **Changing it later is the irreversible rotation** (plan, runbook) |
 | `R2_COVERS_ACCOUNT_ID`, `R2_COVERS_ACCESS_KEY_ID`, `R2_COVERS_SECRET_ACCESS_KEY` | an R2 API token with **Object Read & Write on `libellus-covers` only** |
 | `OPENLIBRARY_CONTACT` | the contact address in the User-Agent (the `openlibrary` function's secret: secrets are the project's) |
-| `COVER_STORE_HOSTS` | optional: `apple,openlibrary,goodreads,regal` (default all). One line drops a host |
+| `COVER_STORE_HOSTS` | optional: `apple,openlibrary,goodreads,regal` (default all). One line drops a host. A list with no known name (a typo) is warned about and means all |
 | `R2_COVERS_ENDPOINT` | optional, **local runs only**: a stand-in for `https://<account>.r2.cloudflarestorage.com` |
 
 A secret that is not set does not stop the function from starting: an authorized run answers 503 `not_configured` with the

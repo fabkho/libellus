@@ -19,8 +19,12 @@ import { sniffImage } from './image.ts'
 
 export const GOODREADS_PER_RUN = 2
 export const DECODE_BUDGET_MS = 500
-/** An image with more pixels than this is not decoded (memory: RGBA is 4 bytes a pixel, a 4 MP image is 16 MB). */
-export const MAX_DECODE_PIXELS = 4_000_000
+/**
+ * An image with more pixels than this is not decoded: the decode costs CPU in proportion (a 1500 x 1500 progressive JPEG
+ * is ~70 ms, 2.25 MP) and a run has 2 s, 8 Books and no CPU clock. Real Goodreads covers are ~0.15 MP; above this the Book
+ * is stored without a thumbhash rather than risk the run.
+ */
+export const MAX_DECODE_PIXELS = 1_000_000
 /** The side thumbhash takes at most. */
 const THUMB_SIDE = 100
 

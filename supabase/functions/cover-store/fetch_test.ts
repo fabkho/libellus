@@ -170,3 +170,43 @@ Deno.test('Open Library: keyed covers wait on the keyed pace, id covers on the i
   assertEquals(await waiting.get(OL_L), { ok: false, kind: 'throttled' })
   assertEquals(hosts.urls(), [])
 })
+
+Deno.test('the timeout starts after the pace turn: a keyed request that waits 150 ms for its turn still has its whole 100 ms', async () => {
+  // A pace that really sleeps (the keyed one waits 7-10 s for 0.3 requests a second; here 150 ms against a 100 ms timeout).
+  const sleeping = { take: () => new Promise<void>((resolve) => setTimeout(resolve, 150)), hold: () => Promise.resolve() }
+  const keyedUrl = 'https://covers.openlibrary.org/b/isbn/9780000000002-L.jpg?default=false'
+  const hosts = web({ [keyedUrl]: image(fixture('ol-L.jpg')) })
+  const fetcher = createFetcher({ fetch: hosts.fetch, userAgent: UA, paces: { keyed: sleeping, id: sleeping }, timeoutMs: 100 })
+  const got = await fetcher.get(keyedUrl)
+  assertEquals(got.ok, true)
+  assertEquals(hosts.urls(), [keyedUrl])
+  // The timeout is still there once the request is out: a host that never answers is a timeout, 100 ms after the turn.
+  const never = (_input: string, init: RequestInit) =>
+    new Promise<Response>((_, reject) => init.signal!.addEventListener('abort', () => reject(init.signal!.reason)))
+  const stuck = createFetcher({ fetch: never, userAgent: UA, paces: { keyed: sleeping, id: sleeping }, timeoutMs: 100 })
+  const started = performance.now()
+  assertEquals(await stuck.get(keyedUrl), { ok: false, kind: 'timeout' })
+  const took = performance.now() - started
+  assert(took >= 230 && took < 1000, String(took)) // 150 ms of turn + 100 ms of timeout, not 100 ms in all
+})
+
+Deno.test('after a keyed 403 the hold lasts KEYED_HOLD_MS, then keyed requests go out again (a warm isolate does not stay throttled)', async () => {
+  const keyedUrl = 'https://covers.openlibrary.org/b/isbn/9780000000002-L.jpg?default=false'
+  let answer = status(403)
+  const hosts = web({})
+  const keyed = fakePace()
+  let clock = 1_000_000
+  const fetcher = createFetcher({
+    fetch: (input, init) => (hosts.requests.push({ url: input, headers: new Headers(init.headers), redirect: init.redirect }), Promise.resolve(answer())),
+    userAgent: UA, paces: { keyed: keyed.pace, id: keyed.pace }, now: () => clock, log: () => {},
+  })
+  assertEquals(await fetcher.get(keyedUrl), { ok: false, kind: 'throttled' })
+  assertEquals(hosts.urls().length, 1)
+  clock += KEYED_HOLD_MS - 1
+  assertEquals(await fetcher.get(keyedUrl), { ok: false, kind: 'throttled' })
+  assertEquals(hosts.urls().length, 1) // still held: no request
+  clock += 1
+  answer = image(fixture('ol-L.jpg'))
+  assertEquals((await fetcher.get(keyedUrl)).ok, true)
+  assertEquals(hosts.urls().length, 2)
+})

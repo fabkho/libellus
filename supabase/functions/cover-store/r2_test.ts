@@ -40,3 +40,17 @@ Deno.test('the endpoint can be another one (the local stack\'s stand-in); the bu
   await r2.put('d'.repeat(32), 120, fixture('ol-S.jpg'), 'image/jpeg')
   assertEquals(seen, [`http://host.docker.internal:3101/${COVERS_BUCKET}/c/${'d'.repeat(32)}/120`])
 })
+
+Deno.test('a PUT that never answers fails after its timeout, and the run\'s signal ends it sooner', async () => {
+  const never = (request: Request) => new Promise<Response>((_, reject) => request.signal.addEventListener('abort', () => reject(request.signal.reason)))
+  const slow = createR2({ ...options, fetch: never, timeoutMs: 30 })
+  const error = await assertRejects(() => slow.put('e'.repeat(32), 120, fixture('ol-S.jpg'), 'image/jpeg'), R2Error)
+  assertEquals(error.status, null)
+
+  const run = new AbortController()
+  const long = createR2({ ...options, fetch: never, timeoutMs: 60_000 })
+  const pending = assertRejects(() => long.put('f'.repeat(32), 120, fixture('ol-S.jpg'), 'image/jpeg', { signal: run.signal }), R2Error)
+  await new Promise((resolve) => setTimeout(resolve, 20)) // the PUT is out
+  run.abort()
+  await pending
+})

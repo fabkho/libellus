@@ -58,6 +58,8 @@ export type RunnerDeps = {
   /** Unique per invocation: a lease holds against the same id too. */
   runner?: string
   concurrency?: number
+  /** Overrides `RUN_DEADLINE_MS` (tests). */
+  deadlineMs?: number
   limit?: number
   budget?: ThumbBudget
   now?: () => number
@@ -87,7 +89,7 @@ export async function runCoverStore(deps: RunnerDeps): Promise<RunResult> {
   const runner = deps.runner ?? `fn:${crypto.randomUUID()}`
   const budget = deps.budget ?? thumbBudget()
   const abort = new AbortController()
-  const deadline = setTimeout(() => abort.abort(), RUN_DEADLINE_MS)
+  const deadline = setTimeout(() => abort.abort(), deps.deadlineMs ?? RUN_DEADLINE_MS)
   const result: RunResult = { state: 'idle', claimed: 0, stored: 0, failed: 0, throttled: 0, deferred: 0, gone: 0, unsupported: 0, stale: 0, ms: 0 }
 
   try {
@@ -154,7 +156,7 @@ export async function runCoverStore(deps: RunnerDeps): Promise<RunResult> {
 
       const entries = [...byWidth.entries()].sort((a, b) => a[0] - b[0])
       try {
-        await Promise.all(entries.map(([width, variant]) => deps.r2.put(key, width, variant.bytes, variant.info.mime)))
+        await Promise.all(entries.map(([width, variant]) => deps.r2.put(key, width, variant.bytes, variant.info.mime, { signal: abort.signal })))
       } catch (error) {
         if (error instanceof R2Error) throw new Failure('r2_error')
         throw error
@@ -239,9 +241,9 @@ export async function runCoverStore(deps: RunnerDeps): Promise<RunResult> {
     const queue = [...rows]
     const lanes = Array.from({ length: Math.min(deps.concurrency ?? CONCURRENCY, queue.length) }, async () => {
       for (let row = queue.shift(); row; row = queue.shift()) {
-        // Past the deadline nothing new is started: the Book is booked again without a request.
+        // Past the deadline nothing new is started: the Book is left for the next run (no attempt counted, no request).
         if (abort.signal.aborted) {
-          await bookAgain(row, 'timeout')
+          await leaveForNextRun(row)
           continue
         }
         try {

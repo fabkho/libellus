@@ -11,6 +11,8 @@ import { AwsClient } from 'aws4fetch'
 
 export const COVERS_BUCKET = 'libellus-covers'
 /** What the Pages Function sends with an image: our copies never change (the key is the bytes' HMAC). */
+/** A PUT of a cover (~100 KB at most) answers in well under this. */
+export const PUT_TIMEOUT_MS = 20_000
 export const OBJECT_CACHE_CONTROL = 'public, max-age=31536000, immutable'
 
 export class R2Error extends Error {
@@ -21,7 +23,7 @@ export class R2Error extends Error {
 
 export type R2 = {
   /** Stores one image at `c/<key>/<width>`; rejects with `R2Error`. */
-  put: (key: string, width: number, bytes: Uint8Array, contentType: string) => Promise<void>
+  put: (key: string, width: number, bytes: Uint8Array, contentType: string, options?: { signal?: AbortSignal }) => Promise<void>
 }
 
 export type R2Options = {
@@ -30,6 +32,8 @@ export type R2Options = {
   secretAccessKey: string
   bucket?: string
   endpoint?: string
+  /** A PUT that does not answer in this time fails (`R2Error`, status null); the run's own signal ends it sooner. */
+  timeoutMs?: number
   fetch?: (request: Request) => Promise<Response>
 }
 
@@ -41,7 +45,7 @@ export function createR2(options: R2Options): R2 {
   const base = (options.endpoint ?? `https://${options.accountId}.r2.cloudflarestorage.com`).replace(/\/+$/, '')
   const bucket = options.bucket ?? COVERS_BUCKET
   return {
-    async put(key, width, bytes, contentType) {
+    async put(key, width, bytes, contentType, { signal } = {}) {
       const signed = await aws.sign(`${base}/${bucket}/${objectPath(key, width)}`, {
         method: 'PUT',
         body: bytes as Uint8Array<ArrayBuffer>,
@@ -49,7 +53,8 @@ export function createR2(options: R2Options): R2 {
       })
       let response: Response
       try {
-        response = await send(signed)
+        const limit = AbortSignal.timeout(options.timeoutMs ?? PUT_TIMEOUT_MS)
+        response = await send(new Request(signed, { signal: signal ? AbortSignal.any([limit, signal]) : limit }))
       } catch (error) {
         throw new R2Error(null, `put failed: ${error instanceof Error ? error.name : 'error'}`)
       }

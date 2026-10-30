@@ -8,10 +8,11 @@
  * with the names of what is missing, so the owner sees what to set.
  *
  *   COVER_STORE_TOKEN          the bearer the database's kick carries (its Vault twin `cover_store_token`)
- *   COVER_KEY_SECRET           the HMAC key of the object keys (key.ts; changing it later is the irreversible rotation)
+ *   COVER_KEY_SECRET           the HMAC key of the object keys, at least 32 characters (key.ts; changing it later is the irreversible rotation)
  *   R2_COVERS_ACCOUNT_ID, R2_COVERS_ACCESS_KEY_ID, R2_COVERS_SECRET_ACCESS_KEY    Object Read & Write on `libellus-covers` only
  *   OPENLIBRARY_CONTACT        the contact address in the User-Agent (the `openlibrary` function's secret: secrets are the project's)
  *   COVER_STORE_HOSTS          optional: which hosts are stored, comma separated (apple, openlibrary, goodreads, regal); default all
+ *                              (a list with no known name is warned about and means all)
  *   R2_COVERS_ENDPOINT         optional, the local stack's stand-in for R2 only (README.md)
  */
 import { createClient } from '@supabase/supabase-js'
@@ -19,7 +20,8 @@ import { sharedPace } from '../_shared/pace.ts'
 import { userAgent } from '../openlibrary/client.ts'
 import { createFetcher } from './fetch.ts'
 import { createHandler, NotConfigured } from './handler.ts'
-import { ALL_HOSTS, type HostName } from './plan.ts'
+import { missingSettings, parseHosts } from './config.ts'
+import type { HostName } from './plan.ts'
 import { createR2 } from './r2.ts'
 import { runCoverStore } from './runner.ts'
 import { createStore } from './store.ts'
@@ -50,18 +52,15 @@ const r2Account = env('R2_COVERS_ACCOUNT_ID')
 const r2KeyId = env('R2_COVERS_ACCESS_KEY_ID')
 const r2Secret = env('R2_COVERS_SECRET_ACCESS_KEY')
 
-const missing = Object.entries({
+const missing = missingSettings({
   COVER_KEY_SECRET: keySecret,
   OPENLIBRARY_CONTACT: contact,
   R2_COVERS_ACCOUNT_ID: r2Account,
   R2_COVERS_ACCESS_KEY_ID: r2KeyId,
   R2_COVERS_SECRET_ACCESS_KEY: r2Secret,
-}).filter(([, value]) => !value).map(([name]) => name)
+})
 
-const named = env('COVER_STORE_HOSTS')
-const hosts: HostName[] = named
-  ? named.split(',').map((name) => name.trim().toLowerCase()).filter((name): name is HostName => (ALL_HOSTS as readonly string[]).includes(name))
-  : [...ALL_HOSTS]
+const hosts: HostName[] = parseHosts(env('COVER_STORE_HOSTS'), (message) => console.warn(message))
 
 const store = createStore(rpc)
 const fetcher = missing.length === 0

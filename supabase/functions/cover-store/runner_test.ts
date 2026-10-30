@@ -19,13 +19,15 @@ type World = {
   hosts?: RunnerDeps['hosts']
   concurrency?: number
   budget?: RunnerDeps['budget']
+  deadlineMs?: number
+  claimDelayMs?: number
 }
 
 /** One run over a queue of leased Books, the hosts' web, an S3, the database's RPCs and the pace, all stand-ins. */
 async function run(options: World) {
   const hosts = web(coverRoutes(options.routes))
   const s3 = fakeS3(options.s3)
-  const { store, calls } = fakeStore(options.rows, { cas: options.cas, deleting: options.deleting })
+  const { store, calls } = fakeStore(options.rows, { cas: options.cas, deleting: options.deleting, claimDelayMs: options.claimDelayMs })
   const keyed = fakePace()
   const id = fakePace()
   const logged: string[] = []
@@ -34,7 +36,7 @@ async function run(options: World) {
   const r2 = createR2({ accountId: 'acct', accessKeyId: 'AKIAFAKE', secretAccessKey: 'fake', fetch: s3.fetch })
   const result = await runCoverStore({
     store, fetcher, r2, keySecret: SECRET, runner: 'fn:test', log, hosts: options.hosts,
-    concurrency: options.concurrency, budget: options.budget,
+    concurrency: options.concurrency, budget: options.budget, deadlineMs: options.deadlineMs,
   })
   return { result, hosts, s3, calls, keyed, id, logged }
 }
@@ -329,4 +331,12 @@ Deno.test('a call to the database that fails after the work does not lose the ot
   })
   assertEquals([result.stored, result.failed], [1, 1])
   assertEquals(failedWith(calls), ['host_error'])
+})
+
+Deno.test('past the run\'s deadline the Books not started are left for the next run (released, no attempt counted), with no request', async () => {
+  const world = await run({ rows: [row(1, APPLE_URL), row(2, GOODREADS_URL), row(3, OPENLIBRARY_ID_URL)], deadlineMs: 5, claimDelayMs: 30, concurrency: 1 })
+  assertEquals(world.hosts.urls(), [])
+  assertEquals(world.calls.failed, [])
+  assertEquals(world.calls.released.map((left) => left.book), [1, 2, 3].map((n) => row(n, '').book_id))
+  assertEquals([world.result.deferred, world.result.stored, world.result.failed], [3, 0, 0])
 })
