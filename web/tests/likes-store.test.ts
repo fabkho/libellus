@@ -95,7 +95,7 @@ describe('likes store', () => {
 describe('a member who leaves her friends (privacy review M2)', () => {
   const ben = { id: 'ben', name: 'Ben', photo: null }
   const cleo = { id: 'cleo', name: 'Cleo', photo: null }
-  const book = { id: 'b1', title: 'Piranesi', authors: [], year: null, coverUrl: null, coverThumbhash: null, coverColors: null, manual: false, unverified: false }
+  const book = { id: 'b1', title: 'Piranesi', authors: [], year: null, coverUrl: null, coverThumbhash: null, coverColors: null, coverKey: null, coverWidths: null, manual: false, unverified: false }
   const recent = (session: string, likers: unknown[], count: number) => ({ session, book, likers, count, at: '2026-10-20T10:00:00Z' })
   const stored = () => JSON.parse(window.localStorage.getItem('libellus.likes') ?? 'null')
 

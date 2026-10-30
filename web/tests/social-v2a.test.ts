@@ -226,7 +226,7 @@ describe('the answers read into shapes', () => {
   it('reads a recent like, a shared Book and a friends row', () => {
     expect(recentLikeFromJson({ session: 's', book: BOOK, likers: [CARD], count: 4, at: '2026-10-20T10:00:00Z' })).toEqual({
       session: 's',
-      book: { id: 'b', title: 'T', authors: [], year: null, coverUrl: null, coverThumbhash: null, coverColors: null, manual: false, unverified: false },
+      book: { id: 'b', title: 'T', authors: [], year: null, coverUrl: null, coverThumbhash: null, coverColors: null, coverKey: null, coverWidths: null, manual: false, unverified: false },
       likers: [{ id: 'm', name: null, photo: null }],
       count: 4,
       at: '2026-10-20T10:00:00Z',
