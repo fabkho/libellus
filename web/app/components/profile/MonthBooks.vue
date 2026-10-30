@@ -15,6 +15,9 @@ import { linkOf } from '~/utils/memberProfile'
 import { durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
 import { coverDelay, rowDelay, SLIDE } from '~/utils/monthIntro'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 const props = withDefaults(defineProps<{ months: { month: number, reads: StatsRead[] }[], loading?: boolean, goneBy?: number, foreign?: boolean }>(), { loading: false, goneBy: 12, foreign: false })
 
 const { t } = useI18n()
@@ -100,7 +103,7 @@ onBeforeUnmount(() => observer?.disconnect())
             <UiCover
               :title="read.book.title"
               :authors="read.book.authors"
-              :src="coverSrc(read.book.coverUrl, 'sm')"
+              v-bind="coverImage(read.book, 'sm', coverHosts)"
               :thumbhash="read.book.coverThumbhash"
               :colors="read.book.coverColors"
               size="sm"

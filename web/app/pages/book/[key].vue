@@ -28,6 +28,9 @@ import { onIdle } from '~/utils/idle'
 import { afterMotion } from '#layers/ui/app/utils/motion'
 import { loadReader, prefetchReader } from '~/utils/readerChunks'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 // One page through a change of edition, though the address changes (utils/bookPageKey.ts).
 definePageMeta({ layout: 'tabs', screen: 'book', pushed: true, key: bookPageKey })
 
@@ -252,7 +255,7 @@ function back() {
         decorative
         :title="book.title"
         :authors="book.authors"
-        :src="coverSrc(book.coverUrl, 'xl')"
+        v-bind="coverImage(book, 'xl', coverHosts)"
         :identity="book.isbn13 ?? ('id' in book ? book.id : book.title)"
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"

@@ -6,6 +6,9 @@ import type { LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import type { FriendsGroup } from '~/utils/friendsNames'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 /** How many covers the row shows: it is a glance, the Library has the rest. */
 const SHOWN = 8
 
@@ -35,7 +38,7 @@ const shown = computed(() => props.entries.slice(0, SHOWN))
           <UiCover
             :title="entry.book.title"
             :authors="entry.book.authors"
-            :src="coverSrc(entry.book.coverUrl, 'md')"
+            v-bind="coverImage(entry.book, 'md', coverHosts)"
             :thumbhash="entry.book.coverThumbhash"
             :colors="entry.book.coverColors"
             size="md"

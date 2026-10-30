@@ -66,7 +66,7 @@ describe('bothReadReelDocument', () => {
     expect(doc.books[0]).toMatchObject({ title: items[0]!.book.title, authors: ['A. Writer', 'B. Writer'] })
   })
 
-  it('asks for every cover with coverFor, at the Book\'s height times the pixel ratio: one address for the front and the rest', () => {
+  it('asks for every cover at the Book\'s height times the pixel ratio (coverAt): one address for the front and the rest', () => {
     const only = item()
     for (const dpr of [1, 2, 3]) {
       const [book] = bothReadReelDocument([only], { outside: OUTSIDE, covers: { dpr } }).books
@@ -89,6 +89,22 @@ describe('bothReadReelDocument', () => {
     expect(url.searchParams.get('u')).toContain('480x720')
     expect(url.searchParams.get('w')).toBe('480')
     expect(front).toBe(coverFor(only.book.coverUrl, { height: REEL_BOOK_HEIGHT, dpr: 2, proxy: true, origin: 'https://libellus.example' }))
+  })
+
+  // Our own stored copies (docs/plans/owned-covers.md §5): the reel names `/c/<key>/<width>` on the page's origin, one
+  // address per cover at the size it draws; the switch off names the source exactly as before.
+  it('draws our stored copy when the Book has one and the switch is on, the source otherwise', () => {
+    const key = 'c0ffeec0ffeec0ffeec0ffeec0ffeec0'
+    const keyed = item({ coverKey: key, coverWidths: [120, 240, 360, 600] })
+    const front = (covers: Parameters<typeof bothReadReelDocument>[1]['covers']) =>
+      bothReadReelDocument([keyed], { outside: OUTSIDE, covers }).books[0]!.assets!.front
+    // 300 px tall is 200 px wide: 400 device px at 2×, so the 600 stored width (the widest); 240 at 1×.
+    expect(front({ dpr: 2, own: true, origin: 'https://libellus.example' })).toBe(`https://libellus.example/c/${key}/600`)
+    expect(front({ dpr: 1, own: true, origin: 'https://libellus.example' })).toBe(`https://libellus.example/c/${key}/240`)
+    // Off is today's address, key or no key (nothing keeps a copy it cannot check).
+    expect(front({ dpr: 2, own: false })).toBe(coverFor(keyed.book.coverUrl, { height: REEL_BOOK_HEIGHT, dpr: 2 }))
+    expect(front({ dpr: 2 })).toBe(coverFor(keyed.book.coverUrl, { height: REEL_BOOK_HEIGHT, dpr: 2 }))
+    expect(bothReadReelDocument([keyed], { outside: OUTSIDE, covers: { dpr: 2, own: true } }).books[0]!.assets!.front).toBe(`/c/${key}/600`)
   })
 
   it('a Book without a cover has no image and its Placeholder’s colour', () => {

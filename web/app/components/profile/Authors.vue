@@ -6,6 +6,9 @@
 // loading wave (docs/MOTION.md, Loading).
 import type { YearFigures } from '~/data/stats'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 // `foreign`: another member's profile, so the title names her (`name`) instead of saying "you".
 const props = withDefaults(defineProps<{ figures: YearFigures | null; limit?: number; foreign?: boolean; name?: string }>(), { limit: 4, foreign: false, name: undefined })
 defineEmits<{ pick: [name: string] }>()
@@ -43,7 +46,7 @@ const authorsTitle = computed(() => {
               :style="{ '--i': i }"
               :title="book.title"
               :authors="book.authors"
-              :src="coverSrc(book.coverUrl, 'sm')"
+              v-bind="coverImage(book, 'sm', coverHosts)"
               :thumbhash="book.coverThumbhash"
               :colors="book.coverColors"
               size="sm"

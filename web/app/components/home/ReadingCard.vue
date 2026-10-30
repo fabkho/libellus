@@ -16,6 +16,9 @@ import { useBookStore } from '~/stores/book'
 import { useReadingStore } from '~/stores/reading'
 import type { FriendsGroup } from '~/utils/friendsNames'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 // `friends`: the followed members reading the same Book now (social v2a, FriendsAlsoAvatars), on the cover's lower edge.
 const props = defineProps<{ entry: LibraryEntry; eager?: boolean; friends?: FriendsGroup | null }>()
 
@@ -66,7 +69,7 @@ function act() {
         <UiCover
           :title="entry.book.title"
           :authors="entry.book.authors"
-          :src="coverSrc(entry.book.coverUrl, 'lg')"
+          v-bind="coverImage(entry.book, 'lg', coverHosts)"
           :thumbhash="entry.book.coverThumbhash"
           :colors="entry.book.coverColors"
           size="lg"

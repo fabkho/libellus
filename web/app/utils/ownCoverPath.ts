@@ -19,6 +19,13 @@ export const OWN_COVER_KEY = /^[0-9a-f]{32}$/
 export const OWN_COVER_MIN_WIDTH = 16
 export const OWN_COVER_MAX_WIDTH = 2000
 
+
+/**
+ * What a copy's answer says of its own keeping: a year, immutable (a key's bytes never change). The Function sends it with
+ * every stored copy, and the service worker keeps only an answer that says it (nuxt.config.ts, the `/c/` rule): a
+ * deployment without the Function answers `/c/…` with the app shell, HTML and a 200, which must never be kept for a year.
+ */
+export const OWN_COVER_CACHE_CONTROL = 'public, max-age=31536000, immutable'
 export function isOwnCoverKey(value: unknown): value is string {
   return typeof value === 'string' && OWN_COVER_KEY.test(value)
 }

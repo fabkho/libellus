@@ -11,6 +11,9 @@
 import { readingPagePath } from '~/data/readingPage'
 import { useReadingPageStore } from '~/stores/readingPage'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 definePageMeta({ layout: 'reading', screen: 'bookCard' })
 
 const { t } = useI18n()
@@ -94,7 +97,7 @@ const status = computed(() => {
             glow
             :title="book.title"
             :authors="book.authors"
-            :src="coverSrc(book.coverUrl, 'xl')"
+            v-bind="coverImage(book, 'xl', coverHosts)"
             :thumbhash="book.coverThumbhash"
             :colors="book.coverColors"
             size="xl"

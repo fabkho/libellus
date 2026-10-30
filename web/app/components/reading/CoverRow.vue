@@ -9,7 +9,12 @@
 // (or null, a Book that opens nothing) in place of the reading page's card under `token`.
 import { bookCardPath, type PublicBook } from '~/data/readingPage'
 
-type RowBook = Pick<PublicBook, 'id' | 'title' | 'authors' | 'coverUrl' | 'coverThumbhash' | 'coverColors'> & { unverified?: boolean }
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
+type RowBook = Pick<PublicBook, 'id' | 'title' | 'authors' | 'coverUrl' | 'coverThumbhash' | 'coverColors' | 'coverKey' | 'coverWidths'> & {
+  unverified?: boolean
+}
 
 const props = withDefaults(
   defineProps<{
@@ -40,7 +45,7 @@ const size = computed(() => (props.compact ? 'md' : 'lg'))
           :decorative="!compact"
           :title="shown(item.book).title"
           :authors="shown(item.book).authors"
-          :src="coverSrc(shown(item.book).coverUrl, size)"
+          v-bind="coverImage(shown(item.book), size, coverHosts)"
           :thumbhash="shown(item.book).coverThumbhash"
           :colors="shown(item.book).coverColors"
           :size="size"

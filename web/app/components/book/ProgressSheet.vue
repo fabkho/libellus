@@ -15,6 +15,9 @@ import { PAGE_CEILING, type ProgressMode } from '~/data/progress'
 import { useReadingStore } from '~/stores/reading'
 import { stepTick } from '#layers/ui/app/utils/haptics'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 const { t, n } = useI18n()
 const reading = useReadingStore()
 // Saving works offline too: it waits to sync (#93).
@@ -96,7 +99,7 @@ watch(
       <UiBookLine
         :title="entry.book.title"
         :authors="entry.book.authors"
-        :src="coverSrc(entry.book.coverUrl, 'xs')"
+        v-bind="coverImage(entry.book, 'xs', coverHosts)"
         :thumbhash="entry.book.coverThumbhash"
         :colors="entry.book.coverColors"
       />

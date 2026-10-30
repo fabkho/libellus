@@ -6,6 +6,9 @@
 import type { Book } from '~/data/books'
 import { MOSAIC_SIZE } from '~/data/collections'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 defineProps<{ covers: readonly Book[]; eager?: boolean }>()
 </script>
 
@@ -17,7 +20,7 @@ defineProps<{ covers: readonly Book[]; eager?: boolean }>()
         v-if="covers[i - 1]"
         :title="covers[i - 1]!.title"
         :authors="covers[i - 1]!.authors"
-        :src="coverSrc(covers[i - 1]!.coverUrl, 'sm')"
+        v-bind="coverImage(covers[i - 1]!, 'sm', coverHosts)"
         :thumbhash="covers[i - 1]!.coverThumbhash"
         :colors="covers[i - 1]!.coverColors"
         size="sm"

@@ -10,6 +10,7 @@
 // this one), listed with their words and colour, never placed on the page.
 import type { HighlightColor } from '~/data/reader/device'
 import type { CoverColors } from '~/utils/cover'
+import type { CoverImage } from '~/utils/coverRef'
 import type { TocItem } from '~/reader/engine'
 import Scrub from './Scrub.vue'
 import { timeLeft, type ChromeInfo } from '~/utils/readerChrome'
@@ -21,7 +22,7 @@ const props = defineProps<{
   info: ChromeInfo
   /** Highlights made in another copy of the book. */
   otherCopy?: readonly { id: string; color: HighlightColor; text: string }[]
-  book: { title: string; authors: string[]; cover: string | null; colors: CoverColors | null; thumbhash: string | null }
+  book: { title: string; authors: string[]; covers: () => CoverImage; colors: CoverColors | null; thumbhash: string | null }
 }>()
 defineEmits<{ go: [href: string]; scrub: [fraction: number]; removeHighlight: [id: string] }>()
 
@@ -65,7 +66,7 @@ watch(open, async (isOpen) => {
 <template>
   <UiSheet v-model:open="open" :title="t('reader.contentsSheet.title')" testid="readerContents">
     <div class="mb-sm flex items-center gap-ms">
-      <UiCover :title="book.title" :authors="book.authors" :src="book.cover" :thumbhash="book.thumbhash" :colors="book.colors" size="sm" />
+      <UiCover :title="book.title" :authors="book.authors" v-bind="book.covers()" :thumbhash="book.thumbhash" :colors="book.colors" size="sm" />
       <div class="min-w-0 flex-1">
         <p class="book-title title-wrap text-callout">{{ book.title }}</p>
         <p class="figures mt-xxs truncate text-meta text-ink-faint">{{ where }}</p>

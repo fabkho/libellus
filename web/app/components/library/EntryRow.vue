@@ -15,6 +15,9 @@ import { useAuthorsStore } from '~/stores/authors'
 import { useBookStore } from '~/stores/book'
 import type { FriendsGroup } from '~/utils/friendsNames'
 
+// Our copies, and `/cover` too: this screen asked through `/cover` before own covers, and still does (docs/plans/owned-covers.md §5).
+const coverHosts = useCoverHosts()
+
 // `friends`: on a Want to read row, the followed members who want the same Book (social v2a, FriendsAlsoAvatars), on the cover's lower edge.
 const props = defineProps<{ entry: LibraryEntry; eager?: boolean; friends?: FriendsGroup | null }>()
 
@@ -27,7 +30,6 @@ const latest = computed(() => props.entry.latestSession)
 const notFinished = computed(() => isNotFinished(props.entry))
 const authors = useAuthorsStore()
 onMounted(() => authors.want(props.entry.book.id))
-const coverProxy = useCoverProxy()
 const authorKey = computed(() => rowAuthorKey(authors.ofBook(props.entry.book.id)))
 </script>
 
@@ -44,7 +46,7 @@ const authorKey = computed(() => rowAuthorKey(authors.ofBook(props.entry.book.id
         decorative
         :title="entry.book.title"
         :authors="entry.book.authors"
-        :src="coverSrc(entry.book.coverUrl, 'sm', coverProxy)"
+        v-bind="coverImage(entry.book, 'sm', coverHosts)"
         :thumbhash="entry.book.coverThumbhash"
         :colors="entry.book.coverColors"
         size="sm"

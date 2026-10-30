@@ -19,6 +19,9 @@ import type { FriendsRow } from '~/utils/friendsView'
 import type { SocialBook } from '~/data/socialShapes'
 import { useBookStore } from '~/stores/book'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 const props = defineProps<{ friend: FriendsRow; dayLabel: string; eager?: boolean }>()
 defineEmits<{ open: [] }>()
 
@@ -90,7 +93,7 @@ const PressLink = resolveComponent('UiPressLink')
               decorative
               :title="shown(book).title"
               :authors="shown(book).authors"
-              :src="coverSrc(shown(book).coverUrl, 'sm')"
+              v-bind="coverImage(shown(book), 'sm', coverHosts)"
               :thumbhash="shown(book).coverThumbhash"
               :colors="shown(book).coverColors"
               size="xs"

@@ -8,6 +8,9 @@
 // `profile.reviews.row`), `.cover`, `.book` (the links), `.title`, `.spoilers`.
 import type { ProfileReview } from '~/utils/profileReviews'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 const props = withDefaults(defineProps<{ item: ProfileReview; testid?: string }>(), { testid: 'profile.reviews.row' })
 
 const { t } = useI18n()
@@ -23,7 +26,7 @@ const link = computed(() => ({ id: book.value.id, manual: false }))
         decorative
         :title="book.title"
         :authors="book.authors"
-        :src="coverSrc(book.coverUrl, 'sm')"
+        v-bind="coverImage(book, 'sm', coverHosts)"
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
         size="sm"

@@ -4,6 +4,9 @@
 // the sheet); a Manual book opens nothing.
 import type { SocialBook } from '~/data/social'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 const open = defineModel<boolean>('open', { required: true })
 defineProps<{ title: string; items: readonly { book: SocialBook; addedOn: string }[] }>()
 
@@ -21,7 +24,7 @@ const { formatDay } = useDays()
             decorative
             :title="shown(item.book).title"
             :authors="shown(item.book).authors"
-            :src="coverSrc(shown(item.book).coverUrl, 'sm')"
+            v-bind="coverImage(shown(item.book), 'sm', coverHosts)"
             :thumbhash="shown(item.book).coverThumbhash"
             :colors="shown(item.book).coverColors"
             size="sm"

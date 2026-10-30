@@ -7,6 +7,9 @@
 // error stays in the sheet, and the button tries again.
 import { useLibraryStore } from '~/stores/library'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 const { t } = useI18n()
 const library = useLibraryStore()
 // Adding a Catalogue Book works offline too: it waits to sync (#93). A search
@@ -41,7 +44,7 @@ async function add() {
       <UiBookLine
         :title="book.title"
         :authors="book.authors"
-        :src="coverSrc(book.coverUrl, 'xs')"
+        v-bind="coverImage(book, 'xs', coverHosts)"
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
       />

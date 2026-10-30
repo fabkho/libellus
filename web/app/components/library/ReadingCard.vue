@@ -8,6 +8,9 @@ import type { LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useReadingStore } from '~/stores/reading'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 const props = defineProps<{ entry: LibraryEntry; eager?: boolean }>()
 
 const { t } = useI18n()
@@ -39,7 +42,7 @@ const since = computed(() => {
         decorative
         :title="entry.book.title"
         :authors="entry.book.authors"
-        :src="coverSrc(entry.book.coverUrl, 'md')"
+        v-bind="coverImage(entry.book, 'md', coverHosts)"
         :thumbhash="entry.book.coverThumbhash"
         :colors="entry.book.coverColors"
         size="md"

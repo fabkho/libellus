@@ -466,6 +466,21 @@ export default defineNuxtConfig({
           },
         },
         {
+          // Our own stored copies of covers (`/c/<key>/<width>`, functions/c/[[path]].js, docs/plans/owned-covers.md §5): same
+          // origin, a real answer (status 200), and content-addressed, so a kept copy is never stale. Only a 200 is kept (a
+          // missing object is a 404 `no-store`). At most 1,500 of the ~20 MB the copies take on a device; sign-out empties the
+          // cache with the rest of what the member looked at (data/localData.ts, MEMBER_CACHES).
+          urlPattern: ({ request, url }) => url.origin === self.location.origin && url.pathname.startsWith('/c/') && request.destination !== 'document',
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'libellus-own-covers',
+            // A 200 that says it is a stored copy (`OWN_COVER_CACHE_CONTROL`, app/utils/ownCoverPath.ts): without the header a
+            // deployment without the Function answers the app shell (HTML, a 200) and it would be kept for a year.
+            cacheableResponse: { statuses: [200], headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
+            expiration: { maxEntries: 1500, maxAgeSeconds: 60 * 60 * 24 * 365, purgeOnQuotaError: true },
+          },
+        },
+        {
           // Authors' portraits on their pages (#167, Wikimedia Commons' thumbnails), kept like covers
           // so a page opened before shows its portrait offline too. Fewer: one per author page.
           urlPattern: ({ request, url }) =>

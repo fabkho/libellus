@@ -7,6 +7,9 @@
 // the row's tap), `<testid>Member` (her avatar and name).
 import type { FeedRow } from '~/data/feed'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 type Batch = Extract<FeedRow, { type: 'batch' }>
 
 const props = defineProps<{ batch: Batch; testid: string; dayLabel?: string | null; eager?: boolean }>()
@@ -36,7 +39,7 @@ const what = computed(() => t(`feed.${feedBatchKey(props.batch.kind)}`, { count:
           decorative
           :title="entry.book.title"
           :authors="entry.book.authors"
-          :src="coverSrc(entry.book.coverUrl, 'sm')"
+          v-bind="coverImage(entry.book, 'sm', coverHosts)"
           :thumbhash="entry.book.coverThumbhash"
           :colors="entry.book.coverColors"
           size="sm"

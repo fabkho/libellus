@@ -19,6 +19,9 @@ import { formatOf, type Book, type BookFormat, type BookSnapshot } from '~/data/
 import { editionFacts } from '~/data/editions'
 import type { LibraryErrorCode } from '~/data/library'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 export type EditionRow = {
   book: Book | BookSnapshot
   /** The edition the host has now: marked, and the one picked until another is. */
@@ -124,7 +127,7 @@ function says(row: EditionRow): string {
             decorative
             :title="row.book.title"
             :authors="row.book.authors"
-            :src="coverSrc(row.book.coverUrl, 'sm')"
+            v-bind="coverImage(row.book, 'sm', coverHosts)"
             :identity="row.book.isbn13 ?? ('id' in row.book ? row.book.id : row.book.title)"
             :thumbhash="row.book.coverThumbhash"
             :colors="row.book.coverColors"

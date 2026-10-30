@@ -23,6 +23,9 @@ import type { LibraryEntry } from '~/data/library'
 import { isCoverUrl, OWN_EDITION_LANGUAGES, type OwnEditionField } from '~/data/ownEdition'
 import { useOwnEditionStore } from '~/stores/ownEdition'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 const emit = defineEmits<{ changed: [entry: LibraryEntry] }>()
 
 const { t, te, locale } = useI18n()
@@ -181,7 +184,7 @@ const errorText = computed(() => {
           decorative
           :title="found.title"
           :authors="found.authors"
-          :src="coverSrc(found.coverUrl, 'md')"
+          v-bind="coverImage(found, 'md', coverHosts)"
           :identity="found.isbn13 ?? found.title"
           :thumbhash="found.coverThumbhash"
           :colors="found.coverColors"

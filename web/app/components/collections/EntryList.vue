@@ -13,6 +13,9 @@ import type { LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useCollectionsStore } from '~/stores/collections'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 const props = defineProps<{ collectionId: string; entries: readonly LibraryEntry[]; sorted?: boolean }>()
 
 const { t } = useI18n()
@@ -346,7 +349,7 @@ async function onKeydown(event: KeyboardEvent, index: number) {
             decorative
             :title="entry.book.title"
             :authors="entry.book.authors"
-            :src="coverSrc(entry.book.coverUrl, 'xs')"
+            v-bind="coverImage(entry.book, 'xs', coverHosts)"
             :thumbhash="entry.book.coverThumbhash"
             :colors="entry.book.coverColors"
             size="xs"

@@ -62,6 +62,7 @@ import { addMover, durationToken, easingToken, prefersReducedMotion } from '#lay
 import { coverCopy, snapshotOf, type Snapshot } from '~/utils/snapshot'
 import { stillCovers } from '#layers/ui/app/utils/coverTilt'
 import { coverSrc } from '~/utils/cover'
+import { unproxied } from '~/utils/coverSize'
 import { preloadImage } from '~/utils/preload'
 import { createBrowserAnimation } from '~/utils/viewTransition'
 
@@ -376,10 +377,17 @@ function tappedOn(link: HTMLElement, path: string): HTMLElement | null {
   return link.querySelector<HTMLElement>(COVER) ?? coverFor(path, box(link))
 }
 
-/** The address of the hero's (large) image of the Book whose cover this is: its own image, at the hero's size. */
+/**
+ * The address of the hero's (large) image of the Book whose cover this is: its own image, at the hero's size, in the space it
+ * was drawn in (utils/coverRef.ts decides that space for the whole app). Our stored copy (`/c/<key>/<width>`) stays the
+ * address in view — its widths are the Book's own (`cover_widths`) and not known from the element — a `/cover` address is
+ * asked at the hero's width through `/cover`, and a source address as before. Never another host: a Pages build's cover
+ * stays on the app's origin.
+ */
 function sharpSrcOf(cover: Element | null): string | null {
   const image = cover?.querySelector<HTMLImageElement>(':scope > img')
-  return coverSrc(image?.currentSrc || image?.src, 'xl')
+  const url = image?.currentSrc || image?.src
+  return url ? coverSrc(url, 'xl', unproxied(url) !== url) : null
 }
 
 /** A tap on a link to a book page: called by UiPressLink (`flightOf`) before it navigates. */

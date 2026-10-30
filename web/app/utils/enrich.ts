@@ -1,7 +1,8 @@
 import type { AuthorHero, AuthorPage, BookAuthor, CreditHit, LifeDate } from '~/data/enrich/authors'
 import type { BookSeriesPlace, StartedSeries } from '~/data/enrich/series'
 import type { WorkCard } from '~/data/enrich/works'
-import { coverSrc, type CoverSize } from './cover'
+import type { CoverSize } from './cover'
+import { coverPrefetch, type CoverHosts } from './coverRef'
 
 /**
  * What the author pages, the series line and Home's "Next in your series"
@@ -74,13 +75,22 @@ export function workCover(work: Pick<WorkCard, 'coverUrl'>): string | null {
  * The covers of a section's works to ask for before their rows are on screen,
  * once the page that names them has arrived: each work's own image at `size`
  * (the one its row will ask for, so the browser has it already), each once,
- * the first `limit` of them.
+ * the first `limit` of them. Through `coverImage` / `coverPrefetch`
+ * (utils/coverRef.ts) with the hosts the rows use (`hosts`), so it is the row's
+ * address: our stored copy where the card has one, else `/cover` or the source,
+ * at the candidate the screen's pixel ratio picks.
  */
-export function coversToPrefetch(works: readonly Pick<WorkCard, 'coverUrl'>[], size: CoverSize, limit: number): string[] {
+export function coversToPrefetch(
+  works: readonly Pick<WorkCard, 'coverUrl' | 'coverKey' | 'coverWidths'>[],
+  size: CoverSize,
+  hosts: CoverHosts,
+  limit: number,
+  dpr = 1,
+): string[] {
   const urls: string[] = []
   for (const work of works) {
     if (urls.length >= limit) break
-    const src = coverSrc(workCover(work), size)
+    const src = coverPrefetch(work, size, hosts, dpr)
     if (src && !urls.includes(src)) urls.push(src)
   }
   return urls

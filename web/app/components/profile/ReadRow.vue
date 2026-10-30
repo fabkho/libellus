@@ -7,6 +7,9 @@
 import type { StatsRead } from '~/data/stats'
 import { linkOf } from '~/utils/memberProfile'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 const props = withDefaults(defineProps<{ read: StatsRead; label?: string; figure?: string; withYear?: boolean; foreign?: boolean }>(), {
   label: undefined,
   figure: undefined,
@@ -29,7 +32,7 @@ const nthRead = (n: number) => (ORDINALS[n - 1] ? t(`history.ordinal.${ORDINALS[
       decorative
       :title="read.book.title"
       :authors="read.book.authors"
-      :src="coverSrc(read.book.coverUrl, 'sm')"
+      v-bind="coverImage(read.book, 'sm', coverHosts)"
       :thumbhash="read.book.coverThumbhash"
       :colors="read.book.coverColors"
       size="sm"

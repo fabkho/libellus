@@ -2,6 +2,7 @@ import type { CoverColors } from '../data/books'
 import { appleArtwork } from '../data/apple'
 import { openLibraryCoverAt } from '../data/openLibrary'
 import { coverIsCacheable, coverProxyUrl, unproxied } from './coverSize'
+import { OWN_COVER_PATH } from './ownCoverPath'
 
 /**
  * Where a cover's image comes from: the sources' sizes (Apple's CDN, Open Library), the chain of sizes a cover tries
@@ -116,11 +117,32 @@ export function coverChain(url: string | null | undefined, size: CoverSize): str
   return unproxied(url!) !== url ? [...new Set([coverSrc(url, size, true)!, ...direct])] : direct
 }
 
+/** One of our own copies (`/c/<key>/<width>`, utils/coverRef.ts, utils/ownCoverPath.ts), whatever the origin. */
+const OWN_COVER_ARTWORK = /^(?:https?:\/\/[^/]+)?\/c\/([0-9a-f]{32})\/\d{1,4}$/
+
 /**
- * Which artwork a cover URL is of, whatever size it is asked at: Apple's box and
- * OpenLibrary's S/M/L are not part of it. Two URLs of one artwork are one image
- * to the member, at another size; two of another are another image.
+ * Which artwork each of our copies is a copy of, by key: `coversArtworkFrom` records it as `coverImage` / `coverAt` hand a
+ * copy out (utils/coverRef.ts). A key is an HMAC of the image, so the source address it was stored from is the only thing
+ * that can say a `/c/…` address and the Book's own `coverUrl` are one picture; without it a Book that gains its copy
+ * while its cover is on screen would be another artwork to the cover in view, and it would start over (a thumbhash flash).
+ */
+const ownArtwork = new Map<string, string>()
+
+/** Says that our copy of `key` is the artwork of `coverUrl` (a Book's source address): their addresses are then one artwork. */
+export function coversArtworkFrom(key: string, coverUrl: string): void {
+  if (!ownArtwork.has(key)) ownArtwork.set(key, artworkOf(coverUrl))
+}
+
+/**
+ * Which artwork a cover URL is of, whatever size it is asked at: Apple's box, OpenLibrary's S/M/L and our own copy's
+ * width are not part of it. Two URLs of one artwork are one image to the member, at another size; two of another are
+ * another image. One address of ours (`/c/<key>/<width>`) is the artwork of its key — which is the artwork of the source
+ * it copies, once `coversArtworkFrom` has seen the pair — so switching a cover from one stored width to another, or from
+ * the source to the copy that just arrived for it, does not start the cover in view over.
  */
 export function artworkOf(url: string): string {
-  return openLibraryCoverAt(appleArtwork(unproxied(url), 1, 1), 'M')
+  const source = unproxied(url)
+  const own = OWN_COVER_ARTWORK.exec(source)
+  if (own) return ownArtwork.get(own[1]) ?? `${OWN_COVER_PATH}/${own[1]}`
+  return openLibraryCoverAt(appleArtwork(source, 1, 1), 'M')
 }

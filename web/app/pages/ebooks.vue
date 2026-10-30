@@ -13,8 +13,12 @@
 // its Book; a copy the browser evicted says Missing. Nothing here is ever
 // uploaded, and the footer says so. A pushed screen in the tab layout.
 import { fileAuthors, fileTitle } from '~/data/ebooks/match'
+import type { EbookRecord } from '~/data/ebooks/ebooks'
+import type { LibraryEntry } from '~/data/library'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useLibraryStore } from '~/stores/library'
+import type { CoverImage } from '~/utils/coverRef'
+import { coverSizes } from '~/utils/cover'
 import { relativeTime } from '~/utils/relativeTime'
 
 definePageMeta({ layout: 'tabs', screen: 'ebooks', pushed: true })
@@ -82,6 +86,15 @@ const scannedWhen = computed(() =>
   scannedAt.value && !scanning.value ? t('ebooks.folder.scanned', { when: relativeTime(scannedAt.value, Math.max(now.value, Date.now()), locale.value) }) : null,
 )
 
+/** These rows asked the source directly before own covers existed (only the Library's row and the reel go through `/cover`). */
+const coverHosts = { ...useCoverHosts(), proxy: false }
+/**
+ * A linked file's cover, for the template (not a computed: `ebooks.coverOf` caches the file's image in the store as it is
+ * asked): its Book's (utils/coverRef.ts) when it has one, else the file's own image, shown whole.
+ */
+function linkedCover(entry: LibraryEntry | null, record: EbookRecord): CoverImage {
+  return entry ? coverImage(entry.book, 'sm', coverHosts) : { src: ebooks.coverOf(record), srcset: null, sizes: coverSizes('sm'), fallbacks: [] }
+}
 const linkedRows = computed(() =>
   ebooks.linked.map((record) => ({ record, entry: record.bookId ? library.entryForBook(record.bookId) : null, missing: ebooks.missing.has(record.id) })),
 )
@@ -194,7 +207,7 @@ const empty = computed(() => ebooks.loaded && !ebooks.records.some((r) => r.stat
                 decorative
                 :title="entry?.book.title ?? fileTitle(record.metadata) ?? record.name"
                 :authors="entry?.book.authors ?? fileAuthors(record.metadata)"
-                :src="entry ? coverSrc(entry.book.coverUrl, 'sm') : ebooks.coverOf(record)"
+                v-bind="linkedCover(entry, record)"
                 :thumbhash="entry?.book.coverThumbhash"
                 :colors="entry?.book.coverColors"
                 size="sm"

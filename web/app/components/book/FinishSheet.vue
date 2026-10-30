@@ -12,6 +12,9 @@ import { pageCountOf } from '~/data/progress'
 import { readSummaryOf } from '~/data/progressDays'
 import { useReadingStore } from '~/stores/reading'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 const { t, n } = useI18n()
 const { relativeDay } = useDays()
 const reading = useReadingStore()
@@ -66,7 +69,7 @@ const summary = computed(() => {
       <UiBookLine
         :title="entry.book.title"
         :authors="entry.book.authors"
-        :src="coverSrc(entry.book.coverUrl, 'xs')"
+        v-bind="coverImage(entry.book, 'xs', coverHosts)"
         :thumbhash="entry.book.coverThumbhash"
         :colors="entry.book.coverColors"
       />

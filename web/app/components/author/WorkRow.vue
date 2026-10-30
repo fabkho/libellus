@@ -16,6 +16,9 @@ import { useBookStore } from '~/stores/book'
 import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 const props = withDefaults(defineProps<{
   work: WorkCard
   /** Its place in the list it is in: "Book 3", or none. */
@@ -101,7 +104,7 @@ async function want() {
       :aria-current="current ? 'page' : undefined"
       @press="press"
     >
-      <UiCover decorative :title="work.title" :src="coverSrc(workCover(work), 'sm')" :thumbhash="owned?.coverThumbhash" :colors="owned?.coverColors" size="sm" :eager="eager" :class="notFinished && 'dimmed'" />
+      <UiCover decorative :title="work.title" v-bind="coverImage(work, 'sm', coverHosts)" :thumbhash="owned?.coverThumbhash" :colors="owned?.coverColors" size="sm" :eager="eager" :class="notFinished && 'dimmed'" />
       <span class="flex min-w-0 flex-1 flex-col gap-xxs">
         <span class="book-title title-wrap text-body-large" :data-testid="`${testid}Title`">{{ work.title }}</span>
         <span v-if="meta || current" class="figures flex items-center gap-xs text-meta text-ink-faint">

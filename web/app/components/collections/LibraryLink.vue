@@ -9,6 +9,9 @@
 import { useCollectionsStore } from '~/stores/collections'
 import { useSessionStore } from '~/stores/session'
 
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 // `onlyIfAny`: an empty Library shows the way in only while there are Collections to go to.
 const props = defineProps<{ onlyIfAny?: boolean }>()
 
@@ -66,7 +69,7 @@ watch(
             <UiCover
               :title="book.title"
               :authors="book.authors"
-              :src="coverSrc(book.coverUrl, 'xs')"
+              v-bind="coverImage(book, 'xs', coverHosts)"
               :thumbhash="book.coverThumbhash"
               :colors="book.coverColors"
               size="xs"
