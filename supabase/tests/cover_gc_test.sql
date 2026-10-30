@@ -8,10 +8,14 @@
 --   * the race with a store: a reservation first keeps the object, a reservation after the claim is refused
 --   * done removes the rows, failed keeps them (released, and not tried again within the week)
 --   * the entry-against-claim case: the Book lost its key, the reconcile queues it again
---   * the weekly job, the schedule and who may call what
+--   * the grace restarts when a Library holds the key again (an entry added between two weekly marks)
+--   * the weekly job (a failing kick does not undo the mark), the schedule and who may call what
+--
+-- The race with a store between two REAL sessions cannot run here (one transaction): it is checked by hand with
+-- supabase/functions/cover-store/gc_race_check.sh (both orders). Here the two orders are checked one after the other.
 
 begin;
-select plan(76);
+select plan(101);
 set local client_min_messages = warning;
 
 create schema if not exists tests;
@@ -123,7 +127,11 @@ select is(public.cover_gc_mark() ->> 'marked', '0', 'a second mark marks nothing
 select is((select orphaned_at < now() - interval '4 days' from private.cover_objects where key = tests.hex(2)), true, 'and does not restart the 30 days');
 
 -- referenced again: the mark is cleared
+-- (the entry's own trigger clears the mark at once, below; here it is off, so it is the mark that finds the object used again)
+alter table public.library_entries disable trigger library_entries_cover_gc_grace;
+delete from public.library_entries where book_id = :'book2';
 insert into public.library_entries (member_id, book_id) values (:'max_id', :'book2');
+alter table public.library_entries enable trigger library_entries_cover_gc_grace;
 select is(public.cover_gc_mark() ->> 'cleared', '1', 'an object used again loses its mark');
 select is(tests.orphaned(2), false, 'object 2 is kept');
 delete from public.library_entries where book_id = :'book2';
@@ -147,7 +155,10 @@ select is((select cover_key from public.books where id = :'book2'), tests.hex(2)
 
 -- an object used again after the mark, before the claim: the claim re-checks and never takes it
 insert into private.cover_objects (key, widths, orphaned_at) values (tests.hex(5), '{120,600}', now() - interval '40 days');
+-- (the entry's trigger would clear that old mark: off here, to see that the claim re-checks use by itself)
+alter table public.library_entries disable trigger library_entries_cover_gc_grace;
 select tests.book(5, 5, :'max_id') as book5 \gset
+alter table public.library_entries enable trigger library_entries_cover_gc_grace;
 select is(tests.claimed_keys(), '-', 'an old mark on an object a Library uses again is not claimed (the mark ran last week)');
 select is(tests.held(5), false, 'and holds nothing');
 select is((select cover_key from public.books where id = :'book5'), tests.hex(5), 'the Book keeps its key');
@@ -248,6 +259,56 @@ select tests.act_as_service();
 select is(tests.claimed_keys(), tests.hex(3), 'next week it is claimed again');
 reset role;
 
+-- ------------------------------------------- the grace restarts when a Library holds the key again
+
+-- Marked 40 days ago; then a Library holds the Book for a day (an entry added and removed between two weekly marks). The
+-- claim must not trust the old mark: the 30 days start over.
+select tests.obj(40, '{120,600}', 40);
+select tests.book(40, 40) as book40 \gset
+select is(tests.orphaned(40), true, 'object 40 is marked, 40 days ago');
+insert into public.library_entries (member_id, book_id) values (:'ida_id', :'book40');
+select is(tests.orphaned(40), false, 'a Library entry for a Book with the key clears the mark at once');
+delete from public.library_entries where book_id = :'book40';
+select tests.act_as_service();
+select is(tests.claimed_keys(), '-', 'removed again, the old mark is gone: nothing is claimed');
+reset role;
+select is(tests.held(40), false, 'and nothing held');
+select is((select cover_key from public.books where id = :'book40'), tests.hex(40), 'the Book keeps its key');
+select is(public.cover_gc_mark() ->> 'marked' >= '1', true, 'the next mark orphans it afresh');
+select is((select orphaned_at > now() - interval '1 minute' from private.cover_objects where key = tests.hex(40)), true, 'with the 30 days restarted');
+select tests.act_as_service();
+select is(tests.claimed_keys(), '-', 'so it is not claimed');
+reset role;
+-- through a Book that is added by the own-edition / import paths too: it is the entry that counts, not who wrote it
+select tests.obj(42, '{120}', 40);
+select tests.book(42, 42) as book42 \gset
+select tests.act_as(:'ida_id');
+select lives_ok(format($$ select public.add_to_library(jsonb_build_object('title', 'Gc Book 42', 'source', 'import', 'isbn13', %L)) $$, (select isbn13 from public.books where id = :'book42')), 'a member adds the Book to their Library (the trigger runs as its owner)');
+select is((select count(*)::int from public.library_entries where book_id = :'book42'), 1, 'it is the Book that holds the key');
+reset role;
+select is(tests.orphaned(42), false, 'and clears the mark');
+
+-- An entry added once GC holds the object changes nothing: the claim cleared the Book's key, the reconcile stores it again.
+select tests.obj(41, '{120}', 40);
+select tests.book(41, 41) as book41 \gset
+select tests.act_as_service();
+select is(tests.claimed_keys(), tests.hex(41), 'an object is claimed');
+reset role;
+insert into public.library_entries (member_id, book_id) values (:'ida_id', :'book41');
+select is(tests.held(41), true, 'an entry added afterwards leaves it held');
+select is(tests.orphaned(41), true, 'and marked');
+select is((select cover_key from public.books where id = :'book41'), null, 'the Book has no key');
+select is(private.cover_store_reconcile() >= 1, true, 'the reconcile finds it');
+select is(tests.q(:'book41'), 'queued,0,-', 'and queues it: the store waits out deleting_at and uploads afresh');
+select is(public.cover_store_reserve(tests.hex(41)), false, 'refused until GC is done');
+select tests.act_as_service();
+select is(public.cover_gc_done(array[tests.hex(41)]), 1, 'GC is done');
+reset role;
+select is(public.cover_store_reserve(tests.hex(41)), true, 'and the store reserves the key afresh');
+delete from private.cover_store_queue where book_id = :'book41';
+delete from public.library_entries where book_id in (:'book41', :'book42');
+delete from private.cover_objects where key in (tests.hex(40), tests.hex(41), tests.hex(42));
+
 -- ------------------------------------------------------------ the weekly job
 
 update private.cover_store_settings set function_url = null;
@@ -264,6 +325,20 @@ select vault.create_secret('test-token', 'cover_store_token');
 select is(private.cover_gc_weekly(), 'sent', 'with one it is sent');
 select is((select count(*)::int from net.http_request_queue), :net_before + 1, 'as one request');
 select is((select convert_from(body, 'utf8')::jsonb from net.http_request_queue order by id desc limit 1), '{"action": "gc"}'::jsonb, 'asking for `gc`');
+-- the settings row missing: off, not an error (and not a kick on a null)
+select count(*)::int as net_pre from net.http_request_queue \gset
+delete from private.cover_store_settings;
+select is(private.cover_gc_kick(), 'off', 'with no settings row the kick is off');
+select is(private.cover_gc_weekly(), 'off', 'and so is the weekly job');
+select is((select count(*)::int from net.http_request_queue), :net_pre, 'and nothing is sent');
+insert into private.cover_store_settings (enabled, function_url) values (true, 'https://example.invalid/functions/v1/cover-store');
+
+-- A kick that fails does not roll the mark back
+delete from public.library_entries where book_id = :'book1';
+update private.cover_objects set orphaned_at = null where key = tests.hex(1);
+create or replace function private.cover_gc_kick() returns text language plpgsql as $$ begin raise exception 'pg_net is down'; end $$;
+select is(private.cover_gc_weekly(), 'unavailable', 'a kick that raises is answered as unavailable, not raised');
+select is(tests.orphaned(1), true, 'and the mark it made stays');
 update private.cover_store_settings set enabled = false;
 select is(private.cover_gc_weekly(), 'off', 'and nothing again once the feature is off');
 select is((select count(*)::int from net.http_request_queue), :net_before + 1, 'not even a queued request');

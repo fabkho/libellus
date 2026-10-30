@@ -64,11 +64,16 @@ A stored image is kept while **any** Book that a `library_entries` row points at
 - **A failed delete keeps the row**: `cover_gc_failed(keys)` releases it (`deleting_at` null, so a store of that key is accepted
   and uploads afresh) and the next weekly run tries again (not before six days). A 404 is a failure, not "deleted" (a wrong
   bucket answers it too); a missing *object* is not one: S3/R2 answer 204.
-- **A `cover_objects` row with null widths** (a failure between the reservation and the end of the upload) is listed
-  (`r2.ts` `list`, ListObjectsV2 by `c/<key>/`) and what is there is deleted.
 - **Store against delete**: reserve and claim lock the same row. A reservation first clears `orphaned_at` and the claim no longer
   takes the row; after the claim it is refused (`deleting`) until `cover_gc_done`. A Library entry the claim could not see may
   point at a Book whose key it cleared: the Book has no key, the reconcile queues it, the store uploads again.
+- **The grace restarts when a Library holds the key again**: a trigger on `library_entries` clears the mark of the Book's key when an
+  entry is added (the weekly mark alone would leave an old mark standing if the Book was held and dropped between two marks).
+  A Book outside every Library does not protect its key, by design.
+- **Every width under `c/<key>/` is deleted**, the ones the database knows and whatever a LIST of exactly that prefix finds (a later
+  re-store with another width set); only claimed keys are listed. `cover_gc_done`/`_failed` are tried three times; if `done`
+  still throws the keys go to `failed`, so a row is never left held.
+- **The race with a store between two real sessions** is checked by hand: `gc_race_check.sh` (local stack only; pgTAP is one transaction).
 - **Nothing is deleted while the feature is off**: `cover_gc_claim`, `cover_gc_mark` and the weekly job answer nothing while
   `private.cover_store_settings.enabled` is false, so even a hand-posted `gc` deletes nothing. **Deletion is irreversible**: an
   object comes back only by storing the cover again from its source. GC needs only the three R2 secrets.

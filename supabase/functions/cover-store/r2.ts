@@ -100,7 +100,8 @@ export function createR2(options: R2Options): R2 {
       const { status, text } = await call('list', signed, signal, true)
       if (status < 200 || status >= 300) throw new R2Error(status, `list answered ${status}`)
       // Keys are `c/<key>/<width>`: nothing else is read from the answer.
-      const widths = [...text.matchAll(/<Key>c\/[0-9a-f]{32}\/(\d{1,4})<\/Key>/g)].map((match) => Number(match[1]))
+      // Only this key's: the prefix ends with a slash, and the key is checked again here.
+      const widths = [...text.matchAll(/<Key>c\/([0-9a-f]{32})\/(\d{1,4})<\/Key>/g)].filter((match) => match[1] === key).map((match) => Number(match[2]))
       return [...new Set(widths)].sort((a, b) => a - b)
     },
   }

@@ -15,6 +15,15 @@
 -- here acts while the feature is off: the weekly job, the mark, the kick AND the claim all answer "nothing" while
 -- `private.cover_store_settings.enabled` is false, whoever calls them, so even a hand-posted `gc` deletes nothing.
 --
+-- **What protects a key:** a Book that a `library_entries` row points at. A Book outside every Library does NOT (the spec's
+-- rule: the copy is for Books members hold): its key stays while the object is merely marked, so a Book removed and added
+-- back within the grace finds its copy, and the claim clears it once the grace has run out.
+--
+-- **The grace restarts when a Library holds the key again.** The weekly mark clears a mark it finds used, but a Book can be
+-- added to a Library and removed again between two marks, and the claim would then trust a stale `orphaned_at`. So a trigger
+-- on `library_entries` clears the mark of the Book's key the moment an entry is added (`cover_gc_entry_added`); the next
+-- mark orphans it afresh and the 30 days start over. The other way a key becomes used, `cover_store_done`, clears it itself.
+--
 -- Store against delete, reserve first (cover_store_reserve, 20261108010000): the reservation and the claim lock the same
 -- `cover_objects` row. A reservation that comes first clears `orphaned_at`, and the claim, which re-checks it on the locked
 -- row (`for update` re-reads it under READ COMMITTED), no longer takes it; one that comes after sees `deleting_at` and
@@ -46,6 +55,33 @@ set search_path = ''
 as $$
   select coalesce((select enabled from private.cover_store_settings where id), false)
 $$;
+
+-- ------------------------------------------------- a Library holds the key
+
+-- An entry is added: the Book's key is used again, so its mark (if any) goes and the 30 days start over at the next mark.
+-- Not while GC holds the object (`deleting_at`): the claim already cleared the Book's key, and the reconcile stores it afresh.
+create function private.cover_gc_entry_added()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update private.cover_objects o
+     set orphaned_at = null
+    from public.books b
+   where b.id = new.book_id
+     and o.key = b.cover_key
+     and o.orphaned_at is not null
+     and o.deleting_at is null;
+  return null;
+end
+$$;
+
+create trigger library_entries_cover_gc_grace
+after insert on public.library_entries
+for each row
+execute function private.cover_gc_entry_added();
 
 -- --------------------------------------------------------------- mark
 
@@ -94,7 +130,8 @@ $$;
 -- Library uses: sets `deleting_at` (locking the rows, so a store of the key waits or is refused) and clears
 -- `cover_key`/`cover_widths` on every Book still pointing at them. `skip locked` leaves a row a reservation holds. A row
 -- GC holds since more than 15 minutes (a run that died) is claimed again; one that failed waits for `gc_retry_at`.
--- Answers the key and its widths (null = a reservation whose upload did not finish: the function deletes what is there).
+-- Answers the key and its widths as the database knows them (null = a reservation whose upload did not finish); the function
+-- deletes those AND whatever else R2 holds under exactly `c/<key>/` (a later re-store with another width set).
 create function public.cover_gc_claim(p_limit integer default 100)
 returns table (key text, widths smallint[])
 language plpgsql
@@ -211,7 +248,7 @@ declare
   v_request bigint;
 begin
   select * into v_settings from private.cover_store_settings where id;
-  if not v_settings.enabled or v_settings.function_url is null then return 'off'; end if;
+  if not coalesce(v_settings.enabled, false) or v_settings.function_url is null then return 'off'; end if;
   if not private.cover_gc_due() then return 'idle'; end if;
   if to_regprocedure('net.http_post(text, jsonb, jsonb, jsonb, integer)') is null
      or to_regclass('vault.decrypted_secrets') is null then
@@ -242,13 +279,19 @@ as $$
 begin
   if not private.cover_gc_enabled() then return 'off'; end if;
   perform public.cover_gc_mark();
-  return private.cover_gc_kick();
+  -- A kick that fails (pg_net, the Vault) must not roll the mark back: the claim finds the rows next week anyway.
+  begin
+    return private.cover_gc_kick();
+  exception when others then
+    return 'unavailable';
+  end;
 end
 $$;
 
 -- -------------------------------------------------------------- grants
 
 revoke all on function private.cover_gc_enabled() from public, anon, authenticated;
+revoke all on function private.cover_gc_entry_added() from public, anon, authenticated;
 revoke all on function private.cover_gc_due() from public, anon, authenticated;
 revoke all on function private.cover_gc_kick() from public, anon, authenticated;
 revoke all on function private.cover_gc_weekly() from public, anon, authenticated;

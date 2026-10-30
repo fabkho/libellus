@@ -1,4 +1,4 @@
-import { assertEquals } from '@std/assert'
+import { assertEquals, assertRejects } from '@std/assert'
 import { GC_BATCH, runGc } from './gc.ts'
 import { createR2 } from './r2.ts'
 import type { GcClaimed, GcStore } from './store.ts'
@@ -11,7 +11,9 @@ const key = (n: number) => n.toString(16).padStart(32, '0')
  * them, `done` removes the rows, `failed` releases them (and `failed` ones are not claimed again: the retry date).
  * `enabled` false = the claim answers nothing, as `cover_gc_claim` does while the feature is off.
  */
-function fakeGcStore(initial: GcClaimed[], options: { enabled?: boolean } = {}) {
+function fakeGcStore(initial: GcClaimed[], options: { enabled?: boolean; doneThrows?: number; failedThrows?: number } = {}) {
+  let doneThrows = options.doneThrows ?? 0
+  let failedThrows = options.failedThrows ?? 0
   const rows = new Map(initial.map((object) => [object.key, { ...object, state: 'free' as 'free' | 'held' | 'retry' }]))
   const calls = { claims: [] as number[], done: [] as string[][], failed: [] as string[][] }
   const store: GcStore = {
@@ -24,11 +26,13 @@ function fakeGcStore(initial: GcClaimed[], options: { enabled?: boolean } = {}) 
     },
     done(keys) {
       calls.done.push(keys)
+      if (doneThrows-- > 0) return Promise.reject(new Error('cover_gc_done: connection refused'))
       for (const key of keys) if (rows.get(key)?.state === 'held') rows.delete(key)
       return Promise.resolve(keys.length)
     },
     failed(keys) {
       calls.failed.push(keys)
+      if (failedThrows-- > 0) return Promise.reject(new Error('cover_gc_failed: connection refused'))
       for (const key of keys) {
         const row = rows.get(key)
         if (row?.state === 'held') row.state = 'retry'
@@ -39,15 +43,15 @@ function fakeGcStore(initial: GcClaimed[], options: { enabled?: boolean } = {}) 
   return { store, calls, rows, states: () => Object.fromEntries([...rows.values()].map((row) => [row.key, row.state])) }
 }
 
-async function world(objects: { key: string; widths: number[] | null; stored?: number[] }[], options: { s3?: Parameters<typeof fakeS3>[0]; enabled?: boolean; batch?: number; deadlineMs?: number } = {}) {
+async function world(objects: { key: string; widths: number[] | null; stored?: number[] }[], options: { s3?: Parameters<typeof fakeS3>[0]; enabled?: boolean; batch?: number; deadlineMs?: number; doneThrows?: number; failedThrows?: number } = {}) {
   const s3 = fakeS3(options.s3)
   const r2 = createR2({ accountId: 'acct', accessKeyId: 'AKIAFAKE', secretAccessKey: 'fake', fetch: s3.fetch })
   // What R2 holds: the widths the database knows, or what `stored` says (an object whose widths the database never learnt).
   for (const object of objects) for (const width of object.stored ?? object.widths ?? []) await r2.put(object.key, width, fixture('apple-120x180.webp'), 'image/webp')
   s3.puts.length = 0
-  const db = fakeGcStore(objects.map(({ key, widths }) => ({ key, widths })), { enabled: options.enabled })
+  const db = fakeGcStore(objects.map(({ key, widths }) => ({ key, widths })), { enabled: options.enabled, doneThrows: options.doneThrows, failedThrows: options.failedThrows })
   const logged: string[] = []
-  const result = await runGc({ store: db.store, r2, log: (message) => logged.push(message), batch: options.batch, deadlineMs: options.deadlineMs })
+  const result = await runGc({ store: db.store, r2, log: (message) => logged.push(message), batch: options.batch, deadlineMs: options.deadlineMs, retryDelayMs: 0 })
   return { result, s3, db, logged }
 }
 
@@ -153,4 +157,51 @@ Deno.test('the deadline cuts the requests: what was claimed is settled (failed, 
   const result = await runGc({ store: db.store, r2, log: () => {}, deadlineMs: 30 })
   assertEquals([result.deleted, result.failed], [0, 2])
   assertEquals(Object.values(db.states()), ['retry', 'retry'])
+})
+
+Deno.test('widths in R2 that the database never recorded (a later re-store with another width set) are deleted too, under exactly that key', async () => {
+  const s3 = fakeS3()
+  const r2 = createR2({ accountId: 'acct', accessKeyId: 'AKIAFAKE', secretAccessKey: 'fake', fetch: s3.fetch })
+  for (const width of [114, 227, 568]) await r2.put(key(1), width, fixture('apple-120x180.webp'), 'image/webp')
+  await r2.put(key(2), 120, fixture('apple-120x180.webp'), 'image/webp') // another key: not claimed, not touched
+  await r2.put(key(0x10), 120, fixture('apple-120x180.webp'), 'image/webp') // a key that shares the start of key(1): not touched
+  const db = fakeGcStore([{ key: key(1), widths: [114] }]) // the database knows one of three
+  const result = await runGc({ store: db.store, r2, log: () => {}, retryDelayMs: 0 })
+  assertEquals([...s3.objects.keys()].sort(), [`c/${key(0x10)}/120`, `c/${key(2)}/120`].sort())
+  assertEquals(s3.lists, [`c/${key(1)}/`])
+  assertEquals([result.deleted, result.failed], [1, 0])
+})
+
+Deno.test('cover_gc_done that throws is tried again; the deletes are not repeated', async () => {
+  const { result, s3, db } = await world([{ key: key(1), widths: [120] }, { key: key(2), widths: [120] }], { doneThrows: 2 })
+  assertEquals(db.calls.done.length, 3)
+  assertEquals(db.calls.failed, [])
+  assertEquals([...db.rows.keys()], [])
+  assertEquals(s3.deletes.length, 2)
+  assertEquals([result.deleted, result.failed], [2, 0])
+})
+
+Deno.test('cover_gc_done that keeps throwing after the deletes: the keys go to cover_gc_failed, so no row stays held', async () => {
+  const { result, db, logged } = await world([{ key: key(1), widths: [120] }, { key: key(2), widths: [120] }], { doneThrows: 99 })
+  assertEquals(db.calls.done.length, 3)
+  assertEquals(db.calls.failed.map((keys) => keys.sort()), [[key(1), key(2)]])
+  assertEquals(Object.values(db.states()), ['retry', 'retry'])
+  assertEquals([result.deleted, result.failed], [0, 2])
+  assertEquals(logged[0]!.includes('done_failed'), true)
+})
+
+Deno.test('cover_gc_failed that throws is tried again too', async () => {
+  const { result, db } = await world([{ key: key(1), widths: [120] }], { s3: { failDelete: () => 500 }, failedThrows: 1 })
+  assertEquals(db.calls.failed, [[key(1)], [key(1)]])
+  assertEquals(db.states(), { [key(1)]: 'retry' })
+  assertEquals([result.deleted, result.failed], [0, 1])
+})
+
+Deno.test('the database down for done and failed both: the run ends with the error (a 500), logged once, counts only', async () => {
+  const s3 = fakeS3()
+  const r2 = createR2({ accountId: 'acct', accessKeyId: 'AKIAFAKE', secretAccessKey: 'fake', fetch: s3.fetch })
+  const db = fakeGcStore([{ key: key(1), widths: [120] }], { doneThrows: 99, failedThrows: 99 })
+  const logged: string[] = []
+  await assertRejects(() => runGc({ store: db.store, r2, log: (message) => logged.push(message), retryDelayMs: 0 }), Error, 'cover_gc_failed')
+  assertEquals(logged.length, 1)
 })
