@@ -50,7 +50,7 @@
     "@supabase/supabase-js": "^2.117.3",
     "dompurify": "^3.4.16",
     "fflate": "^0.8.3",
-    "nuxt": "^4.6.1",
+    "nuxt": "^4.6.2",
     "papaparse": "^5.7.0",
     "pinia": "^4.0.3",
     "thumbhash": "^0.1.1",
