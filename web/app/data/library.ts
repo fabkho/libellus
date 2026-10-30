@@ -355,6 +355,9 @@ export type BookRow = {
   cover_thumbhash: string | null
   cover_dominant: string | null
   cover_secondary: string | null
+  /** Our stored copy of `cover_url` (R2), when there is one: not read by any screen yet (docs/plans/owned-covers.md). */
+  cover_key?: string | null
+  cover_widths?: number[] | null
   source: Book['source']
   apple_id: string | null
   openlibrary_edition_key: string | null
@@ -380,7 +383,7 @@ export const BOOK_COLUMNS = '*, goodreads:goodreads_rating(*)'
  * the two lists against the table.
  */
 export const LIST_BOOK_COLUMNS =
-  'id, title, authors, isbn13, isbn10, page_count, published_year, language, publisher, cover_url, cover_thumbhash, cover_dominant, cover_secondary, source, apple_id, openlibrary_edition_key, openlibrary_work_key, created_at, format, goodreads:goodreads_rating(*)'
+  'id, title, authors, isbn13, isbn10, page_count, published_year, language, publisher, cover_url, cover_thumbhash, cover_dominant, cover_secondary, cover_key, cover_widths, source, apple_id, openlibrary_edition_key, openlibrary_work_key, created_at, format, goodreads:goodreads_rating(*)'
 
 /** How many Books' descriptions one request asks for (the ids are in the address). */
 export const DESCRIPTION_BATCH = 40
