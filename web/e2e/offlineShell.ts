@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 
 /**
- * The service worker's part in an offline flow (offline.spec.ts, offline-sync.spec.ts):
+ * The service worker's part in an offline flow (offline-sync.spec.ts, delete-account-offline.spec.ts):
  * the dev server has no service worker, so every file of the app the page loaded
  * online is kept here and answers the same address offline; any address opens the
  * app, as the worker's navigateFallback does. Supabase is out of reach offline, as

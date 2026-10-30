@@ -17,7 +17,7 @@ import { goto, openProfile, recordedApple, signedIn } from './support'
  * stays as a failure she can read and dismiss.
  *
  * Chromium with the files the page loaded kept for offline (`keepShell`), as in
- * offline.spec.ts.
+ * delete-account-offline.spec.ts.
  */
 test.use({
   browserName: 'chromium',

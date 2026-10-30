@@ -16,7 +16,7 @@
   "friends.spec.ts › Ida shares her link, Anna asks and is let in, a finish shows in her friends and goes when it is hidden, a block ends it": 20,
   "offline-sync.spec.ts › progress saved offline survives a reload and syncs once the connection is back": 5.4,
   "offline-sync.spec.ts › signing out with changes waiting asks first; offline only \"Sign out anyway\" is offered, and it drops them": 8.1,
-  "offline.spec.ts › the Library opens offline, online-only actions say so, and search finds her own books": 6,
+  "offline.spec.ts › offline the actions that need the connection say so, search finds her own books, and both come back online": 4,
   "progress.spec.ts › a member starts a book, sets page 120 on the wheel, turns it from Home, undoes a save and finishes in the sheet": 25.6,
   "reader.spec.ts › A crafted book runs no script and reaches nothing outside itself (scripted frames), and still reads": 5.2,
   "reader.spec.ts › A crafted book runs no script and reaches nothing outside itself (scriptless frames), and still reads": 4.7,

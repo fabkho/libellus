@@ -291,7 +291,7 @@ The page is `/` → `/sign-in`; "shown" is `signIn.title` visible.
 | **Second visit**, service worker in control: shown / LCP | 143–146 / 136 ms (3 runs); 463–473 ms in the 2 runs where the worker was not yet in control 9 s after the first load (HTTP cache only) | 54–69 ms in 2 runs, **1,086–1,101 ms in 3 of 5** |
 | requests / answered by the worker / on the wire | 62 / 55 / 6 (0.8 KB) | 64 / 56 / 8 (10 KB) |
 | long frames, second visit | none with the worker (58–60 ms without) | none |
-| **Offline reload of the shell** (`setOffline`, service worker active) | **ok**, 116–120 ms (268 ms without the worker: the HTTP cache) | not testable: Playwright's WebKit refuses every navigation while offline ("WebKit encountered an internal error"), as `e2e/offline.spec.ts` notes |
+| **Offline reload of the shell** (`setOffline`, service worker active) | **ok**, 116–120 ms (268 ms without the worker: the HTTP cache) | not testable: Playwright's WebKit refuses every navigation while offline ("WebKit encountered an internal error"), as `e2e/offlineShell.ts` notes |
 
 **Headers** (`curl` with `accept-encoding: br`, `data/final/prod-headers.txt`): HTML `cache-control: public,
 max-age=0, must-revalidate`, brotli (1.6 KB on the wire, 90 ms); hashed `/_nuxt/*.js|css` `public,
