@@ -8,9 +8,12 @@
  *   200 { state: 'idle' | 'ran', claimed, stored, failed, throttled, deferred, gone, unsupported, stale, ms, kick? }
  *   401 unauthorized · 405 method_not_allowed · 400 action_invalid · 503 not_configured · 500 failed
  *
- * The `gc` action arrives with PR 6.
+ * `POST {"action": "gc"}` deletes from R2 the stored images no Library has held for 30 days (gc.ts), weekly, from the
+ * database (`private.cover_gc_weekly`); it answers `200 { state: 'idle' | 'ran', claimed, deleted, failed, ms }` and the same errors.
+ * It deletes nothing while `private.cover_store_settings.enabled` is false: the database's claim answers nothing then.
  */
 import { sameSecret } from '../_shared/caller.ts'
+import type { GcResult } from './gc.ts'
 import type { RunResult } from './runner.ts'
 
 /** A secret or setting the run needs is not set: the names, never the values. */
@@ -25,6 +28,8 @@ export type HandlerDeps = {
   token: string | null
   /** One run (runner.ts `runCoverStore`, wired). */
   run: () => Promise<RunResult>
+  /** One GC run (gc.ts `runGc`, wired); without it `gc` is an invalid action. */
+  gc?: () => Promise<GcResult>
   log?: (message: string) => void
 }
 
@@ -44,16 +49,16 @@ export function createHandler(deps: HandlerDeps): (request: Request) => Promise<
       body = null
     }
     const { action } = (body && typeof body === 'object' ? body : {}) as { action?: unknown }
-    if (action !== 'run') return json(400, { error: 'action_invalid' })
+    if (action !== 'run' && !(action === 'gc' && deps.gc)) return json(400, { error: 'action_invalid' })
     try {
-      return json(200, await deps.run())
+      return json(200, action === 'gc' ? await deps.gc!() : await deps.run())
     } catch (error) {
       if (error instanceof NotConfigured) {
         log(`cover-store: ${error.message}`)
         return json(503, { error: 'not_configured', missing: error.missing })
       }
-      // The claim could not be asked (the database): the minute tick tries again.
-      log(`cover-store: run failed: ${error instanceof Error ? error.message : error}`)
+      // The claim could not be asked (the database): the minute tick (the weekly job, for `gc`) tries again.
+      log(`cover-store: ${action} failed: ${error instanceof Error ? error.message : error}`)
       return json(500, { error: 'failed' })
     }
   }

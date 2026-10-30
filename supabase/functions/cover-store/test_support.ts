@@ -81,24 +81,45 @@ export function coverRoutes(extra: Record<string, Route> = {}): Record<string, R
 
 // ------------------------------------------------------------------------------------------------------- R2
 
-/** A stand-in S3: checks the request is a signed PUT into `libellus-covers` and keeps the object. */
-export function fakeS3(options: { fail?: (path: string) => number | null } = {}) {
+/**
+ * A stand-in S3: checks the request is a signed PUT, DELETE or LIST of `libellus-covers` and keeps the objects. A DELETE of
+ * an object that is not there answers 204, as S3 and R2 do. `fail` makes a PUT answer that status, `failDelete` a DELETE.
+ */
+export function fakeS3(options: { fail?: (path: string) => number | null; failDelete?: (path: string) => number | null; failList?: () => number | null } = {}) {
   const objects = new Map<string, { bytes: Uint8Array; contentType: string }>()
   const puts: string[] = []
+  const deletes: string[] = []
+  const lists: string[] = []
   const fetch = async (request: Request): Promise<Response> => {
     const url = new URL(request.url)
-    if (request.method !== 'PUT') return new Response('method', { status: 405 })
     if (!/^AWS4-HMAC-SHA256 Credential=[^/]+\/\d{8}\/auto\/s3\/aws4_request,/.test(request.headers.get('authorization') ?? '')) {
       return new Response('unsigned', { status: 403 })
     }
+    if (request.method === 'GET' && decodeURIComponent(url.pathname) === '/libellus-covers' && url.searchParams.get('list-type') === '2') {
+      const prefix = url.searchParams.get('prefix') ?? ''
+      lists.push(prefix)
+      const failure = options.failList?.()
+      if (failure) return new Response('<Error>secret detail</Error>', { status: failure })
+      const keys = [...objects.keys()].filter((path) => path.startsWith(prefix)).sort()
+      const xml = `<?xml version="1.0" encoding="UTF-8"?><ListBucketResult><Name>libellus-covers</Name><Prefix>${prefix}</Prefix><IsTruncated>false</IsTruncated>${keys.map((path) => `<Contents><Key>${path}</Key><Size>1</Size></Contents>`).join('')}</ListBucketResult>`
+      return new Response(xml, { headers: { 'content-type': 'application/xml' } })
+    }
     const path = decodeURIComponent(url.pathname).replace(/^\/libellus-covers\//, '')
+    if (request.method === 'DELETE') {
+      deletes.push(path)
+      const failure = options.failDelete?.(path)
+      if (failure) return new Response('<Error>secret detail</Error>', { status: failure })
+      objects.delete(path)
+      return new Response(null, { status: 204 })
+    }
+    if (request.method !== 'PUT') return new Response('method', { status: 405 })
     puts.push(path)
     const failure = options.fail?.(path)
     if (failure) return new Response('<Error>secret detail</Error>', { status: failure })
     objects.set(path, { bytes: new Uint8Array(await request.arrayBuffer()), contentType: request.headers.get('content-type') ?? '' })
     return new Response(null, { status: 200 })
   }
-  return { fetch, objects, puts }
+  return { fetch, objects, puts, deletes, lists }
 }
 
 // ------------------------------------------------------------------------------------------ the pace, the store

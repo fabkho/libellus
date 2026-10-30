@@ -1,5 +1,5 @@
 import { assertEquals, assertRejects } from '@std/assert'
-import { createStore } from './store.ts'
+import { createGcStore, createStore } from './store.ts'
 
 function rpcOf(answers: Record<string, unknown>) {
   const calls: { name: string; args: Record<string, unknown> }[] = []
@@ -43,4 +43,20 @@ Deno.test('an empty claim is an empty list, a false answer is false, a database 
   assertEquals(await store.reserve('k'), false)
   assertEquals(await store.done({ book: 'b', sourceUrl: 'u', key: 'k', widths: [1], bytes: 1, contentType: 'image/jpeg' }), false)
   await assertRejects(() => store.failed('b', 'fn:1', 'gone'), Error, 'cover_store_failed: reason_invalid')
+})
+
+Deno.test('the GC store calls cover_gc_* with their parameter names; an empty claim is an empty list', async () => {
+  const claimed = [{ key: 'k'.repeat(32), widths: [120, 600] }, { key: 'j'.repeat(32), widths: null }]
+  const { rpc, calls } = rpcOf({ cover_gc_claim: claimed, cover_gc_done: 2, cover_gc_failed: 1 })
+  const store = createGcStore(rpc)
+  assertEquals(await store.claim(100), claimed)
+  assertEquals(await store.done(['a', 'b']), 2)
+  assertEquals(await store.failed(['c']), 1)
+  assertEquals(calls, [
+    { name: 'cover_gc_claim', args: { p_limit: 100 } },
+    { name: 'cover_gc_done', args: { p_keys: ['a', 'b'] } },
+    { name: 'cover_gc_failed', args: { p_keys: ['c'] } },
+  ])
+  assertEquals(await createGcStore(rpcOf({ cover_gc_claim: null }).rpc).claim(100), [])
+  await assertRejects(() => createGcStore(rpcOf({ cover_gc_claim: new Error('boom') }).rpc).claim(100), Error, 'cover_gc_claim: boom')
 })

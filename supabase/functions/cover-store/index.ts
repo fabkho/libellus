@@ -23,8 +23,9 @@ import { createHandler, NotConfigured } from './handler.ts'
 import { missingSettings, parseHosts } from './config.ts'
 import type { HostName } from './plan.ts'
 import { createR2 } from './r2.ts'
+import { runGc } from './gc.ts'
 import { runCoverStore } from './runner.ts'
-import { createStore } from './store.ts'
+import { createGcStore, createStore } from './store.ts'
 
 /** Open Library's keyed covers (ISBN, OCLC, LCCN) wait this long for their turn at most: a run of 8 needs ~27 s of turns. */
 export const KEYED_PACE_MAX_WAIT_MS = 90_000
@@ -73,14 +74,25 @@ const fetcher = missing.length === 0
     },
   })
   : null
-const r2 = missing.length === 0
+// GC needs R2 and nothing else (no key secret, no fetcher): it is not held back by the other settings.
+const missingForGc = missingSettings({
+  R2_COVERS_ACCOUNT_ID: r2Account,
+  R2_COVERS_ACCESS_KEY_ID: r2KeyId,
+  R2_COVERS_SECRET_ACCESS_KEY: r2Secret,
+})
+const r2 = missingForGc.length === 0
   ? createR2({ accountId: r2Account!, accessKeyId: r2KeyId!, secretAccessKey: r2Secret!, endpoint: env('R2_COVERS_ENDPOINT') ?? undefined })
   : null
+const gcStore = createGcStore(rpc)
 
 Deno.serve(createHandler({
   token,
   run() {
     if (!fetcher || !r2 || !keySecret) throw new NotConfigured(missing)
     return runCoverStore({ store, fetcher, r2, keySecret, hosts })
+  },
+  gc() {
+    if (!r2) throw new NotConfigured(missingForGc)
+    return runGc({ store: gcStore, r2 })
   },
 }))
