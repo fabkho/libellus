@@ -39,6 +39,10 @@ watch(
         <span v-for="n in count ?? 0" :key="n" class="tick" :class="{ fifth: n % 5 === 0 }" />
       </TransitionGroup>
     </div>
+    <!-- One space between the label and the count, which are two words of the one name ("Read in 2026: 1"): drawn
+         with nothing between them, inline text reads as a single word ("Read in 20261"), which no name contains.
+         A flex item of white space alone is not rendered, so nothing moves. -->
+    {{ ' ' }}
     <span class="flex shrink-0 items-center gap-xs">
       <span class="text-figure text-ink tabular-nums" data-testid="home.tallyCount">{{ count ?? '–' }}</span>
       <UiIcon v-if="opens" name="chevron" :size="15" class="text-ink-ghost" />

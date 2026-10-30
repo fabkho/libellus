@@ -63,6 +63,15 @@ How:
 - Text drawn in pieces (dots between facts, a count beside a year, a month's count) is given to
   assistive tech as one phrase: an `aria-label` on the heading or group, or a visually hidden string
   with the drawn pieces hidden.
+- A name starts with what is drawn on the control, word for word (WCAG 2.5.3, label in name): a voice
+  user says what she sees. So the header's and the Profile's avatar say her initials ("Profile: FK"), a
+  chart's column is its count and its label before the words they abbreviate ("8 · ’26 — 2026"), the
+  Home tally and a Reviews card say their count and their words in the order they are drawn, and the
+  reader's place is the "10 % · 108 left" it shows before "Go to a page". The pieces that stand side by
+  side carry a real space between them in the document (a `{{ ' ' }}`, or a space in the text a row is
+  given, which a flex or grid container renders as nothing): axe compares the name with the drawn text
+  as it runs together, so pieces with no text between them are one word to it ("Read in 20261",
+  "Science fiction67"), which no name contains.
 - Something that comes and goes says so in a polite status: a progress save ("Progress saved, +24.
   Undo is beside it …"), the sync chip, search results (`aria-live` on the results), the shelf
   loading. Errors are `role="alert"`. Every navigation reads the new page title

@@ -54,10 +54,11 @@ const shown = computed(() => session.member?.name ?? session.member?.email ?? ''
 
 <template>
   <section class="relative flex flex-col items-center px-xl pt-sm text-center" data-testid="profile.hero">
+    <!-- As the header's avatar: the name starts with the initials drawn in the ring (WCAG 2.5.3). -->
     <button
       type="button"
       class="ring relative flex items-center justify-center rounded-pill disabled:cursor-default"
-      :aria-label="t('photo.avatarLabel')"
+      :aria-label="t('photo.avatarLabel', { initials })"
       :disabled="!online"
       data-testid="profile.avatar"
       @click="emit('photo')"

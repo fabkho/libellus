@@ -81,8 +81,8 @@
   },
   "shell": {
     "tabsLabel": "Hauptnavigation",
-    "avatarLabel": "Profil",
-    "avatarRequest": "Dein Profil, eine Folgeanfrage wartet"
+    "avatarLabel": "Profil: {initials}",
+    "avatarRequest": "Dein Profil: {initials}, eine Folgeanfrage wartet"
   },
   "sync": {
     "chip": "Wartet auf Sync ({count})",
@@ -133,7 +133,7 @@
   "photo": {
     "row": "Foto",
     "rowNone": "Hinzufügen",
-    "avatarLabel": "Profilfoto",
+    "avatarLabel": "Profilfoto: {initials}",
     "title": "Profilfoto",
     "private": "Du und die Mitglieder, mit denen du verbunden bist, können es sehen: wer dir folgt, wem du folgst, wer angefragt hat, wer deinen Folge-Link geöffnet hat und alle in BetterReads, solange dein Konto öffentlich ist. Es wird klein gespeichert, ohne Ort oder Aufnahmezeitpunkt.",
     "choose": "Foto wählen",
@@ -186,6 +186,7 @@
     "byMonth": "Nach Monat",
     "byYear": "Nach Jahr",
     "columnLabel": "{label}: {count}",
+    "columnName": "{count} · {label} — {name}",
     "byWeek": "Nach Woche",
     "chartMode": {
       "label": "Diagramm nach",
@@ -316,7 +317,8 @@
       "all": "Alle {count} ansehen",
       "allLabel": "Alle deine {count} Rezensionen ansehen",
       "spoilers": "Spoiler",
-      "allCard": "Alle ansehen"
+      "allCard": "Alle ansehen",
+      "allCardLabel": "{count} · Alle ansehen — deine Rezensionen"
     }
   },
   "share": {
@@ -1469,6 +1471,7 @@
     "theEnd": "Ende",
     "slider": {
       "label": "Seite wählen",
+      "where": "{where} · Seite wählen",
       "page": "Seite",
       "back": "Zurück zu {page}",
       "done": "Fertig"

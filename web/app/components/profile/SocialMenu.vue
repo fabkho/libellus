@@ -49,6 +49,9 @@ function show(event: MouseEvent) {
     <UiSheet v-model:open="open" :title="t('socialLinks.menu')" :testid="`${testid}Sheet`">
       <div class="pt-xs pb-lg">
         <UiRowGroup :aria-label="t('socialLinks.listLabel')">
+          <!-- A space after the platform's name: the row draws its name and her handle side by side with no text
+               between them, and its name says both in that order ("Goodreads: 4242. Opens…"), so they must read as
+               two words for the name to start with what is shown (WCAG 2.5.3). -->
           <UiRow
             v-for="row in rows"
             :key="row.platform"
@@ -56,7 +59,7 @@ function show(event: MouseEvent) {
             :href="row.href"
             target="_blank"
             :rel="SOCIAL_LINK_REL"
-            :label="row.name"
+            :label="`${row.name} `"
             :value="row.handle"
             :aria-label="row.label"
             :data-testid="`${testid}Sheet.${row.platform}`"

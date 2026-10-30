@@ -46,9 +46,11 @@ onUnmounted(() => document.removeEventListener('visibilitychange', refreshReques
       <!-- A tab's own button (the Friends tab's People) sits beside the avatar, at the trailing edge. -->
       <div class="flex shrink-0 items-center">
         <slot name="actions" />
+        <!-- Her initials are what is drawn on the avatar, so they are what its name starts with: a voice user says
+             what she sees (WCAG 2.5.3, label in name). -->
         <NuxtLink
           to="/profile"
-          :aria-label="requestWaits ? t('shell.avatarRequest') : t('shell.avatarLabel')"
+          :aria-label="requestWaits ? t('shell.avatarRequest', { initials }) : t('shell.avatarLabel', { initials })"
           class="-mr-sm flex shrink-0 size-(--size-touch) items-center justify-center"
           data-testid="shell.avatar"
         >

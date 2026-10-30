@@ -81,8 +81,8 @@
   },
   "shell": {
     "tabsLabel": "Main navigation",
-    "avatarLabel": "Profile",
-    "avatarRequest": "Your profile, a follow request is waiting"
+    "avatarLabel": "Profile: {initials}",
+    "avatarRequest": "Your profile: {initials}, a follow request is waiting"
   },
   "sync": {
     "chip": "Waiting to sync ({count})",
@@ -133,7 +133,7 @@
   "photo": {
     "row": "Photo",
     "rowNone": "Add",
-    "avatarLabel": "Profile photo",
+    "avatarLabel": "Profile photo: {initials}",
     "title": "Profile photo",
     "private": "You and the members you're connected to see it: who follows you, who you follow, who asked to, who opened your follow link, and everyone in BetterReads while your account is public. It's saved small, without where or when it was taken.",
     "choose": "Choose a photo",
@@ -186,6 +186,7 @@
     "byMonth": "By month",
     "byYear": "By year",
     "columnLabel": "{label}: {count}",
+    "columnName": "{count} · {label} — {name}",
     "byWeek": "By week",
     "chartMode": {
       "label": "Chart by",
@@ -316,7 +317,8 @@
       "all": "See all {count}",
       "allLabel": "See all {count} of your reviews",
       "spoilers": "Spoilers",
-      "allCard": "See all"
+      "allCard": "See all",
+      "allCardLabel": "{count} · See all of your reviews"
     }
   },
   "share": {
@@ -1469,6 +1471,7 @@
     "theEnd": "The end",
     "slider": {
       "label": "Go to a page",
+      "where": "{where} · Go to a page",
       "page": "Page",
       "back": "Back to {page}",
       "done": "Done"
