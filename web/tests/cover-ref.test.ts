@@ -201,7 +201,7 @@ describe('the address of a copy', () => {
     `/c/${KEY.toUpperCase()}/240`,
     `/c/${KEY.slice(1)}/240`,
     `/c/${KEY}0/240`,
-    `/c/${KEY.replace('a', 'g')}/240`,
+    `/c/${KEY.replace('c', 'g')}/240`,
     `/c/../${KEY}/240`,
     `/x/${KEY}/240`,
     `//c/${KEY}/240`,
