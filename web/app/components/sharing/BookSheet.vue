@@ -11,7 +11,8 @@ import type { LibraryEntry } from '~/data/library'
 import { useSharingStore } from '~/stores/sharing'
 import { copyLink, shareLink, type ShareOutcome } from '~/utils/shareLink'
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
 
 const props = defineProps<{ entry: LibraryEntry | null }>()
 const open = defineModel<boolean>('open', { required: true })

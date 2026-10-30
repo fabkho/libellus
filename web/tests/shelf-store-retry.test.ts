@@ -46,6 +46,8 @@ async function store() {
   vi.stubGlobal('watch', watch)
   vi.stubGlobal('useRuntimeConfig', () => ({ public: { regal: { librarySrc: SRC }, shelfOwnerId: 'the-owner' } }))
   vi.stubGlobal('useAppConfig', () => ({ regal: true }))
+  // The hosts her shelf's covers are drawn with, read at setup (composables/useCoverHosts.ts): the store keeps them direct.
+  vi.stubGlobal('useCoverHosts', () => ({ proxy: true, own: false }))
   vi.stubGlobal('useOnline', () => ref(true))
   vi.stubGlobal('isOnline', () => online)
   vi.stubGlobal('reportError', reportError)

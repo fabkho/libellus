@@ -28,7 +28,8 @@ import { onIdle } from '~/utils/idle'
 import { afterMotion } from '#layers/ui/app/utils/motion'
 import { loadReader, prefetchReader } from '~/utils/readerChunks'
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
 
 // One page through a change of edition, though the address changes (utils/bookPageKey.ts).
 definePageMeta({ layout: 'tabs', screen: 'book', pushed: true, key: bookPageKey })

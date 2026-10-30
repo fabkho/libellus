@@ -27,6 +27,7 @@ import type { Highlight, HighlightColor } from '~/data/reader/device'
 import { REST, fitBox, poseOf, ratioOf, readerCoverCopy, rectOf } from '~/utils/readerFlight'
 import { stillCovers } from '#layers/ui/app/utils/coverTilt'
 import type { ChromeInfo } from '~/utils/readerChrome'
+import type { CoverImage } from '~/utils/coverRef'
 import { durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
 import type { Box, Layout, PageColors, ReaderEngine, Relocation, Selection } from '~/reader/engine'
 import { useEbooksStore } from '~/stores/ebooks'
@@ -48,12 +49,22 @@ const settings = reader.settings
 const entryNow = computed(() => reader.current(props.entry.id) ?? props.entry)
 const status = computed(() => entryNow.value.status)
 const pageCount = computed(() => pageCountOf(entryNow.value))
+// The hosts the reader's covers are drawn with: direct, as before own covers (only the Library's row and the reel go
+// through `/cover`, docs/plans/owned-covers.md §5). Our stored copy still applies when the feature is on.
+const coverHosts = { ...useCoverHosts(), proxy: false }
+/** The reader's covers (the Contents sheet, the end of the book): the Book's own through `coverImage` (utils/coverRef.ts),
+ *  else the ebook file's image. A function, not a value: `ebooks.coverOf` caches the file's cover in the store as it is
+ *  asked, which belongs in a draw and not in a computed. */
+const covers = (): CoverImage => {
+  const b = props.entry.book
+  return b.coverUrl ? coverImage(b, 'lg', coverHosts) : { src: ebooks.coverOf(props.record), srcset: null, sizes: coverSizes('lg'), fallbacks: [] }
+}
 const book = computed(() => {
   const b = props.entry.book
   return {
     title: b.title,
     authors: b.authors,
-    cover: coverSrc(b.coverUrl, 'lg') ?? ebooks.coverOf(props.record),
+    covers,
     colors: b.coverColors,
     thumbhash: b.coverThumbhash,
     pages: pageCount.value,

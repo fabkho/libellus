@@ -23,7 +23,8 @@ import type { LibraryEntry } from '~/data/library'
 import { isCoverUrl, OWN_EDITION_LANGUAGES, type OwnEditionField } from '~/data/ownEdition'
 import { useOwnEditionStore } from '~/stores/ownEdition'
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
 
 const emit = defineEmits<{ changed: [entry: LibraryEntry] }>()
 

@@ -69,6 +69,8 @@ export const useShelfStore = defineStore('shelf', () => {
    * and the screens show no row (never the published file in its place).
    */
   const document = shallowRef<RegalLibraryFile | null>(null)
+  /** The hosts her shelf's covers are drawn with: direct, as the shelf asked before own covers (docs/plans/owned-covers.md §5). */
+  const coverHosts = { ...useCoverHosts(), proxy: false }
   /** A shelf screen asked for it (`load`): until then nothing is built. */
   const wanted = ref(false)
   let builds = 0
@@ -76,6 +78,7 @@ export const useShelfStore = defineStore('shelf', () => {
     return memberShelfDocument([...library.reading, ...library.finished], {
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
       descriptionOf: (book) => library.descriptionOf(book),
+      covers: coverHosts,
     })
   }
   watch(

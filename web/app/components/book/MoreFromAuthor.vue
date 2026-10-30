@@ -20,6 +20,10 @@ import { useAuthorsStore } from '~/stores/authors'
 
 const props = defineProps<{ book: Book | BookSnapshot; bookKey: string }>()
 
+// The hosts its rows (WorkRow) draw their covers with: direct, as before own covers (only the Library's row and the reel
+// go through `/cover`, docs/plans/owned-covers.md §5), so the prefetch asks for exactly the addresses the rows will.
+const coverHosts = { ...useCoverHosts(), proxy: false }
+
 const { t } = useI18n()
 const authors = useAuthorsStore()
 
@@ -57,7 +61,7 @@ watch(
   more,
   (shown) => {
     if (!shown || typeof Image === 'undefined') return
-    for (const url of coversToPrefetch(shown.works, 'sm', MORE_FROM_AUTHOR)) {
+    for (const url of coversToPrefetch(shown.works, 'sm', coverHosts, MORE_FROM_AUTHOR, window.devicePixelRatio || 1)) {
       if (prefetched.has(url)) continue
       prefetched.add(url)
       new Image().src = url

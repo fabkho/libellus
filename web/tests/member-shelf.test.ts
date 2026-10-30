@@ -117,6 +117,19 @@ describe('memberShelfDocument', () => {
     expect(bare.color).toMatch(/^#[\da-f]{6}$/)
   })
 
+  // docs/plans/owned-covers.md §5: the shelf's own covers come through `coverImage` like every screen's, and with the switch
+  // off the front and the pile are the source's addresses they always were (the tests above hold for both).
+  it('draws our stored copy when the Book has one and the switch is on', () => {
+    const key = 'c0ffeec0ffeec0ffeec0ffeec0ffeec0'
+    const e = entry('finished', { book: book({ coverKey: key, coverWidths: [120, 240, 360, 600] }) })
+    const withCopy = memberShelfDocument([e], { ...OPTIONS, covers: { own: true } }).books[0]!.assets!
+    expect(withCopy.front).toBe(`/c/${key}/600`)
+    expect(withCopy.pile?.front).toBe(`/c/${key}/240`)
+    // The hosts the shelf screens pass say the source (only the Library's row and the reel go through `/cover`).
+    const off = memberShelfDocument([e], { ...OPTIONS, covers: { own: false, proxy: false } }).books[0]!.assets!
+    expect(off.front).toMatch(/600x900bb\.jpg$/)
+  })
+
   it('takes the date read, Rating, pages and binding from her entry', () => {
     const e = entry('finished', { pageCountOverride: 410, formatOverride: 'hardcover' }, { endedOn: '2025-11-03', rating: 15 })
     const b = memberShelfDocument([e], OPTIONS).books[0]!

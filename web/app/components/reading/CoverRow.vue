@@ -9,9 +9,12 @@
 // (or null, a Book that opens nothing) in place of the reading page's card under `token`.
 import { bookCardPath, type PublicBook } from '~/data/readingPage'
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
 
-type RowBook = Pick<PublicBook, 'id' | 'title' | 'authors' | 'coverUrl' | 'coverThumbhash' | 'coverColors'> & { unverified?: boolean }
+type RowBook = Pick<PublicBook, 'id' | 'title' | 'authors' | 'coverUrl' | 'coverThumbhash' | 'coverColors' | 'coverKey' | 'coverWidths'> & {
+  unverified?: boolean
+}
 
 const props = withDefaults(
   defineProps<{

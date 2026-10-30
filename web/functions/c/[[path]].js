@@ -20,10 +20,7 @@
 // `COVER_ALLOWED_ORIGINS`; CORS is sent for that origin alone, never `*`. THE REAL GUARD against burning the Pages Functions
 // pool (100k requests a day, shared with /cover, /r and /share) is the Cloudflare rate-limiting rule (docs/HOSTING.md).
 import { sender } from '../../app/utils/coverSender.ts'
-import { ownCoverObject, parseOwnCoverPath } from '../../app/utils/ownCoverPath.ts'
-
-/** A year, the age the answer is cacheable for: a key's bytes never change. */
-const MAX_AGE = 31536000
+import { OWN_COVER_CACHE_CONTROL, ownCoverObject, parseOwnCoverPath } from '../../app/utils/ownCoverPath.ts'
 /** What the store job writes (`image.ts`: JPEG, WebP, PNG, GIF by their magic bytes); nothing else is served as an image. */
 const IMAGE_TYPE = /^image\/(?:jpeg|png|webp|gif)$/
 
@@ -72,7 +69,7 @@ export async function onRequest({ request, waitUntil, env }) {
   const type = String(object.httpMetadata?.contentType ?? '').split(';')[0].trim().toLowerCase()
   if (!IMAGE_TYPE.test(type)) return failure(404, 'No such cover')
 
-  const headers = { ...BASE, 'Content-Type': type, 'Cache-Control': `public, max-age=${MAX_AGE}, immutable` }
+  const headers = { ...BASE, 'Content-Type': type, 'Cache-Control': OWN_COVER_CACHE_CONTROL }
   if (typeof object.size === 'number') headers['Content-Length'] = String(object.size)
   const response = new Response(object.body, { status: 200, headers })
   if (cache) waitUntil(cache.put(key, response.clone()).catch(() => {}))

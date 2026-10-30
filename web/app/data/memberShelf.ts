@@ -3,7 +3,7 @@ import { exportRegalLibrary, type RegalExportEntry } from './export/regal'
 import type { KnownReadingStatus, LibraryBook, RegalLibraryFile } from './export/regalLibraryFile'
 import type { LibraryEntry } from './library'
 import { bookColour } from '../utils/bookColour'
-import { coverSrc } from '../utils/cover'
+import { coverImage, type CoverHosts } from '../utils/coverRef'
 
 /**
  * A member's own shelf (Your shelf for everyone): her Library as a Regal
@@ -53,6 +53,12 @@ export type MemberShelfOptions = {
   generatedAt?: string
   /** The blurb the device keeps for a Book, if any (not read reactively: the lists carry none). */
   descriptionOf?: (book: LibraryEntry['book']) => string | null
+  /**
+   * How the covers are asked for (`coverImage`, utils/coverRef.ts): the hosts the shelf's screens use. Unset: the source's
+   * own addresses, as the shelf asked before own covers (only the Library's row and the reel go through `/cover`,
+   * docs/plans/owned-covers.md §5).
+   */
+  covers?: CoverHosts
 }
 
 /** One Library entry as the export reads it: its latest read is all the device holds. */
@@ -94,9 +100,11 @@ export function memberShelfDocument(entries: readonly LibraryEntry[], options: M
 }
 
 function dressed(book: LibraryBook, entry: LibraryEntry, options: MemberShelfOptions): LibraryBook {
-  const { coverUrl } = entry.book
-  const front = book.assets?.front ? coverSrc(coverUrl, 'xl') : null
-  const pile = front ? coverSrc(coverUrl, 'md') : null
+  const hosts = options.covers ?? {}
+  // Our stored copy where the Book has one (`coverImage`, utils/coverRef.ts): the shelf's front and the top of its pile are
+  // one address each, and with the switch off they are the source's own, as before.
+  const front = book.assets?.front ? coverImage(entry.book, 'xl', hosts).src : null
+  const pile = front ? coverImage(entry.book, 'md', hosts).src : null
   const format = formatOf(entry.book, entry.formatOverride)
   const description = book.description ?? options.descriptionOf?.(entry.book)?.trim() ?? null
   return {

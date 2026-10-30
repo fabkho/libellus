@@ -86,17 +86,17 @@ const scannedWhen = computed(() =>
   scannedAt.value && !scanning.value ? t('ebooks.folder.scanned', { when: relativeTime(scannedAt.value, Math.max(now.value, Date.now()), locale.value) }) : null,
 )
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
-/** A linked file's cover: its Book's (utils/coverRef.ts) when it has one, else the file's own image, shown whole. */
-const linkedCover = (entry: LibraryEntry | null, record: EbookRecord): CoverImage =>
-  entry
-    ? coverImage(entry.book, 'sm', coverHosts)
-    : { src: ebooks.coverOf(record), srcset: null, sizes: coverSizes('sm'), fallbacks: [] }
+/** These rows asked the source directly before own covers existed (only the Library's row and the reel go through `/cover`). */
+const coverHosts = { ...useCoverHosts(), proxy: false }
+/**
+ * A linked file's cover, for the template (not a computed: `ebooks.coverOf` caches the file's image in the store as it is
+ * asked): its Book's (utils/coverRef.ts) when it has one, else the file's own image, shown whole.
+ */
+function linkedCover(entry: LibraryEntry | null, record: EbookRecord): CoverImage {
+  return entry ? coverImage(entry.book, 'sm', coverHosts) : { src: ebooks.coverOf(record), srcset: null, sizes: coverSizes('sm'), fallbacks: [] }
+}
 const linkedRows = computed(() =>
-  ebooks.linked.map((record) => {
-    const entry = record.bookId ? library.entryForBook(record.bookId) : null
-    return { record, entry, missing: ebooks.missing.has(record.id), cover: linkedCover(entry, record) }
-  }),
+  ebooks.linked.map((record) => ({ record, entry: record.bookId ? library.entryForBook(record.bookId) : null, missing: ebooks.missing.has(record.id) })),
 )
 const empty = computed(() => ebooks.loaded && !ebooks.records.some((r) => r.state !== 'ignored') && !ebooks.folderSupported)
 </script>
@@ -196,7 +196,7 @@ const empty = computed(() => ebooks.loaded && !ebooks.records.some((r) => r.stat
           <span class="eyebrow text-ink-faint">{{ linkedRows.length }}</span>
         </div>
         <ul class="flex flex-col">
-          <li v-for="{ record, entry, missing, cover } in linkedRows" :key="record.id">
+          <li v-for="{ record, entry, missing } in linkedRows" :key="record.id">
             <UiPressLink
               :to="entry ? `/book/${entry.book.id}` : `/book/${record.bookId}`"
               v-on="flightOf(entry ? `/book/${entry.book.id}` : `/book/${record.bookId}`)"
@@ -207,7 +207,7 @@ const empty = computed(() => ebooks.loaded && !ebooks.records.some((r) => r.stat
                 decorative
                 :title="entry?.book.title ?? fileTitle(record.metadata) ?? record.name"
                 :authors="entry?.book.authors ?? fileAuthors(record.metadata)"
-                v-bind="cover"
+                v-bind="linkedCover(entry, record)"
                 :thumbhash="entry?.book.coverThumbhash"
                 :colors="entry?.book.coverColors"
                 size="sm"

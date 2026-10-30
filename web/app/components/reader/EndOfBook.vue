@@ -7,11 +7,12 @@
 // close the book. Reached by turning past the last page of the text (the
 // licence and other back matter after it are not part of "the end").
 import type { CoverColors } from '~/utils/cover'
+import type { CoverImage } from '~/utils/coverRef'
 
 defineProps<{
   shown: boolean
   finished: boolean
-  book: { title: string; authors: string[]; cover: string | null; colors: CoverColors | null; thumbhash: string | null; pages: number | null }
+  book: { title: string; authors: string[]; covers: () => CoverImage; colors: CoverColors | null; thumbhash: string | null; pages: number | null }
 }>()
 defineEmits<{ finish: []; back: []; close: [] }>()
 
@@ -23,7 +24,7 @@ const { t } = useI18n()
     <section v-if="shown" class="end absolute inset-0 z-20 flex flex-col items-center justify-center overflow-hidden bg-surface px-xl text-center" data-testid="reader.end">
       <UiAmbient :colors="book.colors" />
       <div class="relative flex flex-col items-center">
-        <UiCover :title="book.title" :authors="book.authors" :src="book.cover" :thumbhash="book.thumbhash" :colors="book.colors" size="lg" glow />
+        <UiCover :title="book.title" :authors="book.authors" v-bind="book.covers()" :thumbhash="book.thumbhash" :colors="book.colors" size="lg" glow />
         <p class="eyebrow mt-xl">{{ t('reader.end.eyebrow') }}</p>
         <h2 class="book-title mt-sm text-headline text-balance">{{ book.title }}</h2>
         <p class="mt-xs text-body text-ink-muted">{{ book.authors.join(', ') }}</p>

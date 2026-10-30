@@ -19,7 +19,8 @@ import { formatOf, type Book, type BookFormat, type BookSnapshot } from '~/data/
 import { editionFacts } from '~/data/editions'
 import type { LibraryErrorCode } from '~/data/library'
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
 
 export type EditionRow = {
   book: Book | BookSnapshot

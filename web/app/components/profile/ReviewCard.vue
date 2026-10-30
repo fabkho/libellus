@@ -11,7 +11,8 @@
 import type { ProfileReview } from '~/utils/profileReviews'
 import { useBookStore } from '~/stores/book'
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
 
 const props = withDefaults(defineProps<{ item: ProfileReview; eager?: boolean; testid?: string }>(), { testid: 'profile.reviews.card' })
 defineEmits<{ more: [] }>()

@@ -4,7 +4,8 @@
 // the sheet); a Manual book opens nothing.
 import type { SocialBook } from '~/data/social'
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
 
 const open = defineModel<boolean>('open', { required: true })
 defineProps<{ title: string; items: readonly { book: SocialBook; addedOn: string }[] }>()

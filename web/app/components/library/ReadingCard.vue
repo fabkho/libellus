@@ -8,7 +8,8 @@ import type { LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useReadingStore } from '~/stores/reading'
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
 
 const props = defineProps<{ entry: LibraryEntry; eager?: boolean }>()
 

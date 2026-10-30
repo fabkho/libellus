@@ -474,7 +474,9 @@ export default defineNuxtConfig({
           handler: 'CacheFirst',
           options: {
             cacheName: 'libellus-own-covers',
-            cacheableResponse: { statuses: [200] },
+            // A 200 that says it is a stored copy (`OWN_COVER_CACHE_CONTROL`, app/utils/ownCoverPath.ts): without the header a
+            // deployment without the Function answers the app shell (HTML, a 200) and it would be kept for a year.
+            cacheableResponse: { statuses: [200], headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
             expiration: { maxEntries: 1500, maxAgeSeconds: 60 * 60 * 24 * 365, purgeOnQuotaError: true },
           },
         },

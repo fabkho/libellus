@@ -15,7 +15,8 @@ import { linkOf } from '~/utils/memberProfile'
 import { durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
 import { coverDelay, rowDelay, SLIDE } from '~/utils/monthIntro'
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
 
 const props = withDefaults(defineProps<{ months: { month: number, reads: StatsRead[] }[], loading?: boolean, goneBy?: number, foreign?: boolean }>(), { loading: false, goneBy: 12, foreign: false })
 

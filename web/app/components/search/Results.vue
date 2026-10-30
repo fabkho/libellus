@@ -27,7 +27,8 @@ import { useSearchStore, type SearchHit } from '~/stores/search'
 import { SEARCH_DEBOUNCE_MS } from '~/data/search'
 import { durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
 
 const { t } = useI18n()
 const search = useSearchStore()
@@ -160,7 +161,10 @@ onBeforeUnmount(() => clearTimeout(arrivingTimer))
 watch(
   () => [...search.own, ...search.others],
   (hits) => {
-    for (const hit of hits.slice(0, FIRST_COVERS)) preloadImage(coverImage(hit.book, 'sm', coverHosts).src)
+    // The candidate the browser will pick for this screen's pixel ratio (`coverPrefetch`, utils/coverRef.ts): with a
+    // `srcset` a preload of `src` would download a second file, not the one the row shows.
+    const dpr = window.devicePixelRatio || 1
+    for (const hit of hits.slice(0, FIRST_COVERS)) preloadImage(coverPrefetch(hit.book, 'sm', coverHosts, dpr))
   },
 )
 </script>

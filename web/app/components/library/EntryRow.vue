@@ -15,7 +15,8 @@ import { useAuthorsStore } from '~/stores/authors'
 import { useBookStore } from '~/stores/book'
 import type { FriendsGroup } from '~/utils/friendsNames'
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+// Our copies, and `/cover` too: this screen asked through `/cover` before own covers, and still does (docs/plans/owned-covers.md §5).
+const coverHosts = useCoverHosts()
 
 // `friends`: on a Want to read row, the followed members who want the same Book (social v2a, FriendsAlsoAvatars), on the cover's lower edge.
 const props = defineProps<{ entry: LibraryEntry; eager?: boolean; friends?: FriendsGroup | null }>()

@@ -31,7 +31,8 @@ import { reelWanted, saveDataOn, webglAvailable } from '~/utils/bothReadReel'
 import { preloadReelCovers } from '~/utils/regalReelPreload'
 import { prefersReducedMotion } from '#layers/ui/app/utils/motion'
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+// Our copies, and `/cover` too: this screen asked through `/cover` before own covers, and still does (docs/plans/owned-covers.md §5).
+const coverHosts = useCoverHosts()
 
 const props = defineProps<{ items: readonly BothRead[]; name: string; member?: MemberCard | null; reel?: boolean; pending?: boolean }>()
 const { t } = useI18n()

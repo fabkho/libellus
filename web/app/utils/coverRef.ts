@@ -1,4 +1,4 @@
-import { APPLE_BOX, coverChain, coverSizes, coverSrc, coverSrcset, type CoverSize } from './cover'
+import { APPLE_BOX, COVER_WIDTH, coverChain, coverSizes, coverSrc, coverSrcset, coversArtworkFrom, type CoverSize } from './cover'
 import { coverFor, coverPixels, type CoverFor } from './coverSize'
 import { isOwnCoverKey, ownCoverUrl, ownCoverWidths } from './ownCoverPath'
 
@@ -65,6 +65,9 @@ export function coverImage(book: CoverBook | null | undefined, size: CoverSize, 
   const chain = coverChain(coverSrc(book.coverUrl, size, hosts.proxy), size)
   const own = stored(book, hosts)
   if (!own) return { src: chain[0] ?? null, srcset: coverSrcset(chain[0], size), sizes, fallbacks: chain.slice(1) }
+  // The copy is the artwork of the source it was stored from (`artworkOf`, utils/cover.ts): a cover in view does not start
+  // over when its Book gains the copy.
+  coversArtworkFrom(own.key, book.coverUrl)
   const width = ownWidthFor(own.widths, APPLE_BOX[size][0])
   const candidates = own.widths.filter((candidate) => candidate <= width)
   const src = ownCoverUrl(own.key, width)
@@ -87,5 +90,31 @@ export function coverAt(book: CoverBook | null | undefined, options: CoverFor & 
   const { own, ...size } = options
   const copy = stored(book, { own })
   if (!copy) return coverFor(book.coverUrl, size)
+  coversArtworkFrom(copy.key, book.coverUrl)
   return ownCoverUrl(copy.key, ownWidthFor(copy.widths, coverPixels(size)), options.origin)
+}
+
+/** A `srcset`'s candidates: `<url> <width>w` pairs, as `coverImage` writes them. */
+const CANDIDATE = /(\S+)\s+(\d+)w/g
+
+/**
+ * The address of `image` a screen of `pixels` device pixels wide loads: the narrowest `srcset` candidate that is sharp for
+ * it, the widest when none is, else `src` (with no `srcset` `src` is it). What a preload or a prefetch must ask for: the
+ * browser picks the same candidate for the same `sizes`, so asking for `src` instead would download a second file.
+ */
+export function coverPick(image: CoverImage, pixels: number): string | null {
+  if (!image.srcset) return image.src
+  const candidates = [...image.srcset.matchAll(CANDIDATE)].map(([, url, width]) => ({ url: url!, width: Number(width) }))
+  if (!candidates.length) return image.src
+  return (candidates.find((candidate) => candidate.width >= pixels) ?? candidates[candidates.length - 1]!).url
+}
+
+/**
+ * The address a Book's cover shown at `size` loads on a screen of `dpr` (the device's pixel ratio, 1 by default): for a
+ * preload, a prefetch, before the cover itself is on screen. Sized by the size's token width, as the `sizes` of its
+ * `srcset` says (`utils/cover.ts` `COVER_WIDTH`).
+ */
+export function coverPrefetch(book: CoverBook | null | undefined, size: CoverSize, hosts: CoverHosts = {}, dpr = 1): string | null {
+  const ratio = Number.isFinite(dpr) && dpr > 0 ? dpr : 1
+  return coverPick(coverImage(book, size, hosts), Math.ceil(COVER_WIDTH[size] * ratio))
 }

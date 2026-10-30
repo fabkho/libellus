@@ -6,7 +6,8 @@
 // loading wave (docs/MOTION.md, Loading).
 import type { YearFigures } from '~/data/stats'
 
-const coverHosts = useCoverHosts() // our stored copies and `/cover`, as this build has them (utils/coverRef.ts)
+// Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
+const coverHosts = { ...useCoverHosts(), proxy: false }
 
 // `foreign`: another member's profile, so the title names her (`name`) instead of saying "you".
 const props = withDefaults(defineProps<{ figures: YearFigures | null; limit?: number; foreign?: boolean; name?: string }>(), { limit: 4, foreign: false, name: undefined })

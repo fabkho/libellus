@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { artworkOf, coverChain, coverSrc, coverSrcset, type CoverSize } from '@/utils/cover'
-import { coverAt, coverImage, ownWidthFor, type CoverBook } from '@/utils/coverRef'
+import { coverAt, coverImage, coverPick, coverPrefetch, ownWidthFor, type CoverBook } from '@/utils/coverRef'
 import { coverFor } from '@/utils/coverSize'
 import { isOwnCoverKey, isOwnCoverWidth, ownCopy, ownCoverObject, ownCoverUrl, ownCoverWidths, parseOwnCoverPath } from '@/utils/ownCoverPath'
 import { bookFromRow, type BookRow } from '@/data/library'
@@ -106,6 +106,36 @@ describe('without our copy, a Book shows what it showed before', () => {
     const image = coverImage(book, 'md', { ...own, proxy: true })
     expect(image.src).toMatch(/^\/cover\?u=/)
     expect(coverAt(book, { height: 300, ...own })).toBe(coverFor(APPLE, { height: 300 }))
+  })
+})
+
+// A preload or a prefetch (`coverPrefetch`, `coverPick`) must ask for an address the cover itself loads: with a `srcset` the
+// browser picks a candidate by the screen's pixel ratio, and `src` would be a second file.
+describe('the address to ask for ahead of the cover', () => {
+  const keyed: CoverBook = { coverUrl: APPLE, coverKey: KEY, coverWidths: APPLE_WIDTHS }
+
+  it('is the `srcset` candidate the screen picks, the widest when none is sharp enough', () => {
+    const xl = coverImage(keyed, 'xl', own)
+    // 140 px wide (`xl`) at 2× is 280 device px: the 360 copy, not the 600 `src` and not the 120.
+    expect(coverPick(xl, 280)).toBe(`/c/${KEY}/360`)
+    expect(coverPick(xl, 140)).toBe(`/c/${KEY}/240`)
+    expect(coverPick(xl, 900)).toBe(`/c/${KEY}/600`)
+    expect(coverPrefetch(keyed, 'xl', own, 2)).toBe(`/c/${KEY}/360`)
+    expect(coverPrefetch(keyed, 'xl', own, 1)).toBe(`/c/${KEY}/240`)
+  })
+
+  it('is `src` where there is no `srcset`, and nothing without a cover', () => {
+    const sm = coverImage(keyed, 'sm', own)
+    expect(sm.srcset).toBeNull()
+    expect(coverPrefetch(keyed, 'sm', own, 3)).toBe(sm.src)
+    // The same for the source's chain: Apple offers its boxes, Open Library none.
+    const source = coverImage({ coverUrl: OL }, 'xl', own)
+    expect(source.srcset).toBeNull()
+    expect(coverPrefetch({ coverUrl: OL }, 'xl', own, 2)).toBe(source.src)
+    // Through `/cover` the candidates are Apple's own boxes (120, 240, 600): 280 px is the 600 box, and it stays `/cover`.
+    expect(coverPick(coverImage({ coverUrl: APPLE }, 'xl', { proxy: true }), 280)).toMatch(/^\/cover\?u=.*w=600$/)
+    expect(coverPrefetch({ coverUrl: null }, 'sm', own)).toBeNull()
+    expect(coverPrefetch({}, 'sm', own)).toBeNull()
   })
 })
 

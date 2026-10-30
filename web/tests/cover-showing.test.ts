@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { artworkOf, coverChain } from '@/utils/cover'
+import { coverImage, type CoverBook } from '@/utils/coverRef'
 import { coverFailed, coverInputChanged, coverNow, coverShown, startCover, type CoverInput, type CoverShowing } from '#layers/ui/app/utils/coverShowing'
 
 /**
@@ -121,5 +122,30 @@ describe('what is one artwork', () => {
     const next = coverInputChanged(coverShown(startCover(at(120)), `/c/${key}/120`), at(240), artworkOf)
     expect(next.shown).toBe(`/c/${key}/120`)
     expect(coverNow(next)).toBe(`/c/${key}/240`)
+  })
+
+  // A Book that gains its copy while its cover is on screen (the Library read again, the store job's minute): the source's
+  // address becomes `/c/<key>/<width>`, and the image in view must stay until the copy has loaded, not start over (a
+  // thumbhash flash on every screen it is on). `coverImage` records which artwork a copy is of (utils/cover.ts).
+  it('is one artwork with the source it copies, so a copy arriving does not restart the cover', () => {
+    const key = 'c0ffeec0ffeec0ffeec0ffeec0ffeec0'
+    const plain: CoverBook = { coverUrl: SMALL }
+    const keyed: CoverBook = { coverUrl: SMALL, coverKey: key, coverWidths: [120, 240, 320, 600] }
+    const hosts = { own: true, proxy: true }
+    const source = coverImage(plain, 'sm', hosts)
+    const copy = coverImage(keyed, 'sm', hosts)
+    expect(source.src).toMatch(/^\/cover\?u=/)
+    expect(copy.src).toBe(`/c/${key}/120`)
+    expect(artworkOf(copy.src!)).toBe(artworkOf(source.src!))
+    // And what the cover in view does with it: the source stays until the copy has loaded, then the copy is shown.
+    const identity = '9780593983768'
+    const before = input(source.src!, 'sm', identity)
+    const after = { ...input(copy.src!, 'sm', identity), fallbacks: copy.fallbacks }
+    const shown = coverShown(startCover(before), source.src!)
+    const arrived = coverInputChanged(shown, after, artworkOf)
+    expect(arrived.shown).toBe(source.src)
+    expect(coverNow(arrived)).toBe(copy.src)
+    // A copy failing falls back through the same artwork (its source chain), never to another picture.
+    expect(coverFailed(arrived, copy.src!, artworkOf).chain).toContain(source.src)
   })
 })

@@ -25,7 +25,7 @@ describe('the covers to ask for ahead of the rows', () => {
   const works = [{ coverUrl: OL }, { coverUrl: APPLE }, {}, { coverUrl: OL }, { coverUrl: 'https://covers.openlibrary.org/b/id/1-L.jpg' }]
 
   it('is each work’s image at the row’s size, each once, without the works that have none', () => {
-    expect(coversToPrefetch(works, 'sm', 10)).toEqual([
+    expect(coversToPrefetch(works, 'sm', {}, 10)).toEqual([
       'https://covers.openlibrary.org/b/id/8231856-M.jpg',
       APPLE.replace('600x900bb', '120x180bb'),
       'https://covers.openlibrary.org/b/id/1-M.jpg',
@@ -33,7 +33,18 @@ describe('the covers to ask for ahead of the rows', () => {
   })
 
   it('stops at the limit', () => {
-    expect(coversToPrefetch(works, 'sm', 2)).toHaveLength(2)
-    expect(coversToPrefetch(works, 'sm', 0)).toEqual([])
+    expect(coversToPrefetch(works, 'sm', {}, 2)).toHaveLength(2)
+    expect(coversToPrefetch(works, 'sm', {}, 0)).toEqual([])
+  })
+
+  // The hosts the rows draw with (utils/coverRef.ts), so the prefetch is the address the row will ask for: our copy where the
+  // card has one, `/cover` when the hosts allow it, the source otherwise (docs/plans/owned-covers.md §5).
+  it('asks for what the row will draw, on the build it is drawn on', () => {
+    const key = 'c0ffeec0ffeec0ffeec0ffeec0ffeec0'
+    const keyed = [{ coverUrl: APPLE, coverKey: key, coverWidths: [120, 240, 360, 600] }]
+    expect(coversToPrefetch(keyed, 'sm', { own: true }, 10)).toEqual([`/c/${key}/120`])
+    expect(coversToPrefetch(keyed, 'sm', { proxy: true }, 10)).toEqual([`/cover?u=${encodeURIComponent(APPLE.replace('600x900bb', '120x180bb'))}&w=120`])
+    // The switch off: the source, whatever the card carries (`proxy: false` is what every section but the reel is handed).
+    expect(coversToPrefetch(keyed, 'sm', { own: false, proxy: false }, 10)).toEqual([APPLE.replace('600x900bb', '120x180bb')])
   })
 })
