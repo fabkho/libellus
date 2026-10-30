@@ -2068,8 +2068,34 @@
   "uiText": {
     "more": "more",
     "less": "less",
+    "checkList": {
+      "filter": "Filter",
+      "count": "{count} selected",
+      "countMax": "{count} of {max} selected",
+      "atLeast": "Choose at least {min}.",
+      "none": "Nothing matches."
+    },
+    "imageCrop": {
+      "area": "Crop area",
+      "hint": "Arrow keys move the picture, plus and minus zoom.",
+      "zoom": "Zoom",
+      "zoomValue": "{percent} %",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out"
+    },
+    "threadRow": {
+      "veiled": "hidden",
+      "comments": "{count} comments",
+      "commentsOne": "1 comment",
+      "unread": "{count} new"
+    },
     "chat": {
       "locale": "en",
+      "more": "and {count} more",
+      "veiled": {
+        "label": "Spoiler",
+        "show": "Show anyway"
+      },
       "today": "Today",
       "yesterday": "Yesterday",
       "loading": "Loading the conversation",

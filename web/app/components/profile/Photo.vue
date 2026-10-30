@@ -18,7 +18,10 @@ import { encodeAvatar } from '~/data/avatar'
 import { useAvatarStore } from '~/stores/avatar'
 import { useSessionStore } from '~/stores/session'
 import { canvasRaster, loadPicture } from '~/utils/avatarRaster'
-import { MAX_ZOOM, ZOOM_STEP } from '~/utils/crop'
+import { MAX_ZOOM } from '#layers/ui/app/utils/imageCrop'
+
+const ZOOM_STEP = 0.25
+const PAN_STEP = 16
 
 const { t } = useI18n()
 const avatar = useAvatarStore()
@@ -92,7 +95,7 @@ onBeforeUnmount(forgetPicture)
 
 const frame = useTemplateRef<HTMLElement>('frame')
 const side = ref(0)
-const crop = useCrop(() => Math.max(1, side.value))
+const crop = useImageCrop(() => Math.max(1, side.value))
 let observer: ResizeObserver | undefined
 
 watch(frame, (element, _, onCleanup) => {
@@ -112,12 +115,22 @@ watch(frame, (element, _, onCleanup) => {
 const placement = computed(() => (side.value ? crop.placement() : null))
 const zoom = computed({
   get: () => crop.state.zoom,
-  set: (value: number) => crop.setZoom(Number(value)),
+  // The base's clampZoom no longer turns NaN into 1: a cleared range input must not reach it.
+  set: (value: number) => { if (Number.isFinite(Number(value))) crop.setZoom(Number(value)) },
 })
 const zoomPercent = computed(() => `${Math.round(zoom.value * 100)} %`)
 
+/** Arrows move the picture under the circle (Shift, four times as far), + and − zoom. */
 function onFrameKey(event: KeyboardEvent) {
-  if (crop.onKey(event)) event.preventDefault()
+  if (event.altKey || event.ctrlKey || event.metaKey) return
+  const step = event.shiftKey ? PAN_STEP * 4 : PAN_STEP
+  const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }
+  const move = moves[event.key]
+  if (move) crop.nudge(move[0], move[1])
+  else if (event.key === '+' || event.key === '=') zoom.value = zoom.value + ZOOM_STEP
+  else if (event.key === '-' || event.key === '_') zoom.value = zoom.value - ZOOM_STEP
+  else return
+  event.preventDefault()
 }
 
 async function save() {
