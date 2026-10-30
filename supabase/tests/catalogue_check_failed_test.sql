@@ -129,6 +129,7 @@ select is(tests.record_book((select id from ids where name = 'ada'), (select id 
   jsonb_build_object('id', (select id from ids where name = 'b_failed'), 'created_at', tests.created_of((select id from ids where name = 'b_failed')),
     'title', null, 'authors', '[]'::jsonb, 'isbn13', null, 'isbn10', null, 'page_count', null, 'published_year', null, 'language', null,
     'publisher', null, 'description', null, 'cover_url', null, 'cover_thumbhash', null, 'cover_dominant', null, 'cover_secondary', null,
+    'cover_key', null, 'cover_widths', null,
     'source', 'apple', 'apple_id', null, 'openlibrary_edition_key', null, 'openlibrary_work_key', null, 'format', null, 'goodreads', null,
     'unverified', true),
   'her record gives a failed Book as nothing a member sent: no title, authors, ISBN, cover, description, source id: unverified');

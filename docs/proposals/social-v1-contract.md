@@ -191,6 +191,13 @@ the address.
 **Book** (`private.social_book_json(books)`): `private.reading_page_book_json`'s keys plus
 `"manual": true|false` (a Manual book: a follower cannot open it).
 
+**Own covers** (`20261109010000_cover_read_path.sql`, `docs/plans/owned-covers.md` §9 PR 3): a Book whose cover
+we have stored carries `cover_key` (32 hex) and `cover_widths` (e.g. `[240, 600]`) beside `cover_url`, so the app
+builds `c/<cover_key>/<w>` from the Book alone instead of asking `/cover`. They are hidden exactly where the cover
+is (`private.cover_shown`): a hidden cover hides its key and widths too, and a Book without a stored copy carries
+neither (the app falls back to `/cover`, then the source). The same two go on the cards (`work_card`,
+`series_works`, `author_page`), as `coverKey` / `coverWidths`, where the cover a card shows is a Book's.
+
 **Sections**: `{ "reading", "want", "finished", "ratings", "reviews", "abandoned", "year" }`, all
 booleans.
 
@@ -307,8 +314,9 @@ progress, reading days, highlights, notes, collections, the address and hidden B
 //                     entry: { page_count_override, book: { exactly the columns BookRow
 //                     (web/app/data/library.ts) has: id, title, authors, isbn13, isbn10, page_count,
 //                     published_year, language, publisher, description, cover_url, cover_thumbhash,
-//                     cover_dominant, cover_secondary, source, apple_id, openlibrary_edition_key,
-//                     openlibrary_work_key, format, created_at; "goodreads": null } } }  (never owner_id)
+//                     cover_dominant, cover_secondary, cover_key, cover_widths, source, apple_id,
+//                     openlibrary_edition_key, openlibrary_work_key, format, created_at;
+//                     "goodreads": null } } }  (never owner_id; the two cover keys as in Book above)
 ```
 
 Avatars (D4): a new select policy on `storage.objects`, named `avatars_select_connected`:
