@@ -111,7 +111,8 @@ select tests.act_as((select id from ids where name = 'ben'));
 select is(
   (select array_agg(k order by k) from jsonb_object_keys(
      public.member_reading_record((select id from ids where name = 'ada')) -> 'reads' -> 0 -> 'entry' -> 'book') k),
-  array['apple_id', 'authors', 'cover_dominant', 'cover_secondary', 'cover_thumbhash', 'cover_url', 'created_at',
+  array['apple_id', 'authors', 'cover_dominant', 'cover_key', 'cover_secondary', 'cover_thumbhash', 'cover_url',
+        'cover_widths', 'created_at',
         'description', 'format', 'goodreads', 'id', 'isbn10', 'isbn13', 'language', 'openlibrary_edition_key',
         'openlibrary_work_key', 'page_count', 'published_year', 'publisher', 'source', 'title'],
   'her record names a Book by the columns the app reads, and nothing else');
