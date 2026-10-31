@@ -1,7 +1,7 @@
 create table public.synced_writes (
-  request_id uuid not null,
-  member_id uuid not null,
   action text not null,
+  member_id uuid not null,
+  request_id uuid not null,
   result jsonb default '{}'::jsonb not null,
   synced_at timestamp with time zone default now() not null
 );

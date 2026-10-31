@@ -1,8 +1,8 @@
 create table public.edge_rate_limits (
-  member_id uuid not null,
   bucket text not null,
-  window_start timestamp with time zone default now() not null,
-  hits integer default 0 not null
+  hits integer default 0 not null,
+  member_id uuid not null,
+  window_start timestamp with time zone default now() not null
 );
 
 -- constraints

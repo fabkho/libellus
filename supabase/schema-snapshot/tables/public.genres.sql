@@ -1,8 +1,8 @@
 create table public.genres (
+  fiction boolean not null,
   id text not null,
-  "position" smallint not null,
   label text not null,
-  fiction boolean not null
+  "position" smallint not null
 );
 
 -- constraints

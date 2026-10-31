@@ -1,10 +1,10 @@
 create table public.book_enrichment (
   book_id uuid not null,
-  status text not null,
-  sources text[] default '{}'::text[] not null,
-  signals jsonb default '[]'::jsonb not null,
+  enriched_at timestamp with time zone default now() not null,
   map_version integer,
-  enriched_at timestamp with time zone default now() not null
+  signals jsonb default '[]'::jsonb not null,
+  sources text[] default '{}'::text[] not null,
+  status text not null
 );
 
 -- constraints

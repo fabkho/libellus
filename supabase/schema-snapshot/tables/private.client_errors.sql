@@ -1,18 +1,18 @@
 create table private.client_errors (
-  id bigint generated always as identity not null,
-  created_at timestamp with time zone default now() not null,
-  last_seen_at timestamp with time zone default now() not null,
-  user_id uuid,
-  caller_key text not null,
-  kind text not null,
-  message text not null,
-  stack text,
-  route text,
   app_version text,
-  user_agent text,
-  standalone boolean,
+  caller_key text not null,
+  count integer default 1 not null,
+  created_at timestamp with time zone default now() not null,
+  id bigint generated always as identity not null,
+  kind text not null,
+  last_seen_at timestamp with time zone default now() not null,
+  message text not null,
   online boolean,
-  count integer default 1 not null
+  route text,
+  stack text,
+  standalone boolean,
+  user_agent text,
+  user_id uuid
 );
 
 -- constraints

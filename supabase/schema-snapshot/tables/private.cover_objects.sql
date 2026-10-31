@@ -1,12 +1,12 @@
 create table private.cover_objects (
-  key text not null,
-  widths smallint[],
-  content_type text,
   bytes bigint,
-  stored_at timestamp with time zone,
-  orphaned_at timestamp with time zone,
+  content_type text,
   deleting_at timestamp with time zone,
-  gc_retry_at timestamp with time zone
+  gc_retry_at timestamp with time zone,
+  key text not null,
+  orphaned_at timestamp with time zone,
+  stored_at timestamp with time zone,
+  widths smallint[]
 );
 
 -- constraints

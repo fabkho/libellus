@@ -1,7 +1,7 @@
 create table public.muted_series (
   member_id uuid not null,
-  series_id uuid not null,
-  muted_at timestamp with time zone default now() not null
+  muted_at timestamp with time zone default now() not null,
+  series_id uuid not null
 );
 
 -- constraints

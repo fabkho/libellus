@@ -1,9 +1,9 @@
 create table public.accounts (
-  id uuid not null,
-  invite_code_id uuid,
-  created_at timestamp with time zone default now() not null,
   avatar_path text,
-  avatar_updated_at timestamp with time zone
+  avatar_updated_at timestamp with time zone,
+  created_at timestamp with time zone default now() not null,
+  id uuid not null,
+  invite_code_id uuid
 );
 
 -- constraints

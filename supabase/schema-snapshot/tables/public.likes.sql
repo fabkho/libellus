@@ -1,7 +1,7 @@
 create table public.likes (
+  created_at timestamp with time zone default now() not null,
   member_id uuid not null,
-  session_id uuid not null,
-  created_at timestamp with time zone default now() not null
+  session_id uuid not null
 );
 
 -- constraints

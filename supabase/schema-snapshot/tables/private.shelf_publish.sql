@@ -1,12 +1,12 @@
 create table private.shelf_publish (
-  id boolean default true not null,
-  owner_id uuid,
-  repository text default 'fabkho/regal'::text not null,
   event_type text default 'libellus-changed'::text not null,
-  min_interval interval default '00:10:00'::interval not null,
+  id boolean default true not null,
   last_changed_at timestamp with time zone,
   last_dispatched_at timestamp with time zone,
-  last_request_id bigint
+  last_request_id bigint,
+  min_interval interval default '00:10:00'::interval not null,
+  owner_id uuid,
+  repository text default 'fabkho/regal'::text not null
 );
 
 -- constraints

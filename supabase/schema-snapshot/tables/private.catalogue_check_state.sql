@@ -1,9 +1,9 @@
 create table private.catalogue_check_state (
-  book_id uuid not null,
   attempts integer default 0 not null,
-  not_before timestamp with time zone default now() not null,
+  book_id uuid not null,
   claimed_until timestamp with time zone,
-  last_error text
+  last_error text,
+  not_before timestamp with time zone default now() not null
 );
 
 -- constraints

@@ -1,9 +1,9 @@
 create table private.rating_only_reviews_backup (
+  at timestamp with time zone default now() not null,
   id uuid not null,
   rating smallint,
   review text,
-  review_spoilers boolean,
-  at timestamp with time zone default now() not null
+  review_spoilers boolean
 );
 
 -- constraints

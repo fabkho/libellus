@@ -1,11 +1,11 @@
 create table public.invite_codes (
-  id uuid default gen_random_uuid() not null,
   code citext not null,
+  created_at timestamp with time zone default now() not null,
+  expires_at timestamp with time zone,
+  id uuid default gen_random_uuid() not null,
   label text,
   max_uses integer default 1 not null,
-  uses integer default 0 not null,
-  expires_at timestamp with time zone,
-  created_at timestamp with time zone default now() not null
+  uses integer default 0 not null
 );
 
 -- constraints

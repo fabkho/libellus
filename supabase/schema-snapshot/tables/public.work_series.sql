@@ -1,8 +1,8 @@
 create table public.work_series (
-  work_id uuid not null,
-  series_id uuid not null,
   "position" numeric(6,2),
-  source text not null
+  series_id uuid not null,
+  source text not null,
+  work_id uuid not null
 );
 
 -- constraints

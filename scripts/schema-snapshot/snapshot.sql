@@ -55,7 +55,10 @@ with
                     case when a.attgenerated = 's' then format(' generated always as (%s) stored', pg_get_expr(d.adbin, d.adrelid))
                          when d.adbin is not null and a.attidentity = '' then ' default ' || pg_get_expr(d.adbin, d.adrelid) else '' end,
                     case when a.attnotnull then ' not null' else '' end),
-             E',\n' order by a.attnum) as body
+             -- By name, not by attnum: a column's physical position is not something a migration
+             -- can fix (two parallel migrations that both add one land in either order), so
+             -- recording it would report drift that no migration could end.
+             E',\n' order by a.attname) as body
       from pg_attribute a
       left join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
      where a.attnum > 0 and not a.attisdropped
@@ -77,9 +80,11 @@ with
      where not exists (select 1 from pg_constraint k where k.conindid = i.indexrelid and k.contype in ('p', 'u', 'x'))
      group by r.oid
   ),
-  -- table / view / sequence privileges, table-level. Only the app's own relations: the grants of
-  -- `storage`'s tables are the image's, and they change with the storage image's version (a
-  -- different `SUPABASE_CLI` pin, or cloud), which is not drift a migration could fix.
+  -- table / view / column privileges. Only the app's own relations: the grants of `storage`'s
+  -- tables (`objects`, `buckets`, `buckets_analytics`, `iceberg_*`, ...) come from the storage
+  -- image's own migrations, and its versions disagree — the CLI pin of CI and the developer's
+  -- grant `anon` and `authenticated` a different set, cloud is a third — which is drift no
+  -- migration could end. The policies on `storage.objects` are ours and stay in.
   rel_priv as (
     select r.oid, r.qname, r.relkind, g.name as grantee, p.privilege_type,
            format('grant %s on %s %s to %s;', lower(p.privilege_type),
@@ -258,7 +263,10 @@ with
                                                  E'\n' order by pt.schemaname, pt.tablename)
                                   from pg_publication_tables pt where pt.pubname = p.pubname), '-- no tables')) as body
           from pg_publication p
-         where p.pubname not like 'pg\_%'
+         -- Only the app's own publication. `supabase_realtime_messages_publication` and the
+         -- `realtime.messages_YYYY_MM_DD` tables it carries are the realtime platform's (a new
+         -- partition every day), and Postgres' own `pg_*` publications are never the app's.
+         where p.pubname = 'supabase_realtime'
       ) pubs
   ),
 

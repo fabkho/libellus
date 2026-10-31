@@ -26,3 +26,8 @@ The web app's own rules are in `web/AGENTS.md`.
 - A rule change comes with a migration and pgTAP tests (`CONTRIBUTING.md`); never with a dashboard change.
   `release.yml` runs the same query read-only against production after the migrations and warns when the
   two differ, which is how a dashboard change that never landed in a migration is noticed.
+- **An applied migration is never edited or deleted.** `supabase db push` records each file's version in
+  `supabase_migrations.schema_migrations` and never reads the file again: an edit after the deploy changes only
+  the local and CI stacks, production keeps the old definition, and the snapshot drifts from it for good. A wrong
+  migration is corrected by the next one. `ci.yml` fails a pull request that does anything but add a file under
+  `supabase/migrations/` (a tree comparison against the pull request's base commit, seconds, no stack).

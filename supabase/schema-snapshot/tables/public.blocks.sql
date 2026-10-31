@@ -1,6 +1,6 @@
 create table public.blocks (
-  blocker_id uuid not null,
   blocked_id uuid not null,
+  blocker_id uuid not null,
   created_at timestamp with time zone default now() not null
 );
 

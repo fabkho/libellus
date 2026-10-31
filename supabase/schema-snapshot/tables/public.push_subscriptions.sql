@@ -1,12 +1,12 @@
 create table public.push_subscriptions (
-  id uuid default gen_random_uuid() not null,
-  member_id uuid not null,
-  endpoint text not null,
-  p256dh text not null,
   auth text not null,
-  locale text default 'en'::text not null,
   created_at timestamp with time zone default now() not null,
-  last_ok_at timestamp with time zone
+  endpoint text not null,
+  id uuid default gen_random_uuid() not null,
+  last_ok_at timestamp with time zone,
+  locale text default 'en'::text not null,
+  member_id uuid not null,
+  p256dh text not null
 );
 
 -- constraints

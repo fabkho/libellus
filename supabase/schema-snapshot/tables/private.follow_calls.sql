@@ -1,6 +1,6 @@
 create table private.follow_calls (
-  member_id uuid not null,
-  at timestamp with time zone default now() not null
+  at timestamp with time zone default now() not null,
+  member_id uuid not null
 );
 
 -- constraints

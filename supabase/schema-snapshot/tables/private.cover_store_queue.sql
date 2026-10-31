@@ -1,13 +1,13 @@
 create table private.cover_store_queue (
-  book_id uuid not null,
-  source_url text not null,
-  state text default 'queued'::text not null,
   attempts integer default 0 not null,
+  book_id uuid not null,
   due_at timestamp with time zone default now() not null,
+  enqueued_at timestamp with time zone default now() not null,
+  last_error text,
   leased_by text,
   leased_until timestamp with time zone,
-  last_error text,
-  enqueued_at timestamp with time zone default now() not null
+  source_url text not null,
+  state text default 'queued'::text not null
 );
 
 -- constraints

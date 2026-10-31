@@ -1,7 +1,7 @@
 create table public.entry_genres (
   entry_id uuid not null,
-  member_id uuid not null,
   genre_ids text[] not null,
+  member_id uuid not null,
   updated_at timestamp with time zone default now() not null
 );
 

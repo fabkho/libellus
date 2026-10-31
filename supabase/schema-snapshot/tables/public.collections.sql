@@ -1,9 +1,9 @@
 create table public.collections (
+  created_at timestamp with time zone default now() not null,
   id uuid default gen_random_uuid() not null,
   member_id uuid not null,
   name text not null,
   "position" integer not null,
-  created_at timestamp with time zone default now() not null,
   updated_at timestamp with time zone default now() not null
 );
 

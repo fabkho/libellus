@@ -1,7 +1,7 @@
 create table public.book_works (
   book_id uuid not null,
-  work_id uuid not null,
-  matched_by text not null
+  matched_by text not null,
+  work_id uuid not null
 );
 
 -- constraints

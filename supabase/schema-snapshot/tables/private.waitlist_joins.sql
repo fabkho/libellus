@@ -1,7 +1,7 @@
 create table private.waitlist_joins (
-  id bigint generated always as identity not null,
   caller_key text not null,
-  created_at timestamp with time zone default now() not null
+  created_at timestamp with time zone default now() not null,
+  id bigint generated always as identity not null
 );
 
 -- constraints

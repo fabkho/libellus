@@ -1,18 +1,18 @@
 create table public.authors (
-  id uuid default gen_random_uuid() not null,
-  wikidata_id text,
-  openlibrary_key text,
-  name text not null,
   birth_date date,
   birth_precision smallint,
+  created_at timestamp with time zone default now() not null,
   death_date date,
   death_precision smallint,
-  photo_url text,
-  photo_credit jsonb,
-  summaries jsonb default '{}'::jsonb not null,
   fetched_at timestamp with time zone,
-  works_fetched_at timestamp with time zone,
-  created_at timestamp with time zone default now() not null
+  id uuid default gen_random_uuid() not null,
+  name text not null,
+  openlibrary_key text,
+  photo_credit jsonb,
+  photo_url text,
+  summaries jsonb default '{}'::jsonb not null,
+  wikidata_id text,
+  works_fetched_at timestamp with time zone
 );
 
 -- constraints

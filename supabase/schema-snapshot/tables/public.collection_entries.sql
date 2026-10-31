@@ -1,8 +1,8 @@
 create table public.collection_entries (
+  added_at timestamp with time zone default now() not null,
   collection_id uuid not null,
   entry_id uuid not null,
-  "position" integer not null,
-  added_at timestamp with time zone default now() not null
+  "position" integer not null
 );
 
 -- constraints
