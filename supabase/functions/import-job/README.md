@@ -79,7 +79,7 @@ the ISBN, the title ladder over Open Library (direct, identified with `OPENLIBRA
 **Apple is never asked** (owner decision 2026-10-19): every Apple address gets Apple's own empty answer, so no row is
 "unsure" because of it. A first-pass row a source could not be asked about (`unsure`) is deferred to the second pass.
 A row's result (`matchResult`) is its verdict (`matched` / `fromFile`), the preview's review tier (`reviewOf`), the
-edition summary and the cover it shows (`own` / `lent` / `none`); `outcome` is null.
+edition summary and the cover it shows (`own` / `lent` / `hardcover` / `none`); `outcome` is null.
 
 The match writes nothing (`outcome` is null): it saves what it chose to write with the row (`match_book`, `choice.ts`) and
 the write phase (below) writes every row.
@@ -95,6 +95,7 @@ without a cover decision are the only ones the stage ever sees; a row's `cover_s
 | --- | --- |
 | `edition` | the matched edition's own cover (decided when the match is saved) |
 | `lent` | a cover another edition of its work lends (`coverLender` / `mergeCover`, the app's rules, applied by the match) |
+| `hardcover` | the image a Hardcover zip names for the edition she has (the row's `coverHint`, used without a request, decided when the match is saved, `withHardcoverCover` in `work.ts`): for an edition found by ISBN or the file's own row, not one found by title (another edition); checked again here (`web/app/data/hardcoverCover.ts`: https, `assets.hardcover.app` exactly, a plain path), ranked right after the edition's own cover and before a lent one (`data/coverRank.ts`), so the cover stage never asks about the row. Shown inside the app only: `private.cover_shown` is false for the host |
 | `openlibrary` | step 1 of the stage: `api/books` by the row's ISBNs (24 rows in one call), else a title + author search for another edition of the work (the cover fill's own request addresses and answer readers, `web/app/data/coverFill.ts`), on the shared Open Library pace |
 | `goodreads` | step 2, only once step 1 is through for EVERY row: every row still without a cover that has a title and an author, ISBN first, then the full title, then the short title (`goodreads-rating`'s cover route, `createGoodreadsCover`); one ask every 1.6 s on the shared pace (`edge_pace` bucket `goodreads-cover`) |
 | `none` | nothing found, or given up |
@@ -112,7 +113,7 @@ hot loop of empty chunks). An Open Library call that fails asks the row once mor
 Stored per row: `cover_url` (the address, never the image), `cover_source`, `cover_size` (`S`/`M`/`L`, only when the
 address says it: Open Library's `-L.jpg`, Goodreads' `…l/`). **No image probe**: decoding an image and its thumbhash cost
 CPU the Free plan's 2 s does not have (the old WIP's probe was removed for that), so the stage reads no image; the thumbhash
-and colours come later with the Library's cover. The job's counters, `import_jobs.cover_edition / cover_lent /
+and colours come later with the Library's cover. The job's counters, `import_jobs.cover_edition / cover_lent / cover_hardcover /
 cover_openlibrary / cover_goodreads / cover_none` (their sum is the rows decided), say how many rows have a cover by source
 and how many have none. A row handed out three times without being saved is given up (`none`).
 

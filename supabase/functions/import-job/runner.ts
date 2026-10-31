@@ -50,7 +50,7 @@ export type RowResult =
     entry_id?: string | null
     error?: string | null
     edition?: unknown
-    cover?: 'own' | 'lent' | 'goodreads' | 'none'
+    cover?: 'own' | 'lent' | 'hardcover' | 'goodreads' | 'none'
     /** The address of the cover the match shows (`cover` is not `none`), and its size when the address says it. */
     cover_url?: string | null
     cover_size?: CoverSize | null
@@ -79,7 +79,7 @@ export type WriteRow = {
   key: string
   payload: Record<string, unknown>
   match_book: unknown
-  cover_source: 'edition' | 'lent' | 'openlibrary' | 'goodreads' | 'none' | null
+  cover_source: 'edition' | 'lent' | 'hardcover' | 'openlibrary' | 'goodreads' | 'none' | null
   cover_url: string | null
   cover_size: CoverSize | null
   outcome: WrittenOutcome | null

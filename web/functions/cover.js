@@ -1,12 +1,13 @@
-// Cloudflare Pages Function (docs/HOSTING.md, "The cover cache"): our own cache in front of the two cover
+// Cloudflare Pages Function (docs/HOSTING.md, "The cover cache"): our own cache in front of the cover
 // hosts. `/cover?u=<a cover URL>&w=<width>` answers the cover at that width, the way `app/utils/coverSize.ts`
 // says Apple's and Open Library's sizes are asked for, from Cloudflare's Cache API (`caches.default`, free,
 // per data centre) after the first request. Why: Open Library's covers take ~0.6–1.8 s (a redirect to archive.org,
 // then a storage host of its own); a cover at an address never changes, so one slow fetch is all a cover needs;
 // and a texture (the reel's WebGL cards) needs CORS, which this always sends.
 //
-// An allowlist, not a proxy: `parseCoverRequest` accepts only `https://<n>.mzstatic.com/image/thumb/…/<w>x<h>bb.jpg`
-// and `https://covers.openlibrary.org/b/<id|isbn|olid|oclc|lccn>/<key>-<S|M|L>.jpg`, and only the widths in
+// An allowlist, not a proxy: `parseCoverRequest` accepts only `https://<n>.mzstatic.com/image/thumb/…/<w>x<h>bb.jpg`,
+// `https://covers.openlibrary.org/b/<id|isbn|olid|oclc|lccn>/<key>-<S|M|L>.jpg` and the one image a path of Hardcover's
+// `https://assets.hardcover.app/<path>` names (no size variants: the address as it is), and only the widths in
 // `COVER_WIDTHS` (each width is a cache entry). The sized address is computed here from `u` and `w`, so the
 // browser cannot ask for a size nobody listed. Nothing is stored beyond Cloudflare's cache (no bucket, no
 // database), and nothing here is a paid feature: no Cloudflare Images, no Image Resizing, no KV or R2.
@@ -37,7 +38,7 @@ const MAX_BYTES = 2 * 1024 * 1024
 /** Time the host has to answer before the cover counts as unavailable (Open Library's slowest is ~2 s). */
 const ORIGIN_TIMEOUT = 8000
 /** Where the cover came from, as the final address of a (redirected) fetch: its host's own, or Open Library's archive. */
-const ORIGIN_HOST = /^(?:[a-z0-9-]+\.mzstatic\.com|covers\.openlibrary\.org|(?:[a-z0-9-]+\.)*archive\.org)$/
+const ORIGIN_HOST = /^(?:[a-z0-9-]+\.mzstatic\.com|covers\.openlibrary\.org|assets\.hardcover\.app|(?:[a-z0-9-]+\.)*archive\.org)$/
 /** The header that remembers when a cover was fetched (the stored copy's, never sent on). */
 const STORED_AT = 'x-cover-stored-at'
 
@@ -47,18 +48,46 @@ const BASE = { 'Cross-Origin-Resource-Policy': 'same-site', 'X-Content-Type-Opti
 const failure = (status, message) =>
   new Response(message, { status, headers: { ...BASE, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } })
 
+/** At most this many redirects are followed (Open Library's takes two: archive.org, then a storage host of its own). */
+const MAX_HOPS = 3
+
+/**
+ * The host's answer, redirects followed by hand, one hop at a time: every `Location` must be https, with no credentials and no port,
+ * on the allowlist (`ORIGIN_HOST`). A redirect anywhere else is no cover (a 502 to the caller), and nothing is asked of it.
+ */
+async function fetchFollowing(source) {
+  let current = new URL(source)
+  for (let hop = 0; hop <= MAX_HOPS; hop++) {
+    const response = await fetch(current.href, {
+      headers: { Accept: 'image/jpeg,image/png,image/webp,image/*;q=0.8', 'User-Agent': 'Libellus/1.0 (cover cache)' },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(ORIGIN_TIMEOUT),
+    })
+    if (response.status < 300 || response.status >= 400) return response
+    await response.body?.cancel().catch(() => {})
+    const location = response.headers.get('Location')
+    if (!location) return null
+    let next
+    try {
+      next = new URL(location, current)
+    } catch {
+      return null
+    }
+    if (next.protocol !== 'https:' || next.username || next.password || next.port || !ORIGIN_HOST.test(next.hostname)) return null
+    current = next
+  }
+  return null
+}
+
 /** The cover from the host, as bytes and a type; null when it is not a usable image. */
 async function fromHost(source) {
   let response
   try {
-    response = await fetch(source, {
-      headers: { Accept: 'image/jpeg,image/png,image/webp,image/*;q=0.8', 'User-Agent': 'Libellus/1.0 (cover cache)' },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(ORIGIN_TIMEOUT),
-    })
+    response = await fetchFollowing(source)
   } catch {
     return { status: 502 }
   }
+  if (!response) return { status: 502 }
   if (response.status === 404 || response.status === 410) return { status: 404 }
   if (!response.ok) return { status: 502 }
   // A redirect that ended somewhere else is not the cover of the host that was asked.

@@ -67,7 +67,7 @@ does with your data.
   An export of your data is planned; until it exists, the app only imports (Goodreads, Hardcover).
 - **Sharing is opt-in**: a member's reading page is off until she turns it on, shows only the
   sections she picks (never her email, notes, highlights or a review she didn't share), sits at an
-  unguessable link out of search engines, and dies at once when she makes a new link or turns it off.
+  unguessable link out of search engines, and dies at once when she makes a new link or turns it off. A cover that came with a Hardcover export is not shown to visitors or on shared or public pages (a reading page, a link preview, the published shelf); it shows inside the app.
 - **The waitlist is the only address a visitor can leave**: a reading page ends in a small form
   ("BetterReads is invite-only for now"); the address is kept only to send an invite, readable only by
   the owner and deleted on request. No account is made from the page.

@@ -6,7 +6,7 @@ import { CONCURRENCY, RUN_LIMIT, runCoverStore, type RunnerDeps, type RunResult 
 import type { Done } from './store.ts'
 import { thumbBudget } from './thumb.ts'
 import {
-  APPLE_BASE, APPLE_PROBE, APPLE_REAL_WIDTHS, APPLE_URL, APPLE_VARIANTS, coverRoutes, fakePace, fakeS3, fakeStore, fixture, GOODREADS_URL, image, jpegOf,
+  APPLE_BASE, APPLE_PROBE, APPLE_REAL_WIDTHS, APPLE_URL, APPLE_VARIANTS, coverRoutes, fakePace, fakeS3, fakeStore, fixture, GOODREADS_URL, HARDCOVER_URL, image, jpegOf,
   OL_L, OL_M, OPENLIBRARY_ID_URL, redirect, REGAL_URL, row, SECRET, status, web,
 } from './test_support.ts'
 
@@ -135,6 +135,20 @@ Deno.test('Goodreads and Regal: the one image the address names, at its real wid
   const regal = await run({ rows: [row(1, REGAL_URL)] })
   assertEquals(regal.hosts.urls(), [REGAL_URL])
   assertEquals(regal.calls.done[0]!.widths, [318])
+})
+
+Deno.test('Hardcover: the one image the address names, at its real width, no other request; dropped from COVER_STORE_HOSTS it is not stored', async () => {
+  const hardcover = await run({ rows: [row(1, HARDCOVER_URL)] })
+  assertEquals(hardcover.hosts.urls(), [HARDCOVER_URL])
+  assertEquals(hardcover.calls.done[0]!.widths, [318])
+  assertEquals(hardcover.calls.done[0]!.contentType, 'image/jpeg')
+  assert(hardcover.calls.done[0]!.thumbhash)
+  assertEquals(hardcover.s3.puts.length, 1)
+
+  const dropped = await run({ rows: [row(1, HARDCOVER_URL)], hosts: ['apple', 'openlibrary', 'goodreads', 'regal'] })
+  assertEquals(dropped.hosts.urls(), [])
+  assertEquals(dropped.calls.done.length, 0)
+  assertEquals(dropped.result.unsupported, 1)
 })
 
 Deno.test('two Books with the same key: one upload, both Books done with it (a lent cover)', async () => {

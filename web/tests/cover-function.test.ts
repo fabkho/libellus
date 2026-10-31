@@ -12,6 +12,7 @@ import { onRequest } from '../functions/cover.js'
 const SITE = 'https://libellus.fabkho.dev'
 const APPLE = 'https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/c8/bf/b3/c8bf/9780593983768.d.jpg/600x900bb.jpg'
 const OL = 'https://covers.openlibrary.org/b/id/8231856-L.jpg'
+const HARDCOVER = 'https://assets.hardcover.app/edition/30524155/2d30ac0e2eb1f4cd0ea3a93b5cd8a1fa1a63e0e.jpeg'
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4])
 
 /** The Cache API's `default` cache, as a Map by address (put copies the response, match hands one back). */
@@ -64,6 +65,10 @@ describe('the allowlist', () => {
     ['a look-alike host', ask('https://covers.openlibrary.org.evil.test/b/id/1-L.jpg', 240)],
     ['a path of the host that is no cover', ask('https://covers.openlibrary.org/a/olid/OL1A-L.jpg', 240)],
     ['a host over plain http', ask(APPLE.replace('https', 'http'), 240)],
+    ['a look-alike of Hardcover\'s host', ask('https://assets.hardcover.app.evil.test/edition/1/a.jpeg', 240)],
+    ['another Hardcover host', ask('https://cdn.hardcover.app/edition/1/a.jpeg', 240)],
+    ['Hardcover\'s host over plain http', ask(HARDCOVER.replace('https', 'http'), 240)],
+    ['a Hardcover address with a query', ask(`${HARDCOVER}?x=1`, 240)],
     ['a width it does not list', ask(APPLE, 300)],
     ['no width', `?u=${encodeURIComponent(APPLE)}`],
   ])('asks no host and says 400 for %s', async (_, query) => {
@@ -99,6 +104,15 @@ describe('a cover not in the cache yet', () => {
     expect(response.headers.get('X-Cover-Cache')).toBe('miss')
     expect(response.headers.has('x-cover-stored-at')).toBe(false)
     expect(fetchMock.mock.calls[0]![0]).toBe(OL)
+  })
+
+  it('is fetched from Hardcover\'s host as the one image its address names, whatever the width', async () => {
+    const response = await call(ask(HARDCOVER, 480)).settled()
+    expect(response.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0]![0]).toBe(HARDCOVER)
+    await call(ask(HARDCOVER, 120)).settled()
+    expect(fetchMock.mock.calls.every(([source]) => source === HARDCOVER)).toBe(true)
   })
 
   it('is put in the cache under the sized address, with the headers of a cover that never changes', async () => {
@@ -209,6 +223,45 @@ describe('a host that does not give a cover', () => {
   it('may redirect to Open Library’s archive, which is where its older covers are', async () => {
     fetchMock.mockImplementation(async () => hostAnswers(JPEG, { url: 'https://ia800000.us.archive.org/view_archive.php?x=1' }))
     expect((await call(ask(OL, 240)).settled()).status).toBe(200)
+  })
+
+  describe('redirects, followed by hand on the allowlist', () => {
+    const redirect = (location: string, status = 302) => new Response(null, { status, headers: { Location: location } })
+    const ARCHIVE = 'https://archive.org/download/l_covers_0008/0008231856-L.jpg'
+    const STORAGE = 'https://ia800000.us.archive.org/view_archive.php?archive=/x.zip&file=0008231856-L.jpg'
+
+    it('follows Open Library to the archive and its storage host, never letting fetch follow by itself', async () => {
+      fetchMock.mockImplementation(async (url: string) => (url === OL ? redirect(ARCHIVE) : url === ARCHIVE ? redirect(STORAGE, 301) : hostAnswers()))
+      const response = await call(ask(OL, 240)).settled()
+      expect(response.status).toBe(200)
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([OL, ARCHIVE, STORAGE])
+      expect(fetchMock.mock.calls.every(([, init]) => init.redirect === 'manual')).toBe(true)
+    })
+
+    it.each([
+      ['another host', 'https://evil.example/x.jpg'],
+      ['plain http', 'http://covers.openlibrary.org/b/id/1-L.jpg'],
+      ['credentials', 'https://user:pass@archive.org/x.jpg'],
+      ['a port', 'https://archive.org:8443/x.jpg'],
+      ['a look-alike', 'https://archive.org.evil.example/x.jpg'],
+      ['an internal address', 'https://169.254.169.254/latest/meta-data'],
+    ])('stops at a redirect to %s: nothing is asked of it, nothing is stored', async (_, target) => {
+      fetchMock.mockImplementation(async (url: string) => (url === OL ? redirect(target) : hostAnswers()))
+      const response = await call(ask(OL, 240)).settled()
+      expect(response.status).toBe(502)
+      expect(response.headers.get('Cache-Control')).toBe('no-store')
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([OL])
+      expect(cache.put).not.toHaveBeenCalled()
+    })
+
+    it('gives up after three hops, and on a redirect without a Location', async () => {
+      fetchMock.mockImplementation(async (url: string) => redirect(`${ARCHIVE}?n=${fetchMock.mock.calls.length}`))
+      expect((await call(ask(OL, 240)).settled()).status).toBe(502)
+      expect(fetchMock).toHaveBeenCalledTimes(4)
+      fetchMock.mockReset()
+      fetchMock.mockImplementation(async () => new Response(null, { status: 302 }))
+      expect((await call(ask(APPLE, 120)).settled()).status).toBe(502)
+    })
   })
 
   it('is a 502 when it does not answer', async () => {

@@ -29,6 +29,7 @@ import {
  */
 
 const OL = (id: number) => `https://covers.openlibrary.org/b/id/${id}-L.jpg`
+const HC = (id: number) => `https://assets.hardcover.app/edition/${id}/abc.jpeg`
 const GR = (id: number) => `https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1682494830i/${id}.jpg`
 const APPLE = (id: number) => `https://is1-ssl.mzstatic.com/image/thumb/Publication/${id}/600x900bb.jpg`
 const isbn = (n: number) => `97834530${String(n).padStart(5, '0')}`
@@ -182,6 +183,14 @@ describe('what is upgraded: only a larger Apple cover of the right book', () => 
     expect(t.db.written[0]!.map((one) => [one.book_id, one.replaces])).toEqual([['book-1', GR(1)], ['book-2', null]])
     // The Goodreads cover was not downloaded to be measured: it counts as the height it is asked at.
     expect(t.probed.some((url) => url.includes('gr-assets'))).toBe(false)
+  })
+
+  it('a Hardcover cover is measured as Goodreads\'s is (not downloaded) and replaced by the larger Apple one', async () => {
+    const t = setup([row(1, { cover: HC(1) })], { isbns: { [isbn(1)]: appleBook(1) } })
+    await t.run()
+    expect(t.list.rows.map((one) => one.result)).toEqual(['upgraded'])
+    expect(t.db.written[0]!.map((one) => [one.book_id, one.replaces])).toEqual([['book-1', HC(1)]])
+    expect(t.probed.some((url) => url.includes('hardcover'))).toBe(false)
   })
 
   it('never takes a cover that is not larger: Apple\'s is smaller than the one there, or under 300 px', async () => {

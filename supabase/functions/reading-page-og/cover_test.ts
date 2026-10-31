@@ -47,6 +47,8 @@ Deno.test('F18: a host off the list is never asked, whatever the database said',
     'https://user:pass@covers.openlibrary.org/x.png',
     'https://covers.openlibrary.org:8443/x.png',
     'https://mzstatic.com/x.png',
+    // Hardcover's covers show inside the app only (owner decision): never drawn into a public image, whatever the database said.
+    'https://assets.hardcover.app/edition/1/a.jpeg',
     'http://covers.openlibrary.org/x.png',
     'https://169.254.169.254/latest/meta-data',
     'https://localhost/x.png',

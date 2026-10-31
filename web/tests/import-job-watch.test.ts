@@ -12,7 +12,7 @@ import { RealtimeClient as RealClient } from '#realtime-client'
 
 const row = (over: Record<string, unknown> = {}) => ({
   id: 'job-1', state: 'running', total: 100, done: 0, added: 0, kept: 0, failed: 0, already: 0,
-  cover_edition: 0, cover_lent: 0, cover_openlibrary: 0, cover_goodreads: 0, cover_none: 0, error: null, finished_at: null,
+  cover_edition: 0, cover_lent: 0, cover_hardcover: 0, cover_openlibrary: 0, cover_goodreads: 0, cover_none: 0, error: null, finished_at: null,
   ...over,
 })
 const job = (over: Record<string, unknown> = {}): ImportJob => jobOf(row(over))!

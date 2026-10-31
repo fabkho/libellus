@@ -27,6 +27,7 @@ export const OL_L = 'https://covers.openlibrary.org/b/id/8231856-L.jpg?default=f
 export const OL_M = 'https://covers.openlibrary.org/b/id/8231856-M.jpg?default=false'
 export const GOODREADS_URL = 'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1689110385i/187957173.jpg'
 export const REGAL_URL = 'https://books.fabkho.dev/covers/one.jpg'
+export const HARDCOVER_URL = 'https://assets.hardcover.app/edition/30524155/2d30ac0e2eb1f4cd0ea3a93b5cd8a1fa1a63e0e.jpeg'
 
 export const SECRET = 'test-secret-not-a-real-one'
 
@@ -76,6 +77,7 @@ export function coverRoutes(extra: Record<string, Route> = {}): Record<string, R
   routes[OL_M] = image(fixture('ol-M.jpg'))
   routes[GOODREADS_URL] = image(fixture('goodreads.jpg'))
   routes[REGAL_URL] = image(fixture('goodreads.jpg'))
+  routes[HARDCOVER_URL] = image(fixture('goodreads.jpg'))
   return { ...routes, ...extra }
 }
 

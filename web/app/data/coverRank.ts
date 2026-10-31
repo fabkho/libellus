@@ -7,6 +7,8 @@
  * print edition's.
  *
  *   exact       the very edition: its Apple artwork, Open Library's cover for its ISBN
+ *   hardcover   the image Hardcover's export names for the edition she has (a zip's `coverHint`: docs/covers.md,
+ *               "Hardcover's covers"): right after the edition's own cover, before every cover that is another edition's
  *   ebook       the same work's ebook edition (Apple Books, the row's storefront first, then the other)
  *   sameWork    another edition of the same work (an Open Library work's cover, a sibling print edition)
  *   goodreads   Goodreads' own cover for the row's title (a last resort, flagged: docs/covers.md)
@@ -25,13 +27,13 @@
  */
 export const GOODREADS_COVERS = true
 
-export type CoverKind = 'exact' | 'ebook' | 'sameWork' | 'goodreads' | 'placeholder'
+export type CoverKind = 'exact' | 'hardcover' | 'ebook' | 'sameWork' | 'goodreads' | 'placeholder'
 
 /** Best first. */
-export const COVER_KINDS: readonly CoverKind[] = ['exact', 'ebook', 'sameWork', 'goodreads', 'placeholder']
+export const COVER_KINDS: readonly CoverKind[] = ['exact', 'hardcover', 'ebook', 'sameWork', 'goodreads', 'placeholder']
 
 /** Pixel height each source's cover has once asked for large (docs/covers.md): the tie-break inside one kind. */
-export const COVER_HEIGHT = { apple: 900, openlibrary: 500, goodreads: 500, google: 128 } as const
+export const COVER_HEIGHT = { apple: 900, openlibrary: 500, goodreads: 500, hardcover: 500, google: 128 } as const
 
 export function kindRank(kind: CoverKind): number {
   return COVER_KINDS.indexOf(kind)
@@ -43,8 +45,9 @@ export function betterCover(a: CoverKind, b: CoverKind): CoverKind {
 }
 
 /** What the fill's source says about the kind of cover it found. */
-export function coverKindOf(source: 'sibling' | 'openlibrary' | 'work' | 'search' | 'goodreads', url: string): CoverKind {
+export function coverKindOf(source: 'sibling' | 'openlibrary' | 'work' | 'search' | 'goodreads' | 'hardcover', url: string): CoverKind {
   if (source === 'openlibrary') return 'exact'
+  if (source === 'hardcover') return 'hardcover'
   if (source === 'goodreads') return 'goodreads'
   // Apple's catalogue is ebooks: a sibling or a search hit there is the work's ebook.
   if (/mzstatic\.com\//.test(url)) return 'ebook'

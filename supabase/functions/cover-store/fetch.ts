@@ -4,7 +4,7 @@
  *
  *  - **Redirects by hand** (`redirect: 'manual'`, at most 3 hops): every `Location` must be `https:`, with no port and no
  *    credentials, on the allowlist (`*.mzstatic.com`, `covers.openlibrary.org`, `archive.org` and `*.archive.org`,
- *    `i.gr-assets.com`, `books.fabkho.dev`). A redirect anywhere else is `host_error`: no SSRF through a redirect. (Covers
+ *    `i.gr-assets.com`, `assets.hardcover.app`, `books.fabkho.dev`). A redirect anywhere else is `host_error`: no SSRF through a redirect. (Covers
  *    on other hosts are not stored in v1: docs/plans/owned-covers.md, §3: DNS pinning is not possible on this runtime.)
  *  - **Open Library's limits**: covers by ISBN, OCLC or LCCN are 100 requests per address per 5 minutes and answer 403
  *    past it; their requests wait for a turn on the `openlibrary-covers-keyed` pace (0.3 a second), the others on
@@ -29,7 +29,7 @@ export const KEYED_HOLD_MS = 5 * 60_000
 /** The hosts a request or a redirect may go to. */
 export function allowedHost(host: string): boolean {
   const name = host.toLowerCase()
-  return name === 'covers.openlibrary.org' || name === 'archive.org' || name === 'i.gr-assets.com' || name === 'books.fabkho.dev' ||
+  return name === 'covers.openlibrary.org' || name === 'archive.org' || name === 'i.gr-assets.com' || name === 'assets.hardcover.app' || name === 'books.fabkho.dev' ||
     name.endsWith('.archive.org') || name.endsWith('.mzstatic.com')
 }
 

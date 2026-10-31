@@ -6,7 +6,7 @@ import { createLibrary } from '@/data/library'
 // a context the test builds (docs/HOSTING.md, "The Pages Functions").
 import { onRequest } from '../functions/r/[[path]].js'
 import { signUpMember, type TestMember } from './support/member'
-import { runTitle, sql, stack, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
+import { runTitle, sql, stack, TEST_PUBLISHER, uniqueAppleId, visitorClient } from './support/stack'
 
 /**
  * The link previews of a shared reading page (issue #171), against the local
@@ -293,6 +293,30 @@ describe('the picture of a link', () => {
     const page = await onRequest(context(`/r/${token}/og.png`))
     expect(page.status).toBe(302)
     expect(page.headers.get('location')).toBe(`${SITE}/icon-512.png`)
+  })
+
+  it('never draws a Hardcover cover (inside the app only): the visitor\'s data, the page and the preview fall back', async () => {
+    const { token, bookId } = await sharedPage()
+    // Inside the app her Library has it (a Hardcover import's cover) …
+    await sql('update public.books set cover_url = $2 where id = $1', [bookId, 'https://assets.hardcover.app/edition/1234/abc.jpeg'])
+    // … a visitor gets none: no address, no key (`private.cover_shown` is false for the host).
+    const visitor = visitorClient()
+    const card = await visitor.rpc('public_book_card', { p_token: token, p_book: bookId })
+    expect(card.error).toBeNull()
+    const shown = (card.data as { book: Record<string, unknown> }).book
+    expect(shown.title).toBeTruthy()
+    expect(shown.cover_url ?? null).toBeNull()
+    expect(shown.cover_key ?? null).toBeNull()
+    expect(JSON.stringify(card.data)).not.toContain('hardcover')
+    const page = await visitor.rpc('public_reading_page', { p_token: token })
+    expect(JSON.stringify(page.data)).not.toContain('hardcover')
+
+    standInRenderer(() => new Response('no', { status: 500 }))
+    const preview = await onRequest(context(`/r/${token}/book/${bookId}/og.png`))
+    expect(preview.status).toBe(302)
+    expect(preview.headers.get('location')).toBe(`${SITE}/icon-512.png`)
+    const html = await (await onRequest(context(`/r/${token}/book/${bookId}`))).text()
+    expect(html).not.toContain('hardcover')
   })
 
   it('stops at once when the link is renewed', async () => {

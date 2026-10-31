@@ -23,6 +23,8 @@ import {
   reviewOf,
 } from '../../../web/app/data/bookImport.ts'
 import type { Book, BookSnapshot } from '../../../web/app/data/books.ts'
+import { mergeCover } from '../../../web/app/data/coverFill.ts'
+import { hardcoverCoverAddress } from '../../../web/app/data/hardcoverCover.ts'
 import type { ImportBook } from '../../../web/app/data/import/rows.ts'
 import { writeChoice } from './choice.ts'
 import { coverSizeOf } from './cover_size.ts'
@@ -88,10 +90,13 @@ function summary(book: Book | BookSnapshot, edition: Edition, review: ReturnType
 /** What a matched row is saved as (`RowResult`): nothing is written yet, so no outcome (the write phase's). `cover` `none` sends the row on to the cover stage (covers.ts). Pure. */
 export function matchResult({ edition, matched, review }: Matched): Extract<RowResult, { verdict: unknown }> {
   const shown = (edition.coverFrom ?? edition.book).coverUrl
-  const cover: 'own' | 'lent' | 'goodreads' | 'none' = !shown
+  const cover: 'own' | 'lent' | 'hardcover' | 'goodreads' | 'none' = !shown
     ? 'none'
     : edition.goodreadsOnly || edition.coverKind === 'goodreads'
     ? 'goodreads'
+    // The Hardcover zip's image of the edition she has (`withHardcoverCover`): decided here, so it never waits on the cover stage.
+    : edition.filled && edition.coverKind === 'hardcover'
+    ? 'hardcover'
     // `mergeCover` puts a lent cover on a found edition's Book itself (`filled`) and on the file's own row as `coverFrom`.
     : edition.filled || !edition.book.coverUrl
     ? 'lent'
@@ -107,6 +112,24 @@ export function matchResult({ edition, matched, review }: Matched): Extract<RowR
     // The address of the cover shown, so the row's cover decision (edition / lent) is whole when the match is saved.
     ...(shown ? { cover_url: shown, cover_size: coverSizeOf(shown) } : {}),
   }
+}
+
+/**
+ * The edition with the cover the Hardcover zip named for the row (`coverHint`, uploaded by the device and checked again here: the
+ * payload is the member's to write, so only Hardcover's own address passes, `hardcoverCoverAddress`). The ranking
+ * (data/coverRank.ts) does the rest, through `mergeCover`: only for an edition found by ISBN or the file's own row (not one found
+ * by title: another edition of the work), right after the edition's own cover (an edition that has
+ * one is not touched), and replaces a cover the match only lent (another edition's, the work's ebook). Nothing is asked of
+ * Hardcover: the address is used as it came, its stored copy and thumbhash follow from the cover store. Pure.
+ */
+export function withHardcoverCover(edition: Edition, hint: unknown): Edition {
+  // The image is of the edition she has. An edition found by ISBN is that edition, and the file's own row (`via` null) is hers;
+  // one found by title is another edition of the work, a shared Catalogue Book: it keeps what it has (or what was lent to it)
+  // and the hint is not written onto it.
+  if (edition.via === 'title') return edition
+  const address = hardcoverCoverAddress((hint as { url?: unknown } | null | undefined)?.url)
+  if (!address) return edition
+  return mergeCover(edition, { coverUrl: address, coverThumbhash: null, coverColors: null, kind: 'hardcover' }) ?? edition
 }
 
 /** Runs `task` over `items`, at most `limit` at once. */
@@ -126,7 +149,7 @@ export async function matchRow(row: JobRow, lookups: Lookups, signal?: AbortSign
   const book = row.payload as UploadedRow
   let edition: Edition
   try {
-    edition = await findEdition(book, lookups, signal)
+    edition = withHardcoverCover(await findEdition(book, lookups, signal), book.coverHint)
   } catch (error) {
     if (signal?.aborted) return null
     throw error

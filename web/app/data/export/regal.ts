@@ -1,3 +1,4 @@
+import { isHardcoverCover } from '../hardcoverCover.ts'
 import {
   LIBRARY_FILE_VERSION,
   type KnownReadingStatus,
@@ -151,8 +152,13 @@ export function regalBook(entry: RegalExportEntry, { timeZone = 'UTC' }: Pick<Re
   return result
 }
 
-/** The Cover as `assets`: its URL as the front, its colours as a palette. Null when there is neither. */
+/**
+ * The Cover as `assets`: its URL as the front, its colours as a palette. Null when there is neither. A Hardcover cover (owner
+ * decision, 31 Oct 2026: inside the app only, `private.cover_shown`) is neither: the library file feeds a public shelf, and the
+ * colours are taken from that image.
+ */
 export function regalAssets(coverUrl: string | null, coverColors: RegalCoverColors | null): LibraryBookAssets | null {
+  if (isHardcoverCover(coverUrl?.trim())) return null
   const assets: LibraryBookAssets = {}
   if (coverUrl && HTTP_URL.test(coverUrl.trim())) assets.front = coverUrl.trim()
   if (coverColors && HEX_COLOUR.test(coverColors.dominant) && HEX_COLOUR.test(coverColors.secondary)) {

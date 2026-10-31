@@ -198,6 +198,21 @@ Deno.test('the file\'s own row (an import Book, a Goodreads-only Book) is writte
   assertEquals(w.filled[0]!.map((cover) => cover.isbn13), ['9780000000011'])
 })
 
+Deno.test('a Hardcover cover is written like the other covers the job found: a Catalogue Book gets it through fill_book_covers, the file\'s own row with its Book', async () => {
+  const w = world()
+  const address = 'https://assets.hardcover.app/edition/1234/abc.jpeg'
+  const bare = catalogueBook({ coverUrl: null })
+  const own = snapshot({ source: 'import', title: 'Obscure', isbn13: '9780000000011', coverUrl: null })
+  await w.work(JOB, [
+    writeRow(0, { book: { ...bare, coverUrl: address } as Book, filled: true }, { cover_source: 'hardcover', cover_url: address }),
+    writeRow(1, { book: own }, { cover_source: 'hardcover', cover_url: address }),
+  ], w.context())
+  assertEquals(w.filled[0]![0], { book_id: 'book-1', cover_url: address, cover_thumbhash: null, cover_dominant: null, cover_secondary: null })
+  const written = w.written.sort((a, b) => a.idx - b.idx)
+  assertEquals((written[1]!.row.book as { cover_url: string }).cover_url, address)
+  assert(importRowOf(writeRow(1, { book: own }, { cover_source: 'hardcover', cover_url: address })).coverFilled)
+})
+
 Deno.test('a sibling edition\'s cover keeps its thumbhash when the address is the lender\'s', () => {
   const lent = { coverUrl: 'https://covers.openlibrary.org/b/id/9-L.jpg', coverThumbhash: 'hash=', coverColors: { dominant: '#112233', secondary: '#445566' } }
   const imported = importRowOf(writeRow(0, { book: snapshot(), lent }, { cover_source: 'lent', cover_url: lent.coverUrl }))

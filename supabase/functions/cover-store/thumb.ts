@@ -7,8 +7,8 @@
  * and no CPU clock to read, so the cost is budgeted by wall clock around each decode (`performance.now()`, what the
  * import job's README says it can measure) and by count: `ThumbBudget`.
  *
- *   - at most `GOODREADS_PER_RUN` Books of Goodreads a run (their image is the whole cover, a big JPEG; the others are
- *     small probes: Apple's `66x100bb.jpg`, Open Library's `-M`);
+ *   - at most `GOODREADS_PER_RUN` Books of Goodreads and Hardcover together a run (their image is the whole cover, a big
+ *     JPEG; the others are small probes: Apple's `66x100bb.jpg`, Open Library's `-M`);
  *   - no decode starts once the run's decodes have taken `DECODE_BUDGET_MS`.
  *
  * What the budget refuses stays queued for the next run (the runner books it again), it is never stored without.
@@ -48,7 +48,7 @@ export function thumbBudget(options: { now?: () => number; goodreadsPerRun?: num
   return {
     admit(host) {
       if (spent >= budgetMs) return false
-      if (host === 'goodreads') {
+      if (host === 'goodreads' || host === 'hardcover') {
         if (goodreads >= goodreadsPerRun) return false
         goodreads++
       }

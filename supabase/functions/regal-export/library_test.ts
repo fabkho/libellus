@@ -125,3 +125,15 @@ Deno.test('finds the owner by address, in any case, over pages of members', asyn
   assertEquals(await findMemberId(client, ' owner@libellus.TEST '), 'owner')
   assertEquals(await findMemberId(client, 'nobody@libellus.test'), null)
 })
+
+Deno.test('a Hardcover cover (inside the app only) is not read into the entry, nor the colours taken from it; other covers are', () => {
+  const [row] = entryRows()
+  const withCover = (url: string | null): EntryRow => ({ ...row!, book: { ...row!.book, cover_url: url, cover_dominant: '#1a2b3c', cover_secondary: '#f0e0d0' } })
+  for (const url of ['https://assets.hardcover.app/edition/1/a.jpeg', ' https://assets.hardcover.app/edition/1/a%20b.jpeg ', 'https://assets.hardcover.app/']) {
+    const entry = entryFromRow(withCover(url))
+    assertEquals([entry.book.coverUrl, entry.book.coverColors], [null, null], url)
+  }
+  const other = entryFromRow(withCover('https://covers.openlibrary.org/b/id/1-L.jpg'))
+  assertEquals([other.book.coverUrl, other.book.coverColors], ['https://covers.openlibrary.org/b/id/1-L.jpg', { dominant: '#1a2b3c', secondary: '#f0e0d0' }])
+  assertEquals(entryFromRow(withCover('https://assets.hardcover.app.evil.example/a.jpg')).book.coverUrl, 'https://assets.hardcover.app.evil.example/a.jpg')
+})

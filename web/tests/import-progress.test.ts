@@ -20,6 +20,7 @@ const row = (over: Record<string, unknown> = {}) => ({
   already: 0,
   cover_edition: 0,
   cover_lent: 0,
+  cover_hardcover: 0,
   cover_openlibrary: 0,
   cover_goodreads: 0,
   cover_none: 0,
@@ -31,8 +32,8 @@ const job = (over: Record<string, unknown> = {}): ImportJob => jobOf(row(over))!
 
 describe('the server row as the app\'s job', () => {
   it('counts the phases: rows matched, rows with a cover decision (every source), rows written', () => {
-    const now = job({ done: 100, cover_edition: 40, cover_lent: 5, cover_openlibrary: 20, cover_goodreads: 3, cover_none: 7, added: 50, kept: 10, failed: 1 })
-    expect(now).toMatchObject({ total: 100, matched: 100, covered: 75, written: 61, added: 50, failed: 1 })
+    const now = job({ done: 100, cover_edition: 40, cover_lent: 5, cover_hardcover: 4, cover_openlibrary: 20, cover_goodreads: 3, cover_none: 7, added: 50, kept: 10, failed: 1 })
+    expect(now).toMatchObject({ total: 100, matched: 100, covered: 79, written: 61, added: 50, failed: 1 })
   })
 
   it('kept is the books that were there already, with the rows the device did not even upload', () => {

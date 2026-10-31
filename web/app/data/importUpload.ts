@@ -21,8 +21,8 @@ import {
  * A Hardcover "everything" zip (docs/plans/hardcover-zip.md) is read here too, behind `options.zip` (the picker's flag,
  * `NUXT_PUBLIC_IMPORT_ZIP`): the bytes decide, not the name (`PK\x03\x04` is a zip, anything else is read as a CSV, as before). Its
  * reader is loaded only then (a lazy chunk). What a zip knows beyond a CSV goes to the job (plan, PR 2): the session's `progress`
- * on the row, and `collectionOrder` and `emptyCollections` with the start (`Prepared`). The cover address (`coverHint`) is still left
- * out: the job does not take it before the plan's PR 3. A CSV carries none of these, so its upload is what it was.
+ * on the row, and `collectionOrder` and `emptyCollections` with the start (`Prepared`), and so does the cover address (`coverHint`: the
+ * job checks it again and uses it as its `hardcover` cover source, plan PR 3). A CSV carries none of these, so its upload is what it was.
  *
  * A row is not uploaded when it is decided already: imported by an earlier run of this file (`import_key`), or hers under another
  * edition (the title index, #104); the job is told how many (`already`), they count as "kept" in its summary.
@@ -74,13 +74,12 @@ const ROW_MAX_CHARS = 14_000
 
 /**
  * The parsed row as uploaded: all her other shelves are kept as Collections (there is no step left to decline them in).
- * What only a zip carries: the session's progress goes along (the job writes it, `import_books`); the cover address is left
- * out until the job takes it (plan, PR 3).
+ * What only a zip carries goes along: the session's progress (the job writes it, `import_books`) and the cover address
+ * (`coverHint`, a Hardcover address the job uses as a cover source).
  */
 export function uploadRow(book: ImportBook): Record<string, unknown> {
-  const { coverHint: _coverHint, ...kept } = book
   const session = book.session ?? null
-  const row: Record<string, unknown> = { ...kept, session, collections: [...new Set(book.shelves)] }
+  const row: Record<string, unknown> = { ...book, session, collections: [...new Set(book.shelves)] }
   if (JSON.stringify(row).length > ROW_MAX_CHARS) {
     // Only a runaway review can be that long: the book is imported without its text.
     row.session = session ? { ...session, review: null } : null

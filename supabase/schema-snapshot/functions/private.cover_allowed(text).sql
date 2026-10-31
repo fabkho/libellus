@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION private.cover_allowed(p_url text)
  SET search_path TO 'pg_catalog'
 AS $function$
   select coalesce(
-    p_url ~* '^https://(covers\.openlibrary\.org|books\.fabkho\.dev|i\.gr-assets\.com|([a-z0-9-]+\.)+mzstatic\.com)(/|$)',
+    p_url ~* '^https://(covers\.openlibrary\.org|books\.fabkho\.dev|i\.gr-assets\.com|assets\.hardcover\.app|([a-z0-9-]+\.)+mzstatic\.com)(/|$)',
     false)
 $function$
 ;

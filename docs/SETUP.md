@@ -201,7 +201,7 @@ Four things to know:
   re-stores every cover, and the old objects go (docs/OPERATIONS.md, "Own covers" — irreversible).
 - **`COVER_STORE_TOKEN`** and the Vault secret `cover_store_token` must be the same value, and the Pages project needs the
   R2 binding `COVERS` → `libellus-covers` for `/c/…` (docs/HOSTING.md, "Own covers"). `COVER_STORE_HOSTS` is optional:
-  `apple,openlibrary,goodreads,regal`, all by default; one line drops a host.
+  `apple,openlibrary,goodreads,regal,hardcover`, all by default; one line drops a host.
 - **`[functions.cover-store] verify_jwt = false`** belongs in `supabase/config.toml` before the release (the function
   checks its own bearer, and the database's token is no JWT): the entry is the owner's to add, like the release's other
   production steps (the plan, docs/plans/owned-covers.md). Without it Supabase's gateway refuses every call and nothing is
@@ -321,7 +321,7 @@ are off until set.
 | Function secrets | `REGAL_EXPORT_TOKEN`, `REGAL_OWNER_EMAIL`, `REGAL_OWNER_NAME`, `REGAL_*` | unset | `regal-export`, owner only ([OWNER.md](OWNER.md)). |
 | Function secrets | `R2_COVERS_ACCOUNT_ID`, `R2_COVERS_ACCESS_KEY_ID`, `R2_COVERS_SECRET_ACCESS_KEY` | unset (nothing is stored) | `cover-store`: the R2 API token that writes the covers bucket, **Object Read & Write on `libellus-covers` only**. Optional (Optional pieces, Stored covers; [OPERATIONS.md, Own covers](OPERATIONS.md#own-covers)). |
 | Function secrets | `COVER_KEY_SECRET` | unset (nothing is stored) | `cover-store`: the HMAC key of the stored covers' names, **at least 32 characters** (`openssl rand -hex 32`). Keep it: changing it later is the irreversible re-key ([OPERATIONS.md, Own covers](OPERATIONS.md#own-covers)). |
-| Function secrets | `COVER_STORE_TOKEN` | unset (nobody is let in) | `cover-store`: the bearer the database sends; its Vault twin is `cover_store_token`. `COVER_STORE_HOSTS` is optional (`apple,openlibrary,goodreads,regal`, all by default). |
+| Function secrets | `COVER_STORE_TOKEN` | unset (nobody is let in) | `cover-store`: the bearer the database sends; its Vault twin is `cover_store_token`. `COVER_STORE_HOSTS` is optional (`apple,openlibrary,goodreads,regal,hardcover`, all by default). |
 | Database | `private.instance_owner.owner_id` | empty (nobody) | Who may read the client error log through `owner_client_errors` ([OPERATIONS.md, The owner](OPERATIONS.md#the-owner)). Set once by SQL. |
 | Database | `private.shelf_publish.owner_id`, Vault `github_dispatch_token` | empty | The shelf's publish trigger, owner only; does nothing while empty. |
 | Database | `private.cover_store_settings.function_url`, `enabled`, Vault `cover_store_token` | null, `false` (off), unset | `cover-store`: where the function is, whether covers are stored at all, and the token the tick sends ([OPERATIONS.md, Own covers](OPERATIONS.md#own-covers)). Optional. |

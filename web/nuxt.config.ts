@@ -459,7 +459,8 @@ export default defineNuxtConfig({
             request.mode === 'no-cors' &&
             (/(^|\.)mzstatic\.com$/.test(url.hostname) ||
               url.hostname === 'covers.openlibrary.org' ||
-              url.hostname === 'i.gr-assets.com'),
+              url.hostname === 'i.gr-assets.com' ||
+              url.hostname === 'assets.hardcover.app'),
           handler: 'CacheFirst',
           options: {
             cacheName: 'libellus-covers',
