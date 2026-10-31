@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.29.0](https://github.com/fabkho/libellus/compare/v1.28.0...v1.29.0) (2026-10-31)
+
+
+### Features
+
+* **import:** Hardcover's covers as a cover source, inside the app only (PR 3 of 3) ([#455](https://github.com/fabkho/libellus/issues/455)) ([39526d6](https://github.com/fabkho/libellus/commit/39526d6662b040848be4397808fed5ed61a9b863))
+* **import:** read Hardcover's everything zip behind a flag (reader and mapping) ([#450](https://github.com/fabkho/libellus/issues/450)) ([0b47c2c](https://github.com/fabkho/libellus/commit/0b47c2cfa61818d68d4f3622c50af133a496bedc))
+* **import:** the job takes a Hardcover zip's progress, ranked list order and empty lists ([#454](https://github.com/fabkho/libellus/issues/454)) ([6eab03c](https://github.com/fabkho/libellus/commit/6eab03cf705852cd1c688b4c0a4d6317e1fa54ec))
+
 ## [1.28.0](https://github.com/fabkho/libellus/compare/v1.27.0...v1.28.0) (2026-10-31)
 
 
