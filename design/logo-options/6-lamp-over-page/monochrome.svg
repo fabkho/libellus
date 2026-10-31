@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+<title>BetterReads — option 6, Lamp over the page (monochrome, alpha only, inside the 66 dp safe zone)</title>
+<defs><clipPath id="o6mc1"><path d="M0 0H100V58H90C74 52 58 54 50 66C42 54 26 52 10 58H0Z"/></clipPath></defs>
+<g transform="translate(18.26 10.22) scale(0.7149)"><path fill="#000" d="M48.4 70C42 58 26 56 10 62V78C26 72 42 74 48.4 86ZM51.6 70C58 58 74 56 90 62V78C74 72 58 74 51.6 86Z"/><path fill="#000" clip-path="url(#o6mc1)" d="M50 36.5A18.5 18.5 0 1 1 50 73.5A18.5 18.5 0 1 1 50 36.5Z"/></g>
+</svg>
