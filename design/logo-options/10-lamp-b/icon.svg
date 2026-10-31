@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+<title>BetterReads — option 10, Lamp B (adaptive, 108 dp canvas, mark inside the 66 dp safe zone; also maskable)</title>
+<defs><linearGradient id="o10abg" x1="0" y1="0" x2="0" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2a1e1c"/><stop offset="1" stop-color="#120c0b"/></linearGradient><radialGradient id="o10agl" cx="60.5" cy="39.14" r="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.36"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.13"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
+<rect width="108" height="108" fill="url(#o10abg)"/><rect width="108" height="108" fill="url(#o10agl)"/>
+<g transform="translate(23.98 23.05) scale(0.619)"><path fill-rule="evenodd" fill="#f1e3c8" d="M20 10Q20 8 22 8L36 8Q38 8 38 10L38 90Q38 92 36 92L22 92Q20 92 20 90ZM41 47H54A22.5 22.5 0 0 1 54 92H41ZM41 58H54A11.5 11.5 0 0 1 54 81H41Z"/><path fill="#efb768" d="M59 8A18 18 0 1 1 59 44A18 18 0 1 1 59 8Z"/></g>
+</svg>

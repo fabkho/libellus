@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
-<title>BetterReads — option 7, Ribbon in the gutter (adaptive, 108 dp canvas, mark inside the 66 dp safe zone; also maskable)</title>
-<defs><linearGradient id="o7abg" x1="0" y1="0" x2="0" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2b3b4f"/><stop offset="1" stop-color="#19222e"/></linearGradient><radialGradient id="o7agl" cx="54" cy="36.51" r="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.2"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.07"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
-<rect width="108" height="108" fill="url(#o7abg)"/><rect width="108" height="108" fill="url(#o7agl)"/>
-<g transform="translate(23.36 18.13) scale(0.6128)"><path fill="#f1e3c8" d="M48.4 33C40 23 24 21 12 25V61C24 57 40 59 48.4 69ZM51.6 33C60 23 76 21 88 25V61C76 57 60 59 51.6 69Z"/><path fill="#efb768" d="M46 68.6L50 71.5L54 68.6V94L50 88L46 94Z"/></g>
-</svg>

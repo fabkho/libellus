@@ -1,23 +1,22 @@
 # BetterReads: logo options
 
-Six directions for a mark that fits the new name. Nothing here is used by the app yet: the current
+Directions for a mark that fits the new name. Nothing here is used by the app yet: the current
 icons (`design/icons/app/`, Two ribbons), `web/public/`, the manifest and the emails are untouched.
 Once one is picked, its `icon.svg`, `monochrome.svg` and `favicon.svg` replace the three sources in
 `design/icons/app/` and `web/scripts/render-icons.mjs` renders the PNGs as today.
 
 ![All six options side by side](overview.png)
 
-Round 2: the owner kept 1, 3 and 6 from the first round; 7, 8 and 9 are new (2, 4 and 5 were
-dropped). The numbers stay as they were so a reply can name an option without confusion.
+Round 3: the owner kept 1 and 6; 10 and 11 are new and build on them (2–5 and 3, 7–9 were
+dropped in the earlier rounds). The numbers stay as they were so a reply can name an option
+without confusion.
 
 | # | Option | Idea | Room |
 | --- | --- | --- | --- |
 | 1 | [Bookmark B](1-bookmark-b/sheet.png) | A capital B whose stem is today's ribbon, swallowtail and all | leather red (today's, no shift) |
-| 3 | [Read-tick](3-read-tick/sheet.png) | An open book whose short and long pages make a tick: Finished | forest green (shift) |
 | 6 | [Lamp over the page](6-lamp-over-page/sheet.png) | The lamp rising behind an open book like the sun | dusk plum (shift) |
-| 7 | [Ribbon in the gutter](7-ribbon-in-the-gutter/sheet.png) | An open book with its ribbon hanging out of the gutter | midnight blue (shift) |
-| 8 | [Reading glasses](8-reading-glasses/sheet.png) | Read better, literally: reading glasses, the lamp as a glint in one lens | the app's Night room (no shift) |
-| 9 | [Book B](9-book-b/sheet.png) | A capital B built from books: one standing, two lying, the top one lit | deep petrol (shift) |
+| 10 | [Lamp B](10-lamp-b/sheet.png) | 1 and 6 in one: a B whose upper bowl is the lit lamp | warm near-black (slight shift) |
+| 11 | [Reading lamp](11-reading-lamp/sheet.png) | A pendant reading lamp glowing over an open book | deep wine (shift) |
 
 Each option's sheet has the rationale, the palette, the icon on iOS and Android home screens (and
 as a themed icon), every mask, the favicon in a browser tab and at its real pixels, the monochrome

@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
-<title>BetterReads — option 3, Read-tick (iOS: full square, the system rounds it; the mark at 60 % of the tile)</title>
-<defs><linearGradient id="o3ibg" x1="0" y1="0" x2="0" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2f4134"/><stop offset="1" stop-color="#1b261e"/></linearGradient><radialGradient id="o3igl" cx="82.81" cy="21.48" r="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.2"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.07"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
-<rect width="108" height="108" fill="url(#o3ibg)"/><rect width="108" height="108" fill="url(#o3igl)"/>
-<g transform="translate(12.02 9.96) scale(0.8232)"><path fill="#f1e3c8" d="M14 46Q26 50 38.5 64V80Q26 66 14 62ZM41.5 64Q60 34 88 20V36Q60 50 41.5 80Z"/><path fill="#efb768" d="M14 64.5Q26 68.5 38.5 82.5V87Q26 73 14 69ZM41.5 82.5Q60 52.5 88 38.5V43Q60 57 41.5 87Z"/></g>
-</svg>

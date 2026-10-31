@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — option 10, Lamp B (favicon: rounded square, the mark simplified for 16 and 32 px)</title>
+<defs><linearGradient id="o10fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2a1e1c"/><stop offset="1" stop-color="#120c0b"/></linearGradient><radialGradient id="o10fgl" cx="19.13" cy="8.86" r="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.36"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.13"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
+<rect width="32" height="32" rx="7" fill="url(#o10fbg)"/><rect width="32" height="32" rx="7" fill="url(#o10fgl)"/>
+<g transform="translate(1.57 1.12) scale(0.2976)"><path fill-rule="evenodd" fill="#f1e3c8" d="M20 10Q20 8 22 8L36 8Q38 8 38 10L38 90Q38 92 36 92L22 92Q20 92 20 90ZM38 47H54A22.5 22.5 0 0 1 54 92H38ZM38 58H54A11.5 11.5 0 0 1 54 81H38Z"/><path fill="#efb768" d="M59 8A18 18 0 1 1 59 44A18 18 0 1 1 59 8Z"/></g>
+</svg>

@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-<title>BetterReads — option 9, Book B (favicon: rounded square, the mark simplified for 16 and 32 px)</title>
-<defs><linearGradient id="o9fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#284442"/><stop offset="1" stop-color="#162827"/></linearGradient><radialGradient id="o9fgl" cx="20.88" cy="6.63" r="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.2"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.07"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
-<rect width="32" height="32" rx="7" fill="url(#o9fbg)"/><rect width="32" height="32" rx="7" fill="url(#o9fgl)"/>
-<g transform="translate(0.88 0.38) scale(0.3125)"><path fill-rule="evenodd" fill="#f1e3c8" d="M20 12Q20 10 22 10L35 10Q37 10 37 12L37 88Q37 90 35 90L22 90Q20 90 20 88Z"/><path fill-rule="evenodd" fill="#efb768" d="M37 10H51.5A18.5 18.5 0 0 1 51.5 47H37Z"/><path fill-rule="evenodd" fill="#f1e3c8" d="M37 48.5H56A20.75 20.75 0 0 1 56 90H37Z"/></g>
-</svg>

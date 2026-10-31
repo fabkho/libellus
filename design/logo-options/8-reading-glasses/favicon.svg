@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-<title>BetterReads — option 8, Reading glasses (favicon: rounded square, the mark simplified for 16 and 32 px)</title>
-<defs><linearGradient id="o8fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#211c18"/><stop offset="1" stop-color="#0e0c0a"/></linearGradient><radialGradient id="o8fgl" cx="23.56" cy="11.46" r="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.32"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.11"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
-<rect width="32" height="32" rx="7" fill="url(#o8fbg)"/><rect width="32" height="32" rx="7" fill="url(#o8fgl)"/>
-<g transform="translate(-2.91 -5.18) scale(0.3782)"><path fill="#f1e3c8" d="M30 37A19 19 0 1 1 30 75A19 19 0 1 1 30 37ZM30 44.5A11.5 11.5 0 1 0 30 67.5A11.5 11.5 0 1 0 30 44.5ZM70 37A19 19 0 1 1 70 75A19 19 0 1 1 70 37ZM70 44.5A11.5 11.5 0 1 0 70 67.5A11.5 11.5 0 1 0 70 44.5ZM45 52Q50 41 55 52L53 54.5Q50 47.5 47 54.5Z"/><path fill="#efb768" d="M65.56 46.83Q66 45.5 67.4 45.5L72.6 45.5Q74 45.5 73.37 46.75L68.63 56.25Q68 57.5 66.6 57.5L63.4 57.5Q62 57.5 62.44 56.17Z"/></g>
-</svg>
