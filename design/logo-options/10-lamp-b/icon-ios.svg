@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
-<title>BetterReads — option 10, Lamp B (iOS: full square, the system rounds it; the mark at 60 % of the tile)</title>
-<defs><linearGradient id="o10ibg" x1="0" y1="0" x2="0" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2a1e1c"/><stop offset="1" stop-color="#120c0b"/></linearGradient><radialGradient id="o10igl" cx="62" cy="35.71" r="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.36"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.13"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
-<rect width="108" height="108" fill="url(#o10ibg)"/><rect width="108" height="108" fill="url(#o10igl)"/>
-<g transform="translate(17.05 15.9) scale(0.7619)"><path fill-rule="evenodd" fill="#f1e3c8" d="M20 10Q20 8 22 8L36 8Q38 8 38 10L38 90Q38 92 36 92L22 92Q20 92 20 90ZM41 47H54A22.5 22.5 0 0 1 54 92H41ZM41 58H54A11.5 11.5 0 0 1 54 81H41Z"/><path fill="#efb768" d="M59 8A18 18 0 1 1 59 44A18 18 0 1 1 59 8Z"/></g>
-</svg>

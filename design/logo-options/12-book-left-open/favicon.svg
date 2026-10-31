@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — option 12, Book left open (favicon: rounded square, the mark simplified for 16 and 32 px)</title>
+<defs><linearGradient id="o12fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#36385f"/><stop offset="1" stop-color="#1c1d37"/></linearGradient><radialGradient id="o12fgl" cx="16" cy="5.41" r="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.2"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.07"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
+<rect width="32" height="32" rx="7" fill="url(#o12fbg)"/><rect width="32" height="32" rx="7" fill="url(#o12fgl)"/>
+<g transform="translate(0.16 -0.29) scale(0.3168)"><path fill="#efb768" d="M47.5 25.12Q50 22 52.5 25.12L89.04 70.8Q89.98 71.98 88.81 72.91L84.51 76.35Q83.34 77.29 82.44 76.09L51.2 34.48Q50 32.89 48.8 34.48L17.56 76.09Q16.66 77.29 15.49 76.35L11.19 72.91Q10.02 71.98 10.96 70.8Z"/><path fill-rule="evenodd" fill="#f1e3c8" d="M48.6 42.16L24.62 72.13C26.34 77.99 35.24 81.27 39.15 77.99L48.6 66.17ZM51.4 42.16L75.38 72.13C73.66 77.99 64.76 81.27 60.85 77.99L51.4 66.17Z"/></g>
+</svg>

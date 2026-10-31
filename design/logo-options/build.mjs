@@ -531,7 +531,7 @@ async function overview() {
   h1{font-family:Newsreader,serif;font-weight:500;font-size:56px;letter-spacing:-.02em;margin:0}
   </style></head><body>${SVG_DEFS}<div class="wrap">
     <div style="display:flex;align-items:flex-end;justify-content:space-between">
-      <div><div class="eyebrow">BetterReads · logo options, round 3 · kept: 1 and 6 · new: 10 and 11</div><h1>Four directions for the new name</h1></div>
+      <div><div class="eyebrow">BetterReads · logo options, round 4 · kept: 1 and 6 · new: 12 and 13</div><h1>Four directions for the new name</h1></div>
       <div style="display:flex;align-items:center;gap:14px"><span class="cap" style="margin:0;text-align:right">today:<br>Two ribbons</span><img class="squircle" src="${uri(current)}" width="72" height="72"></div>
     </div>
     <div class="cols">${cols.join('')}</div>

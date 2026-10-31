@@ -71,47 +71,62 @@ function lampPage(variant) {
   ]
 }
 
-// ------------------------------------------------------------------ 10 · Lamp B
+// ------------------------------------------------------------------ 12 · Book left open
 
-function lampB(variant) {
-  // Bookmark B and Lamp over the page in one: a constructed B whose upper bowl is the lamp, a
-  // lit disc, over a cream lower bowl; the stem stands 3 units apart (joined in the favicon).
+function tentedBook(variant) {
+  // A book left open face-down, the way you put one down mid-chapter: the cover a chevron, the page
+  // blocks a second chevron under it, curling at their ends. Together they point up.
   const fav = variant === 'fav'
-  const x = fav ? 38 : 41 // where the lower bowl starts
-  const stem = roundedPolygon([[20, 8], [38, 8], [38, 92], [20, 92]], [2, 2, 2, 2])
-  // lower bowl: centre (54, 69.5), r 22.5, 11 thick; its counter opens onto the gap like Bookmark B's
-  const bowl = `M${x} 47H54A22.5 22.5 0 0 1 54 92H${x}Z` + `M${x} 58H54A11.5 11.5 0 0 1 54 81H${x}Z`
-  // the lamp: as wide as the lower bowl, 3 units above it
-  const r = 18
-  const cx = 59
-  const cy = 26
-  const lamp = `M${cx} ${cy - r}A${r} ${r} 0 1 1 ${cx} ${cy + r}A${r} ${r} 0 1 1 ${cx} ${cy - r}Z`
+  const A = [50, 22] // the spine, at the top
+  const u = [-40 / Math.hypot(40, 50), 50 / Math.hypot(40, 50)] // down the left cover
+  const n = [u[1], -u[0]] // across it, inward
+  const pt = (t, o, side) => {
+    const x = A[0] + u[0] * t + n[0] * o
+    const y = A[1] + u[1] * t + n[1] * o
+    return side < 0 ? [x, y] : [100 - x, y]
+  }
+  const cover = fav ? 8.5 : 7
+  const gap = fav ? 3 : 2.5
+  const block = fav ? 15 : 15
+  const g = fav ? 1.4 : 1.8 // half the gutter between the page blocks
+  // the cover: one chevron, rounded at the spine, its inner apex on the centre line
+  const c = [pt(0, 0, -1), pt(64, 0, 1), pt(64, cover, 1), [50, A[1] + cover / n[0]], pt(64, cover, -1), pt(64, 0, -1)]
+  const coverD = roundedPolygon(c, [4, 1.5, 1.5, 2, 1.5, 1.5])
+  const o1 = cover + gap
+  const o2 = o1 + block
+  const tAt = (o) => (n[0] * o + g) / -u[0] // where the offset line meets the gutter
+  const P = (p) => `${f(p[0])} ${f(p[1])}`
+  // a page block: shorter than the cover, its free end a soft curve (the fanned page edges)
+  const page = (side) => {
+    const p1 = pt(tAt(o1), o1, side)
+    const p2 = pt(55, o1, side)
+    const p3 = pt(50.5, o2, side)
+    const p4 = pt(tAt(o2), o2, side)
+    return `M${P(p1)}L${P(p2)}C${P(pt(58.5, o1 + 5, side))} ${P(pt(55.5, o2 - 1, side))} ${P(p3)}L${P(p4)}Z`
+  }
+  const pagesD = page(-1) + page(1)
   return [
-    { role: 'main', d: stem + bowl, evenodd: true },
-    { role: 'accent', d: lamp },
+    { role: 'accent', d: coverD },
+    { role: 'main', d: pagesD, evenodd: true },
   ]
 }
 
-// ------------------------------------------------------------------ 11 · Reading lamp
+// ------------------------------------------------------------------ 13 · Book moth
 
-function readingLamp(variant) {
-  // A pendant reading lamp over an open book: cord, bell shade, the bulb glowing under it, and the
-  // pages in its light. The lamp of the design's first principle, drawn as a lamp.
+function bookMoth(variant) {
+  // A night moth seen from above, drawn to the lamp: its fore wings are the two pages of an open
+  // book (a page edge runs along each), its body the spine, lit amber.
   const fav = variant === 'fav'
-  const cord = fav ? 'M47.5 2H52.5V26H47.5Z' : 'M48.6 4H51.4V26H48.6Z'
-  const shade = 'M17 62C20 40 32 25 50 24C68 25 80 40 83 62Z'
-  const bulbR = fav ? 12 : 10.5
-  const bulb = `M${50 - bulbR} 65.5A${bulbR} ${bulbR} 0 0 0 ${50 + bulbR} 65.5Z`
-  const g = fav ? 2 : 1.6
-  const t = fav ? 9 : 7 // page height at the outer edge
-  const book = fav
-    ? ''
-    : `M${f(50 - g)} 84C42 79 28 77.5 14 80.5V${80.5 + t}C28 ${84.5} 42 86 ${f(50 - g)} 91Z` +
-      `M${f(50 + g)} 84C58 79 72 77.5 86 80.5V${80.5 + t}C72 ${84.5} 58 86 ${f(50 + g)} 91Z`
-  return [
-    { role: 'main', d: cord + shade + book },
-    { role: 'accent', d: bulb },
-  ]
+  const mirror = (d) => d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${f(100 - Number(x))} ${y}`)
+  const fore = 'M44 41C37 27 24 20 9 23C8 38 13 51 24 57C32 60.5 40 58 44 53.5Z'
+  const hind = 'M44 59.5C37 59.5 28 63 24.5 70C21.5 77.5 26 85 33.5 84C40 83 44 75.5 44 67Z'
+  const edge = 'M41.8 45.6C35.6 33.2 24.6 27.4 12.2 29.2L12.3 31.9C24 30.4 34.2 35.8 40 47.4Z' // knocked out of the fore wing
+  const feeler = 'M48.2 27.5Q45.5 17.5 37.5 12.5L36.4 14.2Q43.2 18.8 46.1 28.1Z'
+  const body = fav ? roundedPolygon([[46, 24], [54, 24], [54, 82], [46, 82]], 4) : roundedPolygon([[46.6, 27], [53.4, 27], [53.4, 81], [46.6, 81]], 3.4)
+  const wings = fav ? fore + hind + mirror(fore) + mirror(hind) : fore + edge + hind + mirror(fore + edge) + mirror(hind)
+  const parts = [{ role: 'main', d: wings + (fav ? '' : feeler + mirror(feeler)), evenodd: !fav }]
+  parts.push({ role: 'accent', d: body })
+  return parts
 }
 
 // ------------------------------------------------------------------ the options
@@ -156,31 +171,32 @@ export const OPTIONS = [
       'An open book with the lamp rising behind it like the sun over a horizon: the design\'s founding image ("a reading lamp in a dark room") made into the mark, and a dawn that says better. It is calm, the way the app is calm, and the one option that is a picture rather than a sign. The half disc and the gull of the pages are simple enough to hold at 16 px (the gaps widen there). Its lettering is the app\'s current wordmark face, Newsreader Italic. Nothing of Goodreads: no letterform in the mark, a plum dusk instead of brown and cream.',
   },
   {
-    n: 10,
-    slug: '10-lamp-b',
-    name: 'Lamp B',
-    kind: 'Lettermark, Bookmark B + the lamp',
-    parts: lampB,
-    room: { top: '#2a1e1c', bottom: '#120c0b', glow: [59, 26], glowStrength: 0.36 },
+    n: 12,
+    slug: '12-book-left-open',
+    name: 'Book left open',
+    kind: 'A book put down mid-chapter, pointing up',
+    parts: tentedBook,
+    fit: { ios: 70, adaptive: 33 },
+    room: { top: '#36385f', bottom: '#1c1d37', glow: [50, 18] },
     icon: { main: CREAM, accent: AMBER },
-    font: { family: 'geist-sans', weight: 600, style: 'normal', tracking: -0.03 },
+    font: { family: 'geist-sans', weight: 500, style: 'normal', tracking: -0.025 },
     text: 'BetterReads',
-    palette: 'The app\'s Night room warmed toward today\'s leather (#2a1e1c → #120c0b), cream B, the lamp amber with its glow. A slight shift.',
+    palette: 'Shift: a twilight-indigo room (new, a bluer sister of cloth5), the cover in lamp amber, the pages cream.',
     rationale:
-      'The two options you liked, in one mark: the constructed B of Bookmark B, whose upper bowl has become the lamp of Lamp over the page, a lit disc glowing in a dark room. It says the name (B) and the design\'s founding image (a reading lamp in a dark room) at once, and nothing else; there is no ribbon and no book, so it is the most reduced of the four. The disc keeps its gap at every size, so even at 16 px it is a cream B with an amber light in it (the stem joins the lower bowl there). Goodreads is a brown serif "g" on beige; this is a geometric capital in cream with a warm light, on near-black.',
+      'A book left open face-down on the table, the way everyone puts a book down in the middle of a chapter: the amber cover a chevron, the cream page blocks a second chevron under it, curling at their ends. It is the universal sign for "I am reading this", the state BetterReads is built around, and its shape points up, which is the "better". It is calm and domestic rather than clever, and unlike any letter or app icon. Two nested chevrons are as robust as marks get: at 16 px it is an amber caret over a cream one. Goodreads is a serif "g" in brown on beige; this is a pictogram in amber and cream on twilight indigo.',
   },
   {
-    n: 11,
-    slug: '11-reading-lamp',
-    name: 'Reading lamp',
-    kind: 'The lamp itself, over an open book',
-    parts: readingLamp,
-    room: { top: '#3d2633', bottom: '#21141c', glow: [50, 70], glowStrength: 0.42 },
+    n: 13,
+    slug: '13-book-moth',
+    name: 'Book moth',
+    kind: 'A night moth, its wings an open book',
+    parts: bookMoth,
+    room: { top: '#2b3d31', bottom: '#16211a', glow: [50, 2], glowStrength: 0.34 },
     icon: { main: CREAM, accent: AMBER },
     font: { family: 'newsreader', weight: 500, style: 'normal', tracking: -0.01 },
     text: 'BetterReads',
-    palette: 'Shift: a deep wine room (cloth1 #3b2430, deepened), cream shade and pages, the bulb amber with its pool of light.',
+    palette: 'Shift: a night-garden green room (cloth3 #2c3a2e, deepened), cream wings, the body in lamp amber; the room\'s light comes from above, where the lamp is.',
     rationale:
-      'A pendant reading lamp hanging over an open book, the bulb glowing under its shade and the pages lying in its light. It is the sibling of Lamp over the page: the same idea (one warm light over a book, the app\'s "reading lamp in a dark room"), told as an object instead of a sunrise, so it reads as "reading at night" from across a room. Its silhouette (a bell shade on a cord) is unlike any book app on a home screen. At 16 px the book drops out of the favicon and the shade and the amber bulb remain, which still says "lamp". Nothing of Goodreads: no letter, no serif, no brown and beige; a wine-dark room with one light.',
+      'A moth seen from above, flying toward the light at the top of the icon: its fore wings are the two pages of an open book, each with a page edge running along it, its body the spine, lit amber. A moth is the night creature that cannot leave the lamp alone, which is what a good book does to its reader late at night; it carries the design\'s "reading lamp in a dark room" without drawing the lamp, and it gives BetterReads a character rather than a symbol, something friends can recognise and remember. Four wings and a bar hold at 16 px (the feelers and page edges drop). Nothing of Goodreads: no letter, no brown; a cream moth in a dark green night.',
   },
 ]

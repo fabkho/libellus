@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — option 13, Book moth (favicon: rounded square, the mark simplified for 16 and 32 px)</title>
+<defs><linearGradient id="o13fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2b3d31"/><stop offset="1" stop-color="#16211a"/></linearGradient><radialGradient id="o13fgl" cx="16" cy="0.44" r="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.34"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.12"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
+<rect width="32" height="32" rx="7" fill="url(#o13fbg)"/><rect width="32" height="32" rx="7" fill="url(#o13fgl)"/>
+<g transform="translate(0.8 -0.17) scale(0.304)"><path fill="#f1e3c8" d="M44 41C37 27 24 20 9 23C8 38 13 51 24 57C32 60.5 40 58 44 53.5ZM44 59.5C37 59.5 28 63 24.5 70C21.5 77.5 26 85 33.5 84C40 83 44 75.5 44 67ZM56 41C63 27 76 20 91 23C92 38 87 51 76 57C68 60.5 60 58 56 53.5ZM56 59.5C63 59.5 72 63 75.5 70C78.5 77.5 74 85 66.5 84C60 83 56 75.5 56 67Z"/><path fill="#efb768" d="M46 28Q46 24 50 24L50 24Q54 24 54 28L54 78Q54 82 50 82L50 82Q46 82 46 78Z"/></g>
+</svg>

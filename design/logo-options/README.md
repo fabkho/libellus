@@ -7,16 +7,15 @@ Once one is picked, its `icon.svg`, `monochrome.svg` and `favicon.svg` replace t
 
 ![All six options side by side](overview.png)
 
-Round 3: the owner kept 1 and 6; 10 and 11 are new and build on them (2–5 and 3, 7–9 were
-dropped in the earlier rounds). The numbers stay as they were so a reply can name an option
-without confusion.
+Round 4: the owner keeps 1 and 6; 12 and 13 are new (2–5, 3, 7–11 were dropped in earlier
+rounds). The numbers stay as they were so a reply can name an option without confusion.
 
 | # | Option | Idea | Room |
 | --- | --- | --- | --- |
 | 1 | [Bookmark B](1-bookmark-b/sheet.png) | A capital B whose stem is today's ribbon, swallowtail and all | leather red (today's, no shift) |
 | 6 | [Lamp over the page](6-lamp-over-page/sheet.png) | The lamp rising behind an open book like the sun | dusk plum (shift) |
-| 10 | [Lamp B](10-lamp-b/sheet.png) | 1 and 6 in one: a B whose upper bowl is the lit lamp | warm near-black (slight shift) |
-| 11 | [Reading lamp](11-reading-lamp/sheet.png) | A pendant reading lamp glowing over an open book | deep wine (shift) |
+| 12 | [Book left open](12-book-left-open/sheet.png) | A book put down face-down mid-chapter: an amber cover over cream pages, pointing up | twilight indigo (shift) |
+| 13 | [Book moth](13-book-moth/sheet.png) | A night moth drawn to the lamp, its fore wings the pages of an open book | night-garden green (shift) |
 
 Each option's sheet has the rationale, the palette, the icon on iOS and Android home screens (and
 as a themed icon), every mask, the favicon in a browser tab and at its real pixels, the monochrome
