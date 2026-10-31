@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.28.0](https://github.com/fabkho/libellus/compare/v1.27.0...v1.28.0) (2026-10-31)
+
+
+### Features
+
+* **profile:** the chart's capsule stays under All, its arrows walk All and the years ([#442](https://github.com/fabkho/libellus/issues/442)) ([66790e1](https://github.com/fabkho/libellus/commit/66790e11018a6db627606f3a4fdbed78b2c0f2ef))
+* **web:** Sentry for errors and performance, off without a DSN ([#440](https://github.com/fabkho/libellus/issues/440)) ([805f688](https://github.com/fabkho/libellus/commit/805f6887c7c71cd0ba0a4bbe42480f5695ccec17))
+
+
+### Fixes
+
+* **stack:** make the shelf's stored cover addresses absolute against the page origin ([#444](https://github.com/fabkho/libellus/issues/444)) ([68d930e](https://github.com/fabkho/libellus/commit/68d930e904f5d3fc0f26fa460d3aa72593876be0))
+
 ## [1.27.0](https://github.com/fabkho/libellus/compare/v1.26.0...v1.27.0) (2026-10-30)
 
 
