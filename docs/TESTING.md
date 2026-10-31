@@ -600,8 +600,9 @@ right after "Migrations", diffs it with the snapshot of the tag and adds
 parsed defensively, and a query that fails is a warning too. Nothing runs against production in a pull request.
 
 What the snapshot leaves out, on purpose: `auth` and `storage` tables (only their policies, and our triggers on
-them), `realtime`, `extensions`, `graphql_public` and the other platform schemas, plus versions, OIDs, timestamps and
-data. `scripts/schema-snapshot/snapshot.sql` says which schemas it reads.
+them — and not `storage`'s own grants, which come from the storage image's version and not from a migration),
+`realtime`, `extensions`, `graphql_public` and the other platform schemas, plus versions, OIDs, timestamps and data.
+`scripts/schema-snapshot/snapshot.sql` says which schemas it reads.
 
 ### What makes the flows fast
 

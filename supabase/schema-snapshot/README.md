@@ -13,13 +13,14 @@ The migrations in `supabase/migrations/` stay the source of truth; this folder i
 | `triggers/<schema>.<table>.sql` | all triggers of a table (ours on `auth.users` and `storage.objects` too) |
 | `views/` | views and materialized views |
 | `types/` | enums |
-| `grants/` | schema, table, function, sequence and default privileges for anon, authenticated, service_role, public |
+| `grants/` | schema, table, function, sequence and default privileges of `public` and `private`, for anon, authenticated, service_role, public |
 | `cron/jobs.sql` | pg_cron jobs: name, schedule, command |
 | `realtime/publication.sql` | realtime publications and their tables |
 | `extensions.sql` | installed extensions |
 
-Left out on purpose: `auth`, `storage` (except its policies and our triggers on it), `realtime`,
-`extensions`, `graphql_public` and the other platform schemas; versions, OIDs, timestamps and data.
+Left out on purpose: `auth`, `storage` (except its policies and our triggers on it, and not its own
+grants: those come from the storage image's version, not from a migration), `realtime`, `extensions`,
+`graphql_public` and the other platform schemas; versions, OIDs, timestamps and data.
 
 ## Regenerate
 

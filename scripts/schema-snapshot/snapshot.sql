@@ -77,12 +77,14 @@ with
      where not exists (select 1 from pg_constraint k where k.conindid = i.indexrelid and k.contype in ('p', 'u', 'x'))
      group by r.oid
   ),
-  -- table / view / sequence privileges, table-level
+  -- table / view / sequence privileges, table-level. Only the app's own relations: the grants of
+  -- `storage`'s tables are the image's, and they change with the storage image's version (a
+  -- different `SUPABASE_CLI` pin, or cloud), which is not drift a migration could fix.
   rel_priv as (
     select r.oid, r.qname, r.relkind, g.name as grantee, p.privilege_type,
            format('grant %s on %s %s to %s;', lower(p.privilege_type),
                   case when r.relkind in ('v', 'm') then 'table' else 'table' end, r.qname, g.name) as line
-      from rels r
+      from app_rels r
       cross join lateral aclexplode(coalesce(r.relacl, acldefault('r', r.relowner))) p
       join fmt_grantee g on g.oid = p.grantee
   ),
@@ -90,7 +92,7 @@ with
   col_priv as (
     select r.oid, r.qname, g.name as grantee,
            format('grant %s (%I) on table %s to %s;', lower(p.privilege_type), a.attname, r.qname, g.name) as line
-      from rels r
+      from app_rels r
       join pg_attribute a on a.attrelid = r.oid and a.attnum > 0 and not a.attisdropped and a.attacl is not null
       cross join lateral aclexplode(a.attacl) p
       join fmt_grantee g on g.oid = p.grantee
