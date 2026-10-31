@@ -595,14 +595,26 @@ The `backend` job runs it right after pgTAP, on the stack the migrations just bu
 The `deploy` job of `release.yml` runs the same query read-only against production (`supabase db query --linked`)
 right after "Migrations", diffs it with the snapshot of the tag and adds
 `supabase db diff --linked --use-pg-delta` next to it (grants included, which `db diff` alone misses). Drift is a
-`::warning::` and a job summary; `continue-on-error` and a final `exit 0` mean it never fails a deploy. It is
-`untested against the real linked project` (no access while it was written): the JSON of `db query --linked` is
-parsed defensively, and a query that fails is a warning too. Nothing runs against production in a pull request.
+`::warning::` and a job summary; `continue-on-error` and a final `exit 0` mean it never fails a deploy. It was also
+run by hand against production (`--linked`) when it landed: the two differences it found were the platform's, not
+drift, and the query now leaves them out (below). Nothing runs against production in a pull request.
 
-What the snapshot leaves out, on purpose: `auth` and `storage` tables (only their policies, and our triggers on
-them — and not `storage`'s own grants, which come from the storage image's version and not from a migration),
-`realtime`, `extensions`, `graphql_public` and the other platform schemas, plus versions, OIDs, timestamps and data.
-`scripts/schema-snapshot/snapshot.sql` says which schemas it reads.
+What the snapshot leaves out, on purpose: `auth` and `storage` tables, `realtime`, `extensions`, `graphql_public`
+and the other platform schemas; versions, OIDs, timestamps and data. From `storage` only what is ours — the policies
+on `storage.objects`, and any trigger of ours on it — never the storage image's own grants, which differ between the
+CLI's image, the CI pin and cloud. From the publications only `supabase_realtime`: the realtime platform's
+`supabase_realtime_messages_publication` gains a `realtime.messages_YYYY_MM_DD` table every day. A table's columns
+are listed by name, not in their physical order, which two parallel migrations land in either way and no migration
+can change afterwards. `scripts/schema-snapshot/snapshot.sql` says all of this where it does it.
+
+**An applied migration is never edited**, and the `backend` job's first step says so: it compares the pull
+request's base commit with the branch (`git diff --name-status --no-renames` after a shallow fetch of that one
+commit, seconds, no stack) and fails on any status but `A` under `supabase/migrations/`. `supabase db push` has
+recorded each file's version in `supabase_migrations.schema_migrations` and never reads it again, so an edit after
+the deploy reaches the local and CI stacks only and production keeps the old text: the snapshot then differs from
+production for good, which is exactly the drift the release check would report forever. A migration that is wrong is
+corrected by the next one. The step runs before the stack, which is safe here: every later step of that job is
+unconditional, so its failure skips `Wait for Supabase` instead of leaving the wait to burn its timeout.
 
 ### What makes the flows fast
 

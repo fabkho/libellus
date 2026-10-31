@@ -1,8 +1,8 @@
 create table public.entry_series (
   entry_id uuid not null,
   member_id uuid not null,
-  series_id uuid,
   "position" numeric(6,2),
+  series_id uuid,
   updated_at timestamp with time zone default now() not null
 );
 

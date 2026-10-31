@@ -1,15 +1,15 @@
 create table public.library_entries (
-  id uuid default gen_random_uuid() not null,
-  member_id uuid not null,
-  book_id uuid not null,
-  status entry_status default 'want_to_read'::entry_status not null,
   added_at timestamp with time zone default now() not null,
-  import_key text,
+  book_id uuid not null,
   edition_changed_at timestamp with time zone,
+  format_override book_format,
+  hidden boolean default false not null,
+  id uuid default gen_random_uuid() not null,
+  import_key text,
+  member_id uuid not null,
   page_count_override integer,
   read_as text,
-  format_override book_format,
-  hidden boolean default false not null
+  status entry_status default 'want_to_read'::entry_status not null
 );
 
 -- constraints

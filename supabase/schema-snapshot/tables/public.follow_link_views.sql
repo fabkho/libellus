@@ -1,7 +1,7 @@
 create table public.follow_link_views (
-  visitor_id uuid not null,
   member_id uuid not null,
-  viewed_at timestamp with time zone default now() not null
+  viewed_at timestamp with time zone default now() not null,
+  visitor_id uuid not null
 );
 
 -- constraints

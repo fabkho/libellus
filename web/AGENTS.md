@@ -12,6 +12,10 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   database object, from the local stack (up and migrated; one catalog query, about 1 s). Run it after a
   migration and commit the result with it: CI fails on a stale snapshot. The files there are generated,
   read-only, one per object; never edit one by hand (`../docs/TESTING.md`, "The schema snapshot").
+- **Never edit an applied migration** (`../supabase/migrations/`): `supabase db push` has recorded its version
+  and never reads the file again, so the edit reaches the local and CI stacks only and production keeps the old
+  definition. Write a new migration that corrects it; `ci.yml` fails a pull request that does anything but add
+  a file there.
 - `pnpm e2e` — Playwright, iPhone viewport, WebKit, Reduce Motion on, on the static build served
   like Pages (`e2e/build.ts` + `e2e/serve.mjs`, :4327). `LIBELLUS_E2E_DEV=1` runs it on `nuxt dev`.
 - `pnpm build` / `pnpm generate` — `nuxt generate` to `.output/public`.

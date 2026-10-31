@@ -1,16 +1,16 @@
 create table public.reader_highlights (
+  cfi text not null,
+  color text not null,
+  created_at timestamp with time zone default now() not null,
+  deleted_at timestamp with time zone,
+  entry_id uuid not null,
+  excerpt text default ''::text not null,
+  file_hash text not null,
   id uuid not null,
   member_id uuid default auth.uid() not null,
-  entry_id uuid not null,
-  file_hash text not null,
-  cfi text not null,
-  section_index integer not null,
-  color text not null,
-  excerpt text default ''::text not null,
   note text,
-  created_at timestamp with time zone default now() not null,
-  updated_at timestamp with time zone default now() not null,
-  deleted_at timestamp with time zone
+  section_index integer not null,
+  updated_at timestamp with time zone default now() not null
 );
 
 -- constraints

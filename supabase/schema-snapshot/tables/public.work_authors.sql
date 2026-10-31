@@ -1,7 +1,7 @@
 create table public.work_authors (
-  work_id uuid not null,
   author_id uuid not null,
-  "position" smallint default 1 not null
+  "position" smallint default 1 not null,
+  work_id uuid not null
 );
 
 -- constraints

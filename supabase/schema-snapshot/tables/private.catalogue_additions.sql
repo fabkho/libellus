@@ -1,6 +1,6 @@
 create table private.catalogue_additions (
-  member_id uuid not null,
   day date default CURRENT_DATE not null,
+  member_id uuid not null,
   n integer default 0 not null
 );
 

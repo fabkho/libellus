@@ -1,11 +1,11 @@
 create table public.book_genres (
   book_id uuid not null,
-  genre_id text not null,
-  rank smallint not null,
-  source text not null,
+  computed_at timestamp with time zone default now() not null,
   confidence real not null,
+  genre_id text not null,
   map_version integer not null,
-  computed_at timestamp with time zone default now() not null
+  rank smallint not null,
+  source text not null
 );
 
 -- constraints

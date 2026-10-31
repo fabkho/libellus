@@ -257,6 +257,37 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      # An applied migration is history. `supabase db push` records each file's version in
+      # supabase_migrations.schema_migrations and never reads the file again, so an edit after the
+      # deploy changes only the local and CI stacks, production keeps the old text, and the drift
+      # check reports it for good (#451 found none; Trappist's found an edited comment three weeks
+      # later). Additions are the only change allowed under supabase/migrations/.
+      #
+      # First, before the stack, because it is a tree comparison in seconds and needs no database;
+      # safe here, unlike a job with a `!cancelled()` wait below it: every later step of this job is
+      # unconditional, so a failure skips `Wait for Supabase` instead of leaving it to time out.
+      - name: Applied migrations are not edited
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        env:
+          # The base commit this pull request is diffed against (github.base_ref's tip at the time
+          # of the event), not the base branch's current tip: a migration merged into main after
+          # this branch forked would show up as a deletion here and fail a branch that is fine.
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE: ${{ github.base_ref }}
+        run: |
+          # A fork or a hiccup can make the commit SHA unfetchable; the base branch's tip is then
+          # the fallback (it may report a just-merged migration as deleted: rebase and push again).
+          git fetch --no-tags --depth=1 origin "$BASE_SHA" \
+            || git fetch --no-tags --depth=1 origin "+refs/heads/$BASE:refs/remotes/origin/$BASE"
+          base="$(git rev-parse -q --verify "$BASE_SHA^{commit}" || git rev-parse "origin/$BASE")"
+          # A rename shows as a delete plus an add (`--no-renames`), so it fails like an edit.
+          changed="$(git diff --name-status --no-renames "$base" HEAD -- supabase/migrations | awk '$1 != "A"')"
+          if [ -n "$changed" ]; then
+            echo "$changed"
+            echo "::error::supabase/migrations/ holds a modified or deleted file. Never edit an applied migration: 'supabase db push' has already recorded its version and will not read the file again, so production keeps the old definition and supabase/schema-snapshot/ drifts from it for good. Write a new migration instead and leave the old file as it is."
+            exit 1
+          fi
+
       - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
         with:
           version: ${{ env.SUPABASE_CLI }}

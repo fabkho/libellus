@@ -1,8 +1,8 @@
 create table public.profile_links (
-  member_id uuid not null,
-  platform link_platform not null,
+  created_at timestamp with time zone default now() not null,
   handle text not null,
-  created_at timestamp with time zone default now() not null
+  member_id uuid not null,
+  platform link_platform not null
 );
 
 -- constraints
