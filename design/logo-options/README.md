@@ -7,19 +7,36 @@ Once one is picked, its `icon.svg`, `monochrome.svg` and `favicon.svg` replace t
 
 ![All six options side by side](overview.png)
 
-Round 9: the owner keeps 1, 6, 20, 21, 22 and 25 (18, 19, 23 and 24 dropped, like every option
-before them). The numbers stay as they were so a reply can name an option without confusion.
+**Decision:** option 6, Lamp over the page, is the new mark. 1 and 25 stay here as a backlog for
+later; every other option of the nine rounds was dropped. The numbers are the ones used throughout.
+
+| # | Option | Idea | Room | Status |
+| --- | --- | --- | --- | --- |
+| 6 | [Lamp over the page](6-lamp-over-page/sheet.png) | The lamp rising behind an open book like the sun | dusk plum (shift) | **chosen** |
+| 1 | [Bookmark B](1-bookmark-b/sheet.png) | A capital B whose stem is today's ribbon, swallowtail and all | leather red (today's, no shift) | backlog |
+| 25 | [Night window](25-night-window/sheet.png) | A window lit at night, books on the sill as silhouettes | ink-teal night (shift) | backlog |
+
 `overview.html` is the same overview as a standalone page (light and dark), shared as an Orca
 artifact.
 
-| # | Option | Idea | Room |
-| --- | --- | --- | --- |
-| 1 | [Bookmark B](1-bookmark-b/sheet.png) | A capital B whose stem is today's ribbon, swallowtail and all | leather red (today's, no shift) |
-| 6 | [Lamp over the page](6-lamp-over-page/sheet.png) | The lamp rising behind an open book like the sun | dusk plum (shift) |
-| 20 | [Page kite](20-page-kite/sheet.png) | A printed page flown as a kite, its tail tied with ribbon bows | dusk-sky blue (shift) |
-| 21 | [Balloon](21-balloon/sheet.png) | A hot-air balloon lit like the lamp, rising, a book for its basket | twilight rose-violet (shift) |
-| 22 | [Lighthouse](22-lighthouse/sheet.png) | A tower of three books, the lamp its lantern, guiding you to the next read | slate night (shift) |
-| 25 | [Night window](25-night-window/sheet.png) | A window lit at night, books on the sill as silhouettes | ink-teal night (shift) |
+## Motion (option 6)
+
+`6-lamp-over-page/motion/` holds the mark in motion, made only of the motion tokens
+([MOTION.md](../../docs/MOTION.md)): the pages arrive over `gentle` on `standard`, the lamp rises
+behind them over `wave` on `standard`, its glow swells over `wave` on `wave`, and everything ends on
+the static icon (with Reduce Motion it shows that last frame at once).
+
+| File | What it is |
+| --- | --- |
+| `icon-animated.svg` | the app icon, animated (108 dp canvas, plays once) |
+| `mark-animated-{dark,light}.svg` | the bare mark, animated, for a page in either theme (the way in) |
+| `reveal.{mp4,gif}` | a recording of the three |
+| `handover.{mp4,gif}` | the Android launch: the system's static splash, the page taking over with the same frame, the app |
+| `index.html` | all of it on one page, with the answer to "can Android's splash animate?" (no; the page can take over from it) |
+
+`animate.mjs` writes this folder (after `build.mjs`, same dependencies plus ffmpeg).
+
+![The reveal](6-lamp-over-page/motion/reveal.gif)
 
 Each option's sheet has the rationale, the palette, the icon on iOS and Android home screens (and
 as a themed icon), every mask, the favicon in a browser tab and at its real pixels, the monochrome

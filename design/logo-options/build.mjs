@@ -503,7 +503,7 @@ function overviewHtml() {
     const F = files[o.n]
     const sw = (c) => `<i style="background:${c}"></i>`
     return `<article class="card">
-      <header><span class="n">${o.n}</span><div><h2>${esc(o.name)}</h2><p class="kind">${esc(o.kind)}</p></div></header>
+      <header><span class="n">${o.n}</span><div><h2>${esc(o.name)}</h2><p class="kind">${esc(o.kind)}</p></div><span class="st ${o.status}">${o.status === 'chosen' ? 'Chosen' : 'Backlog'}</span></header>
       <div class="hero"><img class="squircle" src="${uri(F['icon-ios.svg'])}" width="168" height="168" alt="${esc(o.name)}, iOS icon"></div>
       <div class="row masks">
         <figure>${adaptive(uri(F['icon.svg']), 64, 'circle')}<figcaption>Android</figcaption></figure>
@@ -534,6 +534,7 @@ button{font:inherit;font-size:13px;color:var(--ink);background:var(--raised);bor
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:20px;margin-top:36px}
 .card{background:var(--raised);border-radius:22px;padding:22px 20px 20px;box-shadow:0 0 0 .5px var(--hair),0 10px 30px -18px rgb(0 0 0 / .3);display:flex;flex-direction:column}
 .card header{display:flex;gap:14px;align-items:flex-start}
+.st{margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:5px 9px;border-radius:999px;background:var(--hair);color:var(--faint);white-space:nowrap}.st.chosen{background:var(--accent);color:var(--raised)}
 .n{font-family:'Geist Mono',monospace;font-size:34px;color:var(--accent);line-height:1}
 h2{font-family:Newsreader,serif;font-weight:500;font-size:26px;letter-spacing:-.01em;margin:0}
 .kind{font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:4px 0 0}
@@ -553,8 +554,8 @@ footer{margin-top:40px;font-size:13px;color:var(--faint)}footer a{color:var(--ac
 </style></head><body>
 ${SVG_DEFS}
 <div class="top">
-  <div><div class="eyebrow">BetterReads · logo options · ${OPTIONS.length} directions</div><h1>A new mark for BetterReads</h1>
-  <p class="lede">The directions still in the running, numbered as in every round so far. Each shows the iOS icon, the Android adaptive and themed icons, the favicon at its real 32 and 16 px, and the lock-up on the app's light and dark surfaces. All of it is plain SVG with the lettering outlined, in the tokens' colours.</p></div>
+  <div><div class="eyebrow">BetterReads · the new logo</div><h1>Lamp over the page</h1>
+  <p class="lede">Option 6 is the new mark; 1 and 25 stay in the backlog for later. Each shows the iOS icon, the Android adaptive and themed icons, the favicon at its real 32 and 16 px, and the lock-up on the app's light and dark surfaces. All of it is plain SVG with the lettering outlined, in the tokens' colours.</p></div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:14px">
     <button id="theme" type="button">Dark page</button>
     <div class="today">today:<br>Two ribbons<img class="squircle" src="${uri(current)}" width="52" height="52" alt="Today's icon"></div>
@@ -578,7 +579,7 @@ async function overview() {
     const f16 = pngUri(await raster(F['favicon.svg'], 16))
     const f32 = pngUri(await raster(F['favicon.svg'], 32))
     cols.push(`<div class="col card">
-      <div class="n">${o.n}</div>
+      <div class="n">${o.n}<span class="st ${o.status}">${o.status === 'chosen' ? 'Chosen' : 'Backlog'}</span></div>
       <div class="name">${o.name}</div><div class="kind">${o.kind}</div>
       <img class="squircle" src="${uri(F['icon-ios.svg'])}" width="220" height="220" style="margin:22px auto 0;filter:drop-shadow(0 12px 20px rgb(0 0 0 / .22))">
       <div style="display:flex;justify-content:center;gap:16px;margin-top:22px;align-items:center">
@@ -599,7 +600,9 @@ async function overview() {
   .wrap{width:2520px;padding:56px 56px 60px}
   .cols{display:grid;grid-template-columns:repeat(${Math.min(OPTIONS.length, 5)},1fr);gap:22px;margin-top:36px}
   .col{padding:26px 20px 22px;display:flex;flex-direction:column}
-  .n{font-family:'Geist Mono',monospace;font-size:44px;font-weight:400;color:#845418;line-height:1}
+  .n{font-family:'Geist Mono',monospace;font-size:44px;font-weight:400;color:#845418;line-height:1;display:flex;align-items:center;gap:14px}
+  .st{font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:5px 9px;border-radius:999px;background:rgb(28 25 21 / .06);color:rgb(28 25 21 / .62)}
+  .st.chosen{background:#845418;color:#fbf9f5}
   .name{font-family:Newsreader,serif;font-weight:500;font-size:30px;letter-spacing:-.01em;margin-top:10px}
   .kind{font-family:'Geist Mono',monospace;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:rgb(28 25 21 / .6);margin-top:4px;min-height:30px}
   .tab{display:flex;align-items:center;gap:7px;font-size:12px;padding:7px 11px;border-radius:9px;box-shadow:0 0 0 .5px rgb(0 0 0 / .15)}
@@ -608,7 +611,7 @@ async function overview() {
   h1{font-family:Newsreader,serif;font-weight:500;font-size:56px;letter-spacing:-.02em;margin:0}
   </style></head><body>${SVG_DEFS}<div class="wrap">
     <div style="display:flex;align-items:flex-end;justify-content:space-between">
-      <div><div class="eyebrow">BetterReads · logo options, round 9 · 1, 6, 20, 21, 22, 25</div><h1>Six directions for the new name</h1></div>
+      <div><div class="eyebrow">BetterReads · the new logo · chosen: 6 · backlog: 1 and 25</div><h1>Lamp over the page, and two for later</h1></div>
       <div style="display:flex;align-items:center;gap:14px"><span class="cap" style="margin:0;text-align:right">today:<br>Two ribbons</span><img class="squircle" src="${uri(current)}" width="72" height="72"></div>
     </div>
     <div class="cols">${cols.join('')}</div>

@@ -71,103 +71,6 @@ function lampPage(variant) {
   ]
 }
 
-// ------------------------------------------------------------------ path helpers
-
-/** Maps every coordinate pair of an absolute M/L/C/Q path (no arcs) through `fn`. */
-const mapPath = (d, fn) =>
-  d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => {
-    const [a, b] = fn(Number(x), Number(y))
-    return `${f(a)} ${f(b)}`
-  })
-const mirrorX = (d) => mapPath(d, (x, y) => [100 - x, y])
-/** An ellipse as four cubic curves (so mapPath can move it with the rest). `ccw` reverses it. */
-function ellipse(cx, cy, rx, ry, ccw = false) {
-  const k = 0.5523
-  const P = (x, y) => `${f(x)} ${f(y)}`
-  if (ccw)
-    return (
-      `M${P(cx, cy - ry)}C${P(cx - k * rx, cy - ry)} ${P(cx - rx, cy - k * ry)} ${P(cx - rx, cy)}` +
-      `C${P(cx - rx, cy + k * ry)} ${P(cx - k * rx, cy + ry)} ${P(cx, cy + ry)}` +
-      `C${P(cx + k * rx, cy + ry)} ${P(cx + rx, cy + k * ry)} ${P(cx + rx, cy)}` +
-      `C${P(cx + rx, cy - k * ry)} ${P(cx + k * rx, cy - ry)} ${P(cx, cy - ry)}Z`
-    )
-  return (
-    `M${P(cx, cy - ry)}C${P(cx + k * rx, cy - ry)} ${P(cx + rx, cy - k * ry)} ${P(cx + rx, cy)}` +
-    `C${P(cx + rx, cy + k * ry)} ${P(cx + k * rx, cy + ry)} ${P(cx, cy + ry)}` +
-    `C${P(cx - k * rx, cy + ry)} ${P(cx - rx, cy + k * ry)} ${P(cx - rx, cy)}` +
-    `C${P(cx - rx, cy - k * ry)} ${P(cx - k * rx, cy - ry)} ${P(cx, cy - ry)}Z`
-  )
-}
-
-// ------------------------------------------------------------------ more path helpers
-
-/** A straight bar from (x1, y1) to (x2, y2), `w` wide, as a polygon. */
-function bar(x1, y1, x2, y2, w) {
-  const len = Math.hypot(x2 - x1, y2 - y1)
-  const nx = (-(y2 - y1) / len) * (w / 2)
-  const ny = ((x2 - x1) / len) * (w / 2)
-  const P = (x, y) => `${f(x)} ${f(y)}`
-  return `M${P(x1 + nx, y1 + ny)}L${P(x2 + nx, y2 + ny)}L${P(x2 - nx, y2 - ny)}L${P(x1 - nx, y1 - ny)}Z`
-}
-
-// ------------------------------------------------------------------ 20 · Page kite
-
-function pageKite(variant) {
-  // A page flown as a kite: four panels around the spars (two cream, two lit amber), two printed
-  // lines on one of them, and a tail tied with bookmark-ribbon bows.
-  const fav = variant === 'fav'
-  const g = fav ? 0.9 : 1.3 // half a spar
-  const tl = roundedPolygon([[56 - g, 10.5], [56 - g, 32 - g], [32.5, 32 - g]], 1)
-  const tr = roundedPolygon([[56 + g, 10.5], [79.5, 32 - g], [56 + g, 32 - g]], 1)
-  const bl = roundedPolygon([[56 - g, 32 + g], [56 - g, 66], [32.5, 32 + g]], 1)
-  const br = roundedPolygon([[56 + g, 32 + g], [79.5, 32 + g], [56 + g, 66]], 1)
-  const print = fav ? '' : 'M59.6 39.2H73V41.6H59.6Z' + 'M59.6 45.4H68.6V47.8H59.6Z'
-  const tail = fav ? '' : 'M55 68.6C50.6 77.6 44.6 80.6 40.4 86.4C37.4 90.4 33.6 92.6 28.8 96.4L30.6 98C35.4 94.2 39.2 92 42.4 87.8C46.6 82 52.6 79 57 69.4Z'
-  const bow = (x, y) => roundedPolygon([[x - 5, y - 3.6], [x, y], [x - 5, y + 3.6]], 0.8) + roundedPolygon([[x + 5, y - 3.6], [x, y], [x + 5, y + 3.6]], 0.8)
-  const parts = [
-    { role: 'main', d: tl + br + print + tail, evenodd: true },
-    { role: 'accent', d: tr + bl },
-  ]
-  if (!fav) parts.push({ role: 'accent', d: bow(47.6, 79.4) + bow(36.4, 90.2) })
-  return parts
-}
-
-// ------------------------------------------------------------------ 21 · Balloon
-
-function balloon(variant) {
-  // A hot-air balloon lit like the lamp (amber, rising: "better"), carrying a book as its basket.
-  const fav = variant === 'fav'
-  const env = 'M50 8C66.6 8 78 20.4 78 36C78 51.6 65.4 59.6 59 69H41C34.6 59.6 22 51.6 22 36C22 20.4 33.4 8 50 8Z'
-  const gore = 'M45.4 9.4C38.6 22.4 38.6 47.4 44.6 68.6L47 68.6C41.4 47.4 41.4 22.4 47.8 9.2Z'
-  const ropes = fav ? bar(43.6, 71, 44.6, 80, 3) + bar(56.4, 71, 55.4, 80, 3) : bar(43.2, 71.2, 44.2, 80.2, 1.8) + bar(56.8, 71.2, 55.8, 80.2, 1.8)
-  const book = roundedPolygon([[38.5, 82], [61.5, 82], [61.5, 94], [38.5, 94]], [1.5, 2.5, 2.5, 1.5])
-  const pages = fav ? '' : 'M56.4 84.4H58.6V91.6H56.4Z' // the fore-edge line, knocked out
-  return [
-    { role: 'accent', d: env + (fav ? '' : gore + mirrorX(gore)), evenodd: true },
-    { role: 'main', d: ropes + book + pages, evenodd: true },
-  ]
-}
-
-// ------------------------------------------------------------------ 22 · Lighthouse
-
-function lighthouse(variant) {
-  // A lighthouse built of three stacked books, its lantern the lamp, sending two beams out:
-  // the friends' reads that guide you to your next one.
-  const fav = variant === 'fav'
-  const g = fav ? 1.6 : 2.2
-  const at = (y) => 11.5 + (y - 47) * 0.17 // half the tower's width at height y (wider at the foot)
-  const book = (y0, y1) => roundedPolygon([[50 - at(y0), y0], [50 + at(y0), y0], [50 + at(y1), y1], [50 - at(y1), y1]], 1.2)
-  const tower = book(47, 61 - g / 2) + book(61 + g / 2, 75 - g / 2) + book(75 + g / 2, 90)
-  const deck = roundedPolygon([[35, 40.5], [65, 40.5], [65, 44.5], [35, 44.5]], 1)
-  const roof = roundedPolygon([[38.5, 22.5], [50, 12], [61.5, 22.5]], [1, 2, 1])
-  const lantern = roundedPolygon([[42, 25.5], [58, 25.5], [58, 37.5], [42, 37.5]], 1.2)
-  const beams = fav ? '' : roundedPolygon([[38.5, 31.5], [7, 22], [7, 41]], [1, 0.5, 0.5]) + roundedPolygon([[61.5, 31.5], [93, 22], [93, 41]], [1, 0.5, 0.5])
-  return [
-    { role: 'main', d: tower + deck + roof },
-    { role: 'accent', d: lantern + beams },
-  ]
-}
-
 // ------------------------------------------------------------------ 25 · Night window
 
 function nightWindow(variant) {
@@ -217,21 +120,8 @@ export const THEMES = {
 
 export const OPTIONS = [
   {
-    n: 1,
-    slug: '1-bookmark-b',
-    name: 'Bookmark B',
-    kind: 'Lettermark, evolved from Two ribbons',
-    parts: bookmarkB,
-    room: { top: '#5a302c', bottom: '#43211f', glow: [78, 18] },
-    icon: { main: CREAM, accent: AMBER },
-    font: { family: 'geist-sans', weight: 600, style: 'normal', tracking: -0.03 },
-    text: 'BetterReads',
-    palette: 'Keeps today\'s leather-red room (cloth6) with cream (clothInk) and the lamp amber. No shift.',
-    rationale:
-      'A capital B whose stem is the bookmark ribbon from today\'s icon, running past the baseline into its swallowtail. It says the name and the act in one shape: B for BetterReads, the ribbon for "this is where I am in the book". It is the closest step from the current Two ribbons (same room, same ribbon, same amber), so the app keeps its face while the mark finally spells the new name. It scales on a strong vertical stem and two round bowls; in the favicon the 3-unit gap between ribbon and bowls closes so the B stays one solid letter at 16 px. Goodreads is a lowercase serif "g" in brown on beige; this is a constructed geometric capital in two tones with a ribbon tail, on oxblood.',
-  },
-  {
     n: 6,
+    status: 'chosen',
     slug: '6-lamp-over-page',
     name: 'Lamp over the page',
     kind: 'Open book + the lamp rising',
@@ -246,49 +136,23 @@ export const OPTIONS = [
       'An open book with the lamp rising behind it like the sun over a horizon: the design\'s founding image ("a reading lamp in a dark room") made into the mark, and a dawn that says better. It is calm, the way the app is calm, and the one option that is a picture rather than a sign. The half disc and the gull of the pages are simple enough to hold at 16 px (the gaps widen there). Its lettering is the app\'s current wordmark face, Newsreader Italic. Nothing of Goodreads: no letterform in the mark, a plum dusk instead of brown and cream.',
   },
   {
-    n: 20,
-    slug: '20-page-kite',
-    name: 'Page kite',
-    kind: 'A printed page flown as a kite',
-    parts: pageKite,
-    room: { top: '#2b4a5c', bottom: '#132530', glow: [70, 18], glowStrength: 0.24 },
-    icon: { main: CREAM, accent: AMBER },
-    font: { family: 'geist-sans', weight: 500, style: 'normal', tracking: -0.025 },
-    text: 'BetterReads',
-    palette: 'Shift: a dusk-sky blue room (new), the kite in cream and lamp amber, its tail tied with amber ribbon bows.',
-    rationale:
-      'A page flown as a kite: four panels around the spars, two lit amber, two cream (one still carrying two lines of print), and a tail tied with little bookmark-ribbon bows. It is the paper boat\'s cousin (a page made into a toy that goes somewhere) but its direction is up, which is the "better", and a kite is lifted by the wind the way a good book lifts you. Light and joyful, and unlike any reading app. At 16 px it is a two-tone diamond (the print, tail and bows drop). Nothing of Goodreads: no letter, no brown; cream and amber in a dusk sky.',
-  },
-  {
-    n: 21,
-    slug: '21-balloon',
-    name: 'Balloon',
-    kind: 'A lit balloon rising, a book for its basket',
-    parts: balloon,
-    room: { top: '#4a2f4f', bottom: '#22152a', glow: [50, 36], glowStrength: 0.32 },
-    icon: { main: CREAM, accent: AMBER },
-    font: { family: 'newsreader', weight: 500, style: 'italic', tracking: -0.015 },
-    text: 'BetterReads',
-    palette: 'Shift: a twilight rose-violet room (new, between cloth1 and cloth5), the balloon in lamp amber, the book and ropes cream.',
-    rationale:
-      'A hot-air balloon lit from inside like the lamp, rising, with a book for its basket: a book takes you up and away, and rising is the "better" in BetterReads. The envelope is the design\'s one warm light, glowing in a twilight room, which keeps it calm rather than festive. The silhouette (a big amber drop over a small cream block) is about as legible as marks get: at 16 px it is still a balloon (the gores and the fore-edge line drop, the ropes thicken). Nothing of Goodreads: no letter, no brown; amber and cream at twilight.',
-  },
-  {
-    n: 22,
-    slug: '22-lighthouse',
-    name: 'Lighthouse',
-    kind: 'A tower of books, the lamp its light',
-    parts: lighthouse,
-    room: { top: '#2c3646', bottom: '#12171f', glow: [50, 31], glowStrength: 0.36 },
+    n: 1,
+    status: 'backlog',
+    slug: '1-bookmark-b',
+    name: 'Bookmark B',
+    kind: 'Lettermark, evolved from Two ribbons',
+    parts: bookmarkB,
+    room: { top: '#5a302c', bottom: '#43211f', glow: [78, 18] },
     icon: { main: CREAM, accent: AMBER },
     font: { family: 'geist-sans', weight: 600, style: 'normal', tracking: -0.03 },
     text: 'BetterReads',
-    palette: 'Shift: a deep slate night (new), a cream tower, the lantern and its beams in lamp amber.',
+    palette: 'Keeps today\'s leather-red room (cloth6) with cream (clothInk) and the lamp amber. No shift.',
     rationale:
-      'A lighthouse whose tower is three books stacked on top of each other and whose lantern is the lamp, sending two beams out into the night. It is what the friends you follow are on BetterReads: a light that guides you to your next good book, without ads or algorithms. The design\'s "reading lamp in a dark room" becomes a lamp for others. Sturdy and clear: at 16 px it is a cream tower with an amber light at the top (the beams drop). Nothing of Goodreads: no letter, no brown; cream and amber on a slate night.',
+      'A capital B whose stem is the bookmark ribbon from today\'s icon, running past the baseline into its swallowtail. It says the name and the act in one shape: B for BetterReads, the ribbon for "this is where I am in the book". It is the closest step from the current Two ribbons (same room, same ribbon, same amber), so the app keeps its face while the mark finally spells the new name. It scales on a strong vertical stem and two round bowls; in the favicon the 3-unit gap between ribbon and bowls closes so the B stays one solid letter at 16 px. Goodreads is a lowercase serif "g" in brown on beige; this is a constructed geometric capital in two tones with a ribbon tail, on oxblood.',
   },
   {
     n: 25,
+    status: 'backlog',
     slug: '25-night-window',
     name: 'Night window',
     kind: 'A lit window, books on the sill',

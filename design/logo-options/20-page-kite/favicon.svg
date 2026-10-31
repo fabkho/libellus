@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-<title>BetterReads — option 20, Page kite (favicon: rounded square, the mark simplified for 16 and 32 px)</title>
-<defs><linearGradient id="o20fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2b4a5c"/><stop offset="1" stop-color="#132530"/></linearGradient><radialGradient id="o20fgl" cx="22.4" cy="6.75" r="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.24"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.08"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
-<rect width="32" height="32" rx="7" fill="url(#o20fbg)"/><rect width="32" height="32" rx="7" fill="url(#o20fgl)"/>
-<g transform="translate(-9.62 -1.49) scale(0.4575)"><path fill-rule="evenodd" fill="#f1e3c8" d="M54.36 11.17Q55.1 10.5 55.1 11.5L55.1 30.1Q55.1 31.1 54.1 31.1L33.5 31.1Q32.5 31.1 33.24 30.43ZM56.9 33.9Q56.9 32.9 57.9 32.9L78.5 32.9Q79.5 32.9 78.94 33.73L57.46 65.17Q56.9 66 56.9 65Z"/><path fill="#efb768" d="M56.9 11.5Q56.9 10.5 57.64 11.17L78.76 30.43Q79.5 31.1 78.5 31.1L57.9 31.1Q56.9 31.1 56.9 30.1ZM54.1 32.9Q55.1 32.9 55.1 33.9L55.1 65Q55.1 66 54.54 65.17L33.06 33.73Q32.5 32.9 33.5 32.9Z"/></g>
-</svg>
