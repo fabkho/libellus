@@ -71,6 +71,47 @@ describe('an Open Library cover at a size', () => {
   })
 })
 
+const HC = 'https://assets.hardcover.app/edition/30524155/2d30ac0e2eb1f4cd0ea3a93b5cd8a1fa1a63e0e.jpeg'
+
+describe('a Hardcover cover at a size', () => {
+  it('is the one image its address names, at every size (no variants)', () => {
+    for (const pixels of [100, 240, 400, 900]) expect(coverVariant(HC, pixels)).toBe(HC)
+    expect(coverFor(HC, { height: 300, dpr: 2 })).toBe(HC)
+    expect(coverIsCacheable(HC)).toBe(true)
+  })
+
+  it('goes through our cache at one of its widths, and is read back as the cover it asks for', () => {
+    const proxied = coverProxyUrl(HC, 400)
+    expect(new URL(proxied, 'https://x.test').searchParams.get('w')).toBe('480')
+    expect(unproxied(proxied)).toBe(HC)
+    expect(parseCoverRequest(new URL(proxied, 'https://x.test').searchParams)).toEqual({ source: HC, width: 480 })
+  })
+
+  it('keeps a percent-escape in the path (a real export has one), and nothing else odd', () => {
+    const escaped = 'https://assets.hardcover.app/edition/1/a%20b.jpeg'
+    expect(coverIsCacheable(escaped)).toBe(true)
+    expect(coverVariant(escaped, 300)).toBe(escaped)
+    expect(coverIsCacheable('https://assets.hardcover.app/edition/1/a%zz.jpeg')).toBe(false)
+    expect(coverIsCacheable('https://assets.hardcover.app/edition/1/a b.jpeg')).toBe(false)
+  })
+
+  it.each([
+    'http://assets.hardcover.app/edition/1/a.jpeg',
+    'https://assets.hardcover.app.evil.test/edition/1/a.jpeg',
+    'https://user@assets.hardcover.app/edition/1/a.jpeg',
+    'https://assets.hardcover.app:8443/edition/1/a.jpeg',
+    'https://cdn.hardcover.app/edition/1/a.jpeg',
+    'https://hardcover.app/edition/1/a.jpeg',
+    'https://assets.hardcover.app/',
+    'https://assets.hardcover.app/edition/1/a.jpeg?x=1',
+    'https://assets.hardcover.app/edition/1/a.jpeg#x',
+  ])('is not served by the cache unless it is the host\'s plain address: %s', (url) => {
+    expect(coverIsCacheable(url)).toBe(false)
+    expect(coverProxyUrl(url, 300)).toBe(url)
+    expect(parseCoverRequest(new URLSearchParams({ u: url, w: '240' }))).toBeNull()
+  })
+})
+
 describe('an address that is not theirs', () => {
   it.each([
     'https://example.com/cover.jpg',

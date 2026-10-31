@@ -1,7 +1,9 @@
+import { hardcoverCoverAddress, HARDCOVER_COVER_HOST } from '../data/hardcoverCover.ts'
+
 /**
- * A cover at the size it is shown at, and the address of our own cache in front of the two cover hosts
- * (`functions/cover.js`, docs/HOSTING.md, "The cover cache"). Framework-free and without imports: the Pages
- * Function loads this very file, so the allowlist the browser builds addresses by is the one the Function
+ * A cover at the size it is shown at, and the address of our own cache in front of the cover hosts
+ * (`functions/cover.js`, docs/HOSTING.md, "The cover cache"). Framework-free, its one import as plain as it (the host's address
+ * rule): the Pages Function loads this very file, so the allowlist the browser builds addresses by is the one the Function
  * enforces (tests/cover-size.test.ts, tests/cover-function.test.ts).
  *
  * `coverSrc` (utils/cover.ts) is the app's rule for the token sizes (`sm` … `xl`). This is the same idea for a
@@ -48,8 +50,11 @@ export function coverWidthFor(pixels: number): number {
   return COVER_WIDTHS.find((width) => width >= pixels) ?? COVER_WIDTHS[COVER_WIDTHS.length - 1]!
 }
 
-/** The two hosts' kinds of address; null for anything else (a source we do not know sizes of). */
-type Known = { host: 'apple'; origin: string; base: string } | { host: 'openlibrary'; kind: string; key: string; query: string }
+/** The hosts' kinds of address; null for anything else (a source we do not know sizes of). */
+type Known =
+  | { host: 'apple'; origin: string; base: string }
+  | { host: 'openlibrary'; kind: string; key: string; query: string }
+  | { host: 'hardcover'; address: string }
 
 function known(input: string | null | undefined): Known | null {
   if (!input) return null
@@ -63,6 +68,11 @@ function known(input: string | null | undefined): Known | null {
   if (APPLE_HOST.test(url.hostname)) {
     const match = APPLE_PATH.exec(url.pathname)
     return match && !url.search && !url.hash ? { host: 'apple', origin: url.origin, base: match[1]! } : null
+  }
+  if (url.hostname === HARDCOVER_COVER_HOST) {
+    // One image, no size variants: the address as it is (the database's own rule for it, data/hardcoverCover.ts).
+    const address = hardcoverCoverAddress(input)
+    return address ? { host: 'hardcover', address } : null
   }
   if (url.hostname === OPEN_LIBRARY_HOST) {
     const match = OPEN_LIBRARY_PATH.exec(url.pathname)
@@ -85,11 +95,12 @@ export function coverVariant(url: string, pixels: number): string {
     const width = coverWidthFor(pixels)
     return `${parsed.origin}${parsed.base}/${width}x${Math.round(width / ASPECT)}bb.jpg`
   }
+  if (parsed.host === 'hardcover') return parsed.address
   const size = pixels <= OPEN_LIBRARY_WIDTH.S ? 'S' : pixels <= OPEN_LIBRARY_WIDTH.M ? 'M' : 'L'
   return `https://${OPEN_LIBRARY_HOST}/b/${parsed.kind}/${parsed.key}-${size}.jpg${parsed.query}`
 }
 
-/** Whether our cache can serve this cover (it is one of the two hosts' covers, in a shape it knows). */
+/** Whether our cache can serve this cover (it is one of the hosts' covers, in a shape it knows). */
 export function coverIsCacheable(url: string | null | undefined): boolean {
   return known(url) !== null
 }

@@ -156,7 +156,7 @@ const totalSeconds = seconds()
 
 const [job] = await sql<Record<string, number | string | null>>(
   `select state, total, done, added, kept, failed, needs_look, chunks, stalls, error,
-          cover_edition, cover_lent, cover_openlibrary, cover_goodreads, cover_none
+          cover_edition, cover_lent, cover_hardcover, cover_openlibrary, cover_goodreads, cover_none
      from public.import_jobs where id = $1`,
   [jobId],
 )
@@ -272,6 +272,7 @@ const report = {
   coversBySource: {
     edition: job?.cover_edition,
     lent: job?.cover_lent,
+    hardcover: job?.cover_hardcover,
     openlibrary: job?.cover_openlibrary,
     goodreads: job?.cover_goodreads,
     none: job?.cover_none,

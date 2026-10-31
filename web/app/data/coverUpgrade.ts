@@ -16,7 +16,7 @@ import { APPLE_ISBN_BATCH, type Search } from './search'
  *
  * 1. **Refresh** the Catalogue's cover of each Book (another member's import may have upgraded it: an Apple cover is skipped).
  * 2. **Measure** a cover that is neither Apple's nor Goodreads': under `UPGRADE_MIN_HEIGHT` px high it is a candidate, else skipped
- *    (no Apple request). A Goodreads cover counts as `COVER_HEIGHT.goodreads` high (linked, never owned), a missing one as 0.
+ *    (no Apple request). A Goodreads cover counts as `COVER_HEIGHT.goodreads` high (linked, never owned), a Hardcover one as `COVER_HEIGHT.hardcover` (no CORS read of its image), a missing one as 0.
  * 3. **Apple by ISBN**, `APPLE_ISBN_BATCH` (40) ISBNs a request, one batch every `gapMs`: the edition's own artwork.
  * 4. **Apple by title**, for the rest, one search every `gapMs` (3 s, the app's Apple pace): the best-fitting ebook edition of the
  *    same work (`rankEditions`, `languageFits`), the row's storefront first, then the other.
@@ -107,6 +107,7 @@ export type UpgradeRun = {
 const APPLE_HOST = 'itunes.apple.com'
 const APPLE_ARTWORK = /mzstatic\.com\//
 const GOODREADS_COVER = /^https:\/\/i\.gr-assets\.com\//
+const HARDCOVER_COVER = /^https:\/\/assets\.hardcover\.app\//
 
 const defaultWait = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
@@ -252,6 +253,7 @@ export async function runCoverUpgrade(list: UpgradeList, deps: CoverUpgradeDeps)
           if (!row) return
           if (!row.cover) heights.set(row.bookId, 0)
           else if (GOODREADS_COVER.test(row.cover)) heights.set(row.bookId, COVER_HEIGHT.goodreads)
+          else if (HARDCOVER_COVER.test(row.cover)) heights.set(row.bookId, COVER_HEIGHT.hardcover)
           else {
             let height = 0
             try {

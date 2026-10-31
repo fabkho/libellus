@@ -615,11 +615,14 @@ describe('what the upload does with a zip', () => {
     // collectionOrder and emptyCollections come apart from the rows (they go with the start).
     expect(prepared.collectionOrder.map((order) => order.name)).toEqual(['Test Ranked'])
     expect(prepared.emptyCollections).toEqual(['Test Empty'])
-    // The cover address stays out until PR 3; the progress goes along with its read.
-    const wire = JSON.stringify(prepared.rows)
-    expect(wire).not.toContain('coverHint')
-    expect(wire).not.toContain('assets.hardcover.app')
-    for (const row of prepared.rows) expect(Object.keys(row)).not.toContain('coverHint')
+    // The cover address goes along with its row (the job checks it again); the progress with its read.
+    const hints = prepared.rows.filter((row) => (row as { coverHint?: { url: string } | null }).coverHint)
+    expect(hints.length).toBeGreaterThan(0)
+    for (const row of hints) expect((row as { coverHint: { url: string } }).coverHint.url).toMatch(/^https:\/\/assets\.hardcover\.app\//)
+    const editionId = account.records().editions!.find((one) => one.book_id === ids['Read once'])!.id
+    expect(prepared.rows.find((row) => row.key === `hardcover:${ids['Read once']!}`)).toMatchObject({
+      coverHint: { url: `https://assets.hardcover.app/test/${editionId}.jpg`, width: 400, height: 600 },
+    })
     const progress = (id: number) => (prepared.rows.find((row) => row.key === `hardcover:${id}`) as { session: { progress?: unknown } }).session.progress
     expect(progress(ids['Reading page']!)).toEqual({ page: 120 })
     expect(progress(ids['DNF day']!)).toEqual({ page: 80 })
@@ -653,13 +656,13 @@ describe('what the upload does with a zip', () => {
     expect(row.session.progress).toEqual({ page: 80 })
   })
 
-  it('uploadRow strips the cover hint, keeps the session’s progress and everything else', async () => {
+  it('uploadRow keeps the cover hint, the session’s progress and everything else', async () => {
     const { account, ids } = fullAccount()
     const book = (await mapped(account)).books.find((one) => one.sourceId === String(ids['Reading page']))!
     expect(book.coverHint).not.toBeNull()
     expect(book.session?.progress).toEqual({ page: 120 })
     const row = uploadRow(book) as { session: Record<string, unknown>; coverHint?: unknown }
-    expect(row.coverHint).toBeUndefined()
+    expect(row.coverHint).toEqual(book.coverHint)
     expect(row.session.progress).toEqual({ page: 120 })
     expect(row).toMatchObject({ key: book.key, title: book.title, status: 'reading', session: { startedOn: '2024-09-01', outcome: null }, collections: [] })
   })

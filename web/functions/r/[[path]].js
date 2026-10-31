@@ -17,6 +17,7 @@
 // crawlers read it, so the words come from app/utils/previewText.ts (English and German, shared with the
 // image function): `?lang=de` on the address, which the app adds to the links of a member who uses German,
 // picks German; anything else is English, so links made before this one preview as they did.
+import { isHardcoverCover } from '../../app/data/hardcoverCover.ts'
 import { previewLang, previewText } from '../../app/utils/previewText.ts'
 
 /** `/r/<token>`, `/r/<token>/og.png`, `/r/<token>/book/<id>`, `/r/<token>/book/<id>/og.png`. */
@@ -134,7 +135,9 @@ async function onImage(context, { token, book, backend, lang }) {
 /** Where a link preview goes while there is no rendered image: her cover, else the app's icon. */
 function fallbackImage(data, book, url) {
   const cover = book ? data.book?.cover_url : null
-  if (typeof cover === 'string' && cover.startsWith('https://')) return cover
+  // Hardcover's covers show inside the app only (owner decision): the database already hands none to a visitor, and this
+  // never draws one for a preview even if it did.
+  if (typeof cover === 'string' && cover.startsWith('https://') && !isHardcoverCover(cover)) return cover
   return new URL('/icon-512.png', url).toString()
 }
 

@@ -44,6 +44,7 @@ A run that claimed rows calls `cover_store_kick(true)` at the end: the next run 
 | `openlibrary` (`covers.openlibrary.org/b/<kind>/<key>-<S\|M\|L>.jpg`) | `-L` (key), `-M`, always with `?default=false` | the `-M` bytes (one request less than a `-S`) |
 | `goodreads` (`i.gr-assets.com`) | the one image the address names | that image |
 | `regal` (`books.fabkho.dev`) | the one image | that image |
+| `hardcover` (`assets.hardcover.app`) | the one image (a Hardcover export's cover; no size variants) | that image (a run decodes at most `GOODREADS_PER_RUN` Goodreads and Hardcover Books together) |
 
 Other hosts are not stored in v1 (DNS pinning is not possible on this runtime; plan §3). Apple addresses that are not of
 the `…/<w>x<h>bb.<ext>` shape (the app's `APPLE_PATH`, checked against it in `plan_test.ts`) are `unsupported_url`.
@@ -83,7 +84,7 @@ A stored image is kept while **any** Book that a `library_entries` row points at
 Identified (`User-Agent: Libellus/1.0 (<OPENLIBRARY_CONTACT>)`), 8 s timeout, at most 2 MB (the timeout starts when the request goes out, after its pace turn), format by magic bytes (the
 `Content-Type` is not believed), 4 concurrent at most. **Redirects by hand**, at most 3 hops, each `Location` https, no
 port or credentials, on the allowlist (`*.mzstatic.com`, `covers.openlibrary.org`, `archive.org`, `*.archive.org`,
-`i.gr-assets.com`, `books.fabkho.dev`): anything else is `host_error`.
+`i.gr-assets.com`, `assets.hardcover.app`, `books.fabkho.dev`): anything else is `host_error`.
 
 - **Open Library**: covers by `isbn`, `oclc`, `lccn` are limited (100 per address per 5 minutes) and are paced on the
   `edge_pace` bucket `openlibrary-covers-keyed` at **0.3 requests a second**; `id`/`olid` covers on `openlibrary-covers`
@@ -126,7 +127,7 @@ the timeout starts only after the turn): 8 of 8 stored, wall clock 33.6–36.7 s
 | `COVER_KEY_SECRET` | HMAC key of the object keys, **at least 32 characters** (`openssl rand -hex 32`; a shorter one answers 503 `not_configured`). **Changing it later is the irreversible rotation** (plan, runbook) |
 | `R2_COVERS_ACCOUNT_ID`, `R2_COVERS_ACCESS_KEY_ID`, `R2_COVERS_SECRET_ACCESS_KEY` | an R2 API token with **Object Read & Write on `libellus-covers` only** |
 | `OPENLIBRARY_CONTACT` | the contact address in the User-Agent (the `openlibrary` function's secret: secrets are the project's) |
-| `COVER_STORE_HOSTS` | optional: `apple,openlibrary,goodreads,regal` (default all). One line drops a host. A list with no known name (a typo) is warned about and means all |
+| `COVER_STORE_HOSTS` | optional: `apple,openlibrary,goodreads,regal,hardcover` (default all). One line drops a host. A list with no known name (a typo) is warned about and means all |
 | `R2_COVERS_ENDPOINT` | optional, **local runs only**: a stand-in for `https://<account>.r2.cloudflarestorage.com` |
 
 A secret that is not set does not stop the function from starting: an authorized run answers 503 `not_configured` with the

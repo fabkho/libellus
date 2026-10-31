@@ -11,7 +11,7 @@
  *   COVER_KEY_SECRET           the HMAC key of the object keys, at least 32 characters (key.ts; changing it later is the irreversible rotation)
  *   R2_COVERS_ACCOUNT_ID, R2_COVERS_ACCESS_KEY_ID, R2_COVERS_SECRET_ACCESS_KEY    Object Read & Write on `libellus-covers` only
  *   OPENLIBRARY_CONTACT        the contact address in the User-Agent (the `openlibrary` function's secret: secrets are the project's)
- *   COVER_STORE_HOSTS          optional: which hosts are stored, comma separated (apple, openlibrary, goodreads, regal); default all
+ *   COVER_STORE_HOSTS          optional: which hosts are stored, comma separated (apple, openlibrary, goodreads, regal, hardcover); default all
  *                              (a list with no known name is warned about and means all)
  *   R2_COVERS_ENDPOINT         optional, the local stack's stand-in for R2 only (README.md)
  */

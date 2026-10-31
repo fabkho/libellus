@@ -5,7 +5,7 @@ import { APPLE_OFF_ANSWER, jobFetch, jobSources } from './sources.ts'
 import { emptyCatalogue, functions, NOBODY, PIRANESI, recordedOpenLibrary } from './test_support.ts'
 import { coverLender, type Edition, withLentCover } from '../../../web/app/data/bookImport.ts'
 import type { Book } from '../../../web/app/data/books.ts'
-import { createWork, type EditionSummary, matchResult, matchRow } from './work.ts'
+import { createWork, type EditionSummary, matchResult, matchRow, withHardcoverCover } from './work.ts'
 
 const JOB: Job = { id: 'job-1', member_id: 'ada', source: 'goodreads', languages: ['de-DE', 'en-US'], total: 2, done: 0 }
 
@@ -143,4 +143,59 @@ Deno.test('an edition without a cover borrows its work\'s (coverLender, mergeCov
   assertEquals((result.edition as EditionSummary).book.coverUrl, result.cover_url, 'the review shows the lent cover')
   // What the write phase needs of the match is saved with the row (choice.ts): the Catalogue Book by id, the borrowed cover, the fill.
   assertEquals((result.write as { filled: boolean }).filled, true)
+})
+
+// ------------------------------------------------------------------ Hardcover's cover (the zip's coverHint)
+
+const HINT = { url: 'https://assets.hardcover.app/edition/1234/abc.jpeg', width: 400, height: 600 }
+
+Deno.test('a row with a Hardcover cover hint and no other cover: matched or not, the cover is decided as hardcover, with the address', async () => {
+  const w = world()
+  await w.work(JOB, [jobRow({ ...NOBODY, coverHint: HINT }, 0)], w.context())
+  const result = resultOf(w.saves, 0)
+  assertEquals(result.verdict, 'fromFile')
+  assertEquals(result.cover, 'hardcover')
+  assertEquals(result.cover_url, HINT.url)
+  assertEquals((result.edition as EditionSummary).book.coverUrl, HINT.url, 'the review shows it')
+  assertEquals((result.write as { filled: boolean }).filled, true)
+})
+
+Deno.test('the matched edition\'s own cover comes first: a hint does not replace it', async () => {
+  const w = world()
+  await w.work(JOB, [jobRow({ ...PIRANESI, coverHint: HINT }, 0)], w.context())
+  const result = resultOf(w.saves, 0)
+  assertEquals(result.cover, 'own')
+  assert(result.cover_url?.startsWith('https://covers.openlibrary.org/'))
+})
+
+Deno.test('a Hardcover cover goes before a cover lent from another edition (and after the edition\'s own)', () => {
+  const book = (fields: Partial<Book>) => ({ id: null, source: 'openlibrary', title: 'Piranesi', authors: ['Susanna Clarke'], isbn13: null, language: 'en', coverUrl: null, coverThumbhash: null, coverColors: null, ...fields }) as unknown as Book
+  const exact = book({ isbn13: PIRANESI.isbn13 })
+  const sibling = book({ isbn13: '9781526622426', coverUrl: 'https://covers.openlibrary.org/b/id/10226290-L.jpg' })
+  const lent: Edition = withLentCover({ book: exact, via: 'isbn', unsure: false, alternatives: [sibling], near: [] }, coverLender(PIRANESI, exact, [sibling]))
+  assertEquals(matchResult({ row: jobRow(PIRANESI, 0), book: PIRANESI, edition: lent, matched: true, review: { tier: 'quiet', choose: false, notes: [] } as never }).cover, 'lent')
+  const hardcover = withHardcoverCover(lent, HINT)
+  const result = matchResult({ row: jobRow(PIRANESI, 0), book: PIRANESI, edition: hardcover, matched: true, review: { tier: 'quiet', choose: false, notes: [] } as never })
+  assertEquals([result.cover, result.cover_url], ['hardcover', HINT.url])
+  // The edition's own cover is not touched.
+  const own: Edition = { book: book({ coverUrl: 'https://covers.openlibrary.org/b/id/1-L.jpg' }), via: 'isbn', unsure: false, alternatives: [], near: [] }
+  assertEquals(withHardcoverCover(own, HINT), own)
+})
+
+Deno.test('a hint that is not Hardcover\'s own address is not a cover: another host, a port, a query, plain http, junk', () => {
+  const book = { id: null, source: 'import', title: 'x', authors: [], isbn13: null, language: null, coverUrl: null, coverThumbhash: null, coverColors: null } as unknown as Book
+  const edition: Edition = { book, via: null, unsure: false, alternatives: [], near: [] }
+  for (const url of [
+    'https://example.com/a.jpg',
+    'https://assets.hardcover.app.evil.example/a.jpg',
+    'https://cdn.hardcover.app/a.jpg',
+    'https://assets.hardcover.app:8443/a.jpg',
+    'https://user@assets.hardcover.app/a.jpg',
+    'https://assets.hardcover.app/a.jpg?x=1',
+    'http://assets.hardcover.app/a.jpg',
+    'https://assets.hardcover.app/',
+    'not a url',
+    '',
+  ]) assertEquals(withHardcoverCover(edition, { url, width: 400, height: 600 }), edition, url)
+  for (const hint of [null, undefined, {}, { url: 7 }, 'https://assets.hardcover.app/a.jpg']) assertEquals(withHardcoverCover(edition, hint), edition)
 })

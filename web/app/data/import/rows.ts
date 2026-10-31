@@ -121,7 +121,7 @@ export type ImportBook = {
   /** The day it entered her library in the app. */
   addedOn: string | null
   problems: ImportProblem[]
-  /** Hardcover zip only: the cover address the export names for the book. Mapped, not uploaded yet. */
+  /** Hardcover zip only: the cover address the export names for the book. Uploaded; the job checks it again and uses it as its `hardcover` cover source. */
   coverHint?: CoverHint | null
 }
 

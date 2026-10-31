@@ -1,3 +1,5 @@
+import { hardcoverCoverAddress, HARDCOVER_COVER_HOST } from '../../../web/app/data/hardcoverCover.ts'
+
 /**
  * Which images of a cover are fetched and stored, by the host of its address (`books.cover_url`): the variants (the
  * LARGEST first: it is fetched first and alone makes the key, key.ts), the thumbhash's source, and what paces them.
@@ -10,14 +12,17 @@
  *                a 404, not a 1 × 1 GIF). Thumbhash: the -M bytes already fetched (one request less than a -S).
  *   goodreads    `i.gr-assets.com/<path>`                  the one image the address names. Thumbhash: that image.
  *   regal        `books.fabkho.dev/<path>`                 the one image. Thumbhash: that image.
+ *   hardcover    `assets.hardcover.app/<path>`             the one image (a Hardcover export's cover, JPEG; no size variants). Thumbhash:
+ *                that image. Fixed, allowlisted public host like Goodreads' (never a member's host); the app shows it inside only
+ *                (`private.cover_shown` is false for it, 20261112010000), so the stored copy is the member's own app's.
  *
  * The sizes are Apple's 4 widths (a subset of `COVER_WIDTHS`, web/app/utils/coverSize.ts) and Open Library's 2. The
  * Apple shape is that file's `APPLE_PATH` (tests/plan_test.ts checks the two agree on a table of addresses).
  * `COVER_STORE_HOSTS` (index.ts) drops a host: its Books are `unsupported_url`.
  */
 
-export type HostName = 'apple' | 'openlibrary' | 'goodreads' | 'regal'
-export const ALL_HOSTS: readonly HostName[] = ['apple', 'openlibrary', 'goodreads', 'regal']
+export type HostName = 'apple' | 'openlibrary' | 'goodreads' | 'regal' | 'hardcover'
+export const ALL_HOSTS: readonly HostName[] = ['apple', 'openlibrary', 'goodreads', 'regal', 'hardcover']
 
 /** The Apple widths stored, largest first, and the box each is asked at (2:3; `bb` keeps the cover's own proportions in it). */
 export const APPLE_WIDTHS = [600, 360, 240, 120] as const
@@ -91,6 +96,12 @@ export function planCover(source: string, hosts: ReadonlySet<HostName> | readonl
     // The stored address has no query (books_cover_url constraint); a path is all it is.
     if (!allowed.has('goodreads') || url.search || url.hash || url.pathname === '/') return null
     return { host: 'goodreads', largest: url.href, rest: [], thumb: url.href, keyed: false }
+  }
+
+  if (host === HARDCOVER_COVER_HOST) {
+    // The address the database stores (data/hardcoverCover.ts: the one rule, also behind `/cover`): a plain path, no query.
+    if (!allowed.has('hardcover') || hardcoverCoverAddress(url.href) === null) return null
+    return { host: 'hardcover', largest: url.href, rest: [], thumb: url.href, keyed: false }
   }
 
   if (host === 'books.fabkho.dev') {

@@ -1,7 +1,7 @@
 import { assertEquals } from '@std/assert'
 import { coverIsCacheable } from '../../../web/app/utils/coverSize.ts'
 import { byCoverId, coverIdFromLocation, planCover } from './plan.ts'
-import { APPLE_BASE, APPLE_URL, GOODREADS_URL, REGAL_URL } from './test_support.ts'
+import { APPLE_BASE, APPLE_URL, GOODREADS_URL, HARDCOVER_URL, REGAL_URL } from './test_support.ts'
 
 Deno.test('Apple: the largest 600x900 WebP is the key, then 360, 240 and 120; the thumbhash probe is the 66x100 JPEG', () => {
   const plan = planCover(APPLE_URL)!
@@ -80,6 +80,24 @@ Deno.test('Goodreads and Regal: the one image the address names, and the thumbha
   assertEquals(planCover('https://s.gr-assets.com/a.jpg'), null)
 })
 
+Deno.test('Hardcover: the one image the address names, a plain path on the one host, and the thumbhash from it', () => {
+  const hardcover = planCover(HARDCOVER_URL)!
+  assertEquals([hardcover.host, hardcover.largest, hardcover.rest, hardcover.thumb, hardcover.keyed], ['hardcover', HARDCOVER_URL, [], HARDCOVER_URL, false])
+  // A percent-escape in the path is part of a real export's address.
+  assertEquals(planCover('https://assets.hardcover.app/edition/1/a%20b.jpeg')?.host, 'hardcover')
+  for (const url of [
+    'https://assets.hardcover.app/',
+    'https://assets.hardcover.app/edition/1/a.jpeg?x=1',
+    'https://assets.hardcover.app/edition/1/a.jpeg#x',
+    'http://assets.hardcover.app/edition/1/a.jpeg',
+    'https://assets.hardcover.app:8443/edition/1/a.jpeg',
+    'https://user@assets.hardcover.app/edition/1/a.jpeg',
+    'https://assets.hardcover.app.evil.example/edition/1/a.jpeg',
+    'https://cdn.hardcover.app/edition/1/a.jpeg',
+    'https://hardcover.app/edition/1/a.jpeg',
+  ]) assertEquals(planCover(url), null, url)
+})
+
 Deno.test('other hosts are unsupported_url, and COVER_STORE_HOSTS drops a host', () => {
   assertEquals(planCover('https://example.com/cover.jpg'), null)
   assertEquals(planCover('https://169.254.169.254/latest/meta-data'), null)
@@ -89,6 +107,9 @@ Deno.test('other hosts are unsupported_url, and COVER_STORE_HOSTS drops a host',
   assertEquals(planCover(APPLE_URL, new Set(['apple']))?.host, 'apple')
   assertEquals(planCover('https://covers.openlibrary.org/b/id/1-L.jpg', ['apple']), null)
   assertEquals(planCover(REGAL_URL, ['apple']), null)
+  // The takedown switch of the Hardcover host: `COVER_STORE_HOSTS` without it, and its Books are unsupported_url.
+  assertEquals(planCover(HARDCOVER_URL, ['apple', 'openlibrary', 'goodreads', 'regal']), null)
+  assertEquals(planCover(HARDCOVER_URL, ['hardcover'])?.host, 'hardcover')
 })
 
 Deno.test('a keyed redirect that names the cover id: the other size is asked by id', () => {

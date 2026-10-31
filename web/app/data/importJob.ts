@@ -33,7 +33,7 @@ export type ImportJob = {
 
 /** The columns the app reads of a job (and what a Realtime change carries: the whole row). */
 export const JOB_COLUMNS =
-  'id, state, total, done, added, kept, failed, already, cover_edition, cover_lent, cover_openlibrary, cover_goodreads, cover_none, error, finished_at'
+  'id, state, total, done, added, kept, failed, already, cover_edition, cover_lent, cover_hardcover, cover_openlibrary, cover_goodreads, cover_none, error, finished_at'
 
 type JobRow = {
   id: string
@@ -46,6 +46,7 @@ type JobRow = {
   already: number
   cover_edition: number
   cover_lent: number
+  cover_hardcover: number
   cover_openlibrary: number
   cover_goodreads: number
   cover_none: number
@@ -68,7 +69,7 @@ export function jobOf(row: unknown): ImportJob | null {
     state: value.state as ImportJobState,
     total: value.total,
     matched: count(value.done),
-    covered: count(value.cover_edition) + count(value.cover_lent) + count(value.cover_openlibrary) + count(value.cover_goodreads) + count(value.cover_none),
+    covered: count(value.cover_edition) + count(value.cover_lent) + count(value.cover_hardcover) + count(value.cover_openlibrary) + count(value.cover_goodreads) + count(value.cover_none),
     written: added + kept + failed,
     added,
     kept: kept + count(value.already),

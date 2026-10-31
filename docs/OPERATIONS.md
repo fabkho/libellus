@@ -645,10 +645,10 @@ never titles, ISBNs or cover addresses.
 (`stored`, `failed`, `throttled`, `deferred`, `gone`, `unsupported`, `stale`, `ms`) or `503 not_configured` with the names
 of the secrets that are missing.
 
-**One host off** (for example Goodreads): `supabase secrets set COVER_STORE_HOSTS=apple,openlibrary,regal` (unset means
-all four), then clear the keys of that host's Books, `update public.books set cover_key = null, cover_widths = null where
+**One host off** (for example Goodreads): `supabase secrets set COVER_STORE_HOSTS=apple,openlibrary,regal,hardcover` (unset means
+all five: `apple`, `openlibrary`, `goodreads`, `regal`, `hardcover`), then clear the keys of that host's Books, `update public.books set cover_key = null, cover_widths = null where
 cover_url like 'https://i.gr-assets.com/%';`. Their objects become orphans at the next weekly mark and GC deletes them
-after the grace; every one of those Books shows `/cover` and then its source meanwhile. Never delete objects by hand: the
+after the grace; every one of those Books shows `/cover` and then its source meanwhile. For Hardcover's (`assets.hardcover.app`) the clearing statement is the same with `cover_url like 'https://assets.hardcover.app/%'`. Never delete objects by hand: the
 bucket is written and deleted by the two runs, which know what a Library still holds.
 
 **Rotate the R2 API token** (a leak, or a token being replaced): R2 → Manage API tokens → create a new one with Object

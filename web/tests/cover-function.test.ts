@@ -12,6 +12,7 @@ import { onRequest } from '../functions/cover.js'
 const SITE = 'https://libellus.fabkho.dev'
 const APPLE = 'https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/c8/bf/b3/c8bf/9780593983768.d.jpg/600x900bb.jpg'
 const OL = 'https://covers.openlibrary.org/b/id/8231856-L.jpg'
+const HARDCOVER = 'https://assets.hardcover.app/edition/30524155/2d30ac0e2eb1f4cd0ea3a93b5cd8a1fa1a63e0e.jpeg'
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4])
 
 /** The Cache API's `default` cache, as a Map by address (put copies the response, match hands one back). */
@@ -64,6 +65,10 @@ describe('the allowlist', () => {
     ['a look-alike host', ask('https://covers.openlibrary.org.evil.test/b/id/1-L.jpg', 240)],
     ['a path of the host that is no cover', ask('https://covers.openlibrary.org/a/olid/OL1A-L.jpg', 240)],
     ['a host over plain http', ask(APPLE.replace('https', 'http'), 240)],
+    ['a look-alike of Hardcover\'s host', ask('https://assets.hardcover.app.evil.test/edition/1/a.jpeg', 240)],
+    ['another Hardcover host', ask('https://cdn.hardcover.app/edition/1/a.jpeg', 240)],
+    ['Hardcover\'s host over plain http', ask(HARDCOVER.replace('https', 'http'), 240)],
+    ['a Hardcover address with a query', ask(`${HARDCOVER}?x=1`, 240)],
     ['a width it does not list', ask(APPLE, 300)],
     ['no width', `?u=${encodeURIComponent(APPLE)}`],
   ])('asks no host and says 400 for %s', async (_, query) => {
@@ -99,6 +104,15 @@ describe('a cover not in the cache yet', () => {
     expect(response.headers.get('X-Cover-Cache')).toBe('miss')
     expect(response.headers.has('x-cover-stored-at')).toBe(false)
     expect(fetchMock.mock.calls[0]![0]).toBe(OL)
+  })
+
+  it('is fetched from Hardcover\'s host as the one image its address names, whatever the width', async () => {
+    const response = await call(ask(HARDCOVER, 480)).settled()
+    expect(response.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0]![0]).toBe(HARDCOVER)
+    await call(ask(HARDCOVER, 120)).settled()
+    expect(fetchMock.mock.calls.every(([source]) => source === HARDCOVER)).toBe(true)
   })
 
   it('is put in the cache under the sized address, with the headers of a cover that never changes', async () => {

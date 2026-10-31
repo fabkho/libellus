@@ -5,5 +5,6 @@ CREATE OR REPLACE FUNCTION private.cover_shown(p_book books)
  SET search_path TO 'pg_catalog'
 AS $function$
   select private.cover_allowed(p_book.cover_url)
+     and p_book.cover_url !~* '^https://assets\.hardcover\.app(/|$)'
 $function$
 ;

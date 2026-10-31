@@ -2,6 +2,7 @@ import { strFromU8, unzip, type UnzipFileInfo } from 'fflate'
 import { plainText } from '../apple.ts'
 import type { EntryStatus } from '../library.ts'
 import { authorsOfCredits, seriesWithPosition, type Credit } from './hardcover.ts'
+import { HARDCOVER_COVER_HOST } from '../hardcoverCover.ts'
 import { languageCode } from './editions.ts'
 import { splitSeriesTitle } from './readingTracker.ts'
 import {
@@ -37,7 +38,7 @@ import {
  *   on one of her lists. Every rule reuses the CSV adapter's helpers (hardcover.ts, rows.ts), so the two cannot drift.
  *
  * What the zip adds to a row: `session.progress`, `coverHint`, and, on the file, `collectionOrder` and `emptyCollections`. The upload
- * carries all but `coverHint` to the job (importUpload.ts; the cover address waits for the plan's PR 3).
+ * carries all of them to the job (importUpload.ts); the job uses `coverHint` as its `hardcover` cover source (docs/covers.md, "Hardcover's covers").
  */
 
 // ------------------------------------------------------------------ reading
@@ -251,7 +252,7 @@ const MAX_PAGES = 99_999
 // ---- covers
 
 /** The one host a cover hint may name, and the least short side it may have (px): below it the image is a thumbnail. */
-export const COVER_HINT_HOST = 'assets.hardcover.app'
+export const COVER_HINT_HOST = HARDCOVER_COVER_HOST
 export const COVER_HINT_MIN_SIDE = 150
 
 /** What a cover address of the export comes to: kept as a hint, too small, on another host, or none. */

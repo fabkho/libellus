@@ -109,8 +109,8 @@ Everything else stays static, and only `/share`, `/r/*`, `/manifest.webmanifest`
 
 ## The cover cache
 
-**`web/functions/cover.js`** answers `/cover?u=<cover URL>&w=<width>`: our own cache in front of the two cover
-hosts (Apple's `*.mzstatic.com` and `covers.openlibrary.org`). Open Library's covers take 0.7–3 s (a redirect
+**`web/functions/cover.js`** answers `/cover?u=<cover URL>&w=<width>`: our own cache in front of the cover
+hosts (Apple's `*.mzstatic.com`, `covers.openlibrary.org` and Hardcover's `assets.hardcover.app`). Open Library's covers take 0.7–3 s (a redirect
 to archive.org and a storage host of its own); a cover at an address never changes, so the first request pays
 and the rest are answered from Cloudflare's Cache API (`caches.default`) in a few milliseconds. The answer
 carries `Cache-Control: public, max-age=31536000, immutable`, the image's own `Content-Type`, `Vary: Origin` and, for
@@ -129,7 +129,9 @@ load it same-origin, a WebGL texture needs a CORS-clean image, so does a canvas 
 
 - **An allowlist, not a proxy.** `parseCoverRequest` (`web/app/utils/coverSize.ts`, which the browser builds
   addresses with and the Function enforces) accepts `https://<n>.mzstatic.com/image/thumb/…/<w>x<h>bb.jpg` and
-  `https://covers.openlibrary.org/b/<id|isbn|olid|oclc|lccn>/<key>-<S|M|L>.jpg[?default=false]`, and the widths
+  `https://covers.openlibrary.org/b/<id|isbn|olid|oclc|lccn>/<key>-<S|M|L>.jpg[?default=false]` and
+  `https://assets.hardcover.app/<path>` (a Hardcover export's cover: one image, no size variants, a plain path without a
+  query, fetched as the address says), and the widths
   120, 240, 360, 480 and 600 only (each width is an entry; no width asks for any size). Anything else is a 400
   with `no-store`, and no host is asked. The sized address (Apple's `<w>x<1.5w>bb`, Open Library's `-M` up to
   180 px, else `-L`) is computed here from `u` and `w`, and is the cache key: a stored `-L` and a `-M`, a
@@ -171,7 +173,7 @@ object, and **a bucket that is not bound yet** are a 404 with `no-store`. Who ma
   README has the detail) writes `c/<key>/<width>` through the S3 API. The **database** decides: the reconcile
   (`private.cover_store_tick`, pg_cron `cover-store-tick`, every minute) queues every Book in a Library whose `cover_key`
   is null, the tick kicks the function through pg_net and the Vault secret `cover_store_token`, and the function leases a
-  few, fetches the images from their host (Apple, Open Library, Goodreads, `books.fabkho.dev`) identified and paced, and
+  few, fetches the images from their host (Apple, Open Library, Goodreads, Hardcover's `assets.hardcover.app`, `books.fabkho.dev`) identified and paced, and
   PUTs every width before it writes the key. **Its secrets live on Supabase, not on Pages** (`R2_COVERS_*`,
   `COVER_KEY_SECRET`, `COVER_STORE_TOKEN`; docs/SETUP.md, Every setting). Nothing is stored while
   `private.cover_store_settings.enabled` is false, which is how it ships.
@@ -276,7 +278,7 @@ On top of Pages' defaults (`X-Content-Type-Options: nosniff`,
 - `Strict-Transport-Security`, `X-Frame-Options: DENY`, a `Permissions-Policy` that allows only
   the camera (the barcode scanner), and only to BetterReads.
 - `Content-Security-Policy-Report-Only`: violations show in the browser console, nothing is
-  blocked. A new host the app talks to (a search source, a cover host read with CORS) goes into
+  blocked. A new host the app talks to (a search source, a cover host read with CORS: `i.gr-assets.com`, `assets.hardcover.app`) goes into
   `connect-src` first. To enforce it, rename the header once a while of real use reports
   nothing.
 - `Cache-Control: no-cache` on `sw.js`, `sw-sync.js` and `manifest.webmanifest`.

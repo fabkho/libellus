@@ -25,8 +25,8 @@ begin
     return true;
   end if;
   v_state := case when v_cover = 'none' then 'pending' else 'done' end;
-  v_source := case v_cover when 'own' then 'edition' when 'lent' then 'lent' when 'goodreads' then 'goodreads'
-                           when 'none' then null else 'none' end;
+  v_source := case v_cover when 'own' then 'edition' when 'lent' then 'lent' when 'hardcover' then 'hardcover'
+                           when 'goodreads' then 'goodreads' when 'none' then null else 'none' end;
   v_outcome := coalesce(v_row.outcome, v_outcome);
   update public.import_job_rows
      set state = 'done', taken_by = null, done_at = now(),
@@ -42,9 +42,9 @@ begin
          cover = v_cover,
          cover_state = v_state,
          cover_source = v_source,
-         cover_url = case when v_source in ('edition', 'lent', 'goodreads') and (p_result ->> 'cover_url') ~ '^https://[^[:space:]]+$'
+         cover_url = case when v_source in ('edition', 'lent', 'hardcover', 'goodreads') and (p_result ->> 'cover_url') ~ '^https://[^[:space:]]+$'
                           then p_result ->> 'cover_url' end,
-         cover_size = case when v_source in ('edition', 'lent', 'goodreads') and (p_result ->> 'cover_size') in ('S', 'M', 'L')
+         cover_size = case when v_source in ('edition', 'lent', 'hardcover', 'goodreads') and (p_result ->> 'cover_size') in ('S', 'M', 'L')
                            then p_result ->> 'cover_size' end
    where job_id = p_job and idx = p_idx;
   update public.import_jobs
@@ -56,6 +56,7 @@ begin
          needs_look = needs_look + coalesce((v_tier = 'needsLook')::integer, 0),
          cover_edition = cover_edition + coalesce((v_source = 'edition')::integer, 0),
          cover_lent = cover_lent + coalesce((v_source = 'lent')::integer, 0),
+         cover_hardcover = cover_hardcover + coalesce((v_source = 'hardcover')::integer, 0),
          cover_goodreads = cover_goodreads + coalesce((v_source = 'goodreads')::integer, 0),
          cover_none = cover_none + coalesce((v_source = 'none')::integer, 0),
          progress_at = clock_timestamp(),

@@ -37,6 +37,9 @@ Deno.test('the budget: 2 Goodreads Books a run, counted exactly; no decode start
   assertEquals([GOODREADS_PER_RUN, DECODE_BUDGET_MS], [2, 500])
   const budget = thumbBudget()
   assertEquals([budget.admit('goodreads'), budget.admit('goodreads'), budget.admit('goodreads')], [true, true, false])
+  // Hardcover's whole image counts with Goodreads' (one budget of whole-cover decodes).
+  const shared = thumbBudget()
+  assertEquals([shared.admit('goodreads'), shared.admit('hardcover'), shared.admit('hardcover'), shared.admit('goodreads')], [true, true, false, false])
   // The others are not capped by count.
   for (let index = 0; index < 10; index++) assert(budget.admit('apple'))
 

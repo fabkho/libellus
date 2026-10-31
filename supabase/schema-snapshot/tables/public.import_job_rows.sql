@@ -30,10 +30,10 @@ create table public.import_job_rows (
 );
 
 -- constraints
-alter table public.import_job_rows add constraint import_job_rows_cover_check CHECK ((cover = ANY (ARRAY['own'::text, 'lent'::text, 'goodreads'::text, 'none'::text])));
+alter table public.import_job_rows add constraint import_job_rows_cover_check CHECK ((cover = ANY (ARRAY['own'::text, 'lent'::text, 'hardcover'::text, 'goodreads'::text, 'none'::text])));
 alter table public.import_job_rows add constraint import_job_rows_cover_decided CHECK (((cover_state <> 'done'::text) OR (cover_source IS NOT NULL)));
 alter table public.import_job_rows add constraint import_job_rows_cover_size_check CHECK ((cover_size = ANY (ARRAY['S'::text, 'M'::text, 'L'::text])));
-alter table public.import_job_rows add constraint import_job_rows_cover_source_check CHECK ((cover_source = ANY (ARRAY['edition'::text, 'lent'::text, 'openlibrary'::text, 'goodreads'::text, 'none'::text])));
+alter table public.import_job_rows add constraint import_job_rows_cover_source_check CHECK ((cover_source = ANY (ARRAY['edition'::text, 'lent'::text, 'hardcover'::text, 'openlibrary'::text, 'goodreads'::text, 'none'::text])));
 alter table public.import_job_rows add constraint import_job_rows_cover_state_check CHECK ((cover_state = ANY (ARRAY['pending'::text, 'goodreads'::text, 'done'::text])));
 alter table public.import_job_rows add constraint import_job_rows_cover_url_check CHECK (((cover_url IS NULL) OR (cover_url ~ '^https://[^[:space:]]+$'::text)));
 alter table public.import_job_rows add constraint import_job_rows_entry_id_fkey FOREIGN KEY (entry_id) REFERENCES library_entries(id) ON DELETE SET NULL;

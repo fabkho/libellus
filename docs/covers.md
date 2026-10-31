@@ -173,12 +173,15 @@ Owner decision: the work's ebook is a first-class route, not a last resort (the 
 ebook usually wears the print cover). Best first:
 
 1. **exact**: the very edition: its Apple artwork, Open Library's cover for its ISBN.
-2. **ebook**: the same work's ebook at Apple Books (`isSameWork`, the language rule), the row's storefront first.
-3. **sameWork**: another edition of the same work (a sibling edition, an Open Library work's cover).
-4. **goodreads**: Goodreads' cover for the row's title: a last resort, only for a Goodreads file's rows and a manual
+2. **hardcover**: the image a Hardcover "everything" zip names for the edition she has (`coverHint`; [below](#hardcovers-covers)),
+   right after the matched edition's own cover and before every cover that is another edition's.
+3. **ebook**: the same work's ebook at Apple Books (`isSameWork`, the language rule), the row's storefront first.
+4. **sameWork**: another edition of the same work (a sibling edition, an Open Library work's cover).
+5. **goodreads**: Goodreads' cover for the row's title: a last resort, only for a Goodreads file's rows and a manual
    "Find a cover" action ([below](#goodreads-the-last-resort)).
-5. **placeholder**: no image: `cover_url` stays null and `UiCover` draws the cloth (by title), so a real cover found
-   later replaces it with no flag. Pixel height inside a kind: Apple 900, Open Library `-L` 500, Goodreads 500, Google 128.
+6. **placeholder**: no image: `cover_url` stays null and `UiCover` draws the cloth (by title), so a real cover found
+   later replaces it with no flag. Pixel height inside a kind: Apple 900, Open Library `-L` 500, Goodreads 500, Hardcover 500 (the export's own size is not
+   read), Google 128.
 
 Anything but `exact` is *lent*: the Book and the entry keep their own edition facts (ISBN, pages, binding), the
 cover is only borrowed, and a better kind found later replaces it (`mergeCover`; a cover the member chose herself
@@ -304,6 +307,38 @@ found." a miss does. Nothing is lost: a Book whose cover came earlier keeps it (
 cache (`cover_url`) still serves what it already knows while the breaker is open. When the breaker closes, the next ask tries again.
 To switch route for good: set `GOODREADS_COVERS` to `false` (stage and button gone, no call), and, if the address host must go too, drop
 `i.gr-assets.com` from `private.cover_allowed` in a migration (as under *Terms risk*).
+
+#### Hardcover's covers
+
+What: a Hardcover "everything" zip (`docs/plans/hardcover-zip.md`) names an image per book and per edition
+(`cached_image {id, url, width, height, …}`), every one on `assets.hardcover.app`. The device keeps the edition's (else the
+book's) as the row's `coverHint` when it is on that host, https, without a port or credentials, and at least 150 px on its short
+side (a smaller one is a thumbnail, the row then goes to the other sources). The upload carries it (`importUpload.ts`), and **the
+import job uses it without a request**: when it saves a row's match (`work.ts`, `withHardcoverCover`) it checks the address
+again (`web/app/data/hardcoverCover.ts`, the one rule: the host exactly, a plain path, no query), and `mergeCover` puts it where the
+ranking says: **right after the matched edition's own cover** (an edition that has one keeps it), before a cover only borrowed
+from another edition, before the cover stage's Open Library and Goodreads. The row's `cover` is `hardcover`, its `cover_source`
+`hardcover` (decided with the match, so it never waits on the Goodreads pace), counted in `import_jobs.cover_hardcover`; the
+stored copy follows from the owned-covers reconcile like any other, the thumbhash from the cover store. A Catalogue Book that already
+has a cover keeps it (`fill_book_covers` gives a cover to a Book without one only); the one-time Apple upgrade treats the address
+like Goodreads': linked, 500 px high, replaced by a larger Apple cover when Apple has one.
+
+**A fixed host, never a member's.** `assets.hardcover.app` is one allowlisted public host, like `i.gr-assets.com`; the v1 exclusion of
+arbitrary hosts above is about a member's own address, which this is not. The one host is on the list in each place that fetches or
+accepts a cover: `private.cover_allowed` (the database, 20261112010000), `/cover` (`cover.js` `ORIGIN_HOST` and
+`utils/coverSize.ts`, the one image as it is, no size variants), the cover store's `hardcover` host (`plan.ts`: the one image, JPEG,
+thumbhash from it; `COVER_STORE_HOSTS`, `ALL_HOSTS`; `fetch.ts`' redirect allowlist), the CSP's `connect-src` and the service worker's
+cover rule.
+
+**Never on a public surface** (owner decision, 31 October 2026): `private.cover_shown` is false for the host, though
+`cover_allowed` is true. Every answer made for somebody who is not the member (a shared reading page and its cards, `/r/<token>` and
+its link preview and image, the feed, a profile, the readers of a Book) therefore carries neither `cover_url` nor the stored copy's
+`cover_key` / `cover_widths` for such a Book, and the page draws the generated cover; the `/r/` Function and `reading-page-og` also refuse the host
+on their own. Inside the app, in her Library, they show. No takedown line in the privacy notice (it says what Hardcover receives:
+image requests from our server and cache, nothing from a member).
+
+Terms and the way out: docs/THIRD-PARTY.md, *Hardcover covers*. Off: drop `hardcover` from `COVER_STORE_HOSTS` and clear those Books'
+keys (docs/OPERATIONS.md, "Own covers"), and, to stop for good, drop the host from `cover_allowed` (a migration).
 
 ### The Apple upgrade: one time, after an import, on the device (#366)
 
@@ -584,7 +619,7 @@ and no more; the Library asks for 28 of the 51 images in its DOM, those within 1
 ## The cover cache (29 Oct 2026)
 
 `web/functions/cover.js` (docs/HOSTING.md, "The cover cache") answers `/cover?u=<cover URL>&w=<width>` from Cloudflare's Cache API
-(one year, both hosts). An owner-accepted risk for a private app (docs/THIRD-PARTY.md, "Cover cache"); off with
+(one year, the three hosts: Apple, Open Library and, as the one image its address names, Hardcover). An owner-accepted risk for a private app (docs/THIRD-PARTY.md, "Cover cache"); off with
 `NUXT_PUBLIC_COVER_PROXY=off` and by deleting the Function. A Book's `cover_url` is still the source address.
 Measured locally (`wrangler pages dev` on :3110, real Apple and Open Library covers, `curl` from a home connection): the
 host numbers are indicative; the cached ones are the Function's own time, on Cloudflare's edge they are about the same or lower.
@@ -606,7 +641,7 @@ docs/THIRD-PARTY.md (*Own covers*), the runbook in docs/OPERATIONS.md ("Own cove
 - **Sizes: the source's own renderer, never an encoder of ours.** Apple renders WebP itself (`…/<w>x<h>bb.webp`), so its
   covers are copied at 120, 240, 360 and 600 px wide and nothing is resized here: a Pages Function gets about 10 ms of CPU
   (no codec fits), a Supabase edge function 2 s (the import job already spends none of it on decoding), and a browser
-  cannot cover the server side. Open Library (`-L`, the key, then `-M`), Goodreads and Regal's library (the one image the
+  cannot cover the server side. Open Library (`-L`, the key, then `-M`), Goodreads, Hardcover and Regal's library (the one image the
   address names) stay JPEG. **The widths stored are the real ones**, read from each image's header (JPEG SOF, WebP,
   PNG IHDR: a few bytes, no decoding), because Apple's `bb` box keeps a cover's proportions and Open Library's sizes are
   not fixed; they go to `books.cover_widths`, so the app's `srcset` is exact.

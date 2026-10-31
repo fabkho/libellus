@@ -8,6 +8,8 @@ Deno.test('COVER_STORE_HOSTS: unset is all; names are trimmed and lower-cased; o
   assertEquals(parseHosts(null, warn), [...ALL_HOSTS])
   assertEquals(parseHosts('', warn), [...ALL_HOSTS])
   assertEquals(parseHosts(' Apple , openlibrary,regal', warn), ['apple', 'openlibrary', 'regal'])
+  assertEquals(parseHosts('apple,hardcover', warn), ['apple', 'hardcover'])
+  assertEquals(ALL_HOSTS.includes('hardcover'), true)
   assertEquals(warned, [])
 })
 

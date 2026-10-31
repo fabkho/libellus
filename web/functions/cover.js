@@ -1,12 +1,13 @@
-// Cloudflare Pages Function (docs/HOSTING.md, "The cover cache"): our own cache in front of the two cover
+// Cloudflare Pages Function (docs/HOSTING.md, "The cover cache"): our own cache in front of the cover
 // hosts. `/cover?u=<a cover URL>&w=<width>` answers the cover at that width, the way `app/utils/coverSize.ts`
 // says Apple's and Open Library's sizes are asked for, from Cloudflare's Cache API (`caches.default`, free,
 // per data centre) after the first request. Why: Open Library's covers take ~0.6–1.8 s (a redirect to archive.org,
 // then a storage host of its own); a cover at an address never changes, so one slow fetch is all a cover needs;
 // and a texture (the reel's WebGL cards) needs CORS, which this always sends.
 //
-// An allowlist, not a proxy: `parseCoverRequest` accepts only `https://<n>.mzstatic.com/image/thumb/…/<w>x<h>bb.jpg`
-// and `https://covers.openlibrary.org/b/<id|isbn|olid|oclc|lccn>/<key>-<S|M|L>.jpg`, and only the widths in
+// An allowlist, not a proxy: `parseCoverRequest` accepts only `https://<n>.mzstatic.com/image/thumb/…/<w>x<h>bb.jpg`,
+// `https://covers.openlibrary.org/b/<id|isbn|olid|oclc|lccn>/<key>-<S|M|L>.jpg` and the one image a path of Hardcover's
+// `https://assets.hardcover.app/<path>` names (no size variants: the address as it is), and only the widths in
 // `COVER_WIDTHS` (each width is a cache entry). The sized address is computed here from `u` and `w`, so the
 // browser cannot ask for a size nobody listed. Nothing is stored beyond Cloudflare's cache (no bucket, no
 // database), and nothing here is a paid feature: no Cloudflare Images, no Image Resizing, no KV or R2.
@@ -37,7 +38,7 @@ const MAX_BYTES = 2 * 1024 * 1024
 /** Time the host has to answer before the cover counts as unavailable (Open Library's slowest is ~2 s). */
 const ORIGIN_TIMEOUT = 8000
 /** Where the cover came from, as the final address of a (redirected) fetch: its host's own, or Open Library's archive. */
-const ORIGIN_HOST = /^(?:[a-z0-9-]+\.mzstatic\.com|covers\.openlibrary\.org|(?:[a-z0-9-]+\.)*archive\.org)$/
+const ORIGIN_HOST = /^(?:[a-z0-9-]+\.mzstatic\.com|covers\.openlibrary\.org|assets\.hardcover\.app|(?:[a-z0-9-]+\.)*archive\.org)$/
 /** The header that remembers when a cover was fetched (the stored copy's, never sent on). */
 const STORED_AT = 'x-cover-stored-at'
 

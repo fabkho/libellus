@@ -231,6 +231,7 @@ export function coverHeightOf(candidate: Candidate): number {
   if (/mzstatic\.com\//.test(url)) return COVER_HEIGHT.apple
   if (/covers\.openlibrary\.org\//.test(url)) return COVER_HEIGHT.openlibrary
   if (/gr-assets\.com\//.test(url)) return COVER_HEIGHT.goodreads
+  if (/assets\.hardcover\.app\//.test(url)) return COVER_HEIGHT.hardcover
   if (/books\.google\.|googleusercontent\.com\//.test(url)) return COVER_HEIGHT.google
   return 0
 }

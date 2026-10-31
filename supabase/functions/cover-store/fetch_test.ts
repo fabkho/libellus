@@ -83,6 +83,8 @@ Deno.test('a start address off the allowlist is never requested', async () => {
   assertEquals(world.hosts.urls(), [])
   assert(allowedHost('is2-ssl.mzstatic.com') && allowedHost('covers.openlibrary.org') && allowedHost('ia1.us.archive.org'))
   assert(!allowedHost('mzstatic.com') && !allowedHost('openlibrary.org') && !allowedHost('gr-assets.com'))
+  assert(allowedHost('assets.hardcover.app'))
+  assert(!allowedHost('hardcover.app') && !allowedHost('cdn.hardcover.app') && !allowedHost('assets.hardcover.app.evil.example'))
 })
 
 Deno.test('statuses: 404/410 are gone; 5xx, 401 and the rest are host_error; a body that is cut is host_error', async () => {
