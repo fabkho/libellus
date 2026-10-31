@@ -30,7 +30,7 @@ after the branch exists; docs/OPERATIONS.md, "The first release") a push to `mai
 | `LIBELLUS_REGAL` | `1`: build with the Regal layer (`regal.config.ts`; without it the shelf is left out). Production and preview. |
 | `GIGET_AUTH` (secret) | A GitHub token that can read fabkho/regal: where the Regal layer comes from. Production and preview. |
 | `NUXT_PUBLIC_REGAL_LIBRARY_SRC` | `https://books.fabkho.dev/v2/library.json`, the library file the shelf shows (the build stops without it when `LIBELLUS_REGAL=1`). Production and preview. |
-| `NUXT_PUBLIC_SENTRY_DSN` | The Sentry project's DSN (EU, `*.ingest.de.sentry.io`), **Production only** (previews stay without Sentry). Empty or missing: Sentry is off, no request, no download. Set it only once the privacy notice's Sentry text is approved (README, "Sentry"). |
+| `NUXT_PUBLIC_SENTRY_DSN` | The Sentry project's DSN (EU, `*.ingest.de.sentry.io`), **Production only** (previews stay without Sentry). Empty or missing: Sentry is off, no request, no download. Set it only once the privacy notice's Sentry text is approved (docs/OPERATIONS.md, "Sentry"). |
 | `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, `NUXT_PUBLIC_SHELF_OWNER_ID` | Production only. Previews have no backend: they show the signed-out screens and cannot sign in, so a branch never touches production data. |
 
 A deploy is atomic and a rollback is one click (Workers & Pages → libellus → Deployments →

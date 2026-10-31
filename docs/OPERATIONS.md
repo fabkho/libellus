@@ -75,7 +75,7 @@ In the repository's settings (the workflow does not change them):
 | `production` → environment secret `SUPABASE_DB_PASSWORD` (optional) | The database password, only if the temporary role ever fails; the CLI then uses it instead. |
 | `production` → environment variable `SUPABASE_PROJECT_REF` | `ltedflcewdcqtqzcjeyr` |
 | `production` → environment secret `PRODUCTION_DEPLOY_KEY` | The private half of an SSH key whose public half is a **deploy key with write access** (Settings → Deploy keys). It moves the branch `production`: the run's own `GITHUB_TOKEN` stays read-only, and GitHub refuses a `GITHUB_TOKEN` push that brings changed workflow files to a branch. `ssh-keygen -t ed25519 -N '' -C 'libellus production' -f prod-deploy-key`. |
-| `production` → environment secret `SENTRY_AUTH_TOKEN`, variables `SENTRY_ORG`, `SENTRY_PROJECT` (optional) | Readable stack traces: the job "source maps to Sentry" builds the tag once more with hidden maps and uploads them to Sentry (EU, `de.sentry.io`). Without all three it does nothing. README, "Sentry". |
+| `production` → environment secret `SENTRY_AUTH_TOKEN`, variables `SENTRY_ORG`, `SENTRY_PROJECT` (optional) | Readable stack traces: the job "source maps to Sentry" builds the tag once more with hidden maps and uploads them to Sentry (EU, `de.sentry.io`). Without all three it does nothing. "Sentry" below. |
 | Cloudflare Pages → libellus → Settings → Builds → Branch control | **Production branch: `production`**. Previews stay on for every other branch, `main` included (`main.libellus-3q1.pages.dev`). |
 
 Only the deploy job reads the environment's secrets; the release-please job has
@@ -317,6 +317,39 @@ select e.created_at, e.kind, e.message, u.email
 
 Locally the same queries run against the local stack (`docker exec -it supabase_db_libellus psql -U
 postgres`, or Studio at http://127.0.0.1:55323).
+
+## Sentry
+
+`@sentry/nuxt` in `web/`, **off until a DSN is set**: `NUXT_PUBLIC_SENTRY_DSN` empty means no Sentry code is downloaded
+and no request goes out (the SDK sits in its own lazy chunk, `sentry.<hash>.js`, which the service worker does not
+precache and the page does not preload). Only an **EU DSN** (`*.ingest.de.sentry.io`) is accepted; any other is ignored.
+The Supabase edge functions are not covered. It runs next to the app's own error log (docs/OPERATIONS.md, "Client error
+log"), which stays as it is.
+
+- Unhandled errors and rejections and Vue errors; traces for about 10 % of sessions (route changes and requests with
+  status and duration, no headers); release = `version.txt`; environment `production`, `preview` (`*.pages.dev`) or `dev`.
+- No session replay, no feedback widget, no user, no IP, no cookies. `web/app/utils/sentryScrub.ts` strips e-mail
+  addresses, ids, query strings, headers, cookies, bodies, console output and click selectors from every event before it
+  leaves the device; if the scrubber itself throws, a minimal event (tag `scrub.failed`) goes out instead of nothing
+  (`web/tests/sentry.test.ts`). Added back: browser (name, major version), system, device family (never a model), and a tap's
+  place as tag names and `data-testid`s only.
+- **UI frozen:** a one-second timer (`web/app/utils/uiFrozen.ts`) reports an exception `UIFrozen` (warning, fingerprint
+  `ui-frozen`) when the main thread was blocked 5 s or more, at most 3 per page load. Sleep is not a freeze: sleep signals reset
+  the clock, and where the browser has long tasks / long animation frames they must cover half the gap; iOS Safari has
+  neither, so there gaps over 60 s count as sleep.
+
+**Where the DSN goes.** The app is built by Cloudflare Pages from the branch `production` (docs/HOSTING.md), so the DSN
+must be in that build's environment: Cloudflare → Workers & Pages → `libellus` → Settings → Variables and Secrets →
+**Production**: `NUXT_PUBLIC_SENTRY_DSN=<DSN>` (public by nature, baked into the files), then *Retry deployment* or the next
+release. Previews build without it (Sentry off there) unless the variable is also set for Preview. Local: leave it empty;
+to try it, put an EU DSN into `web/.env` and open the app on `localhost` (environment `dev`). Not before the privacy
+notice's Sentry text is approved. Removing the variable and redeploying turns Sentry off.
+
+**Source maps (optional).** GitHub → Settings → Environments → `production`: secret `SENTRY_AUTH_TOKEN` (an organisation
+token, scopes `project:releases`, `org:read`) and variables `SENTRY_ORG=bookretreats-jx`, `SENTRY_PROJECT=libellus`. The
+release workflow's job "source maps to Sentry" then builds the released commit once more with hidden maps
+(`SENTRY_SOURCEMAPS=1`, the same Regal inputs as Pages) and uploads them for the release; without them it does nothing and
+stays green. The maps are never deployed.
 
 ## Waitlist
 
