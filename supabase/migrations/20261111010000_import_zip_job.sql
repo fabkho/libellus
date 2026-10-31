@@ -30,7 +30,7 @@
 -- Security: every function stays SECURITY DEFINER with the checks it had. The job acts as its own member only (the claims
 -- come from the job row, for the runner holding its lease: `import_job_as_member`), so a Collection or an entry is only ever
 -- looked up among HER rows (`member_id` is in every query), and `reorder_collection` / `create_collection` run as her. The
--- table below is read by no member and no role but the definers (RLS on, no policy, no grant).
+-- table below is read by no member (RLS on, no policy, no grant to anon or authenticated; service_role has the default grants, as on every table, and the definers own it).
 --
 -- Safe for a job queued before this migration (the old row shape): it has no `import_job_collections` row, so the end step
 -- and the first write find nothing to do; its rows carry no `progress`, which `import_books` reads as none.

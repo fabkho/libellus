@@ -115,7 +115,7 @@ select ok(not has_table_privilege('authenticated', 'public.import_job_collection
           and not has_table_privilege('anon', 'public.import_job_collections', 'select')
           and not has_table_privilege('authenticated', 'public.import_job_collections', 'insert')
           and (select relrowsecurity from pg_class where oid = 'public.import_job_collections'::regclass),
-          'no member reads or writes a job''s lists: RLS on, no grant');
+          'no member reads or writes a job''s lists: RLS on, no grant to members');
 select ok(not has_function_privilege('authenticated', 'private.import_job_finish(uuid, text)', 'execute')
           and not has_function_privilege('service_role', 'private.import_job_finish(uuid, text)', 'execute')
           and not has_function_privilege('authenticated', 'private.import_job_make_empty_collections(uuid)', 'execute'),
