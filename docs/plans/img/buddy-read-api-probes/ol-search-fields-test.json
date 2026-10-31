@@ -1,0 +1,25 @@
+{
+  "q": "isbn:9780547928227",
+  "docs": [
+    {
+      "has_fulltext": true,
+      "ebook_access": "borrowable",
+      "ia": [
+        "hobbitortherebac00tolk_2",
+        "annotatedhobbith00tolk_0",
+        "hobbitalbotamizp0000tolk",
+        "derkleinehobbit0000tolk",
+        "elhobbitohistori0000tolk_c5o2"
+      ],
+      "table_of_contents_returned": false,
+      "keys": [
+        "ebook_access",
+        "editions",
+        "has_fulltext",
+        "ia",
+        "key",
+        "title"
+      ]
+    }
+  ]
+}

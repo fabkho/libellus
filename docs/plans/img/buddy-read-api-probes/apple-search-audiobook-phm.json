@@ -1,0 +1,89 @@
+{
+  "resultCount": 3,
+  "results": [
+    {
+      "collectionName": "Project Hail Mary (Unabridged)",
+      "wrapperType": "audiobook",
+      "collectionId": 1565808256,
+      "keys": [
+        "artistId",
+        "artistName",
+        "artistViewUrl",
+        "artworkUrl100",
+        "artworkUrl60",
+        "collectionCensoredName",
+        "collectionExplicitness",
+        "collectionId",
+        "collectionName",
+        "collectionPrice",
+        "collectionViewUrl",
+        "copyright",
+        "country",
+        "currency",
+        "description",
+        "previewUrl",
+        "primaryGenreName",
+        "releaseDate",
+        "trackCount",
+        "wrapperType"
+      ],
+      "description_head": "<b>THE #1 </b><b><i> NEW YORK TIMES </i></b><b> BESTSELLER FROM THE AUTHOR OF </b><b><i> THE MARTIAN. </i></b><b> Now a "
+    },
+    {
+      "collectionName": "Project Hail Mary",
+      "wrapperType": "audiobook",
+      "collectionId": 1729184154,
+      "keys": [
+        "artistId",
+        "artistName",
+        "artistViewUrl",
+        "artworkUrl100",
+        "artworkUrl60",
+        "collectionCensoredName",
+        "collectionExplicitness",
+        "collectionId",
+        "collectionName",
+        "collectionPrice",
+        "collectionViewUrl",
+        "copyright",
+        "country",
+        "currency",
+        "description",
+        "previewUrl",
+        "primaryGenreName",
+        "releaseDate",
+        "trackCount",
+        "wrapperType"
+      ],
+      "description_head": "Quando Ryland Grace si risveglia, non ha assolutamente idea di dove si trovi né di chi sia. Vede solo che il suo corpo è"
+    },
+    {
+      "collectionName": "Proyecto Hail Mary",
+      "wrapperType": "audiobook",
+      "collectionId": 1566656166,
+      "keys": [
+        "artistId",
+        "artistName",
+        "artistViewUrl",
+        "artworkUrl100",
+        "artworkUrl60",
+        "collectionCensoredName",
+        "collectionExplicitness",
+        "collectionId",
+        "collectionName",
+        "collectionPrice",
+        "collectionViewUrl",
+        "copyright",
+        "country",
+        "currency",
+        "description",
+        "previewUrl",
+        "primaryGenreName",
+        "releaseDate",
+        "trackCount",
+        "wrapperType"
+      ],
+      "description_head": "LA NOVELA QUE HA INSPIRADO LA PELÍCULA PROYECTO SALVACIÓN, PROTAGONIZADA POR RYAN GOSLING.\nMÁS DE 5 MILLONES DE LECTORES"
+    }
+  ]
+}
