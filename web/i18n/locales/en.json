@@ -184,6 +184,7 @@
       "usually": "usually, start to finish"
     },
     "byMonth": "By month",
+    "allYears": "All years",
     "byYear": "By year",
     "columnLabel": "{label}: {count}",
     "columnName": "{count} · {label} — {name}",

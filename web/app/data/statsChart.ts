@@ -6,9 +6,11 @@ import { addDays, daysBetween, mondayOf, weekNumberOf } from '../utils/dates'
  * worked out here, framework-free, so a native client draws the same columns.
  *
  * The chart follows the year pills (the `scope`):
- * - **All**: one column per year she finished a read in, no window and nothing to step (the pills pick a year).
- * - **A year, Months**: the twelve months of that year; ‹ › step to the neighbouring year that has a finished read
- *   (the ones the pills list), which moves the pill with it.
+ * - **All**: the overview, one column per year she finished a read in (the Months half of the capsule, "All years"). It sits after
+ *   the newest year on the capsule's line of time: ‹ goes from it to the newest year, › is nothing. Weeks picked under All open
+ *   on the newest year's newest window and move the pill to that year (`switchMode`).
+ * - **A year, Months**: the twelve months of that year; ‹ › step to the neighbouring pill (older: the next year with a
+ *   finished read, as the pills list them; newer: the next year, or All after the newest), which moves the pill with it.
  * - **A year, Weeks**: the columns are `WEEKS_SHOWN` ISO weeks (Monday first), the windows laid out from the one
  *   today sits in, back; ‹ › step one whole window but stay on the windows that touch the selected year (the first
  *   and the last may reach into its neighbours), so the chart never contradicts the pill. Another year's pill puts
@@ -86,13 +88,17 @@ export function defaultRange(today: string): ChartRange {
   return { mode: 'months', weekStart: newestWeekStartOf(today) }
 }
 
-/** A range held from before, held to the windows of the scope (a record that changed, a day that passed, another pill); a week start off a Monday goes to its Monday. */
+/**
+ * A range held from before, held to the windows of the scope (a record that changed, a day that passed, another pill); a week start off a Monday goes to its Monday.
+ * Under All there are no weeks to show: the overview is the Months half's (`mode` months).
+ */
 export function clampRange(range: ChartRange, bounds: ChartBounds, scope: ChartScope): ChartRange {
   const ends = scopeBounds(bounds, scope)
   let weekStart = mondayOf(range.weekStart)
   if (weekStart < ends.earliestWeekStart) weekStart = ends.earliestWeekStart
   if (weekStart > ends.newestWeekStart) weekStart = ends.newestWeekStart
-  return weekStart === range.weekStart ? range : { mode: range.mode, weekStart }
+  const mode = scope.year === 'all' ? 'months' : range.mode
+  return weekStart === range.weekStart && mode === range.mode ? range : { mode, weekStart }
 }
 
 /** Switches the mode: the weeks open on the newest window of the scope. */
@@ -101,29 +107,46 @@ export function withMode(range: ChartRange, mode: ChartMode, bounds: ChartBounds
   return mode === 'months' ? { ...range, mode } : { mode, weekStart: scopeBounds(bounds, scope).newestWeekStart }
 }
 
-/** The year a step in Months goes to: the next one the pills list, older (`-1`) or newer (`1`); none under All or at an end. */
-export function stepYear(scope: ChartScope, direction: -1 | 1): number | null {
-  if (scope.year === 'all') return null
+/**
+ * The capsule's mode switch with the pill it moves: Weeks picked under All opens on the newest year's newest window and moves the
+ * pill to that year (there are no weeks of "all time"; without a year with a finished read there is nothing to open, so nothing
+ * changes); anywhere else the mode changes and the pill stays.
+ */
+export function switchMode(range: ChartRange, mode: ChartMode, bounds: ChartBounds, scope: ChartScope): { range: ChartRange; year: StatsYear } {
+  if (mode === 'weeks' && scope.year === 'all') {
+    const newest = scope.years[0]
+    if (newest === undefined) return { range, year: scope.year }
+    return { range: withMode(range, mode, bounds, { year: newest, years: scope.years }), year: newest }
+  }
+  return { range: withMode(range, mode, bounds, scope), year: scope.year }
+}
+
+/**
+ * The pill a step in Months goes to. The steps run along time, the overview after the newest year: ‹ (`-1`) is older (All → the newest year →
+ * 2025 → …), › (`1`) newer (… → the newest year → All); none at either end (the oldest year with a finished read, All) or from a pill the record no longer lists.
+ */
+export function stepYear(scope: ChartScope, direction: -1 | 1): StatsYear | null {
+  if (scope.year === 'all') return direction < 0 ? (scope.years[0] ?? null) : null
   const at = scope.years.indexOf(scope.year)
   if (at < 0) return null
+  if (direction > 0 && at === 0) return 'all'
   return scope.years[at - direction] ?? null
 }
 
 /** Whether ‹ (`-1`) or › (`1`) has a window to step to. */
 export function canStep(range: ChartRange, bounds: ChartBounds, scope: ChartScope, direction: -1 | 1): boolean {
-  if (scope.year === 'all') return false
-  if (range.mode === 'months') return stepYear(scope, direction) !== null
+  if (scope.year === 'all' || range.mode === 'months') return stepYear(scope, direction) !== null
   const ends = scopeBounds(bounds, scope)
   return direction < 0 ? range.weekStart > ends.earliestWeekStart : range.weekStart < ends.newestWeekStart
 }
 
 /**
- * One window back or forward: to the neighbouring year (the pill's, so it comes back as `year`), or `WEEKS_SHOWN`
+ * One window back or forward: to the neighbouring pill (All, or a year; it comes back as `year`), or `WEEKS_SHOWN`
  * weeks (the year stays). At an end, the range and the year as they are.
  */
 export function stepRange(range: ChartRange, bounds: ChartBounds, scope: ChartScope, direction: -1 | 1): { range: ChartRange; year: StatsYear } {
   if (!canStep(range, bounds, scope, direction)) return { range, year: scope.year }
-  if (range.mode === 'months') return { range, year: stepYear(scope, direction)! }
+  if (scope.year === 'all' || range.mode === 'months') return { range, year: stepYear(scope, direction)! }
   return { range: { ...range, weekStart: addDays(range.weekStart, 7 * WEEKS_SHOWN * direction) }, year: scope.year }
 }
 

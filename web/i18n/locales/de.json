@@ -184,6 +184,7 @@
       "usually": "meist Start bis Ende"
     },
     "byMonth": "Nach Monat",
+    "allYears": "Alle Jahre",
     "byYear": "Nach Jahr",
     "columnLabel": "{label}: {count}",
     "columnName": "{count} · {label} — {name}",

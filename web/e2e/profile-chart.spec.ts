@@ -7,8 +7,10 @@ import { test } from './fixtures'
 import { expectAccessible, openProfile, recordedApple, signedIn, untilStill } from './support'
 
 /**
- * The Profile's chart (WP-08, backlog #11b/#11c), following the year pills: the years under All (one opens its
- * review); under a year the capsule switches Months and Weeks and steps the window (the months' ‹ › move the pill);
+ * The Profile's chart (WP-08, backlog #11b/#11c), following the year pills; the capsule is there under every pill.
+ * Under All it reads "All years" and the chart is the years (one opens its review); ‹ › walk the pills along time (All,
+ * the newest year, older ones: the overview after the newest year), Weeks picked under All open on the newest year.
+ * Under a year the capsule switches Months and Weeks and steps the window (the months' ‹ › move the pill);
  * a bar opens that month's or week's books, the ends stop, and the mode and window survive a trip to a Book and
  * back. The windows' arithmetic (ISO weeks, New Year, week 53, daylight saving, the ends, the pill and the window in
  * step) is tests/stats-chart.test.ts; this is the flow. Reduce Motion is on, so the unfold is instant here.
@@ -66,14 +68,19 @@ test('the chart follows the year pills: years under All, then months and weeks o
   const period = page.getByTestId('profile.chart.period')
   const prev = page.getByTestId('profile.chart.prev')
   const next = page.getByTestId('profile.chart.next')
-  const pill = (year: number) => page.getByTestId(`profile.year.${year}`)
+  const pill = (year: number | 'all') => page.getByTestId(`profile.year.${year}`)
   const lastYear = thisYear - 1
 
-  // All, the pill she opens on: a column per year she finished in (last year's and this), no capsule, no figures.
-  await expect(page.getByTestId('profile.chart.capsule')).toHaveCount(0)
+  // All, the pill she opens on: the capsule reads "All years" and a column per year she finished in (last year's and this), no figures.
+  await expect(page.getByTestId('profile.chart.capsule')).toBeVisible()
+  await expect(period).toContainText('All years')
+  await expect(next).toBeDisabled()
+  await expect(prev).toBeEnabled()
+  await expect(page.getByTestId('profile.chart.caption')).toHaveCount(0)
   await expect(page.getByTestId('profile.chart.figures')).toHaveCount(0)
   await expect(page.getByTestId('profile.columns').locator('button, [role=img]')).toHaveCount(2)
   await expect(page.getByTestId('profile.chart.alt')).toContainText(String(lastYear))
+  await expectAccessible(page, 'the chart under All')
 
   // A year's column opens that year in review, as before; Back returns to All.
   await page.getByTestId(`profile.columns.${lastYear}`).click()
@@ -82,11 +89,35 @@ test('the chart follows the year pills: years under All, then months and weeks o
   await expect(page.getByTestId('profile.library')).toBeVisible()
   await untilStill(page)
 
-  // This year's pill: the capsule arrives on Months of that year; nothing after today, last year before.
+  // ‹ from All goes to the newest year and moves the pill; › comes back to All, where it stops.
+  await prev.click()
+  await expect(period).toContainText(String(thisYear))
+  await expect(pill(thisYear)).toHaveAttribute('aria-pressed', 'true')
+  await expect(pill('all')).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByTestId('profile.columns').locator('button, [role=img]')).toHaveCount(12)
+  await expect(next).toBeEnabled()
+  await next.click()
+  await expect(period).toContainText('All years')
+  await expect(pill('all')).toHaveAttribute('aria-pressed', 'true')
+  await expect(next).toBeDisabled()
+
+  // Weeks picked under All open on the newest year's weeks and move the pill there; Months bring the year back, › the overview.
+  await page.getByTestId('profile.chart.mode.weeks').click()
+  await expect(pill(thisYear)).toHaveAttribute('aria-pressed', 'true')
+  await expect(period).toContainText(/\d+–\d+ · \d{4}/)
+  await expect(page.getByTestId('profile.columns').locator('button, [role=img]')).toHaveCount(13)
+  await expect(page.getByTestId('profile.chart.caption')).toBeVisible()
+  await page.getByTestId('profile.chart.mode.months').click()
+  await expect(period).toContainText(String(thisYear))
+  await page.waitForTimeout(450) // an arrow tapped within 400 ms of a mode switch is a double tap, which the capsule ignores
+  await next.click()
+  await expect(period).toContainText('All years')
+
+  // This year's pill: the capsule arrives on Months of that year; › is the overview, last year before.
   await pill(thisYear).click()
   await expect(period).toContainText(String(thisYear))
   await expect(page.getByTestId('profile.columns').locator('button, [role=img]')).toHaveCount(12)
-  await expect(next).toBeDisabled()
+  await expect(next).toBeEnabled()
   await expect(prev).toBeEnabled()
   await expect(page.getByTestId('profile.chart.caption')).toHaveCount(0)
   await expect(page.getByTestId('profile.chart.figures')).toHaveCount(0)
@@ -101,7 +132,7 @@ test('the chart follows the year pills: years under All, then months and weeks o
   // And the other way round: a pill moves the chart.
   await pill(thisYear).click()
   await expect(period).toContainText(String(thisYear))
-  await expect(next).toBeDisabled()
+  await expect(next).toBeEnabled()
 
   // Weeks: thirteen of them, the newest window, its dates under the chart.
   await page.getByTestId('profile.chart.mode.weeks').click()
@@ -152,11 +183,17 @@ test('the chart follows the year pills: years under All, then months and weeks o
   await expect(next).toBeEnabled()
   await expect(pill(thisYear)).toHaveAttribute('aria-pressed', 'true')
 
-  // Months again: the year in the pill; All brings the years back and the capsule goes.
+  // Months again: the year in the pill; All brings the years back, the capsule stays on its overview; from the weeks, the All pill brings Months with it.
   await page.getByTestId('profile.chart.mode.months').click()
   await expect(period).toContainText(String(thisYear))
   await expect(page.getByTestId('profile.chart.caption')).toHaveCount(0)
+  await page.getByTestId('profile.chart.mode.weeks').click()
+  await expect(page.getByTestId('profile.chart.caption')).toBeVisible()
   await page.getByTestId('profile.year.all').click()
-  await expect(page.getByTestId('profile.chart.capsule')).toHaveCount(0)
+  await expect(page.getByTestId('profile.chart.capsule')).toBeVisible()
+  await expect(period).toContainText('All years')
+  await expect(page.getByTestId('profile.chart.caption')).toHaveCount(0)
   await expect(page.getByTestId('profile.columns').locator('button, [role=img]')).toHaveCount(2)
+  await pill(lastYear).click()
+  await expect(period).toContainText(String(lastYear)) // Months: the overview took the weeks back
 })

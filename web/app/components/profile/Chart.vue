@@ -1,9 +1,11 @@
 <script setup lang="ts">
 // The Profile's reading chart (WP-08, backlog #11b/#11c): the books of a window as columns, following the year
-// pills (`v-model:year`). Under All: a column per year (a bar opens that year in review, `openYear`), no capsule,
-// the old "By year" heading in its row. Under a year: by month (that year) or by week (13 ISO weeks, the windows
-// that touch the year), with the capsule that switches the mode and steps the window (ChartNav.vue); stepping the
-// months moves the pill to the neighbouring year, stepping the weeks stays in the year. The figures of the window
+// pills (`v-model:year`), with the capsule that switches the mode and steps the window (ChartNav.vue) under every
+// pill. Under All: the overview, a column per year (a bar opens that year in review, `openYear`), the capsule's
+// Months half reading "All years". Under a year: by month (that year) or by week (13 ISO weeks, the windows that
+// touch the year). The arrows walk the pills along time, the overview after the newest year (‹ older, › newer:
+// 2025 ‹ 2026 › All) and move the pill with every step in Months; the weeks' arrows stay in the year. Weeks
+// picked under All open on the newest year's newest window and move the pill there. The figures of the window
 // stand under the weeks (under the months they would repeat the figures of the pill's year, which the page
 // shows just above) and a text alternative follows the window. The Profile and a member's page both draw it from a
 // record's reads (`reads`); the mode and the weeks' window are `v-model` (stores/stats.ts and stores/memberProfile.ts
@@ -14,7 +16,7 @@
 // screen edge, which is iOS's back-swipe and stays the system's. The weeks' full dates ride under the chart as its
 // caption: the capsule names them by number.
 import { yearsOf, type StatsRead, type StatsYear } from '~/data/stats'
-import { WEEKS_SHOWN, canStep, chartBounds, clampRange, columnsOf, litColumn, stepRange, windowFigures, withMode, yearColumnsOf, type ChartMode, type ChartRange } from '~/data/statsChart'
+import { WEEKS_SHOWN, canStep, chartBounds, clampRange, columnsOf, litColumn, stepRange, switchMode, windowFigures, yearColumnsOf, type ChartMode, type ChartRange } from '~/data/statsChart'
 import type { ProfileSheet } from '~/stores/stats'
 import { isoDay, parseDay } from '~/utils/dates'
 import { dateFormat } from '~/utils/intl'
@@ -43,7 +45,7 @@ const bounds = computed(() => chartBounds(props.reads, today))
 const scope = computed(() => ({ year: props.year, years: yearsOf(props.reads) }))
 /** The window in view: what was kept, held to the ends of this record and to the year in the pills. */
 const range = computed(() => clampRange(props.modelValue, bounds.value, scope.value))
-/** Under All the columns are years, whatever mode was kept. */
+/** Under All the columns are years (the overview, the Months half's). */
 const byYear = computed(() => props.year === 'all')
 const mode = computed(() => range.value.mode)
 const columns = computed(() => (byYear.value ? yearColumnsOf(props.reads) : columnsOf(props.reads, range.value, props.year as number)))
@@ -53,6 +55,13 @@ const lit = computed(() => litColumn(columns.value, today))
 
 /** Which way the window last moved (the label slides in from that side). */
 const direction = ref<-1 | 1>(1)
+// A pill picked moves the label the way the years run too: time goes on to the right, the overview last.
+watch(
+  () => props.year,
+  (now, was) => {
+    direction.value = (now === 'all' ? Infinity : now) > (was === 'all' ? Infinity : was) ? 1 : -1
+  },
+)
 function step(by: -1 | 1) {
   if (by < 0 ? !canPrev.value : !canNext.value) return
   direction.value = by
@@ -61,8 +70,19 @@ function step(by: -1 | 1) {
   if (stepped.year !== props.year) emit('update:year', stepped.year)
 }
 function setMode(next: ChartMode) {
-  emit('update:modelValue', withMode(range.value, next, bounds.value, scope.value))
+  const switched = switchMode(range.value, next, bounds.value, scope.value)
+  if (next === 'weeks' && byYear.value && switched.year === props.year) return
+  emit('update:modelValue', switched.range)
+  if (switched.year !== props.year) emit('update:year', switched.year)
 }
+// The overview is Months: a pill that brings All (a pick, a step, the record losing the year) takes the kept mode back to Months, so the next year the member steps or picks opens on Months too.
+watch(
+  () => [props.year, props.modelValue.mode] as const,
+  ([year, kept]) => {
+    if (year === 'all' && kept !== 'months') emit('update:modelValue', { ...props.modelValue, mode: 'months' })
+  },
+  { immediate: true },
+)
 
 // ---------------------------------------------------------------------------------------------- names
 const drawn = computed(() =>
@@ -78,6 +98,7 @@ const modeTitle = computed(() => (byYear.value ? t('profile.byYear') : mode.valu
 
 /** "2026", or the weeks' numbers with their year: "KW 13–25 · 2026", across a year end "KW 52–12 · 2025/26". */
 const label = computed(() => {
+  if (byYear.value) return t('profile.allYears')
   if (mode.value === 'months') return String(props.year)
   const first = columns.value[0]!
   const last = columns.value[columns.value.length - 1]!
@@ -152,9 +173,8 @@ function swallowSwipe(event: MouseEvent) {
 <template>
   <section class="flex flex-col gap-md" data-testid="profile.chart">
     <h2 class="sr-only">{{ modeTitle }}</h2>
-    <!-- Under All there is nothing to switch or step: the old heading holds the capsule's row, so the chart does not move when a pill is picked. -->
-    <p v-if="byYear" class="eyebrow flex h-(--size-touch) items-center" aria-hidden="true">{{ modeTitle }}</p>
-    <ProfileChartNav v-else :mode="mode" :label="label" :can-prev="canPrev" :can-next="canNext" :direction="direction" @mode="setMode" @step="step" />
+    <!-- The capsule under every pill: under All its Months half reads "All years" and steps to the newest year (‹); Weeks opens on that year. -->
+    <ProfileChartNav :mode="mode" :label="label" :overview="byYear" :can-prev="canPrev" :can-next="canNext" :direction="direction" @mode="setMode" @step="step" />
 
     <!-- The chart; a swipe moves the window. -->
     <div style="touch-action: pan-y" @pointerdown="dragStart" @pointerup="dragEnd" @pointercancel="dragCancel" @click.capture="swallowSwipe">
