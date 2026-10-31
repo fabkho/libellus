@@ -1,9 +1,9 @@
 create table public.import_job_collections (
-  job_id uuid not null,
+  began_at timestamp with time zone default now() not null,
   collection_order jsonb default '[]'::jsonb not null,
   empty_collections jsonb default '[]'::jsonb not null,
   empty_made boolean default false not null,
-  began_at timestamp with time zone default now() not null
+  job_id uuid not null
 );
 
 -- constraints
