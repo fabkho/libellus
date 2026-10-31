@@ -169,6 +169,18 @@ describe('reading the zip', () => {
       expect(file.books.map((book) => book.authors)).toEqual([['Edie Edition'], ['Tom Translator']])
     })
 
+    it('reads them when the edition a row uses has none, though another edition of the book has', async () => {
+      const account = new Account()
+      account.credits = 'contributions'
+      const work = account.book({ title: 'Test Book: Credits by edition', authors: ['Cora Credit'] })
+      account.credits = 'cached'
+      account.edition(work, { authors: ['Edie Edition'] })
+      account.credits = 'contributions'
+      const chosen = account.edition(work)
+      account.shelve(work, { status: 1, edition: chosen })
+      expect((await mapped(account)).books[0]!.authors).toEqual(['Cora Credit'])
+    })
+
     it('does not read them when every book has its own: a broken file there is no error', async () => {
       const account = new Account()
       account.shelve(account.book({ title: 'Test Book: Cached' }), { status: 1 })
@@ -239,6 +251,20 @@ describe('the mapping of a library book', () => {
     small.shelve(small.book({ title: 'Test Book: Y' }), { status: 3, reads: [{ finished: '2021-09-30', precision: 3 }] })
     const sessions = (await mapped(small)).books.map((book) => book.session?.endedOn)
     expect(sessions).toEqual(['2023-06-01', '2021-01-01'])
+  })
+
+  it('a start inside a finish’s month or year is kept: the finish is not moved before it', async () => {
+    const small = new Account()
+    small.shelve(small.book({ title: 'Test Book: M' }), { status: 3, reads: [{ started: '2023-06-10', finished: '2023-06-01', precision: 2 }] })
+    small.shelve(small.book({ title: 'Test Book: Y' }), { status: 3, reads: [{ started: '2021-05-04', finished: '2021-01-01', precision: 3 }] })
+    // A start after that month is a real mistake: dropped, told.
+    small.shelve(small.book({ title: 'Test Book: L' }), { status: 3, reads: [{ started: '2023-07-02', finished: '2023-06-01', precision: 2 }] })
+    const [month, year, late] = (await mapped(small)).books
+    expect(month!.session).toMatchObject({ startedOn: '2023-06-10', endedOn: '2023-06-10' })
+    expect(month!.problems).toEqual([])
+    expect(year!.session).toMatchObject({ startedOn: '2021-05-04', endedOn: '2021-05-04' })
+    expect(late!.session).toMatchObject({ startedOn: null, endedOn: '2023-06-01' })
+    expect(late!.problems).toContainEqual({ code: 'dateInvalid' })
   })
 
   it('reads in order, undated first: dated earlier reads keep their days, the undated add to extraReads', () => {
@@ -455,6 +481,19 @@ describe('lists → Collections (option A)', () => {
     expect(file.emptyCollections).toEqual(['Test Empty'])
   })
 
+  it('a book she keeps off her shelves (Ignored) but put on a list is a list-only book: Want to read, in its Collection', async () => {
+    const small = new Account()
+    const list = small.list('Test Kept')
+    const ignored = small.book({ title: 'Test Book: Ignored on a list' })
+    small.shelve(ignored, { status: 6 })
+    small.onList(list, ignored)
+    const result = await mapped(small)
+    expect(result.books).toHaveLength(1)
+    expect(result.books[0]).toMatchObject({ key: `hardcover:${ignored}`, status: 'want_to_read', shelves: ['Test Kept'], problems: [{ code: 'fromList' }] })
+    expect(result.skipped).toContainEqual(expect.objectContaining({ title: 'Test Book: Ignored on a list', problem: { code: 'notShelved' } }))
+    expect(result.emptyCollections).toEqual([])
+  })
+
   it('a name she has twice in another case is one Collection', async () => {
     const small = new Account()
     const [one, two] = [small.list('Test Case'), small.list('test case')]
@@ -582,6 +621,17 @@ describe('what the upload does with a zip', () => {
     expect(listOnly).toMatchObject({ status: 'want_to_read', collections: ['Test Ranked', 'Test Plain'] })
     // What the server takes, as it is.
     expect((await startImportJob(ada.client, { rows: prepared.rows, source: prepared.source, device: null, already: 0, languages: ['en'] })).error).toBeNull()
+  })
+
+  it('an oversize row is trimmed without its review and still uploads no progress', async () => {
+    const { account, ids } = fullAccount()
+    const book = (await mapped(account)).books.find((one) => one.sourceId === String(ids['DNF day']))!
+    expect(book.session?.progress).toEqual({ page: 80 })
+    const row = uploadRow({ ...book, session: { ...book.session!, review: 'x'.repeat(30_000) } }) as { session: Record<string, unknown>; problems: unknown[] }
+    expect(row.session.review).toBeNull()
+    expect(row.problems).toEqual([])
+    expect('progress' in row.session).toBe(false)
+    expect(JSON.stringify(row)).not.toContain('progress')
   })
 
   it('uploadRow strips the cover hint and the session’s progress, and keeps everything else', async () => {

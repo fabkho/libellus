@@ -81,7 +81,7 @@ export function uploadRow(book: ImportBook): Record<string, unknown> {
   const row: Record<string, unknown> = { ...kept, session, collections: [...new Set(book.shelves)] }
   if (JSON.stringify(row).length > ROW_MAX_CHARS) {
     // Only a runaway review can be that long: the book is imported without its text.
-    row.session = book.session ? { ...book.session, review: null } : null
+    row.session = session ? { ...session, review: null } : null
     row.earlierReads = book.earlierReads.slice(0, 20)
     row.problems = []
   }

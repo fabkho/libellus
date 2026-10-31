@@ -305,18 +305,30 @@ type Read = {
 
 type Edition = { rec: Rec; id: number }
 
-/** Whether any book lacks contributors of its own, so that `contributions.json` and `authors.json` are needed. */
+/**
+ * Whether a row's authors need `contributions.json` and `authors.json`: `authorsOf` takes the edition the row is written with, else
+ * the book's own, else those files. So a book with no cached contributors needs them when an edition the row may use has none (or it
+ * has no edition). Over-reads when a better candidate comes first, never under-reads.
+ */
 function needsCredits(exp: HardcoverExport): boolean {
+  const index = indexOf(exp)
   const credited = (rec: Rec) => Array.isArray(rec.cached_contributors) && rec.cached_contributors.length > 0
-  const editionsOf = new Map<number, Rec[]>()
-  for (const edition of exp.editions) {
-    const book = whole(edition.book_id)
-    if (book !== null) editionsOf.set(book, [...(editionsOf.get(book) ?? []), edition])
+  const needs = (bookId: number | null, editionIds: readonly (number | null)[]) => {
+    const book = bookId === null ? undefined : index.books.get(bookId)
+    if (!book || credited(book)) return false
+    const editions = [...editionIds, whole(book.default_physical_edition_id)].flatMap((id) => {
+      const rec = id === null ? undefined : index.editions.get(id)
+      return rec && (whole(rec.book_id) === null || whole(rec.book_id) === bookId) ? [rec] : []
+    })
+    return editions.length === 0 || editions.some((edition) => !credited(edition))
   }
-  return exp.books.some((book) => {
-    const id = whole(book.id)
-    return id !== null && !credited(book) && !(editionsOf.get(id) ?? []).some(credited)
-  })
+  return (
+    exp.userBooks.some((entry) => {
+      const reads = index.readsOf.get(whole(entry.id) ?? -1) ?? []
+      return needs(whole(entry.book_id), [whole(entry.edition_id), ...reads.map((read) => whole(read.edition_id))])
+    }) ||
+    exp.listBooks.some((entry) => needs(whole(entry.book_id), [whole(entry.edition_id)]))
+  )
 }
 
 /** The export's records indexed for the mapping. */
@@ -478,8 +490,10 @@ export function mapHardcoverExport(exp: HardcoverExport, today: string, onCover?
   const shelved = new Set<number>()
   for (const entry of exp.userBooks) {
     const book = whole(entry.book_id)
-    if (book !== null) shelved.add(book)
-    mapped.push(mapEntry(index, lists, entry, mapped.length + 1, today, onCover))
+    const row = mapEntry(index, lists, entry, mapped.length + 1, today, onCover)
+    // An entry she keeps off her shelves (Ignored, no status) is no shelved book: on a list, it is a list-only one (option A).
+    if (book !== null && !('problem' in row && row.problem.code === 'notShelved')) shelved.add(book)
+    mapped.push(row)
   }
   // Books that are only on her lists: Want to read, each in its Collections.
   for (const only of lists.entries) {
@@ -520,6 +534,9 @@ function readsOf(index: Index, entryId: number | null, day: (value: unknown) => 
     if (endedOn && precision === 2) endedOn = `${endedOn.slice(0, 7)}-01`
     if (endedOn && precision === 3) endedOn = `${endedOn.slice(0, 4)}-01-01`
     let startedOn = day(rec.started_at)
+    // A month or a year is no day: a start inside it is the more exact word, so the finish is not moved before it.
+    const period = precision === 2 ? startedOn?.slice(0, 7) : precision === 3 ? startedOn?.slice(0, 4) : undefined
+    if (startedOn && endedOn && period && endedOn < startedOn && endedOn.startsWith(period)) endedOn = startedOn
     if (startedOn && endedOn && endedOn < startedOn) {
       problems.push({ code: 'dateInvalid' })
       startedOn = null
