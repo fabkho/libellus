@@ -120,6 +120,8 @@ jobs:
               - 'supabase/tests/**'
               - 'supabase/templates/**'
               - 'scripts/*backup*'
+              - 'supabase/schema-snapshot/**'
+              - 'scripts/schema-snapshot/**'
             web:
               - *ci
               - 'web/**'
@@ -285,6 +287,20 @@ jobs:
 
       - name: Database rules (pgTAP)
         run: supabase test db
+
+      # The migrations are applied on this stack: what the catalog says now must equal the
+      # committed supabase/schema-snapshot/ (one catalog query through `docker exec`, about 1 s,
+      # on the stack this job started; its project_id is supabase/config.toml's). `pnpm
+      # schema:snapshot` in web/ regenerates it, docs/TESTING.md "The schema snapshot".
+      - name: Schema snapshot is fresh
+        run: |
+          node scripts/schema-snapshot/run.mjs
+          if ! git diff --exit-code --stat supabase/schema-snapshot || [ -n "$(git ls-files --others --exclude-standard supabase/schema-snapshot)" ]; then
+            git status --short supabase/schema-snapshot
+            echo "::error::supabase/schema-snapshot/ is stale: a migration changed the database and the snapshot was not regenerated. Run 'supabase db reset', then 'pnpm schema:snapshot' in web/, and commit the result."
+            git diff supabase/schema-snapshot | head -200
+            exit 1
+          fi
 
       - name: Web data layer (Vitest against the local stack)
         working-directory: web

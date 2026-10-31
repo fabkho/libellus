@@ -119,7 +119,9 @@ jobs:
         (github.event_name == 'push' && needs.release-please.outputs.release_created == 'true')
       ) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 25 and not 15: the drift check below may spend up to 10 minutes on pg-delta, and it must
+    # never be the reason a release job is killed (it is a warning, not a gate).
+    timeout-minutes: 25
     outputs:
       target: ${{ steps.branch.outputs.target }}
       moved: ${{ steps.move.outcome }}
@@ -246,6 +248,79 @@ jobs:
           set -euo pipefail
           [ -z "$DB_PASSWORD" ] || export SUPABASE_DB_PASSWORD="$DB_PASSWORD"
           supabase db push --linked --include-all --yes
+
+      # Dashboard changes that never became a migration (`supabase db diff` misses grants).
+      # The committed supabase/schema-snapshot/ is what the migrations of this tag add up to (the
+      # PR check in ci.yml keeps it fresh); the same read-only catalog query runs against
+      # production through the linked project and the two are compared, with the pg-delta diff
+      # next to it. Never fails the deploy: a warning and this summary only.
+      - name: Drift check (production vs migrations)
+        id: drift
+        if: steps.which.outputs.migrations == 'true' && steps.migrate.outcome == 'success'
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -uo pipefail
+          [ -z "$DB_PASSWORD" ] || export SUPABASE_DB_PASSWORD="$DB_PASSWORD"
+          prod="$RUNNER_TEMP/prod-snapshot"
+          drift=false
+          if [ ! -d supabase/schema-snapshot ]; then
+            echo "This tag has no supabase/schema-snapshot/; drift check skipped."
+            exit 0
+          fi
+          {
+            echo "## Database drift check"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if node scripts/schema-snapshot/run.mjs --linked --out "$prod" > "$RUNNER_TEMP/drift-run.txt" 2>&1; then
+            # `-` lines: in the migrations, missing in production. `+` lines: in production, in no migration.
+            if diff -ru -x README.md supabase/schema-snapshot "$prod" > "$RUNNER_TEMP/drift-snapshot.diff"; then
+              echo "Functions (public and private), tables, policies, triggers, grants (anon, authenticated, service_role, public), cron jobs and the realtime publication match the migrations." >> "$GITHUB_STEP_SUMMARY"
+            else
+              drift=true
+              grep -E '^(Only in|diff )' "$RUNNER_TEMP/drift-snapshot.diff" | sed -E 's/^diff -ru -x README.md //' | head -20 | while read -r l; do echo "::warning::drift: $l"; done
+              {
+                echo "**Production differs from the migrations** (\`-\` = in the migrations only, \`+\` = in production only; a dashboard change that never landed in a migration):"
+                echo
+                echo '```diff'
+                head -c 60000 "$RUNNER_TEMP/drift-snapshot.diff"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            cat "$RUNNER_TEMP/drift-run.txt"
+            echo "::warning::Drift check: the catalog query against production failed (see the log)."
+            { echo "The catalog query against production failed:"; echo '```'; head -c 4000 "$RUNNER_TEMP/drift-run.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # pg-delta: a shadow built from supabase/migrations against production.
+          if timeout 600 supabase db diff --linked --use-pg-delta > "$RUNNER_TEMP/drift-pgdelta.sql" 2> "$RUNNER_TEMP/drift-pgdelta.err"; then
+            if [ -s "$RUNNER_TEMP/drift-pgdelta.sql" ]; then
+              drift=true
+              {
+                echo
+                echo "**\`supabase db diff --linked --use-pg-delta\`** (what would turn production into the migrations):"
+                echo
+                echo '```sql'
+                head -c 60000 "$RUNNER_TEMP/drift-pgdelta.sql"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+            else
+              { echo; echo "\`supabase db diff --linked --use-pg-delta\`: no difference."; } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            cat "$RUNNER_TEMP/drift-pgdelta.err"
+            echo "::warning::Drift check: supabase db diff --linked did not finish (see the log)."
+            { echo; echo "\`supabase db diff --linked --use-pg-delta\` did not finish:"; echo '```'; head -c 4000 "$RUNNER_TEMP/drift-pgdelta.err"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ "$drift" = true ]; then
+            echo "::warning::Production has drifted from the migrations (a dashboard change?). Details in the job summary; fix it with a migration. The deploy continues."
+          fi
+          exit 0
 
       # Every function under supabase/functions (not `_shared`-style folders), each
       # with its own settings from config.toml ([functions.<name>]: verify_jwt,
