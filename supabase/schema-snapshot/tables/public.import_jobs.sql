@@ -5,6 +5,7 @@ create table public.import_jobs (
   claimed_at timestamp with time zone,
   cover_edition integer default 0 not null,
   cover_goodreads integer default 0 not null,
+  cover_hardcover integer default 0 not null,
   cover_lent integer default 0 not null,
   cover_none integer default 0 not null,
   cover_openlibrary integer default 0 not null,
