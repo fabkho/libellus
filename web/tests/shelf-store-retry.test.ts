@@ -40,6 +40,7 @@ const pinias: ReturnType<typeof createPinia>[] = []
 const reportError = vi.fn()
 let online = true
 async function store() {
+  vi.stubGlobal('useRequestURL', () => new URL('https://app.example.com/'))
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('shallowRef', shallowRef)
   vi.stubGlobal('computed', computed)

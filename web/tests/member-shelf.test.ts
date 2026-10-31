@@ -130,6 +130,18 @@ describe('memberShelfDocument', () => {
     expect(off.front).toMatch(/600x900bb\.jpg$/)
   })
 
+  it('makes our stored copies absolute against the page origin, and leaves source addresses alone', () => {
+    const key = 'c0ffeec0ffeec0ffeec0ffeec0ffeec0'
+    const origin = 'https://app.example.com'
+    const e = entry('finished', { book: book({ coverKey: key, coverWidths: [120, 240, 360, 600] }) })
+    const on = memberShelfDocument([e], { ...OPTIONS, origin, covers: { own: true } }).books[0]!.assets!
+    expect(on.front).toBe(`${origin}/c/${key}/600`)
+    expect(on.pile?.front).toBe(`${origin}/c/${key}/240`)
+    const off = memberShelfDocument([e], { ...OPTIONS, origin, covers: { own: false, proxy: false } }).books[0]!.assets!
+    expect(off.front).toMatch(/^https?:\/\/.*600x900bb\.jpg$/)
+    expect(off.front).not.toContain(origin)
+  })
+
   it('takes the date read, Rating, pages and binding from her entry', () => {
     const e = entry('finished', { pageCountOverride: 410, formatOverride: 'hardcover' }, { endedOn: '2025-11-03', rating: 15 })
     const b = memberShelfDocument([e], OPTIONS).books[0]!
