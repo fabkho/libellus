@@ -8,6 +8,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { RegalExportEntry, RegalExportSession } from '../../../web/app/data/export/regal.ts'
+import { isHardcoverCover } from '../../../web/app/data/hardcoverCover.ts'
 
 export type BookRow = {
   id: string
@@ -69,6 +70,9 @@ export function sortSessions(sessions: readonly Session[]): Session[] {
 
 export function entryFromRow(row: EntryRow): RegalExportEntry {
   const { book } = row
+  // The file feeds a public shelf, and this read has the service role, which `private.cover_shown` does not bind: a Hardcover
+  // cover (inside the app only, owner decision of 31 Oct 2026) goes out with neither its address nor the colours taken from it.
+  const hidden = isHardcoverCover(book.cover_url?.trim())
   return {
     addedAt: row.added_at,
     pageCountOverride: row.page_count_override ?? null,
@@ -82,8 +86,8 @@ export function entryFromRow(row: EntryRow): RegalExportEntry {
       year: book.published_year,
       publisher: book.publisher,
       description: book.description,
-      coverUrl: book.cover_url,
-      coverColors: book.cover_dominant && book.cover_secondary
+      coverUrl: hidden ? null : book.cover_url,
+      coverColors: !hidden && book.cover_dominant && book.cover_secondary
         ? { dominant: book.cover_dominant, secondary: book.cover_secondary }
         : null,
     },

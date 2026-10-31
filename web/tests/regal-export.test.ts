@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { Book } from '@/data/books'
 import { readMemberLibrary, type MemberLibraryEntry } from '@/data/export/memberLibrary'
 import { carryArt, workKey } from '@/data/export/carryArt'
-import { coverPalette, dayIn, exportRegalLibrary, regalBook } from '@/data/export/regal'
+import { coverPalette, dayIn, exportRegalLibrary, regalAssets, regalBook } from '@/data/export/regal'
 import { parseLibraryFile, validateLibraryFile } from '@/data/export/regalLibraryFile'
 import { createLibrary, type ReadingSession } from '@/data/library'
 import { signUpMember } from './support/member'
@@ -389,5 +389,16 @@ describe('carryArt', () => {
     expect(workKey({ title: 'Klara and the Sun: A GMA Book Club Pick', authors: ['Kazuo Ishiguro'] })).toBe('klara and the sun|ishiguro')
     expect(workKey({ title: 'Les Misérables', authors: ['Victor Hugo'] })).toBe('les miserables|hugo')
     expect(workKey({ title: 'Anonymous', authors: [] })).toBe('anonymous|')
+  })
+})
+
+describe('the library file feeds a public shelf: no Hardcover cover', () => {
+  const colours = { dominant: '#1a2b3c', secondary: '#f0e0d0' }
+
+  it('leaves out a Hardcover cover and the colours taken from it, and keeps any other', () => {
+    expect(regalAssets('https://assets.hardcover.app/edition/1/a.jpeg', colours)).toBeNull()
+    expect(regalAssets(' https://assets.hardcover.app/edition/1/a%20b.jpeg ', colours)).toBeNull()
+    expect(regalAssets('https://covers.openlibrary.org/b/id/1-L.jpg', colours)).toMatchObject({ front: 'https://covers.openlibrary.org/b/id/1-L.jpg' })
+    expect(regalAssets(null, colours)).toMatchObject({ palette: expect.anything() })
   })
 })

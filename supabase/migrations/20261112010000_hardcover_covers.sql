@@ -8,8 +8,9 @@
 --    surface that is not the member's own app. `cover_shown` is false for `assets.hardcover.app`, so the Book JSON of every
 --    answer that hands a Book to somebody else (a reading page, `/r/` and its link preview, the feed, a member's profile,
 --    the readers of a Book) carries neither the address nor the stored copy's key (`cover_key`, `cover_widths`: they travel
---    exactly where the URL travels, 20261109010000); the page draws the generated cover instead. Inside the app, on her own
---    Library and on the Catalogue's cards, the cover shows. Off switch for the whole source: drop the host from
+--    exactly where the URL travels, 20261109010000); the page draws the generated cover instead. Signed in, inside the app (her own
+--    Library, the Catalogue's cards), the cover shows. The Regal export that feeds the published shelf leaves it out in code
+--    (its service-role read is not bound by `cover_shown`). Off switch for the whole source: drop the host from
 --    `cover_allowed` again (the stored address stays in `books.cover_url`, hidden on the social surfaces anyway).
 -- 3. The import job decides the cover when it saves the match (`import_job_save_row`): a new source `hardcover` (cover
 --    `hardcover` of the row's result), its own counter `import_jobs.cover_hardcover`. The cover stage never decides it, so

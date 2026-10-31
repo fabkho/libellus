@@ -48,18 +48,46 @@ const BASE = { 'Cross-Origin-Resource-Policy': 'same-site', 'X-Content-Type-Opti
 const failure = (status, message) =>
   new Response(message, { status, headers: { ...BASE, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } })
 
+/** At most this many redirects are followed (Open Library's takes two: archive.org, then a storage host of its own). */
+const MAX_HOPS = 3
+
+/**
+ * The host's answer, redirects followed by hand, one hop at a time: every `Location` must be https, with no credentials and no port,
+ * on the allowlist (`ORIGIN_HOST`). A redirect anywhere else is no cover (a 502 to the caller), and nothing is asked of it.
+ */
+async function fetchFollowing(source) {
+  let current = new URL(source)
+  for (let hop = 0; hop <= MAX_HOPS; hop++) {
+    const response = await fetch(current.href, {
+      headers: { Accept: 'image/jpeg,image/png,image/webp,image/*;q=0.8', 'User-Agent': 'Libellus/1.0 (cover cache)' },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(ORIGIN_TIMEOUT),
+    })
+    if (response.status < 300 || response.status >= 400) return response
+    await response.body?.cancel().catch(() => {})
+    const location = response.headers.get('Location')
+    if (!location) return null
+    let next
+    try {
+      next = new URL(location, current)
+    } catch {
+      return null
+    }
+    if (next.protocol !== 'https:' || next.username || next.password || next.port || !ORIGIN_HOST.test(next.hostname)) return null
+    current = next
+  }
+  return null
+}
+
 /** The cover from the host, as bytes and a type; null when it is not a usable image. */
 async function fromHost(source) {
   let response
   try {
-    response = await fetch(source, {
-      headers: { Accept: 'image/jpeg,image/png,image/webp,image/*;q=0.8', 'User-Agent': 'Libellus/1.0 (cover cache)' },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(ORIGIN_TIMEOUT),
-    })
+    response = await fetchFollowing(source)
   } catch {
     return { status: 502 }
   }
+  if (!response) return { status: 502 }
   if (response.status === 404 || response.status === 410) return { status: 404 }
   if (!response.ok) return { status: 502 }
   // A redirect that ended somewhere else is not the cover of the host that was asked.

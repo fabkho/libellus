@@ -316,7 +316,7 @@ book's) as the row's `coverHint` when it is on that host, https, without a port 
 side (a smaller one is a thumbnail, the row then goes to the other sources). The upload carries it (`importUpload.ts`), and **the
 import job uses it without a request**: when it saves a row's match (`work.ts`, `withHardcoverCover`) it checks the address
 again (`web/app/data/hardcoverCover.ts`, the one rule: the host exactly, a plain path, no query), and `mergeCover` puts it where the
-ranking says: **right after the matched edition's own cover** (an edition that has one keeps it), before a cover only borrowed
+ranking says, for an edition found by ISBN or the file's own row (one found by title is another edition of the work, a shared Catalogue Book, and keeps what it has): **right after the matched edition's own cover** (an edition that has one keeps it), before a cover only borrowed
 from another edition, before the cover stage's Open Library and Goodreads. The row's `cover` is `hardcover`, its `cover_source`
 `hardcover` (decided with the match, so it never waits on the Goodreads pace), counted in `import_jobs.cover_hardcover`; the
 stored copy follows from the owned-covers reconcile like any other, the thumbhash from the cover store. A Catalogue Book that already
@@ -334,7 +334,7 @@ cover rule.
 `cover_allowed` is true. Every answer made for somebody who is not the member (a shared reading page and its cards, `/r/<token>` and
 its link preview and image, the feed, a profile, the readers of a Book) therefore carries neither `cover_url` nor the stored copy's
 `cover_key` / `cover_widths` for such a Book, and the page draws the generated cover; the `/r/` Function and `reading-page-og` also refuse the host
-on their own. Inside the app, in her Library, they show. No takedown line in the privacy notice (it says what Hardcover receives:
+on their own. The Regal export, which feeds the published shelf, leaves the cover and the colours taken from it out as well (`regalAssets`, and the service-role read in `regal-export/library.ts`). Signed in, inside the app, they show: her Library and the Catalogue's cards for the Book (an author page, a series sheet, `work_card`); they are not shown to visitors or on shared or public pages. No takedown line in the privacy notice (it says what Hardcover receives:
 image requests from our server and cache, nothing from a member).
 
 Terms and the way out: docs/THIRD-PARTY.md, *Hardcover covers*. Off: drop `hardcover` from `COVER_STORE_HOSTS` and clear those Books'

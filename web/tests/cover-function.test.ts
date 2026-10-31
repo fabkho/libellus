@@ -225,6 +225,45 @@ describe('a host that does not give a cover', () => {
     expect((await call(ask(OL, 240)).settled()).status).toBe(200)
   })
 
+  describe('redirects, followed by hand on the allowlist', () => {
+    const redirect = (location: string, status = 302) => new Response(null, { status, headers: { Location: location } })
+    const ARCHIVE = 'https://archive.org/download/l_covers_0008/0008231856-L.jpg'
+    const STORAGE = 'https://ia800000.us.archive.org/view_archive.php?archive=/x.zip&file=0008231856-L.jpg'
+
+    it('follows Open Library to the archive and its storage host, never letting fetch follow by itself', async () => {
+      fetchMock.mockImplementation(async (url: string) => (url === OL ? redirect(ARCHIVE) : url === ARCHIVE ? redirect(STORAGE, 301) : hostAnswers()))
+      const response = await call(ask(OL, 240)).settled()
+      expect(response.status).toBe(200)
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([OL, ARCHIVE, STORAGE])
+      expect(fetchMock.mock.calls.every(([, init]) => init.redirect === 'manual')).toBe(true)
+    })
+
+    it.each([
+      ['another host', 'https://evil.example/x.jpg'],
+      ['plain http', 'http://covers.openlibrary.org/b/id/1-L.jpg'],
+      ['credentials', 'https://user:pass@archive.org/x.jpg'],
+      ['a port', 'https://archive.org:8443/x.jpg'],
+      ['a look-alike', 'https://archive.org.evil.example/x.jpg'],
+      ['an internal address', 'https://169.254.169.254/latest/meta-data'],
+    ])('stops at a redirect to %s: nothing is asked of it, nothing is stored', async (_, target) => {
+      fetchMock.mockImplementation(async (url: string) => (url === OL ? redirect(target) : hostAnswers()))
+      const response = await call(ask(OL, 240)).settled()
+      expect(response.status).toBe(502)
+      expect(response.headers.get('Cache-Control')).toBe('no-store')
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([OL])
+      expect(cache.put).not.toHaveBeenCalled()
+    })
+
+    it('gives up after three hops, and on a redirect without a Location', async () => {
+      fetchMock.mockImplementation(async (url: string) => redirect(`${ARCHIVE}?n=${fetchMock.mock.calls.length}`))
+      expect((await call(ask(OL, 240)).settled()).status).toBe(502)
+      expect(fetchMock).toHaveBeenCalledTimes(4)
+      fetchMock.mockReset()
+      fetchMock.mockImplementation(async () => new Response(null, { status: 302 }))
+      expect((await call(ask(APPLE, 120)).settled()).status).toBe(502)
+    })
+  })
+
   it('is a 502 when it does not answer', async () => {
     fetchMock.mockImplementation(async () => { throw new TypeError('network') })
     expect((await call(ask(OL, 240)).settled()).status).toBe(502)

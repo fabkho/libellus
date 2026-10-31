@@ -133,7 +133,7 @@ load it same-origin, a WebGL texture needs a CORS-clean image, so does a canvas 
   `https://assets.hardcover.app/<path>` (a Hardcover export's cover: one image, no size variants, a plain path without a
   query, fetched as the address says), and the widths
   120, 240, 360, 480 and 600 only (each width is an entry; no width asks for any size). Anything else is a 400
-  with `no-store`, and no host is asked. The sized address (Apple's `<w>x<1.5w>bb`, Open Library's `-M` up to
+  with `no-store`, and no host is asked. Redirects from a host are followed by hand, at most 3 hops, each one https, without credentials or a port and on the same allowlist (Apple's, Open Library's, Hardcover's, and `archive.org` for Open Library's older covers); any other `Location` is a 502 and is never asked. The sized address (Apple's `<w>x<1.5w>bb`, Open Library's `-M` up to
   180 px, else `-L`) is computed here from `u` and `w`, and is the cache key: a stored `-L` and a `-M`, a
   600×900 and a 120×180 `u`, are one entry at one width.
 - **When the host fails.** A cover in the cache is served as it is; one older than 30 days is served and

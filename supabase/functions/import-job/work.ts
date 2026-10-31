@@ -117,11 +117,16 @@ export function matchResult({ edition, matched, review }: Matched): Extract<RowR
 /**
  * The edition with the cover the Hardcover zip named for the row (`coverHint`, uploaded by the device and checked again here: the
  * payload is the member's to write, so only Hardcover's own address passes, `hardcoverCoverAddress`). The ranking
- * (data/coverRank.ts) does the rest, through `mergeCover`: it goes right after the edition's own cover (an edition that has
+ * (data/coverRank.ts) does the rest, through `mergeCover`: only for an edition found by ISBN or the file's own row (not one found
+ * by title: another edition of the work), right after the edition's own cover (an edition that has
  * one is not touched), and replaces a cover the match only lent (another edition's, the work's ebook). Nothing is asked of
  * Hardcover: the address is used as it came, its stored copy and thumbhash follow from the cover store. Pure.
  */
 export function withHardcoverCover(edition: Edition, hint: unknown): Edition {
+  // The image is of the edition she has. An edition found by ISBN is that edition, and the file's own row (`via` null) is hers;
+  // one found by title is another edition of the work, a shared Catalogue Book: it keeps what it has (or what was lent to it)
+  // and the hint is not written onto it.
+  if (edition.via === 'title') return edition
   const address = hardcoverCoverAddress((hint as { url?: unknown } | null | undefined)?.url)
   if (!address) return edition
   return mergeCover(edition, { coverUrl: address, coverThumbhash: null, coverColors: null, kind: 'hardcover' }) ?? edition

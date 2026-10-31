@@ -199,3 +199,18 @@ Deno.test('a hint that is not Hardcover\'s own address is not a cover: another h
   ]) assertEquals(withHardcoverCover(edition, { url, width: 400, height: 600 }), edition, url)
   for (const hint of [null, undefined, {}, { url: 7 }, 'https://assets.hardcover.app/a.jpg']) assertEquals(withHardcoverCover(edition, hint), edition)
 })
+
+Deno.test('an edition found by title is another edition of the work: the hint is not written onto it (no cover, or a lent one); found by ISBN or the file\'s own row it is', () => {
+  const book = (fields: Partial<Book>) => ({ id: 'book-1', source: 'openlibrary', title: 'Piranesi', authors: ['Susanna Clarke'], isbn13: null, language: 'en', coverUrl: null, coverThumbhash: null, coverColors: null, ...fields }) as unknown as Book
+  const sibling = book({ id: 'book-2', isbn13: '9781526622426', coverUrl: 'https://covers.openlibrary.org/b/id/10226290-L.jpg' })
+  const titled: Edition = { book: book({}), via: 'title', unsure: false, alternatives: [sibling], near: [] }
+  assertEquals(withHardcoverCover(titled, HINT), titled, 'no cover of its own: left to the other sources')
+  const lent = withLentCover(titled, coverLender(PIRANESI, titled.book, [sibling]))
+  assertEquals(withHardcoverCover(lent, HINT), lent, 'a lent cover stays')
+  assertEquals(matchResult({ row: jobRow(PIRANESI, 0), book: PIRANESI, edition: withHardcoverCover(lent, HINT), matched: true, review: { tier: 'quiet', choose: false, notes: [] } as never }).cover, 'lent')
+  // By ISBN: the same edition, so its image ranks after the edition's own cover and above a lent one.
+  const byIsbn: Edition = { ...titled, via: 'isbn' }
+  assertEquals(matchResult({ row: jobRow(PIRANESI, 0), book: PIRANESI, edition: withHardcoverCover(byIsbn, HINT), matched: true, review: { tier: 'quiet', choose: false, notes: [] } as never }).cover, 'hardcover')
+  // The file's own row (no edition found): hers.
+  assertEquals(matchResult({ row: jobRow(PIRANESI, 0), book: PIRANESI, edition: withHardcoverCover({ ...titled, via: null }, HINT), matched: false, review: { tier: 'needsLook', choose: false, notes: [] } as never }).cover, 'hardcover')
+})

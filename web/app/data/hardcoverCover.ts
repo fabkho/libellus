@@ -6,7 +6,7 @@
  * `/cover` cache (`utils/coverSize.ts`), the cover-store function (its own copy of the rule, `plan.ts`, kept in step by a
  * test) and the database (`private.cover_allowed`, 20261112010000).
  *
- * Owner decision (31 Oct 2026): these covers show inside the app and nowhere else. `private.cover_shown` is false for the
+ * Owner decision (31 Oct 2026): these covers are not shown to visitors or on shared or public pages, and show inside the app. `private.cover_shown` is false for the
  * host, so the Book JSON of a reading page, `/r/`, the feed and a profile carries no address and no key; `isHardcoverCover`
  * is the same rule for the code that holds an address and draws it for a visitor (the `/r/` function's preview image).
  *
