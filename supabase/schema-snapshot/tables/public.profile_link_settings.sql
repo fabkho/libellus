@@ -1,7 +1,7 @@
 create table public.profile_link_settings (
   member_id uuid not null,
-  visibility text default 'followers'::text not null,
-  updated_at timestamp with time zone default now() not null
+  updated_at timestamp with time zone default now() not null,
+  visibility text default 'followers'::text not null
 );
 
 -- constraints

@@ -1,10 +1,10 @@
 create table private.cover_store_settings (
-  id boolean default true not null,
   enabled boolean default false not null,
   function_url text,
-  min_interval interval default '00:00:50'::interval not null,
+  id boolean default true not null,
   last_kick_at timestamp with time zone,
-  last_request_id bigint
+  last_request_id bigint,
+  min_interval interval default '00:00:50'::interval not null
 );
 
 -- constraints

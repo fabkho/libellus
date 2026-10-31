@@ -1,18 +1,18 @@
 create table public.reading_sessions (
-  id uuid default gen_random_uuid() not null,
-  entry_id uuid not null,
-  started_on date,
-  ended_on date,
-  outcome session_outcome,
-  rating smallint,
-  review text,
   abandon_reason text,
   created_at timestamp with time zone default now() not null,
+  ended_on date,
+  entry_id uuid not null,
+  id uuid default gen_random_uuid() not null,
   import_key text,
+  outcome session_outcome,
   progress_page integer,
   progress_percent smallint,
   progress_updated_at timestamp with time zone,
-  review_spoilers boolean default false not null
+  rating smallint,
+  review text,
+  review_spoilers boolean default false not null,
+  started_on date
 );
 
 -- constraints

@@ -1,10 +1,10 @@
 create table public.reading_progress_days (
-  session_id uuid not null,
   day date not null,
-  start_page integer,
-  start_percent smallint,
   end_page integer,
   end_percent smallint,
+  session_id uuid not null,
+  start_page integer,
+  start_percent smallint,
   updated_at timestamp with time zone default now() not null
 );
 

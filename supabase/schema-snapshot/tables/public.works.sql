@@ -1,16 +1,16 @@
 create table public.works (
+  cover_url text,
+  created_at timestamp with time zone default now() not null,
+  editions jsonb default '{}'::jsonb not null,
+  fetched_at timestamp with time zone,
+  first_year smallint,
+  genre_ids text[] default '{}'::text[] not null,
   id uuid default gen_random_uuid() not null,
-  wikidata_id text,
+  kind text,
   openlibrary_key text,
   title text not null,
   titles jsonb default '{}'::jsonb not null,
-  first_year smallint,
-  kind text,
-  cover_url text,
-  editions jsonb default '{}'::jsonb not null,
-  genre_ids text[] default '{}'::text[] not null,
-  fetched_at timestamp with time zone,
-  created_at timestamp with time zone default now() not null
+  wikidata_id text
 );
 
 -- constraints

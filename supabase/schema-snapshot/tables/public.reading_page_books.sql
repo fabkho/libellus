@@ -1,6 +1,6 @@
 create table public.reading_page_books (
-  member_id uuid not null,
   book_id uuid not null,
+  member_id uuid not null,
   review boolean default false not null,
   shared_at timestamp with time zone default now() not null
 );

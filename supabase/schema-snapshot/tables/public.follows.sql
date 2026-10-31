@@ -1,9 +1,9 @@
 create table public.follows (
-  follower_id uuid not null,
-  followee_id uuid not null,
-  requested_at timestamp with time zone default now() not null,
   accepted_at timestamp with time zone,
-  declined_at timestamp with time zone
+  declined_at timestamp with time zone,
+  followee_id uuid not null,
+  follower_id uuid not null,
+  requested_at timestamp with time zone default now() not null
 );
 
 -- constraints

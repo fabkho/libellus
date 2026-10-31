@@ -1,13 +1,13 @@
 create table public.goodreads_title_ratings (
-  title_key text not null,
-  status text not null,
-  matched_by text,
+  checked_at timestamp with time zone default now() not null,
+  cover_url text,
   goodreads_id text,
+  matched_by text,
   rating numeric(3,2),
   ratings_count integer,
   reviews_count integer,
-  checked_at timestamp with time zone default now() not null,
-  cover_url text
+  status text not null,
+  title_key text not null
 );
 
 -- constraints

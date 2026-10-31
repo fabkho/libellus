@@ -1,14 +1,14 @@
 create table private.waitlist (
-  id uuid default gen_random_uuid() not null,
-  email citext not null,
-  created_at timestamp with time zone default now() not null,
-  source text default 'reading_page'::text not null,
-  source_member_id uuid,
   consent_text_version text not null,
-  invited_at timestamp with time zone,
-  note text,
+  created_at timestamp with time zone default now() not null,
+  email citext not null,
+  id uuid default gen_random_uuid() not null,
   invite_code_id uuid,
-  locale text
+  invited_at timestamp with time zone,
+  locale text,
+  note text,
+  source text default 'reading_page'::text not null,
+  source_member_id uuid
 );
 
 -- constraints

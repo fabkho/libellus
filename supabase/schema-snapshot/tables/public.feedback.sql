@@ -1,11 +1,11 @@
 create table public.feedback (
-  id uuid default gen_random_uuid() not null,
-  member_id uuid default auth.uid() not null,
-  kind text not null,
   body text not null,
   context jsonb default '{}'::jsonb not null,
   created_at timestamp with time zone default now() not null,
   handled_at timestamp with time zone,
+  id uuid default gen_random_uuid() not null,
+  kind text not null,
+  member_id uuid default auth.uid() not null,
   owner_note text
 );
 

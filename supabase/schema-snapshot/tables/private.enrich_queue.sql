@@ -1,11 +1,11 @@
 create table private.enrich_queue (
-  book_id uuid not null,
-  reason text not null,
-  enqueued_at timestamp with time zone default now() not null,
-  not_before timestamp with time zone default now() not null,
   attempts integer default 0 not null,
+  book_id uuid not null,
   claimed_until timestamp with time zone,
-  last_error text
+  enqueued_at timestamp with time zone default now() not null,
+  last_error text,
+  not_before timestamp with time zone default now() not null,
+  reason text not null
 );
 
 -- constraints

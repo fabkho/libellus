@@ -1,7 +1,7 @@
 create table private.book_search (
   book_id uuid not null,
-  words tsvector not null,
-  title text not null
+  title text not null,
+  words tsvector not null
 );
 
 -- constraints

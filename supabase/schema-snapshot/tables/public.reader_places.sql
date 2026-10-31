@@ -1,9 +1,9 @@
 create table public.reader_places (
-  member_id uuid default auth.uid() not null,
-  entry_id uuid not null,
   cfi text not null,
-  fraction real not null,
+  entry_id uuid not null,
   file_hash text not null,
+  fraction real not null,
+  member_id uuid default auth.uid() not null,
   updated_at timestamp with time zone default now() not null
 );
 

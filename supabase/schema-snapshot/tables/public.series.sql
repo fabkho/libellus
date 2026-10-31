@@ -1,13 +1,13 @@
 create table public.series (
+  created_at timestamp with time zone default now() not null,
+  created_by uuid,
+  fetched_at timestamp with time zone,
   id uuid default gen_random_uuid() not null,
   name text not null,
-  wikidata_id text,
   openlibrary_key text,
   parent_id uuid,
   source text not null,
-  created_by uuid,
-  fetched_at timestamp with time zone,
-  created_at timestamp with time zone default now() not null
+  wikidata_id text
 );
 
 -- constraints

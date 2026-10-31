@@ -8,19 +8,23 @@ The migrations in `supabase/migrations/` stay the source of truth; this folder i
 | Path | Content |
 | --- | --- |
 | `functions/<schema>.<name>(<arg types>).sql` | `pg_get_functiondef`, one file per overload |
-| `tables/<schema>.<table>.sql` | columns, constraints, indexes, RLS on/off, grants |
+| `tables/<schema>.<table>.sql` | columns (sorted by name, not by their physical order), constraints, indexes, RLS on/off, grants |
 | `policies/<schema>.<table>.sql` | all RLS policies of a table (`public`, `private` and `storage`) |
 | `triggers/<schema>.<table>.sql` | all triggers of a table (ours on `auth.users` and `storage.objects` too) |
 | `views/` | views and materialized views |
 | `types/` | enums |
 | `grants/` | schema, table, function, sequence and default privileges of `public` and `private`, for anon, authenticated, service_role, public |
 | `cron/jobs.sql` | pg_cron jobs: name, schedule, command |
-| `realtime/publication.sql` | realtime publications and their tables |
+| `realtime/publication.sql` | the app's publication, `supabase_realtime`, and its tables |
 | `extensions.sql` | installed extensions |
 
 Left out on purpose: `auth`, `storage` (except its policies and our triggers on it, and not its own
 grants: those come from the storage image's version, not from a migration), `realtime`, `extensions`,
-`graphql_public` and the other platform schemas; versions, OIDs, timestamps and data.
+`graphql_public` and the other platform schemas; versions, OIDs, timestamps and data. From the publications only
+`supabase_realtime`: the realtime platform's `supabase_realtime_messages_publication` gains a
+`realtime.messages_YYYY_MM_DD` table every day. A table's columns are listed by name and not in their physical
+order, which two parallel migrations land in either way and no migration can change afterwards. So the release's
+drift check compares like with like, and a warning there means a change that really is missing from the migrations.
 
 ## Regenerate
 

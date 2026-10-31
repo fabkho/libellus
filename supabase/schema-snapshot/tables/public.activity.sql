@@ -1,11 +1,11 @@
 create table public.activity (
-  id uuid default gen_random_uuid() not null,
-  member_id uuid not null,
-  entry_id uuid not null,
-  session_id uuid,
-  kind text not null,
-  on_day date,
   created_at timestamp with time zone default now() not null,
+  entry_id uuid not null,
+  id uuid default gen_random_uuid() not null,
+  kind text not null,
+  member_id uuid not null,
+  on_day date,
+  session_id uuid,
   visible_at timestamp with time zone not null
 );
 

@@ -1,11 +1,11 @@
 create table public.reading_pages (
   member_id uuid not null,
-  token text,
-  show_reading boolean default true not null,
-  show_year boolean default true not null,
   show_favourites boolean default true not null,
   show_finished boolean default true not null,
+  show_reading boolean default true not null,
   show_shelf boolean default true not null,
+  show_year boolean default true not null,
+  token text,
   updated_at timestamp with time zone default now() not null
 );
 

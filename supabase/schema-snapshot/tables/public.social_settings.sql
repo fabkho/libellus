@@ -1,14 +1,14 @@
 create table public.social_settings (
+  follow_token text not null,
   member_id uuid not null,
   private boolean default true not null,
-  show_reading boolean default true not null,
-  show_want boolean default true not null,
+  show_abandoned boolean default true not null,
   show_finished boolean default true not null,
   show_ratings boolean default true not null,
+  show_reading boolean default true not null,
   show_reviews boolean default true not null,
-  show_abandoned boolean default true not null,
+  show_want boolean default true not null,
   show_year boolean default true not null,
-  follow_token text not null,
   updated_at timestamp with time zone default now() not null
 );
 

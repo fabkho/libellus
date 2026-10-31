@@ -1,7 +1,7 @@
 create table public.book_authors (
+  author_id uuid not null,
   book_id uuid not null,
-  "position" smallint not null,
-  author_id uuid not null
+  "position" smallint not null
 );
 
 -- constraints

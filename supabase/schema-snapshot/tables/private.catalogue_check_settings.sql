@@ -1,12 +1,12 @@
 create table private.catalogue_check_settings (
-  id boolean default true not null,
   function_url text,
-  min_interval interval default '00:00:50'::interval not null,
+  id boolean default true not null,
+  last_error text,
   last_kick_at timestamp with time zone,
   last_request_id bigint,
   last_status integer,
-  last_error text,
-  last_status_at timestamp with time zone
+  last_status_at timestamp with time zone,
+  min_interval interval default '00:00:50'::interval not null
 );
 
 -- constraints

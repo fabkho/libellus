@@ -1,12 +1,12 @@
 create table public.import_queue (
-  member_id uuid not null,
-  holder text not null,
-  rows integer default 0 not null,
-  done integer default 0 not null,
-  joined_at timestamp with time zone default clock_timestamp() not null,
-  started_at timestamp with time zone,
   beat_at timestamp with time zone default clock_timestamp() not null,
-  device text
+  device text,
+  done integer default 0 not null,
+  holder text not null,
+  joined_at timestamp with time zone default clock_timestamp() not null,
+  member_id uuid not null,
+  rows integer default 0 not null,
+  started_at timestamp with time zone
 );
 
 -- constraints
