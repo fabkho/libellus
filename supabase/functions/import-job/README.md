@@ -148,6 +148,24 @@ write was recorded: that outcome stands), the suspects after a crash come one at
 (`row_invalid`) is failed with that reason; any other error fails the batch (the chunk pauses with backoff). A job that is
 done, failed (stalled) or cancelled gives its place in the queue up (`import_job_dequeue`).
 
+## A Hardcover zip's extras (`docs/plans/hardcover-zip.md`, PR 2)
+
+The device sends three things a CSV never has (all optional; a job without them is what it always was, so a job queued before the
+migration, or a CSV import, needs nothing of it): a row's `session.progress`, and with the start `p_collection_order` and
+`p_empty_collections` (`start_import_job`, kept in `import_job_collections` until the job is done; no member reads that table).
+
+- **Progress** is part of the row: `importArguments` passes `progress` (`{ page }` or `{ percent }`) to `import_books`, which writes it on an
+  open or abandoned session (`progress_page` / `progress_percent`, `progress_updated_at`), cuts a page past the page count back
+  (`clamp_progress_page`) and writes **no `reading_progress_days` row**. Audiobook seconds were turned into a percent on the device.
+  Out of range or the wrong shape: that row fails with `progress_invalid`; on another status: `session_invalid`.
+- **Empty Collections** are made by the job's first write (`import_job_write`: the ones she does not have yet, any case).
+- **Ranked Collections** are put in order by the end step (`import_job_release`, when the job is done, as the member, through
+  `reorder_collection`): her entries that were on the Collection before the job started keep the front, this import's entries follow in
+  rank order. A failure there is a warning in the database log, never a failed job.
+
+All of it runs as the job's own member (`import_job_as_member`), so only her Collections and entries are ever read or changed.
+`supabase/tests/import_books_progress_test.sql` and `import_job_zip_test.sql` pin it; `write_test.ts` the row's `progress`.
+
 ## As the member
 
 The job writes for a member who is not in the app, through the very functions the app calls (`search_books`,

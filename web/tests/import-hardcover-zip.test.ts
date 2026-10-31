@@ -3,18 +3,21 @@ import Papa from 'papaparse'
 import { strToU8, unzip, zipSync } from 'fflate'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { startImportJob } from '@/data/importJob'
+import { importArguments } from '@/data/bookImport'
 import { parseExport } from '@/data/import/detect'
 import { hardcoverAdapter } from '@/data/import/hardcover'
 import { COVER_HINT_MIN_SIDE, judgeCover, mapHardcoverExport, readHardcoverZip, ZIP_LIMITS } from '@/data/import/hardcoverZip'
 import { HardcoverZipError, type ImportBook, type ImportFile } from '@/data/import/rows'
 import { prepareUpload, uploadRow } from '@/data/importUpload'
 import { signUpMember } from './support/member'
+import { sql } from './support/stack'
 import { Account, bigAccount, fullAccount, lieAboutSize, manyEntries, testIsbn } from './fixtures/hardcover-zip/make'
 
 /**
  * Reading Hardcover's "everything" zip (docs/plans/hardcover-zip.md, PR 1): the reader with its limits, then one `it` per mapping
  * rule of the plan, detection and every error code, zip-vs-CSV parity for the fields both carry, and what `importUpload` does
- * with what only a zip knows (progress, cover address, list order, empty lists: mapped, kept out of the upload for now).
+ * with what only a zip knows: progress, list order and empty lists go to the job (PR 2), the cover address is mapped and kept out
+ * of the upload until the job takes it (PR 3).
  * Every zip is built here from an invented account (tests/fixtures/hardcover-zip/make.ts); nothing is a real export.
  */
 
@@ -600,49 +603,93 @@ describe('zip and CSV of one account', () => {
 })
 
 describe('what the upload does with a zip', () => {
-  it('uploads the library and the list-only rows with their Collections, and carries what the job does not take yet apart', async () => {
+  it('uploads the library and the list-only rows with their Collections, the progress on their reads, and the lists apart', async () => {
     const ada = await signUpMember()
-    const { account } = fullAccount()
+    const { account, ids } = fullAccount()
     const prepared = await prepareUpload(ada.client, account.zip(), TODAY, { zip: true })
     expect(prepared.ok).toBe(true)
     if (!prepared.ok) return
     expect(prepared.source).toBe('hardcover')
     expect(prepared.rows.length).toBe(prepared.books)
     expect(prepared.already).toBe(0)
-    // progress, coverHint, collectionOrder and emptyCollections: mapped and tested, stripped before upload.
+    // collectionOrder and emptyCollections come apart from the rows (they go with the start).
     expect(prepared.collectionOrder.map((order) => order.name)).toEqual(['Test Ranked'])
     expect(prepared.emptyCollections).toEqual(['Test Empty'])
+    // The cover address stays out until PR 3; the progress goes along with its read.
     const wire = JSON.stringify(prepared.rows)
     expect(wire).not.toContain('coverHint')
-    expect(wire).not.toContain('progress')
     expect(wire).not.toContain('assets.hardcover.app')
     for (const row of prepared.rows) expect(Object.keys(row)).not.toContain('coverHint')
+    const progress = (id: number) => (prepared.rows.find((row) => row.key === `hardcover:${id}`) as { session: { progress?: unknown } }).session.progress
+    expect(progress(ids['Reading page']!)).toEqual({ page: 120 })
+    expect(progress(ids['DNF day']!)).toEqual({ page: 80 })
     const listOnly = prepared.rows.find((row) => row.title === 'Test Book: List only one')
     expect(listOnly).toMatchObject({ status: 'want_to_read', collections: ['Test Ranked', 'Test Plain'] })
-    // What the server takes, as it is.
-    expect((await startImportJob(ada.client, { rows: prepared.rows, source: prepared.source, device: null, already: 0, languages: ['en'] })).error).toBeNull()
+    // What the server takes, as it is: the lists are kept with the job.
+    const started = await startImportJob(ada.client, {
+      rows: prepared.rows,
+      source: prepared.source,
+      device: null,
+      already: 0,
+      languages: ['en'],
+      collectionOrder: prepared.collectionOrder,
+      emptyCollections: prepared.emptyCollections,
+    })
+    expect(started.error).toBeNull()
+    const kept = await sql<{ order: { name: string; keys: string[] }[]; empty: string[]; made: boolean }>(
+      'select collection_order as order, empty_collections as empty, empty_made as made from public.import_job_collections where job_id = $1',
+      [started.data],
+    )
+    expect(kept).toEqual([{ order: prepared.collectionOrder, empty: ['Test Empty'], made: false }])
   })
 
-  it('an oversize row is trimmed without its review and still uploads no progress', async () => {
+  it('an oversize row is trimmed without its review and keeps its progress', async () => {
     const { account, ids } = fullAccount()
     const book = (await mapped(account)).books.find((one) => one.sourceId === String(ids['DNF day']))!
     expect(book.session?.progress).toEqual({ page: 80 })
     const row = uploadRow({ ...book, session: { ...book.session!, review: 'x'.repeat(30_000) } }) as { session: Record<string, unknown>; problems: unknown[] }
     expect(row.session.review).toBeNull()
     expect(row.problems).toEqual([])
-    expect('progress' in row.session).toBe(false)
-    expect(JSON.stringify(row)).not.toContain('progress')
+    expect(row.session.progress).toEqual({ page: 80 })
   })
 
-  it('uploadRow strips the cover hint and the session’s progress, and keeps everything else', async () => {
+  it('uploadRow strips the cover hint, keeps the session’s progress and everything else', async () => {
     const { account, ids } = fullAccount()
     const book = (await mapped(account)).books.find((one) => one.sourceId === String(ids['Reading page']))!
     expect(book.coverHint).not.toBeNull()
     expect(book.session?.progress).toEqual({ page: 120 })
     const row = uploadRow(book) as { session: Record<string, unknown>; coverHint?: unknown }
     expect(row.coverHint).toBeUndefined()
-    expect('progress' in row.session).toBe(false)
+    expect(row.session.progress).toEqual({ page: 120 })
     expect(row).toMatchObject({ key: book.key, title: book.title, status: 'reading', session: { startedOn: '2024-09-01', outcome: null }, collections: [] })
+  })
+
+  it('the job’s write argument carries the progress, and a CSV row’s has none', async () => {
+    const { account, ids } = fullAccount()
+    const books = (await mapped(account)).books
+    const argumentOf = (id: number) => {
+      const book = books.find((one) => one.sourceId === String(id))!
+      return importArguments({ ...book, collections: [], book: { title: book.title, authors: book.authors } as never }) as Record<string, unknown>
+    }
+    expect(argumentOf(ids['Reading page']!).progress).toEqual({ page: 120 })
+    expect(argumentOf(ids['DNF day']!).progress).toEqual({ page: 80 })
+    expect(argumentOf(ids['Reading percent']!).progress).toEqual({ percent: 42 })
+    const csv = parseExport(new TextDecoder().decode(new Uint8Array(readFileSync(new URL('./fixtures/hardcover/hardcover_export.csv', import.meta.url)))), TODAY)
+    for (const book of csv.books) {
+      expect('progress' in importArguments({ ...book, collections: [], book: { title: book.title, authors: book.authors } as never })).toBe(false)
+    }
+  })
+
+  it('a CSV start sends the five arguments it always did; a zip’s lists go as two more, and only when there are some', async () => {
+    const calls: Record<string, unknown>[] = []
+    const client = { rpc: (_name: string, args: Record<string, unknown>) => (calls.push(args), Promise.resolve({ data: 'job', error: null, status: 200 })) }
+    const base = { rows: [{ key: 'hardcover:1' }], source: 'hardcover', device: null, already: 0, languages: ['en'] }
+    await startImportJob(client as never, base)
+    await startImportJob(client as never, { ...base, collectionOrder: [], emptyCollections: [] })
+    await startImportJob(client as never, { ...base, collectionOrder: [{ name: 'A', keys: ['hardcover:1'] }], emptyCollections: ['B'] })
+    expect(Object.keys(calls[0]!).sort()).toEqual(['p_already', 'p_device', 'p_languages', 'p_rows', 'p_source'])
+    expect(Object.keys(calls[1]!).sort()).toEqual(Object.keys(calls[0]!).sort())
+    expect(calls[2]).toMatchObject({ p_collection_order: [{ name: 'A', keys: ['hardcover:1'] }], p_empty_collections: ['B'] })
   })
 
   it('flag off: a zip is no CSV, as today; with it on a CSV still reads the same', async () => {

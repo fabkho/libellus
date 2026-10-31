@@ -204,6 +204,8 @@ export const useImportStore = defineStore('import', () => {
       device: deviceOf(storage(), () => crypto.randomUUID()),
       already: prepared.already,
       languages: searchLanguages(),
+      collectionOrder: prepared.collectionOrder,
+      emptyCollections: prepared.emptyCollections,
     })
     await settle(started)
   }

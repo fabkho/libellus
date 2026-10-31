@@ -793,6 +793,8 @@ export function importArguments(row: ImportRow) {
     rating: session?.rating ?? null,
     review: session?.review ?? null,
     outcome: session?.outcome === 'abandoned' ? 'abandoned' : null,
+    // Where she is in an open or abandoned read (a Hardcover zip's): { page } or { percent }, the database's own rule decides. A CSV row has none.
+    ...(session?.progress ? { progress: session.progress } : {}),
     added_on: row.addedOn,
     // Her earlier reads (undated: Read Count; dated: several reads), her page count, her shelves (#111).
     extra_reads: row.extraReads,

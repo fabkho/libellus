@@ -35,7 +35,7 @@ export type ImportSession = {
   /** Integer quarters (1 … 20), only on a finished read. */
   rating: number | null
   review: string | null
-  /** Hardcover zip only: where the read stands (open, or given up). Mapped, not uploaded yet. */
+  /** Hardcover zip only: where the read stands (open, or given up). Uploaded: the job writes it (`import_books`). */
   progress?: ImportProgress | null
 }
 
@@ -131,9 +131,9 @@ export type ImportFile = {
   source: ImportSource
   books: ImportBook[]
   skipped: SkippedRow[]
-  /** Hardcover zip only: her ranked lists, each with the keys of its rows in rank order. The job reorders the Collection by it (not uploaded yet). */
+  /** Hardcover zip only: her ranked lists, each with the keys of its rows in rank order. The job reorders the Collection by it when it is done (sent with the start). */
   collectionOrder?: { name: string; keys: string[] }[]
-  /** Hardcover zip only: her lists with no book, which still become empty Collections (not uploaded yet). */
+  /** Hardcover zip only: her lists with no book, which still become empty Collections (the job makes them with its first write; sent with the start). */
   emptyCollections?: string[]
 }
 

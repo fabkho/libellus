@@ -36,8 +36,8 @@ import {
  * - `mapHardcoverExport(export, today)`: the files → `ImportFile`, one row per book of her library and one per book that is only
  *   on one of her lists. Every rule reuses the CSV adapter's helpers (hardcover.ts, rows.ts), so the two cannot drift.
  *
- * What the zip adds to a row, and the upload does not carry yet (importUpload.ts strips it): `session.progress`, `coverHint`, and,
- * on the file, `collectionOrder` and `emptyCollections`.
+ * What the zip adds to a row: `session.progress`, `coverHint`, and, on the file, `collectionOrder` and `emptyCollections`. The upload
+ * carries all but `coverHint` to the job (importUpload.ts; the cover address waits for the plan's PR 3).
  */
 
 // ------------------------------------------------------------------ reading

@@ -20,6 +20,8 @@ begin
   if p_row is null or jsonb_typeof(p_row) <> 'object' or p_row ->> 'key' is distinct from v_row.key then
     raise exception 'row_invalid' using errcode = '22023';
   end if;
+  -- The job's first write makes her empty Collections (once; the ones she has already stay as they are).
+  perform private.import_job_make_empty_collections(p_job);
   select value into v_outcome from jsonb_array_elements(public.import_books(jsonb_build_array(p_row))) limit 1;
   update public.import_job_rows
      set outcome = v_outcome ->> 'outcome',

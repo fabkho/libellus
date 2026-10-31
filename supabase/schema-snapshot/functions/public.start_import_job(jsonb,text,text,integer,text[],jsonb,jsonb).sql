@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION public.start_import_job(p_rows jsonb, p_source text, p_device text DEFAULT NULL::text, p_already integer DEFAULT 0, p_languages text[] DEFAULT '{}'::text[])
+CREATE OR REPLACE FUNCTION public.start_import_job(p_rows jsonb, p_source text, p_device text DEFAULT NULL::text, p_already integer DEFAULT 0, p_languages text[] DEFAULT '{}'::text[], p_collection_order jsonb DEFAULT NULL::jsonb, p_empty_collections jsonb DEFAULT NULL::jsonb)
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -22,6 +22,15 @@ begin
   if p_languages is null or cardinality(p_languages) > 5
      or exists (select 1 from unnest(p_languages) l where l is null or l !~ '^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})?$') then
     raise exception 'languages_invalid' using errcode = '22023';
+  end if;
+  -- A Hardcover zip's lists (none for a CSV): her ranked lists in order, and her empty ones.
+  if p_collection_order is not null and jsonb_typeof(p_collection_order) <> 'null'
+     and not private.import_collection_order_valid(p_collection_order) then
+    raise exception 'collections_invalid' using errcode = '22023';
+  end if;
+  if p_empty_collections is not null and jsonb_typeof(p_empty_collections) <> 'null'
+     and not private.import_empty_collections_valid(p_empty_collections) then
+    raise exception 'collections_invalid' using errcode = '22023';
   end if;
   -- Every row an object with a key of its own, at most 20 kB.
   select count(*) into v_count
@@ -55,6 +64,13 @@ begin
   insert into public.import_job_rows (job_id, idx, key, payload)
   select v_job, (r.ord - 1)::integer, r.value ->> 'key', r.value
     from jsonb_array_elements(p_rows) with ordinality as r (value, ord);
+  if coalesce(jsonb_array_length(case when jsonb_typeof(p_collection_order) = 'array' then p_collection_order end), 0) > 0
+     or coalesce(jsonb_array_length(case when jsonb_typeof(p_empty_collections) = 'array' then p_empty_collections end), 0) > 0 then
+    insert into public.import_job_collections (job_id, collection_order, empty_collections)
+    values (v_job,
+            case when jsonb_typeof(p_collection_order) = 'array' then p_collection_order else '[]'::jsonb end,
+            case when jsonb_typeof(p_empty_collections) = 'array' then p_empty_collections else '[]'::jsonb end);
+  end if;
   perform private.import_job_enqueue(v_job);
   -- Member-triggered: held back by the debounce (the tick, every minute, is the safety net).
   perform private.import_job_kick(false);
