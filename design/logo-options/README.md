@@ -7,16 +7,16 @@ Once one is picked, its `icon.svg`, `monochrome.svg` and `favicon.svg` replace t
 
 ![All six options side by side](overview.png)
 
-Round 5: the owner keeps 1 and 6 and liked the direction of 13 (Book moth, a night creature)
-but not its drawing; 14 and 15 go that way. Everything else was dropped in earlier rounds. The
-numbers stay as they were so a reply can name an option without confusion.
+Round 7: the owner keeps 1 and 6; 18 and 19 are new (everything else was dropped in earlier
+rounds, the creatures of rounds 4–6 included). The numbers stay as they were so a reply can name
+an option without confusion.
 
 | # | Option | Idea | Room |
 | --- | --- | --- | --- |
 | 1 | [Bookmark B](1-bookmark-b/sheet.png) | A capital B whose stem is today's ribbon, swallowtail and all | leather red (today's, no shift) |
 | 6 | [Lamp over the page](6-lamp-over-page/sheet.png) | The lamp rising behind an open book like the sun | dusk plum (shift) |
-| 14 | [Luna moth](14-luna-moth/sheet.png) | The moon moth: book-page fore wings, tails cut like bookmark ribbons, an amber spine | midnight navy (shift) |
-| 15 | [Firefly](15-firefly/sheet.png) | A firefly carrying its own reading light: wing covers like a book's covers, an amber lantern | summer-night green (shift) |
+| 18 | [Locked diary](18-locked-diary/sheet.png) | A keyhole through a book's cover, its stem a bookmark ribbon, the lamp's light inside | deep mulberry (shift) |
+| 19 | [Paper boat](19-paper-boat/sheet.png) | A printed page folded into a paper boat, its sail amber, setting off | night-sea blue (shift) |
 
 Each option's sheet has the rationale, the palette, the icon on iOS and Android home screens (and
 as a themed icon), every mask, the favicon in a browser tab and at its real pixels, the monochrome
