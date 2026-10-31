@@ -3118,6 +3118,11 @@
           "de"
         ]
       },
+      "import.chooseZip": {
+        "b09c73d9d3f80210": [
+          "de"
+        ]
+      },
       "import.doneNothing": {
         "0226a3c03ceafc39": [
           "de"
@@ -3173,6 +3178,11 @@
           "de"
         ]
       },
+      "import.fileError.notCsvZip": {
+        "6744676c1459a296": [
+          "de"
+        ]
+      },
       "import.fileError.notSupported": {
         "676763c5d2f77da9": [
           "de"
@@ -3193,6 +3203,26 @@
           "de"
         ]
       },
+      "import.fileError.zipMissing": {
+        "778dbbe2b04063bc": [
+          "de"
+        ]
+      },
+      "import.fileError.zipTooBig": {
+        "c9c8ae23c0e26db9": [
+          "de"
+        ]
+      },
+      "import.fileError.zipUnknown": {
+        "a9ca1e1da3412c0c": [
+          "de"
+        ]
+      },
+      "import.fileError.zipVersion": {
+        "972824930fbac2cf": [
+          "de"
+        ]
+      },
       "import.howTo.goodreads": {
         "5f701b5d51812aae": [
           "de"
@@ -3200,6 +3230,11 @@
       },
       "import.howTo.hardcover": {
         "e59ff3326fa6a6e0": [
+          "de"
+        ]
+      },
+      "import.howTo.hardcoverZip": {
+        "cbadd5b0818c9e20": [
           "de"
         ]
       },
@@ -3230,6 +3265,11 @@
       },
       "import.pickText": {
         "3d7192993c888aee": [
+          "de"
+        ]
+      },
+      "import.pickTextZip": {
+        "3d2418d635220917": [
           "de"
         ]
       },

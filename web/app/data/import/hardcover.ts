@@ -80,20 +80,36 @@ export const HARDCOVER_KEY_PREFIX = 'hardcover:'
 /** Credits that are not the author's: dropped from the authors. */
 const AUTHOR_ROLE = /^author$/i
 
+/** One credit of a book: a name and its role (`Author`, `Translator` …), none when the source gives none. */
+export type Credit = { name: string; role: string | null }
+
+/** The credits that make the authors: those with no role or the role Author; only the first credit when none is left. Once each. */
+export function authorsOfCredits(credits: readonly Credit[]): string[] {
+  const named = credits.map((credit) => ({ name: tidy(credit.name), role: credit.role ? tidy(credit.role) : null })).filter((credit) => credit.name)
+  const authors = named.filter((credit) => !credit.role || AUTHOR_ROLE.test(credit.role))
+  const names = (authors.length ? authors : named.slice(0, 1)).map((credit) => credit.name)
+  return [...new Map(names.map((name) => [normalize(name), name])).values()]
+}
+
 /** `Roberto Bolaño, Natasha Wimmer (Translator)` → `['Roberto Bolaño']`; only credited roles when no author is left. */
 export function hardcoverAuthors(value: string): string[] {
-  const credits = value
-    .split(',')
-    .map(tidy)
-    .filter(Boolean)
-    .map((credit) => {
-      const role = /^(.*?)\s*\(([^()]*)\)$/.exec(credit)
-      return role ? { name: tidy(role[1]!), role: tidy(role[2]!) } : { name: credit, role: null }
-    })
-    .filter((credit) => credit.name)
-  const authors = credits.filter((credit) => !credit.role || AUTHOR_ROLE.test(credit.role))
-  const names = (authors.length ? authors : credits.slice(0, 1)).map((credit) => credit.name)
-  return [...new Map(names.map((name) => [normalize(name), name])).values()]
+  return authorsOfCredits(
+    value
+      .split(',')
+      .map(tidy)
+      .filter(Boolean)
+      .map((credit) => {
+        const role = /^(.*?)\s*\(([^()]*)\)$/.exec(credit)
+        return role ? { name: tidy(role[1]!), role: tidy(role[2]!) } : { name: credit, role: null }
+      }),
+  )
+}
+
+/** A series and the book's place in it as the CSV makes of it: `Mistborn, #1`; the bare name when the place is no number above 0. */
+export function seriesWithPosition(name: string, position: number | null): string | null {
+  const series = tidy(name)
+  if (!series) return null
+  return position !== null && Number.isFinite(position) && position > 0 ? `${series}, #${position}` : series
 }
 
 /** `Mistborn (#1.0), The Cosmere` → `Mistborn, #1`: the first series, as Goodreads writes it. */
@@ -102,8 +118,7 @@ export function hardcoverSeries(value: string): string | null {
   if (!first) return null
   const position = /^(.*?)\s*\(#?\s*([\d.]+)\)$/.exec(first)
   if (!position) return first
-  const number = Number(position[2])
-  return Number.isFinite(number) && number > 0 ? `${position[1]}, #${number}` : position[1]!
+  return seriesWithPosition(position[1]!, Number(position[2]))
 }
 
 /** `Owned, Favourites (#19)` → `['Owned', 'Favourites']`. */

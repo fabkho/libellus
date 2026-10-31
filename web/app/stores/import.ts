@@ -16,8 +16,7 @@ import {
 } from '~/data/importJob'
 import { createRealtimePort, type RealtimeModule } from '~/data/importJobFeed'
 import { createJobWatch, type JobWatch } from '~/data/importJobWatch'
-import type { FileError } from '~/data/importUpload'
-import type { ImportSource } from '~/data/import/rows'
+import type { FileError, FileErrorDetail } from '~/data/importUpload'
 import { useCoverUpgradeStore } from '~/stores/coverUpgrade'
 import { prepareUpload } from '~/data/importUpload'
 import { useLibraryStore } from '~/stores/library'
@@ -62,12 +61,14 @@ export const useImportStore = defineStore('import', () => {
   // Composables need the app (the config, the language); asked here, not after an `await`.
   const config = parseAppConfig(useRuntimeConfig().public)
   const searchLanguages = useSearchLanguages()
+  // Whether a Hardcover zip is taken as well as a CSV (a build's flag, composables/useImportZip.ts).
+  const zip = useImportZip()
 
   const phase = ref<ImportPhase>('pick')
   const fileName = ref<string | null>(null)
   const fileError = ref<FileError | null>(null)
-  /** For `missingColumns`: the app the file is from and the columns it lacks. */
-  const fileErrorDetail = ref<{ source: ImportSource; columns: string[] } | null>(null)
+  /** For `missingColumns`: the app the file is from and the columns it lacks; for `zipMissing`: the files. */
+  const fileErrorDetail = ref<FileErrorDetail | null>(null)
   /** The server refused the start (or the retry): `import_too_soon`, `device_import_running` … */
   const startError = ref<ImportJobError | null>(null)
   /** Every book of the file is in her Library already: nothing was uploaded. */
@@ -184,7 +185,7 @@ export const useImportStore = defineStore('import', () => {
     fileName.value = file.name
     phase.value = 'reading'
     const bytes = new Uint8Array(await file.arrayBuffer().catch(() => new ArrayBuffer(0)))
-    const prepared = await prepareUpload(backend, bytes, isoDay())
+    const prepared = await prepareUpload(backend, bytes, isoDay(), { zip })
     if (!prepared.ok) {
       fileError.value = prepared.error
       if (prepared.detail) fileErrorDetail.value = prepared.detail

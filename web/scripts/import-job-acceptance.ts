@@ -8,7 +8,8 @@
  * It prints COUNTS only (never a title, an author or an ISBN) and exits 1 when the job did not finish in time, any row's write failed or
  * more than `LIBELLUS_ACCEPT_MAX_NO_COVER` (5) Library entries have no cover at the end (the owner's criterion: close to 0).
  *
- *   LIBELLUS_IMPORT_CSV=/path/export.csv \
+ *   LIBELLUS_IMPORT_CSV=/path/export.csv       (or a Hardcover "everything" zip: the bytes decide, as on the Import page with
+ *                                              NUXT_PUBLIC_IMPORT_ZIP=on; docs/plans/hardcover-zip.md) \
  *   IMPORT_JOB_TOKEN=<the token the stack's `import-job` function was started with> \
  *   [LIBELLUS_ACCEPT_MAX_NO_COVER=5]       threshold: rows without any cover at the end
  *   [LIBELLUS_ACCEPT_LIMIT=40]             only the first N rows of the file (a smoke run)
@@ -29,7 +30,8 @@ import { readFileSync } from 'node:fs'
 import { createAuth } from '../app/data/auth'
 import { decodeExport } from '../app/data/import/csv'
 import { parseExport } from '../app/data/import/detect'
-import type { ImportBook } from '../app/data/import/rows'
+import type { ImportFile } from '../app/data/import/rows'
+import { uploadRow } from '../app/data/importUpload'
 import { createInviteCode, newClient, readMailedCode, sleep, sql, stack, uniqueEmail } from '../tests/support/stack'
 
 const file = process.env.LIBELLUS_IMPORT_CSV
@@ -56,10 +58,15 @@ const seconds = (since = started) => Math.round((Date.now() - since) / 1000)
 
 // ------------------------------------------------------------------- the rows, as the app uploads them
 
-/** What the app uploads of a parsed row (data/importUpload.ts `uploadRow`): the row with the Collections she keeps. */
-const uploadRow = (book: ImportBook): Record<string, unknown> => ({ ...book, collections: [...new Set(book.shelves)] })
-
-const parsed = parseExport(decodeExport(new Uint8Array(readFileSync(file))), today)
+const bytes = new Uint8Array(readFileSync(file))
+// What the app uploads of a parsed row is `uploadRow` (data/importUpload.ts: the row with the Collections she keeps, a zip's extras left out).
+let parsed: ImportFile
+if (bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04) {
+  const { mapHardcoverExport, readHardcoverZip } = await import('../app/data/import/hardcoverZip')
+  parsed = mapHardcoverExport(await readHardcoverZip(bytes), today)
+} else {
+  parsed = parseExport(decodeExport(bytes), today)
+}
 const rows = (limit ? parsed.books.slice(0, limit) : parsed.books).map(uploadRow)
 console.error(`import-job-acceptance: ${rows.length} rows of a ${parsed.source} file`)
 
@@ -177,6 +184,17 @@ const [library] = await sql<{ entries: number; no_cover: number }>(
      from public.library_entries e join public.books b on b.id = e.book_id where e.member_id = $1`,
   [member.id],
 )
+// What the import made of her shelves and lists (counts only).
+const [shelves] = await sql<Record<string, number>>(
+  `select count(*) filter (where status = 'finished')::int finished, count(*) filter (where status = 'reading')::int reading,
+          count(*) filter (where status = 'want_to_read')::int want_to_read,
+          (select count(*)::int from public.collections c where c.member_id = $1) collections,
+          (select count(*)::int from public.collection_entries ce join public.collections c on c.id = ce.collection_id where c.member_id = $1) collection_entries,
+          (select count(*)::int from public.collections c where c.member_id = $1
+             and not exists (select 1 from public.collection_entries ce where ce.collection_id = c.id)) collections_empty
+     from public.library_entries where member_id = $1`,
+  [member.id],
+)
 const [net] = await sql<{ n: string; failed: string }>(
   `select count(*)::text n, count(*) filter (where timed_out or status_code is distinct from 200)::text failed from net._http_response where created >= $1`,
   [startedAt],
@@ -219,6 +237,7 @@ try {
 const noCover = library?.no_cover ?? -1
 const report = {
   rows: rows.length,
+  shelves,
   job: { state: job?.state, chunks: job?.chunks, stalls: job?.stalls, error: job?.error ?? null },
   matched: byRow?.matched,
   fromFile: byRow?.from_file,

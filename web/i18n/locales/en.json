@@ -1018,6 +1018,7 @@
     "back": "Back",
     "pickTitle": "Bring your books along",
     "pickText": "Works with exports from Goodreads and Hardcover. Your shelves, dates, ratings and reviews come along.",
+    "pickTextZip": "Works with exports from Goodreads (CSV) and Hardcover (zip or CSV). Your shelves, dates, ratings and reviews come along.",
     "howToTitle": "How to export",
     "app": {
       "goodreads": "Goodreads",
@@ -1025,9 +1026,11 @@
     },
     "howTo": {
       "goodreads": "On goodreads.com: My Books → Import and export → Export library. Download the CSV when the link appears.",
-      "hardcover": "On hardcover.app: Settings → Export your data → CSV export → Generate export. Download the CSV when it's ready."
+      "hardcover": "On hardcover.app: Settings → Export your data → CSV export → Generate export. Download the CSV when it's ready.",
+      "hardcoverZip": "On hardcover.app: Settings → Export your data → Everything (zip) → Generate export. Choose the zip as it is, no need to unzip it: your reads, progress, lists and covers come along. The Hardcover CSV and the Goodreads CSV from Hardcover work too, with less."
     },
     "choose": "Choose CSV file",
+    "chooseZip": "Choose file",
     "reading": "Reading the file…",
     "starting": "Sending your books…",
     "serverNote": "Your import runs on our server. You can close BetterReads; we'll finish it.",
@@ -1095,6 +1098,11 @@
     "fileError": {
       "notSupported": "That isn't an export BetterReads can read. Choose the CSV you exported from Goodreads or Hardcover.",
       "notCsv": "That isn't a CSV file. Goodreads and Hardcover both export one.",
+      "notCsvZip": "That isn't an export file. Goodreads exports a CSV, Hardcover a zip or a CSV.",
+      "zipUnknown": "That zip isn't a Hardcover export. Choose the zip from Hardcover's \"Everything\" export.",
+      "zipVersion": "This Hardcover export is newer than BetterReads can read. Export the Hardcover CSV instead.",
+      "zipMissing": "That Hardcover export is missing {files}. Export it again and choose the zip without changing it.",
+      "zipTooBig": "That zip is too big to read here. Export the Hardcover CSV instead.",
       "storygraph": "That's a StoryGraph export, which BetterReads can't read yet. Export from Goodreads or Hardcover instead.",
       "librarything": "That's a LibraryThing export, which BetterReads can't read yet. Export from Goodreads or Hardcover instead.",
       "bookshelf": "That's a Bookshelf app export, which BetterReads can't read yet. Export from Goodreads or Hardcover instead.",

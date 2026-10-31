@@ -6,7 +6,8 @@
 // so nothing here chooses a source: it only helps her find the export.
 import type { ImportSource } from '~/data/import/rows'
 
-defineProps<{ sources: readonly ImportSource[] }>()
+// `zip`: the build takes the Hardcover zip too, so its steps point to that export first (import.howTo.hardcoverZip).
+defineProps<{ sources: readonly ImportSource[]; zip?: boolean }>()
 
 const { t } = useI18n()
 const open = ref<ImportSource | null>(null)
@@ -35,7 +36,7 @@ function toggle(source: ImportSource) {
         </button>
         <UiReveal :show="open === source">
           <p :id="`${ids}-${source}`" class="px-inset pb-ms text-footnote text-ink-muted" :data-testid="`import.howTo.${source}.text`">
-            {{ t(`import.howTo.${source}`) }}
+            {{ t(zip && source === 'hardcover' ? 'import.howTo.hardcoverZip' : `import.howTo.${source}`) }}
           </p>
         </UiReveal>
       </div>
