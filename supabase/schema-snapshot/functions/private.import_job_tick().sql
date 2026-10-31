@@ -30,6 +30,9 @@ begin
   delete from public.import_job_rows r
    using public.import_jobs j
    where r.job_id = j.id and j.finished_at < now() - interval '30 days';
+  delete from public.import_job_collections c
+   using public.import_jobs j
+   where c.job_id = j.id and j.finished_at < now() - interval '30 days';
   return private.import_job_kick(false);
 end
 $function$

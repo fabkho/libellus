@@ -69,8 +69,8 @@ select ok(has_table_privilege('authenticated', 'public.import_jobs', 'select')
           and not has_table_privilege('authenticated', 'public.import_job_rows', 'insert, update, delete')
           and not has_table_privilege('anon', 'public.import_jobs', 'select'),
           'members only read; visitors nothing');
-select ok(has_function_privilege('authenticated', 'public.start_import_job(jsonb, text, text, integer, text[])', 'execute')
-          and not has_function_privilege('anon', 'public.start_import_job(jsonb, text, text, integer, text[])', 'execute')
+select ok(has_function_privilege('authenticated', 'public.start_import_job(jsonb, text, text, integer, text[], jsonb, jsonb)', 'execute')
+          and not has_function_privilege('anon', 'public.start_import_job(jsonb, text, text, integer, text[], jsonb, jsonb)', 'execute')
           and has_function_privilege('authenticated', 'public.cancel_import_job(uuid)', 'execute'),
           'members start and cancel a job, visitors do not');
 select ok(not has_function_privilege('authenticated', 'public.import_job_claim(text, integer)', 'execute')

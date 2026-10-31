@@ -106,6 +106,10 @@ export type StartArguments = {
   already: number
   /** The device's languages, first first (the lookups rank editions by them). */
   languages: readonly string[]
+  /** Hardcover zip: her ranked lists, each with the keys of its rows in rank order; the job puts them in order at its end. */
+  collectionOrder?: readonly { name: string; keys: readonly string[] }[]
+  /** Hardcover zip: her lists without a book; the job makes them with its first write. */
+  emptyCollections?: readonly string[]
 }
 
 /** The languages the server takes (`start_import_job`): two or three letters, a region may follow; at most five. */
@@ -122,6 +126,9 @@ export async function startImportJob(client: SupabaseClient, args: StartArgument
       p_device: args.device,
       p_already: args.already,
       p_languages: languagesOf(args.languages),
+      // Only a zip has them: a CSV's start is the call it was.
+      ...(args.collectionOrder?.length ? { p_collection_order: args.collectionOrder } : {}),
+      ...(args.emptyCollections?.length ? { p_empty_collections: args.emptyCollections } : {}),
     })
     if (error) return { data: null, error: errorOf(error, status) }
     return typeof data === 'string' ? { data, error: null } : { data: null, error: 'unknown' }

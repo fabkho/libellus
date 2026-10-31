@@ -16,6 +16,7 @@ begin
   perform private.import_job_dequeue(p_job);
   -- Her rows name her books: nothing is left to look up, so they go with the cancel.
   delete from public.import_job_rows where job_id = p_job;
+  delete from public.import_job_collections where job_id = p_job;
   perform private.import_job_kick(false);
   return true;
 end

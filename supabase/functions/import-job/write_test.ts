@@ -119,6 +119,41 @@ Deno.test('the row is written as the app writes it: importArguments of the app\'
   assertEquals(w.saved, [{ idx: 0 }])
 })
 
+Deno.test('a Hardcover zip row\'s progress is written with its read: on an open read and on an abandoned one, as { page } or { percent }', async () => {
+  const w = world()
+  const reading = fileRow({
+    key: 'hardcover:11',
+    title: 'Eleven',
+    authors: ['A. Writer'],
+    status: 'reading',
+    session: { startedOn: '2026-09-01', endedOn: null, outcome: null, rating: null, review: null, progress: { page: 120 } },
+  }, 11)
+  const stopped = fileRow({
+    key: 'hardcover:12',
+    title: 'Twelve',
+    authors: ['A. Writer'],
+    status: 'finished',
+    session: { startedOn: '2026-01-01', endedOn: '2026-02-01', outcome: 'abandoned', rating: null, review: null, progress: { percent: 35 } },
+  }, 12)
+  await w.work(JOB, [writeRow(0, { book: snapshot() }, {}, reading), writeRow(1, { book: snapshot() }, {}, stopped)], w.context())
+  assertEquals(w.written.map(({ row }) => row.progress), [{ page: 120 }, { percent: 35 }])
+  assertEquals(w.written[1]!.row.outcome, 'abandoned')
+})
+
+Deno.test('a row of the old shape (no progress, as every CSV row and every job queued before the migration) is written without the field', async () => {
+  const w = world()
+  const finished = fileRow({ key: 'goodreads:13', title: 'Thirteen', authors: ['A. Writer'] }, 13)
+  const reading = fileRow({
+    key: 'goodreads:14',
+    title: 'Fourteen',
+    authors: ['A. Writer'],
+    status: 'reading',
+    session: { startedOn: '2026-09-01', endedOn: null, outcome: null, rating: null, review: null, progress: null },
+  }, 14)
+  await w.work(JOB, [writeRow(0, { book: snapshot() }, {}, finished), writeRow(1, { book: snapshot() }, {}, reading)], w.context())
+  for (const { row } of w.written) assertEquals('progress' in row, false)
+})
+
 Deno.test('a matched Catalogue Book is written by its id; its own cover is nothing to fill', async () => {
   const w = world()
   const book = catalogueBook({ coverUrl: 'https://covers.openlibrary.org/b/id/1-L.jpg' })

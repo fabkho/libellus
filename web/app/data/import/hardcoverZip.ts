@@ -36,8 +36,8 @@ import {
  * - `mapHardcoverExport(export, today)`: the files → `ImportFile`, one row per book of her library and one per book that is only
  *   on one of her lists. Every rule reuses the CSV adapter's helpers (hardcover.ts, rows.ts), so the two cannot drift.
  *
- * What the zip adds to a row, and the upload does not carry yet (importUpload.ts strips it): `session.progress`, `coverHint`, and,
- * on the file, `collectionOrder` and `emptyCollections`.
+ * What the zip adds to a row: `session.progress`, `coverHint`, and, on the file, `collectionOrder` and `emptyCollections`. The upload
+ * carries all but `coverHint` to the job (importUpload.ts; the cover address waits for the plan's PR 3).
  */
 
 // ------------------------------------------------------------------ reading
@@ -509,9 +509,33 @@ export function mapHardcoverExport(exp: HardcoverExport, today: string, onCover?
   const collectionOrder = [...lists.ranked]
     .map(([name, books]) => ({ name, keys: [...new Set(books.flatMap((book) => keyOf.get(book) ?? []))] }))
     .filter((order) => order.keys.length)
-  file.collectionOrder = collectionOrder
-  file.emptyCollections = lists.names.filter((name) => !hers.has(name.toLowerCase()))
+  const limited = limitLists(collectionOrder, lists.names.filter((name) => !hers.has(name.toLowerCase())))
+  file.collectionOrder = limited.collectionOrder
+  file.emptyCollections = limited.emptyCollections
   return file
+}
+
+/**
+ * What `start_import_job` takes of the lists (20261111010000_import_zip_job.sql: at most 500 lists, 10,000 keys a list, 1 MB): a
+ * file over it is trimmed here (lists past the limits lose their rank or their Collection) instead of letting the server refuse the
+ * whole job with `collections_invalid`. The byte cap is under the server's, because the database counts its own binary form.
+ */
+export const LIST_LIMITS = { lists: 500, keys: 10_000, bytes: 700_000 } as const
+
+export function limitLists(
+  order: { name: string; keys: string[] }[],
+  empty: string[],
+): { collectionOrder: { name: string; keys: string[] }[]; emptyCollections: string[] } {
+  const ranked: { name: string; keys: string[] }[] = []
+  let bytes = 0
+  for (const list of order.slice(0, LIST_LIMITS.lists)) {
+    const trimmed = { name: list.name, keys: list.keys.slice(0, LIST_LIMITS.keys) }
+    const size = JSON.stringify(trimmed).length
+    if (bytes + size > LIST_LIMITS.bytes) break
+    bytes += size
+    ranked.push(trimmed)
+  }
+  return { collectionOrder: ranked, emptyCollections: empty.slice(0, LIST_LIMITS.lists) }
 }
 
 /** The days, kept apart from the problems of a row. */

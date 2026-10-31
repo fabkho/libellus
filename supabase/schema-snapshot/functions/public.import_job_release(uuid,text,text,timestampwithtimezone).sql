@@ -20,6 +20,8 @@ begin
   update public.import_job_rows set write_taken_by = null, write_attempts = greatest(write_attempts - 1, 0)
    where job_id = p_job and write_state = 'pending' and write_taken_by = p_runner;
   if not exists (select 1 from public.import_job_rows where job_id = p_job and (cover_state <> 'done' or write_state <> 'done')) then
+    -- The end step: her ranked Collections in order (and her empty ones, when no write made them).
+    perform private.import_job_finish(p_job, p_runner);
     update public.import_jobs set state = 'done', finished_at = now(), runner = null, lease_until = null, error = null
      where id = p_job;
     perform private.import_job_dequeue(p_job);

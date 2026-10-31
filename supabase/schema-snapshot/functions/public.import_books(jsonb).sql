@@ -29,6 +29,10 @@ declare
   v_read_end   date;
   v_count   integer;
   v_dated   integer;
+  v_progress jsonb;
+  v_prog_num numeric;
+  v_prog_page    integer;
+  v_prog_percent integer;
   v_results jsonb := '[]'::jsonb;
 begin
   if v_member is null then
@@ -72,6 +76,33 @@ begin
       v_earlier := coalesce(v_row->'earlier_reads', '[]'::jsonb);
       if jsonb_typeof(v_earlier) = 'null' then
         v_earlier := '[]'::jsonb;
+      end if;
+      -- How far she was (a Hardcover zip's open and abandoned reads): { "page": n } or { "percent": n }, one of the two, whole
+      -- numbers in range, and only where a session can hold one (Currently reading, or abandoned). Checked before anything is written.
+      v_progress := v_row->'progress';
+      v_prog_page := null;
+      v_prog_percent := null;
+      if v_progress is not null and jsonb_typeof(v_progress) <> 'null' then
+        if jsonb_typeof(v_progress) <> 'object'
+           or (select count(*) from jsonb_object_keys(v_progress)) <> 1
+           or not (v_progress ? 'page' or v_progress ? 'percent')
+           or jsonb_typeof(coalesce(v_progress->'page', v_progress->'percent')) <> 'number' then
+          raise exception 'progress_invalid' using errcode = '22023';
+        end if;
+        v_prog_num := (coalesce(v_progress->>'page', v_progress->>'percent'))::numeric;
+        if v_prog_num <> trunc(v_prog_num)
+           or (v_progress ? 'page' and v_prog_num not between 0 and 99999)
+           or (v_progress ? 'percent' and v_prog_num not between 0 and 100) then
+          raise exception 'progress_invalid' using errcode = '22023';
+        end if;
+        if not (v_status = 'reading' or (v_status = 'finished' and v_outcome = 'abandoned')) then
+          raise exception 'session_invalid' using errcode = '22023';
+        end if;
+        if v_progress ? 'page' then
+          v_prog_page := v_prog_num::integer;
+        else
+          v_prog_percent := v_prog_num::integer;
+        end if;
       end if;
       if v_extra not between 0 and 20 or jsonb_typeof(v_earlier) <> 'array' then
         raise exception 'session_invalid' using errcode = '22023';
@@ -126,6 +157,9 @@ begin
          or v_pages is not distinct from (select page_count from public.books where id = v_book_id) then
         v_pages := null;
       end if;
+      -- A page past the edition's (or her own) page count is cut back to the last page, as for a later edition change.
+      v_prog_page := public.clamp_progress_page(
+        v_prog_page, coalesce(v_pages, (select page_count from public.books where id = v_book_id)));
 
       insert into public.library_entries (member_id, book_id, import_key, page_count_override, added_at)
       values (
@@ -147,8 +181,10 @@ begin
         if v_ended is not null or v_rating is not null or v_review is not null or v_row->>'outcome' is not null then
           raise exception 'session_invalid' using errcode = '22023';
         end if;
-        insert into public.reading_sessions (entry_id, started_on, import_key)
-        values (v_entry, v_started, v_key);
+        -- Progress is set on the session itself: no reading_progress_days row, so an import never marks today as a reading day.
+        insert into public.reading_sessions (entry_id, started_on, import_key, progress_page, progress_percent, progress_updated_at)
+        values (v_entry, v_started, v_key, v_prog_page, v_prog_percent,
+                case when num_nonnulls(v_prog_page, v_prog_percent) = 1 then now() end);
       else
         -- Finished. An import may not know the day it ended: a finished read
         -- without dates is allowed (past reads).
@@ -164,8 +200,11 @@ begin
         if char_length(v_review) > 10000 then
           raise exception 'review_too_long' using errcode = '22023';
         end if;
-        insert into public.reading_sessions (entry_id, started_on, ended_on, outcome, rating, review, import_key)
-        values (v_entry, v_started, v_ended, v_outcome, v_rating, v_review, v_key);
+        -- An abandoned read keeps where she stopped (a closed session keeps its last value, as in the app).
+        insert into public.reading_sessions (entry_id, started_on, ended_on, outcome, rating, review, import_key,
+                                             progress_page, progress_percent, progress_updated_at)
+        values (v_entry, v_started, v_ended, v_outcome, v_rating, v_review, v_key,
+                v_prog_page, v_prog_percent, case when num_nonnulls(v_prog_page, v_prog_percent) = 1 then now() end);
       end if;
 
       -- Her earlier reads, `<key>#2` …: first the ones with days (oldest

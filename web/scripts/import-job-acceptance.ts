@@ -59,7 +59,8 @@ const seconds = (since = started) => Math.round((Date.now() - since) / 1000)
 // ------------------------------------------------------------------- the rows, as the app uploads them
 
 const bytes = new Uint8Array(readFileSync(file))
-// What the app uploads of a parsed row is `uploadRow` (data/importUpload.ts: the row with the Collections she keeps, a zip's extras left out).
+// What the app uploads of a parsed row is `uploadRow` (data/importUpload.ts: the row with the Collections she keeps and, for a zip, its progress);
+// a zip's lists (`collectionOrder`, `emptyCollections`) go with the start, as the Import page sends them.
 let parsed: ImportFile
 if (bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04) {
   const { mapHardcoverExport, readHardcoverZip } = await import('../app/data/import/hardcoverZip')
@@ -101,6 +102,8 @@ const { data: jobId, error: startError } = await client.rpc('start_import_job', 
   p_device: 'job-acceptance',
   p_already: 0,
   p_languages: ['de-DE', 'en-US'],
+  ...(parsed.collectionOrder?.length ? { p_collection_order: parsed.collectionOrder } : {}),
+  ...(parsed.emptyCollections?.length ? { p_empty_collections: parsed.emptyCollections } : {}),
 })
 if (startError || typeof jobId !== 'string') throw new Error(`start_import_job failed: ${startError?.message}`)
 
@@ -195,6 +198,26 @@ const [shelves] = await sql<Record<string, number>>(
      from public.library_entries where member_id = $1`,
   [member.id],
 )
+// A Hardcover zip's extras (counts only): reads with a place (page / percent), the ranked lists and whether each is in the file's order
+// (her entries of the file's keys, by position, are the keys in the file's rank order), and the lists she has left empty.
+const [places] = await sql<{ page: number; percent: number; reading_day: number }>(
+  `select count(*) filter (where s.progress_page is not null)::int page, count(*) filter (where s.progress_percent is not null)::int percent,
+          (select count(*)::int from public.reading_progress_days d join public.reading_sessions s2 on s2.id = d.session_id
+             join public.library_entries e2 on e2.id = s2.entry_id where e2.member_id = $1) reading_day
+     from public.reading_sessions s join public.library_entries e on e.id = s.entry_id where e.member_id = $1`,
+  [member.id],
+)
+let rankedInOrder = 0
+for (const list of parsed.collectionOrder ?? []) {
+  const have = await sql<{ import_key: string }>(
+    `select e.import_key from public.collections c join public.collection_entries ce on ce.collection_id = c.id
+       join public.library_entries e on e.id = ce.entry_id where c.member_id = $1 and lower(c.name) = lower($2) order by ce.position`,
+    [member.id, list.name],
+  )
+  const wanted = list.keys.filter((key) => have.some((row) => row.import_key === key))
+  if (JSON.stringify(have.map((row) => row.import_key).filter((key) => list.keys.includes(key))) === JSON.stringify(wanted)) rankedInOrder++
+}
+const lists = { fileRanked: parsed.collectionOrder?.length ?? 0, rankedInOrder, fileEmpty: parsed.emptyCollections?.length ?? 0 }
 const [net] = await sql<{ n: string; failed: string }>(
   `select count(*)::text n, count(*) filter (where timed_out or status_code is distinct from 200)::text failed from net._http_response where created >= $1`,
   [startedAt],
@@ -238,6 +261,8 @@ const noCover = library?.no_cover ?? -1
 const report = {
   rows: rows.length,
   shelves,
+  progress: places,
+  lists,
   job: { state: job?.state, chunks: job?.chunks, stalls: job?.stalls, error: job?.error ?? null },
   matched: byRow?.matched,
   fromFile: byRow?.from_file,
@@ -271,6 +296,8 @@ if (!process.env.LIBELLUS_ACCEPT_KEEP) await sql('delete from auth.users where i
 const problems: string[] = []
 if (job?.state !== 'done') problems.push(`the job is ${job?.state} after ${totalSeconds} s, not done`)
 if (Number(job?.failed ?? 0) > 0) problems.push(`${job?.failed} rows failed to write`)
+if (lists.rankedInOrder !== lists.fileRanked) problems.push(`${lists.fileRanked - lists.rankedInOrder} ranked Collections are not in the file's order`)
+if (Number(places?.reading_day ?? 0) > 0) problems.push('the import wrote reading days')
 if (noCover < 0 || noCover > maxNoCover) problems.push(`${noCover} Library entries without a cover (threshold ${maxNoCover})`)
 if (problems.length) {
   console.error(`import-job-acceptance: FAILED: ${problems.join('; ')}`)
