@@ -59,6 +59,12 @@ export type MemberShelfOptions = {
    * docs/plans/owned-covers.md §5).
    */
   covers?: CoverHosts
+  /**
+   * The page's origin (`window.location.origin`). The document is in memory, so Regal resolves its images against
+   * `regal-memory:N`, where only absolute http(s) addresses load: our stored copies (`/c/<key>/<width>`) are made absolute
+   * against it. Unset: left as they are (the source's addresses are absolute already).
+   */
+  origin?: string
 }
 
 /** One Library entry as the export reads it: its latest read is all the device holds. */
@@ -103,8 +109,9 @@ function dressed(book: LibraryBook, entry: LibraryEntry, options: MemberShelfOpt
   const hosts = options.covers ?? {}
   // Our stored copy where the Book has one (`coverImage`, utils/coverRef.ts): the shelf's front and the top of its pile are
   // one address each, and with the switch off they are the source's own, as before.
-  const front = book.assets?.front ? coverImage(entry.book, 'xl', hosts).src : null
-  const pile = front ? coverImage(entry.book, 'md', hosts).src : null
+  const absolute = (src: string | null) => (src && options.origin && src.startsWith('/') ? new URL(src, options.origin).href : src)
+  const front = book.assets?.front ? absolute(coverImage(entry.book, 'xl', hosts).src) : null
+  const pile = front ? absolute(coverImage(entry.book, 'md', hosts).src) : null
   const format = formatOf(entry.book, entry.formatOverride)
   const description = book.description ?? options.descriptionOf?.(entry.book)?.trim() ?? null
   return {

@@ -79,6 +79,7 @@ export const useShelfStore = defineStore('shelf', () => {
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
       descriptionOf: (book) => library.descriptionOf(book),
       covers: coverHosts,
+      origin: useRequestURL().origin,
     })
   }
   watch(
