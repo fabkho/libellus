@@ -316,10 +316,11 @@ paragraph; the How-to puts no badge or logo next to it.
 - **Edition titles** in the edition's language differ from the book title (5/26), and the match ranks by title
   after the ISBN. Only the 1 + 3 rows without an ISBN-13 depend on it.
 
-## Open questions for the owner
+## Owner decisions (31 Oct 2026)
 
-1. **Takedown line.** Hardcover asks for a DMCA takedown policy wherever its images are public. Add one sentence
-   to the privacy notice (EN/DE: "a cover is removed on request, write to …") with the switch-on PR? Or keep
-   Hardcover covers off public reading pages (`cover_shown` false for that host)? Recommendation: the sentence.
-2. **The friend's Hardcover CSV** (same account) for the parity count in the acceptance run.
-3. Confirm **no Hardcover API** (recommendation above).
+1. **Hardcover covers stay off public surfaces** (option a, not the takedown sentence): `cover_shown` is false for
+   the Hardcover host, so `/r/` link previews and any page a signed-out visitor sees never draw one; inside the
+   app they show. No DMCA line in the privacy notice.
+2. **The friend's Hardcover CSV**: later; the acceptance run uses the zip's own counts.
+3. **No Hardcover API.**
+4. Lists: option A (as above).
