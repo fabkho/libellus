@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — option 6, Lamp over the page (favicon: rounded square, the mark simplified for 16 and 32 px)</title>
+<defs><linearGradient id="o6fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient><radialGradient id="o6fgl" cx="16" cy="10.93" r="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.4"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.14"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient><clipPath id="o6fc1"><path d="M0 0H100V57.5H90C74 51.5 58 53.5 50 65.5C42 53.5 26 51.5 10 57.5H0Z"/></clipPath></defs>
+<rect width="32" height="32" rx="7" fill="url(#o6fbg)"/><rect width="32" height="32" rx="7" fill="url(#o6fgl)"/>
+<g transform="translate(-1.5 -5.17) scale(0.35)"><path fill="#f1e3c8" d="M48 70C42 58 26 56 10 62V78C26 72 42 74 48 86ZM52 70C58 58 74 56 90 62V78C74 72 58 74 52 86Z"/><path fill="#efb768" clip-path="url(#o6fc1)" d="M50 35A20 20 0 1 1 50 75A20 20 0 1 1 50 35Z"/></g>
+</svg>
