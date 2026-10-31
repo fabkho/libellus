@@ -7,14 +7,17 @@ Once one is picked, its `icon.svg`, `monochrome.svg` and `favicon.svg` replace t
 
 ![All six options side by side](overview.png)
 
+Round 2: the owner kept 1, 3 and 6 from the first round; 7, 8 and 9 are new (2, 4 and 5 were
+dropped). The numbers stay as they were so a reply can name an option without confusion.
+
 | # | Option | Idea | Room |
 | --- | --- | --- | --- |
 | 1 | [Bookmark B](1-bookmark-b/sheet.png) | A capital B whose stem is today's ribbon, swallowtail and all | leather red (today's, no shift) |
-| 2 | [Rising shelf](2-rising-shelf/sheet.png) | Three books, each taller, the lit one leaning forward off the shelf | midnight blue (shift) |
 | 3 | [Read-tick](3-read-tick/sheet.png) | An open book whose short and long pages make a tick: Finished | forest green (shift) |
-| 4 | [Quarter star](4-quarter-star/sheet.png) | A star in quarters, three lit: 3¾ stars, three quarters through | the app's Night room (no shift) |
-| 5 | [br on the rule](5-br-monogram/sheet.png) | "br" from the wordmark's Newsreader Italic on the focused field's rule | lamp amber (shift) |
 | 6 | [Lamp over the page](6-lamp-over-page/sheet.png) | The lamp rising behind an open book like the sun | dusk plum (shift) |
+| 7 | [Ribbon in the gutter](7-ribbon-in-the-gutter/sheet.png) | An open book with its ribbon hanging out of the gutter | midnight blue (shift) |
+| 8 | [Reading glasses](8-reading-glasses/sheet.png) | Read better, literally: reading glasses, the lamp as a glint in one lens | the app's Night room (no shift) |
+| 9 | [Book B](9-book-b/sheet.png) | A capital B built from books: one standing, two lying, the top one lit | deep petrol (shift) |
 
 Each option's sheet has the rationale, the palette, the icon on iOS and Android home screens (and
 as a themed icon), every mask, the favicon in a browser tab and at its real pixels, the monochrome

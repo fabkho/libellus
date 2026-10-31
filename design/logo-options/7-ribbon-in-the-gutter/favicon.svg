@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — option 7, Ribbon in the gutter (favicon: rounded square, the mark simplified for 16 and 32 px)</title>
+<defs><linearGradient id="o7fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2b3b4f"/><stop offset="1" stop-color="#19222e"/></linearGradient><radialGradient id="o7fgl" cx="16" cy="6.61" r="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.2"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.07"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
+<rect width="32" height="32" rx="7" fill="url(#o7fbg)"/><rect width="32" height="32" rx="7" fill="url(#o7fgl)"/>
+<g transform="translate(-0.45 -3.25) scale(0.3289)"><path fill="#f1e3c8" d="M48.4 33C40 23 24 21 12 25V61C24 57 40 59 48.4 69ZM51.6 33C60 23 76 21 88 25V61C76 57 60 59 51.6 69Z"/><path fill="#efb768" d="M44.5 66.5L50 71L55.5 66.5V94L50 88L44.5 94Z"/></g>
+</svg>

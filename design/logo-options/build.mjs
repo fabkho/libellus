@@ -65,15 +65,6 @@ function outline(fnt, text, size, x, y, tracking = 0) {
   return { d, box, baseline: y }
 }
 
-// Option 5's glyphs: "br" in Newsreader Italic 600, centred in the 100 box, baseline at 74.
-{
-  const fnt = font('newsreader', 600, 'italic')
-  const probe = outline(fnt, 'br', 100, 0, 0, -0.03)
-  const w = probe.box.x2 - probe.box.x1
-  const br = outline(fnt, 'br', 100, 50 - w / 2 - probe.box.x1, 74, -0.03)
-  OPTIONS[4].glyphs = { br }
-}
-
 // ------------------------------------------------------------------ marks
 
 const colourOf = (palette, role) => palette[role] ?? palette.main
@@ -428,7 +419,7 @@ async function sheet(o) {
   <div class="row" style="align-items:center;gap:48px">
     <img class="squircle" src="${ios}" width="200" height="200" style="flex:none;filter:drop-shadow(0 14px 24px rgb(0 0 0 / .25))">
     <div>
-      <div class="num">OPTION ${o.n} OF ${OPTIONS.length} · ${o.kind.toUpperCase()}</div>
+      <div class="num">OPTION ${o.n} · ${o.kind.toUpperCase()}</div>
       <h1>${o.name}</h1>
       <div style="display:flex;gap:22px;margin-top:10px">${swatch(o.room.top, 'room ' + o.room.top)}${swatch(o.room.bottom, o.room.bottom)}${swatch(o.icon.main, 'mark ' + o.icon.main)}${o.icon.accent !== o.icon.main ? swatch(o.icon.accent, 'lamp ' + o.icon.accent) : ''}</div>
       <div class="cap" style="text-align:left;margin-top:12px">${o.palette}</div>
@@ -540,7 +531,7 @@ async function overview() {
   h1{font-family:Newsreader,serif;font-weight:500;font-size:56px;letter-spacing:-.02em;margin:0}
   </style></head><body>${SVG_DEFS}<div class="wrap">
     <div style="display:flex;align-items:flex-end;justify-content:space-between">
-      <div><div class="eyebrow">BetterReads · logo options · pick one</div><h1>Six directions for the new name</h1></div>
+      <div><div class="eyebrow">BetterReads · logo options, round 2 · kept from round 1: 1, 3, 6 · new: 7, 8, 9</div><h1>Six directions for the new name</h1></div>
       <div style="display:flex;align-items:center;gap:14px"><span class="cap" style="margin:0;text-align:right">today:<br>Two ribbons</span><img class="squircle" src="${uri(current)}" width="72" height="72"></div>
     </div>
     <div class="cols">${cols.join('')}</div>

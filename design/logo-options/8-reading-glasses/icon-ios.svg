@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+<title>BetterReads — option 8, Reading glasses (iOS: full square, the system rounds it; the mark at 60 % of the tile)</title>
+<defs><linearGradient id="o8ibg" x1="0" y1="0" x2="0" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#211c18"/><stop offset="1" stop-color="#0e0c0a"/></linearGradient><radialGradient id="o8igl" cx="68.88" cy="45.07" r="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.32"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.11"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
+<rect width="108" height="108" fill="url(#o8ibg)"/><rect width="108" height="108" fill="url(#o8igl)"/>
+<g transform="translate(16.79 12.33) scale(0.7442)"><path fill="#f1e3c8" d="M30 37A19 19 0 1 1 30 75A19 19 0 1 1 30 37ZM30 43A13 13 0 1 0 30 69A13 13 0 1 0 30 43ZM70 37A19 19 0 1 1 70 75A19 19 0 1 1 70 37ZM70 43A13 13 0 1 0 70 69A13 13 0 1 0 70 43ZM45.5 51Q50 41.5 54.5 51L52.6 53Q50 47 47.4 53ZM14.6 46.5L7 43.5L8 40.5L16.4 43.4ZM85.4 46.5L93 43.5L92 40.5L83.6 43.4Z"/><path fill="#efb768" d="M66.95 47.24Q67.6 46 69 46L73 46Q74.4 46 73.75 47.24L69.85 54.76Q69.2 56 67.8 56L63.8 56Q62.4 56 63.05 54.76Z"/></g>
+</svg>

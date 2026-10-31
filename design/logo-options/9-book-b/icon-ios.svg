@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+<title>BetterReads — option 9, Book B (iOS: full square, the system rounds it; the mark at 60 % of the tile)</title>
+<defs><linearGradient id="o9ibg" x1="0" y1="0" x2="0" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#284442"/><stop offset="1" stop-color="#162827"/></linearGradient><radialGradient id="o9igl" cx="66.8" cy="30" r="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.2"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.07"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
+<rect width="108" height="108" fill="url(#o9ibg)"/><rect width="108" height="108" fill="url(#o9igl)"/>
+<g transform="translate(15.6 14) scale(0.8)"><path fill-rule="evenodd" fill="#f1e3c8" d="M20 12Q20 10 22 10L34 10Q36 10 36 12L36 88Q36 90 34 90L22 90Q20 90 20 88Z"/><path fill-rule="evenodd" fill="#efb768" d="M39 10H51.5A18.5 18.5 0 0 1 51.5 47H39ZM45 16H51.5A12.5 12.5 0 0 1 51.5 41H45V38.5H51.5A10 10 0 0 0 51.5 18.5H45Z"/><path fill-rule="evenodd" fill="#f1e3c8" d="M39 50H56A20 20 0 0 1 56 90H39ZM45 56H56A14 14 0 0 1 56 84H45V81.5H56A11.5 11.5 0 0 0 56 58.5H45Z"/></g>
+</svg>

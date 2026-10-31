@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-<title>BetterReads — option 2, Rising shelf (favicon: rounded square, the mark simplified for 16 and 32 px)</title>
-<defs><linearGradient id="o2fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2b3b4f"/><stop offset="1" stop-color="#19222e"/></linearGradient><radialGradient id="o2fgl" cx="26.66" cy="0.42" r="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.2"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.07"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
-<rect width="32" height="32" rx="7" fill="url(#o2fbg)"/><rect width="32" height="32" rx="7" fill="url(#o2fgl)"/>
-<g transform="translate(-1.76 -3.85) scale(0.3553)"><path fill-rule="evenodd" fill="#f1e3c8" d="M17.8 86Q17 86 17 85.2L17 53.6Q17 52 18.6 52L29.4 52Q31 52 31 53.6L31 85.2Q31 86 30.2 86ZM34.8 86Q34 86 34 85.2L34 39.6Q34 38 35.6 38L48.4 38Q50 38 50 39.6L50 85.2Q50 86 49.2 86ZM12 87.5Q12 86 13.5 86L86.5 86Q88 86 88 87.5L88 89.5Q88 91 86.5 91L13.5 91Q12 91 12 89.5Z"/><path fill-rule="evenodd" fill="#efb768" d="M54.94 84.02Q54.15 83.91 54.26 83.12L62.83 22.12Q63.05 20.54 64.64 20.76L76.32 22.4Q77.91 22.62 77.68 24.21L69.11 85.21Q69 86 68.21 85.89Z"/></g>
-</svg>
