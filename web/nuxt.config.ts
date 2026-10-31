@@ -286,6 +286,10 @@ export default defineNuxtConfig({
       // composables/useCoverHosts.ts, docs/plans/owned-covers.md): 'on' / 'off' (NUXT_PUBLIC_OWN_COVERS). Unset: off, in every
       // build, Pages or not: the owner turns it on (a rebuild) once the bucket is bound and the covers are stored.
       ownCovers: process.env.NUXT_PUBLIC_OWN_COVERS ?? 'off',
+      // The Hardcover "everything" zip on the Import page (data/import/hardcoverZip.ts, docs/plans/hardcover-zip.md): 'on' / 'off'
+      // (NUXT_PUBLIC_IMPORT_ZIP). Unset: off, the picker takes a CSV only and says so (today's copy). A zip's progress, cover
+      // addresses and list order are mapped but not uploaded yet (plan, PR 2 and 3).
+      importZip: process.env.NUXT_PUBLIC_IMPORT_ZIP ?? 'off',
     },
   },
 

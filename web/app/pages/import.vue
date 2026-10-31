@@ -17,6 +17,8 @@ const router = useRouter()
 const store = useImportStore()
 const push = useImportPushStore()
 const words = useImportWords()
+// A Hardcover zip as well as a CSV (a build's flag): the picker, the copy and the How-to follow it.
+const zip = useImportZip()
 // Choosing a file uploads its books and starting again writes: offline neither can (#15).
 const online = useOnline()
 
@@ -55,7 +57,11 @@ const said = computed(() => (kind.value ? t(`import.ambient.say.${kind.value}`) 
 const picking = computed(() => store.phase !== 'job' || !job.value)
 const fileErrorText = computed(() => {
   const detail = store.fileErrorDetail
-  if (store.fileError !== 'missingColumns' || !detail) return store.fileError ? t(`import.fileError.${store.fileError}`) : ''
+  const error = store.fileError
+  if (!error) return ''
+  if (error === 'notCsv' && zip) return t('import.fileError.notCsvZip')
+  if (error === 'zipMissing') return t('import.fileError.zipMissing', { files: detail && 'files' in detail ? detail.files.join(', ') : '' })
+  if (error !== 'missingColumns' || !detail || !('columns' in detail)) return t(`import.fileError.${error}`)
   const columns = detail.columns.map((name) => `“${name}”`).join(', ')
   return t('import.fileError.missingColumns', { app: t(`import.app.${detail.source}`), columns }, detail.columns.length)
 })
@@ -83,15 +89,22 @@ async function cancel() {
       <h1 class="text-large-title" data-testid="import.title">{{ t('import.title') }}</h1>
     </header>
 
-    <input ref="input" type="file" accept=".csv,text/csv" class="hidden" data-testid="import.file" @change="picked" />
+    <input
+      ref="input"
+      type="file"
+      :accept="zip ? '.csv,.zip,text/csv,application/zip' : '.csv,text/csv'"
+      class="hidden"
+      data-testid="import.file"
+      @change="picked"
+    />
 
     <!-- The job's phase, said once per phase for assistive tech; the counts below are not read out. -->
     <p class="sr-only" role="status" data-testid="import.say">{{ said }}</p>
 
     <!-- Pick: where the file comes from, and the one way forward. -->
-    <UiEmptyState v-if="picking" screen="import" :title="t('import.pickTitle')" :text="t('import.pickText')" class="px-screen pt-md">
+    <UiEmptyState v-if="picking" screen="import" :title="t('import.pickTitle')" :text="t(zip ? 'import.pickTextZip' : 'import.pickText')" class="px-screen pt-md">
       <UiButton block :offline="!online" :disabled="store.phase !== 'pick'" data-testid="import.choose" @click="pick">
-        {{ store.phase === 'reading' ? t('import.reading') : store.phase !== 'pick' ? t('import.starting') : t('import.choose') }}
+        {{ store.phase === 'reading' ? t('import.reading') : store.phase !== 'pick' ? t('import.starting') : t(zip ? 'import.chooseZip' : 'import.choose') }}
       </UiButton>
       <p v-if="store.fileError" class="mt-ms text-center text-caption text-error" role="alert" data-testid="import.fileError">
         {{ fileErrorText }}
@@ -102,7 +115,7 @@ async function cancel() {
       <p v-else-if="store.nothingNew" class="mt-ms text-center text-caption text-ink-muted" role="status" data-testid="import.nothing">
         {{ t('import.nothingNew') }}
       </p>
-      <ImportHowTo :sources="SUPPORTED_SOURCES" class="mt-xl" />
+      <ImportHowTo :sources="SUPPORTED_SOURCES" :zip="zip" class="mt-xl" />
     </UiEmptyState>
 
     <!-- Running: where the server's job stands. Nothing to do but wait, or close the app. -->

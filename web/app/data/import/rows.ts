@@ -21,6 +21,12 @@ export type ImportSource = 'goodreads' | 'hardcover'
 /** An earlier read with its days, finished. */
 export type ImportRead = { startedOn: string | null; endedOn: string | null }
 
+/**
+ * Where an open (or given-up) read stands: a page or a percent, never both (one value on the session, as the database keeps it).
+ * Only a Hardcover zip carries it (hardcoverZip.ts); the CSV adapters leave it out.
+ */
+export type ImportProgress = { page: number } | { percent: number }
+
 export type ImportSession = {
   startedOn: string | null
   endedOn: string | null
@@ -29,7 +35,12 @@ export type ImportSession = {
   /** Integer quarters (1 … 20), only on a finished read. */
   rating: number | null
   review: string | null
+  /** Hardcover zip only: where the read stands (open, or given up). Mapped, not uploaded yet. */
+  progress?: ImportProgress | null
 }
+
+/** The cover address an export carries for a book (Hardcover zip only), already checked: its host and its size. */
+export type CoverHint = { url: string; width: number; height: number }
 
 /**
  * Something about a row the member should know: it was carried over with a
@@ -64,6 +75,8 @@ export type ImportProblem =
   | { code: 'paused' }
   /** A row the app lists without a status (Hardcover's None, Ignored): skipped. */
   | { code: 'notShelved' }
+  /** A book that is only on one of her Hardcover lists, not on a shelf: added as Want to read, into its Collections. */
+  | { code: 'fromList' }
 
 /** One row of the file, mapped. */
 export type ImportBook = {
@@ -108,11 +121,21 @@ export type ImportBook = {
   /** The day it entered her library in the app. */
   addedOn: string | null
   problems: ImportProblem[]
+  /** Hardcover zip only: the cover address the export names for the book. Mapped, not uploaded yet. */
+  coverHint?: CoverHint | null
 }
 
 export type SkippedRow = { row: number; title: string; problem: ImportProblem }
 
-export type ImportFile = { source: ImportSource; books: ImportBook[]; skipped: SkippedRow[] }
+export type ImportFile = {
+  source: ImportSource
+  books: ImportBook[]
+  skipped: SkippedRow[]
+  /** Hardcover zip only: her ranked lists, each with the keys of its rows in rank order. The job reorders the Collection by it (not uploaded yet). */
+  collectionOrder?: { name: string; keys: string[] }[]
+  /** Hardcover zip only: her lists with no book, which still become empty Collections (not uploaded yet). */
+  emptyCollections?: string[]
+}
 
 /**
  * One app's export, read: which columns it needs, which columns tell its file
@@ -161,6 +184,20 @@ export class UnknownExportError extends Error {
   constructor(readonly app: OtherApp | null = null) {
     super(app ? `A ${app} export, which is not supported` : 'Not an export of a supported app')
     this.name = 'UnknownExportError'
+  }
+}
+
+/** Why a Hardcover zip could not be read (hardcoverZip.ts). Copy: `import.fileError.<code>` (importUpload.ts). */
+export type ZipErrorCode = 'zipUnknown' | 'zipVersion' | 'zipMissing' | 'zipTooBig' | 'unreadable'
+
+/** Thrown by the zip reader; `files` names what `zipMissing` lacks. Here, not in hardcoverZip.ts, so the upload can tell it without loading the reader. */
+export class HardcoverZipError extends Error {
+  constructor(
+    readonly code: ZipErrorCode,
+    readonly files: string[] = [],
+  ) {
+    super(files.length ? `${code}: ${files.join(', ')}` : code)
+    this.name = 'HardcoverZipError'
   }
 }
 
@@ -299,20 +336,28 @@ export function countByStatus(books: readonly Pick<ImportBook, 'status'>[]): Rec
  * German read of one novel are two books on her shelves.
  */
 export function mapRows(adapter: ImportAdapter, rows: readonly Row[], today: string): ImportFile {
+  return collectBooks(adapter.source, rows.map((row, index) => adapter.map(row, index, today)))
+}
+
+/**
+ * The mapped rows of a file as an ImportFile: skipped rows set apart, a book listed twice (same key) taken once, the keys of
+ * the file's other rows of the same work on each. What every adapter shares, whether it maps CSV rows (`mapRows`) or reads
+ * records of its own (hardcoverZip.ts).
+ */
+export function collectBooks(source: ImportSource, mapped: readonly (ImportBook | SkippedRow)[]): ImportFile {
   const books: ImportBook[] = []
   const skipped: SkippedRow[] = []
   const keys = new Set<string>()
-  rows.forEach((row, index) => {
-    const mapped = adapter.map(row, index, today)
-    if (!('key' in mapped)) {
-      skipped.push(mapped)
-    } else if (keys.has(mapped.key)) {
-      skipped.push({ row: mapped.row, title: mapped.title, problem: { code: 'duplicate' } })
+  for (const row of mapped) {
+    if (!('key' in row)) {
+      skipped.push(row)
+    } else if (keys.has(row.key)) {
+      skipped.push({ row: row.row, title: row.title, problem: { code: 'duplicate' } })
     } else {
-      keys.add(mapped.key)
-      books.push(mapped)
+      keys.add(row.key)
+      books.push(row)
     }
-  })
+  }
   const byWork = new Map<string, ImportBook[]>()
   for (const book of books) {
     const work = `${workTitle(book.title)}|${surname(book.authors[0])}`
@@ -322,5 +367,5 @@ export function mapRows(adapter: ImportAdapter, rows: readonly Row[], today: str
     if (rows.length < 2) continue
     for (const book of rows) book.otherKeys = rows.filter((other) => other !== book).map((other) => other.key)
   }
-  return { source: adapter.source, books, skipped }
+  return { source, books, skipped }
 }

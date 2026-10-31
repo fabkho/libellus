@@ -327,6 +327,7 @@ are off until set.
 | Database | `private.cover_store_settings.function_url`, `enabled`, Vault `cover_store_token` | null, `false` (off), unset | `cover-store`: where the function is, whether covers are stored at all, and the token the tick sends ([OPERATIONS.md, Own covers](OPERATIONS.md#own-covers)). Optional. |
 | Pages project | Custom domain, Web Analytics | none, off | Step 4; Optional pieces. |
 | Pages project | R2 binding `COVERS`, `NUXT_PUBLIC_OWN_COVERS` | none, unset (off) | The binding `COVERS` → `libellus-covers` that `/c/…` reads ([HOSTING.md, Own covers](HOSTING.md#own-covers)); the build variable turns the app's own covers on. Optional. |
+| Pages project | `NUXT_PUBLIC_IMPORT_ZIP` | unset (off) | `on`: the Import page also takes Hardcover's "everything" zip (the build variable; [parity.md, Import books](parity.md)). Optional. |
 | GitHub Actions secrets | `SUPABASE_DB_URL`, `R2_BACKUP_ACCESS_KEY_ID`, `R2_BACKUP_SECRET_ACCESS_KEY` | unset | Nightly backups: the session pooler's connection string, an R2 token for the bucket. Optional ([OPERATIONS.md](OPERATIONS.md#backups)). |
 | GitHub Actions variables | `BACKUP_AGE_RECIPIENT`, `CLOUDFLARE_ACCOUNT_ID`, `BACKUP_R2_BUCKET`, `BACKUP_MIN_BYTES` | unset (backup skipped), `libellus-backups`, `50000` | Nightly backups: the owner's age public key, where the bucket is. |
 | Restore script | `LIBELLUS_PRODUCTION_REF` | the instance's project ref | The project `scripts/restore-backup.sh` refuses without `--i-know`: set it to the new ref after the project is replaced. |

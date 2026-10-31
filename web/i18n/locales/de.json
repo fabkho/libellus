@@ -1018,6 +1018,7 @@
     "back": "Zurück",
     "pickTitle": "Bring deine Bücher mit",
     "pickText": "Funktioniert mit Exporten aus Goodreads und Hardcover. Deine Regale, Lesedaten, Bewertungen und Rezensionen kommen mit.",
+    "pickTextZip": "Funktioniert mit Exporten aus Goodreads (CSV) und Hardcover (Zip oder CSV). Deine Regale, Lesedaten, Bewertungen und Rezensionen kommen mit.",
     "howToTitle": "So exportierst du",
     "app": {
       "goodreads": "Goodreads",
@@ -1025,9 +1026,11 @@
     },
     "howTo": {
       "goodreads": "Auf goodreads.com: My Books → Import and export → Export library. Lade die CSV herunter, sobald der Link da ist.",
-      "hardcover": "Auf hardcover.app: Settings → Export your data → CSV export → Generate export. Lade die CSV herunter, sobald sie fertig ist."
+      "hardcover": "Auf hardcover.app: Settings → Export your data → CSV export → Generate export. Lade die CSV herunter, sobald sie fertig ist.",
+      "hardcoverZip": "Auf hardcover.app: Settings → Export your data → Everything (zip) → Generate export. Wähle die Zip-Datei so, wie sie ist, ohne sie zu entpacken: Lesevorgänge, Fortschritt, Listen und Cover kommen mit. Die Hardcover-CSV und die Goodreads-CSV von Hardcover gehen auch, mit weniger."
     },
     "choose": "CSV-Datei wählen",
+    "chooseZip": "Datei wählen",
     "reading": "Datei wird gelesen …",
     "starting": "Sende deine Bücher…",
     "serverNote": "Dein Import läuft auf unserem Server. Du kannst BetterReads schließen; wir machen ihn fertig.",
@@ -1095,6 +1098,11 @@
     "fileError": {
       "notSupported": "Dieses Format kann BetterReads nicht lesen. Wähle die exportierte CSV von Goodreads oder Hardcover.",
       "notCsv": "Das ist keine CSV-Datei. Sowohl Goodreads als auch Hardcover exportieren als CSV.",
+      "notCsvZip": "Das ist keine Exportdatei. Goodreads exportiert eine CSV, Hardcover eine Zip-Datei oder eine CSV.",
+      "zipUnknown": "Diese Zip-Datei ist kein Hardcover-Export. Wähle die Zip-Datei aus Hardcovers Export „Everything“.",
+      "zipVersion": "Dieser Hardcover-Export ist neuer, als BetterReads lesen kann. Exportiere stattdessen die Hardcover-CSV.",
+      "zipMissing": "In diesem Hardcover-Export fehlt {files}. Exportiere ihn erneut und wähle die Zip-Datei unverändert.",
+      "zipTooBig": "Diese Zip-Datei ist zu groß. Exportiere stattdessen die Hardcover-CSV.",
       "storygraph": "Das ist ein StoryGraph-Export. Den kann BetterReads noch nicht lesen. Exportiere stattdessen von Goodreads oder Hardcover.",
       "librarything": "Das ist ein LibraryThing-Export. Den kann BetterReads noch nicht lesen. Exportiere stattdessen von Goodreads oder Hardcover.",
       "bookshelf": "Das ist ein Export der Bookshelf-App. Den kann BetterReads noch nicht lesen. Exportiere stattdessen von Goodreads oder Hardcover.",
