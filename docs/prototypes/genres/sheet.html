@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Genres mock-up 2: the Tags sheet</title>
+<link rel="stylesheet" href="base.css" />
+<style>
+  .under { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; padding-top: 104px; }
+  .bookline { display: flex; align-items: center; gap: 12px; }
+  .sec { margin-top: 22px; }
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .kinds { display: grid; grid-template-columns: 88px 1fr; row-gap: 8px; align-items: start; }
+  .kinds dt { padding-top: 10px; }
+  .kinds dd .chips { justify-content: flex-start; }
+  .chip .x { margin-left: 2px; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar"><span>9:41</span><span class="mono" style="font-size:12px;letter-spacing:2px">▪▪▪ ▮</span></div>
+  <div class="under"><div class="cover xl c6"><span class="t">The Winter Pact</span><span class="a">Mara Ellis</span></div></div>
+  <div class="scrim"></div>
+
+  <section class="sheet" style="top:58px">
+    <div class="grabber"></div>
+    <div class="head">
+      <button class="cancel" data-en="Cancel" data-de="Abbrechen"></button>
+      <span class="title" data-en="Tags" data-de="Tags"></span>
+      <button class="action" data-en="Save" data-de="Speichern"></button>
+    </div>
+
+    <div class="body">
+      <div class="bookline">
+        <div class="cover sm c6"><span class="t">The Winter Pact</span><span class="a">Mara Ellis</span></div>
+        <div><p class="serif callout">The Winter Pact</p><p class="caption faint">Mara Ellis</p></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-head">
+          <h3 class="eyebrow" data-en="Your tags" data-de="Deine Tags"></h3>
+          <span class="mono caption muted" data-en="1 of 10" data-de="1 von 10"></span>
+        </div>
+        <ul class="chips left" style="list-style:none">
+          <li class="chip mine"><span data-en="Comfort read" data-de="Seelentröster"></span><span class="x">×</span></li>
+        </ul>
+        <div class="field" style="margin-top:10px"><span class="input ph" data-en="Add a tag" data-de="Tag hinzufügen"></span></div>
+        <p class="footnote faint" style="margin-top:8px" data-en="Only you see your tags." data-de="Nur du siehst deine Tags."></p>
+      </div>
+
+      <div class="sec">
+        <div class="sec-head"><h3 class="eyebrow" data-en="From the book" data-de="Aus dem Buch"></h3></div>
+        <p class="caption muted" style="margin:-4px 0 10px" data-en="Tap one to hide it for you." data-de="Tippe auf einen, um ihn für dich auszublenden."></p>
+        <dl class="kinds">
+          <dt class="eyebrow" data-en="Audience" data-de="Leser"></dt>
+          <dd><div class="chips"><span class="chip" data-en="New adult" data-de="New Adult"></span></div></dd>
+          <dt class="eyebrow" data-en="Season" data-de="Jahreszeit"></dt>
+          <dd><div class="chips"><span class="chip" data-en="Christmas" data-de="Weihnachten"></span></div></dd>
+          <dt class="eyebrow" data-en="Tropes" data-de="Tropes"></dt>
+          <dd><div class="chips"><span class="chip" data-en="Enemies to lovers" data-de="Enemies to Lovers"></span><span class="chip" data-en="Slow burn" data-de="Slow Burn"></span><span class="chip" data-en="Forced proximity" data-de="Forced Proximity"></span></div></dd>
+          <dt class="eyebrow" data-en="Setting" data-de="Schauplatz"></dt>
+          <dd><div class="chips"><span class="chip" data-en="Small town" data-de="Kleinstadt"></span></div></dd>
+          <dt class="eyebrow" data-en="Mood" data-de="Stimmung"></dt>
+          <dd><div class="chips"><span class="chip hidden-for-her">Spicy</span><span class="chip" data-en="Cosy" data-de="Wohlfühlbuch"></span></div></dd>
+        </dl>
+      </div>
+
+      <div class="rowgroup" style="margin-top:22px">
+        <div class="row"><span data-en="Genres for your chart" data-de="Genres für deine Statistik"></span><span class="v" data-en="Romance" data-de="Liebesroman"></span><span class="chev">›</span></div>
+        <div class="row"><span data-en="Content notes" data-de="Inhaltshinweise"></span><span class="v mono">2</span><span class="chev">›</span></div>
+      </div>
+    </div>
+  </section>
+</div>
+<script src="mock.js"></script>
+</body>
+</html>
