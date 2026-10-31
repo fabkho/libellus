@@ -8,6 +8,10 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - `pnpm dev` — http://localhost:3020. Needs `.env` (copy `.env.example`) and `supabase start` in the
   repo root (the libellus stack, ports 553xx).
 - `pnpm test` — Vitest data-layer suite against the local stack. No mocks.
+- `pnpm schema:snapshot` — regenerates `../supabase/schema-snapshot/`, the current definition of every
+  database object, from the local stack (up and migrated; one catalog query, about 1 s). Run it after a
+  migration and commit the result with it: CI fails on a stale snapshot. The files there are generated,
+  read-only, one per object; never edit one by hand (`../docs/TESTING.md`, "The schema snapshot").
 - `pnpm e2e` — Playwright, iPhone viewport, WebKit, Reduce Motion on, on the static build served
   like Pages (`e2e/build.ts` + `e2e/serve.mjs`, :4327). `LIBELLUS_E2E_DEV=1` runs it on `nuxt dev`.
 - `pnpm build` / `pnpm generate` — `nuxt generate` to `.output/public`.

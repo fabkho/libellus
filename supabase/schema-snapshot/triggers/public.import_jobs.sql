@@ -1,0 +1,1 @@
+CREATE TRIGGER import_jobs_ended AFTER UPDATE OF state ON import_jobs FOR EACH ROW WHEN ((new.state = ANY (ARRAY['done'::text, 'failed'::text])) AND old.state IS DISTINCT FROM new.state AND new.notified_at IS NULL) EXECUTE FUNCTION private.import_job_ended();

@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
+    "schema:snapshot": "node ../scripts/schema-snapshot/run.mjs",
     "email:preview": "node scripts/preview-email.mjs",
     "i18n:translate": "node scripts/i18n/run.mjs translate",
     "i18n:verify": "node scripts/i18n/run.mjs verify",
