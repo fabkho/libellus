@@ -7,15 +7,16 @@ Once one is picked, its `icon.svg`, `monochrome.svg` and `favicon.svg` replace t
 
 ![All six options side by side](overview.png)
 
-Round 4: the owner keeps 1 and 6; 12 and 13 are new (2–5, 3, 7–11 were dropped in earlier
-rounds). The numbers stay as they were so a reply can name an option without confusion.
+Round 5: the owner keeps 1 and 6 and liked the direction of 13 (Book moth, a night creature)
+but not its drawing; 14 and 15 go that way. Everything else was dropped in earlier rounds. The
+numbers stay as they were so a reply can name an option without confusion.
 
 | # | Option | Idea | Room |
 | --- | --- | --- | --- |
 | 1 | [Bookmark B](1-bookmark-b/sheet.png) | A capital B whose stem is today's ribbon, swallowtail and all | leather red (today's, no shift) |
 | 6 | [Lamp over the page](6-lamp-over-page/sheet.png) | The lamp rising behind an open book like the sun | dusk plum (shift) |
-| 12 | [Book left open](12-book-left-open/sheet.png) | A book put down face-down mid-chapter: an amber cover over cream pages, pointing up | twilight indigo (shift) |
-| 13 | [Book moth](13-book-moth/sheet.png) | A night moth drawn to the lamp, its fore wings the pages of an open book | night-garden green (shift) |
+| 14 | [Luna moth](14-luna-moth/sheet.png) | The moon moth: book-page fore wings, tails cut like bookmark ribbons, an amber spine | midnight navy (shift) |
+| 15 | [Firefly](15-firefly/sheet.png) | A firefly carrying its own reading light: wing covers like a book's covers, an amber lantern | summer-night green (shift) |
 
 Each option's sheet has the rationale, the palette, the icon on iOS and Android home screens (and
 as a themed icon), every mask, the favicon in a browser tab and at its real pixels, the monochrome

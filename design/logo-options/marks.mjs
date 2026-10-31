@@ -71,62 +71,80 @@ function lampPage(variant) {
   ]
 }
 
-// ------------------------------------------------------------------ 12 · Book left open
+// ------------------------------------------------------------------ helpers for drawn creatures
 
-function tentedBook(variant) {
-  // A book left open face-down, the way you put one down mid-chapter: the cover a chevron, the page
-  // blocks a second chevron under it, curling at their ends. Together they point up.
+/** Maps every coordinate pair of an absolute M/L/C/Q path (no arcs) through `fn`. */
+const mapPath = (d, fn) =>
+  d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => {
+    const [a, b] = fn(Number(x), Number(y))
+    return `${f(a)} ${f(b)}`
+  })
+const mirrorX = (d) => mapPath(d, (x, y) => [100 - x, y])
+const rotate = (d, deg, cx = 50, cy = 50) => {
+  const a = (deg * Math.PI) / 180
+  return mapPath(d, (x, y) => [cx + (x - cx) * Math.cos(a) - (y - cy) * Math.sin(a), cy + (x - cx) * Math.sin(a) + (y - cy) * Math.cos(a)])
+}
+/** An ellipse as four cubic curves (so it can be rotated with the rest). `ccw` reverses it. */
+function ellipse(cx, cy, rx, ry, ccw = false) {
+  const k = 0.5523
+  const P = (x, y) => `${f(x)} ${f(y)}`
+  if (ccw)
+    return (
+      `M${P(cx, cy - ry)}C${P(cx - k * rx, cy - ry)} ${P(cx - rx, cy - k * ry)} ${P(cx - rx, cy)}` +
+      `C${P(cx - rx, cy + k * ry)} ${P(cx - k * rx, cy + ry)} ${P(cx, cy + ry)}` +
+      `C${P(cx + k * rx, cy + ry)} ${P(cx + rx, cy + k * ry)} ${P(cx + rx, cy)}` +
+      `C${P(cx + rx, cy - k * ry)} ${P(cx + k * rx, cy - ry)} ${P(cx, cy - ry)}Z`
+    )
+  return (
+    `M${P(cx, cy - ry)}C${P(cx + k * rx, cy - ry)} ${P(cx + rx, cy - k * ry)} ${P(cx + rx, cy)}` +
+    `C${P(cx + rx, cy + k * ry)} ${P(cx + k * rx, cy + ry)} ${P(cx, cy + ry)}` +
+    `C${P(cx - k * rx, cy + ry)} ${P(cx - rx, cy + k * ry)} ${P(cx - rx, cy)}` +
+    `C${P(cx - rx, cy - k * ry)} ${P(cx - k * rx, cy - ry)} ${P(cx, cy - ry)}Z`
+  )
+}
+
+// ------------------------------------------------------------------ 14 · Luna moth
+
+function lunaMoth(variant) {
+  // The moon moth, seen from above: its fore wings are the two pages of an open book (their leading
+  // edges the pages' top edges, rising from the gutter), its hind wings run out into long tails that
+  // end in a swallowtail cut like a bookmark ribbon, and its body, the spine, is lit amber.
+  // Feathery antennae make it a moth rather than a butterfly.
   const fav = variant === 'fav'
-  const A = [50, 22] // the spine, at the top
-  const u = [-40 / Math.hypot(40, 50), 50 / Math.hypot(40, 50)] // down the left cover
-  const n = [u[1], -u[0]] // across it, inward
-  const pt = (t, o, side) => {
-    const x = A[0] + u[0] * t + n[0] * o
-    const y = A[1] + u[1] * t + n[1] * o
-    return side < 0 ? [x, y] : [100 - x, y]
-  }
-  const cover = fav ? 8.5 : 7
-  const gap = fav ? 3 : 2.5
-  const block = fav ? 15 : 15
-  const g = fav ? 1.4 : 1.8 // half the gutter between the page blocks
-  // the cover: one chevron, rounded at the spine, its inner apex on the centre line
-  const c = [pt(0, 0, -1), pt(64, 0, 1), pt(64, cover, 1), [50, A[1] + cover / n[0]], pt(64, cover, -1), pt(64, 0, -1)]
-  const coverD = roundedPolygon(c, [4, 1.5, 1.5, 2, 1.5, 1.5])
-  const o1 = cover + gap
-  const o2 = o1 + block
-  const tAt = (o) => (n[0] * o + g) / -u[0] // where the offset line meets the gutter
-  const P = (p) => `${f(p[0])} ${f(p[1])}`
-  // a page block: shorter than the cover, its free end a soft curve (the fanned page edges)
-  const page = (side) => {
-    const p1 = pt(tAt(o1), o1, side)
-    const p2 = pt(55, o1, side)
-    const p3 = pt(50.5, o2, side)
-    const p4 = pt(tAt(o2), o2, side)
-    return `M${P(p1)}L${P(p2)}C${P(pt(58.5, o1 + 5, side))} ${P(pt(55.5, o2 - 1, side))} ${P(p3)}L${P(p4)}Z`
-  }
-  const pagesD = page(-1) + page(1)
+  const fore = 'M44 27C36 17.5 21 12 6 13.5C7.5 27 12.5 39 21 46C29.5 49.5 38 48 44 43.5Z'
+  const hind =
+    'M44 46.5C36 46 25.5 49.5 21.5 57C18.5 63.5 21.5 69.5 27.5 72C29.5 79.5 30 87.5 28 95.5' +
+    'L33.4 91.2L37.6 96.2C39.4 87 41.4 77.5 43.6 69.5C45 62 44.6 53.5 44 46.5Z'
+  const feeler = 'M48.6 15.2C45.6 10 40.6 5.6 33.6 4.2C36.4 8.8 41.4 13 47.4 16.4Z'
+  const main = fore + hind + mirrorX(fore + hind) + (fav ? '' : feeler + mirrorX(feeler))
+  const body = ellipse(50, 42, fav ? 4.6 : 3.8, 19.5) + ellipse(50, 17.6, fav ? 4.6 : 4, fav ? 4.6 : 4)
   return [
-    { role: 'accent', d: coverD },
-    { role: 'main', d: pagesD, evenodd: true },
+    { role: 'main', d: main },
+    { role: 'accent', d: body },
   ]
 }
 
-// ------------------------------------------------------------------ 13 · Book moth
+// ------------------------------------------------------------------ 15 · Firefly
 
-function bookMoth(variant) {
-  // A night moth seen from above, drawn to the lamp: its fore wings are the two pages of an open
-  // book (a page edge runs along each), its body the spine, lit amber.
+function firefly(variant) {
+  // A firefly seen from above, carrying its own reading light: its wing covers are a book's two
+  // covers, closed along the spine and just parting at the tail, where the lantern glows amber.
+  // Drawn upright, then tilted 18° into flight.
   const fav = variant === 'fav'
-  const mirror = (d) => d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${f(100 - Number(x))} ${y}`)
-  const fore = 'M44 41C37 27 24 20 9 23C8 38 13 51 24 57C32 60.5 40 58 44 53.5Z'
-  const hind = 'M44 59.5C37 59.5 28 63 24.5 70C21.5 77.5 26 85 33.5 84C40 83 44 75.5 44 67Z'
-  const edge = 'M41.8 45.6C35.6 33.2 24.6 27.4 12.2 29.2L12.3 31.9C24 30.4 34.2 35.8 40 47.4Z' // knocked out of the fore wing
-  const feeler = 'M48.2 27.5Q45.5 17.5 37.5 12.5L36.4 14.2Q43.2 18.8 46.1 28.1Z'
-  const body = fav ? roundedPolygon([[46, 24], [54, 24], [54, 82], [46, 82]], 4) : roundedPolygon([[46.6, 27], [53.4, 27], [53.4, 81], [46.6, 81]], 3.4)
-  const wings = fav ? fore + hind + mirror(fore) + mirror(hind) : fore + edge + hind + mirror(fore + edge) + mirror(hind)
-  const parts = [{ role: 'main', d: wings + (fav ? '' : feeler + mirror(feeler)), evenodd: !fav }]
-  parts.push({ role: 'accent', d: body })
-  return parts
+  const head = ellipse(50, 17.5, fav ? 5.4 : 4.6, fav ? 4.8 : 4.2)
+  const shield = ellipse(50, 30.5, fav ? 11 : 10, fav ? 7.6 : 7)
+  const cover = fav
+    ? 'M48.8 40.2C44 39.6 38.4 40.8 37.2 46.2C35.6 55.4 37.6 64.6 42.6 71.2C45.6 70.6 47.8 67.8 48.8 63.8Z'
+    : 'M48.2 40.2C44 39.6 38.8 40.8 37.8 46C36.4 55 38.2 64 43 70.6C45.4 70.2 47.2 67.6 48.2 63.8Z'
+  const feeler = 'M48.4 14.4C46.8 9.6 43 5.6 37.6 3.6L36.8 5.4C41.4 7.4 44.6 10.8 46.2 15.2Z'
+  const lantern = ellipse(50, 83.5, fav ? 9 : 8, fav ? 10.5 : 9.5)
+  const main = head + shield + cover + mirrorX(cover) + (fav ? '' : feeler + mirrorX(feeler))
+  // a little wider than drawn: a stout, friendly beetle rather than a thin one
+  const tilt = (d) => rotate(mapPath(d, (x, y) => [50 + (x - 50) * 1.3, y]), 18)
+  return [
+    { role: 'main', d: tilt(main) },
+    { role: 'accent', d: tilt(lantern) },
+  ]
 }
 
 // ------------------------------------------------------------------ the options
@@ -171,32 +189,31 @@ export const OPTIONS = [
       'An open book with the lamp rising behind it like the sun over a horizon: the design\'s founding image ("a reading lamp in a dark room") made into the mark, and a dawn that says better. It is calm, the way the app is calm, and the one option that is a picture rather than a sign. The half disc and the gull of the pages are simple enough to hold at 16 px (the gaps widen there). Its lettering is the app\'s current wordmark face, Newsreader Italic. Nothing of Goodreads: no letterform in the mark, a plum dusk instead of brown and cream.',
   },
   {
-    n: 12,
-    slug: '12-book-left-open',
-    name: 'Book left open',
-    kind: 'A book put down mid-chapter, pointing up',
-    parts: tentedBook,
-    fit: { ios: 70, adaptive: 33 },
-    room: { top: '#36385f', bottom: '#1c1d37', glow: [50, 18] },
+    n: 14,
+    slug: '14-luna-moth',
+    name: 'Luna moth',
+    kind: 'The moon moth: book-page wings, ribbon tails',
+    parts: lunaMoth,
+    room: { top: '#26344d', bottom: '#111927', glow: [50, -4], glowStrength: 0.34 },
     icon: { main: CREAM, accent: AMBER },
-    font: { family: 'geist-sans', weight: 500, style: 'normal', tracking: -0.025 },
+    font: { family: 'newsreader', weight: 500, style: 'italic', tracking: -0.015 },
     text: 'BetterReads',
-    palette: 'Shift: a twilight-indigo room (new, a bluer sister of cloth5), the cover in lamp amber, the pages cream.',
+    palette: 'Shift: a midnight-navy room (cloth2 #22303f, deepened), cream wings, the body in lamp amber; the room\'s light comes from above.',
     rationale:
-      'A book left open face-down on the table, the way everyone puts a book down in the middle of a chapter: the amber cover a chevron, the cream page blocks a second chevron under it, curling at their ends. It is the universal sign for "I am reading this", the state BetterReads is built around, and its shape points up, which is the "better". It is calm and domestic rather than clever, and unlike any letter or app icon. Two nested chevrons are as robust as marks get: at 16 px it is an amber caret over a cream one. Goodreads is a serif "g" in brown on beige; this is a pictogram in amber and cream on twilight indigo.',
+      'The luna moth, the moon moth, flying toward the light at the top of the icon. Its fore wings are the two pages of an open book, their leading edges rising out of the gutter like a page\'s top edge; its long hind-wing tails end in a swallowtail cut, the bookmark ribbon of Bookmark B; and its body, the book\'s spine, is lit amber. Feathery antennae and the trailing tails make it unmistakably a moth, and a particular one, rather than a generic butterfly. It is a character for a night reader: the creature that cannot leave the lamp alone. At 16 px the antennae drop and the silhouette (wide wings, two long tails) carries it. Nothing of Goodreads: no letter, no brown; cream and amber on midnight.',
   },
   {
-    n: 13,
-    slug: '13-book-moth',
-    name: 'Book moth',
-    kind: 'A night moth, its wings an open book',
-    parts: bookMoth,
-    room: { top: '#2b3d31', bottom: '#16211a', glow: [50, 2], glowStrength: 0.34 },
+    n: 15,
+    slug: '15-firefly',
+    name: 'Firefly',
+    kind: 'A night creature with its own reading light',
+    parts: firefly,
+    room: { top: '#24352b', bottom: '#101a14', glow: [39.6, 81.9], glowStrength: 0.5 },
     icon: { main: CREAM, accent: AMBER },
     font: { family: 'newsreader', weight: 500, style: 'normal', tracking: -0.01 },
     text: 'BetterReads',
-    palette: 'Shift: a night-garden green room (cloth3 #2c3a2e, deepened), cream wings, the body in lamp amber; the room\'s light comes from above, where the lamp is.',
+    palette: 'Shift: a summer-night green room (cloth3 #2c3a2e, deepened), a cream firefly, its lantern in lamp amber with a strong glow.',
     rationale:
-      'A moth seen from above, flying toward the light at the top of the icon: its fore wings are the two pages of an open book, each with a page edge running along it, its body the spine, lit amber. A moth is the night creature that cannot leave the lamp alone, which is what a good book does to its reader late at night; it carries the design\'s "reading lamp in a dark room" without drawing the lamp, and it gives BetterReads a character rather than a symbol, something friends can recognise and remember. Four wings and a bar hold at 16 px (the feelers and page edges drop). Nothing of Goodreads: no letter, no brown; a cream moth in a dark green night.',
+      'A firefly, carrying its own light: the night reader who brings the lamp along. Seen from above, its two wing covers are a book\'s two covers, closed along the spine and just parting at the tail, where the lantern glows in the design\'s amber, and it flies up and to the right, which is the "better". Where a moth comes to the light, the firefly is the light, so the mark is warm and a little playful while staying calm, and it is a character people remember. It is a simple stack of shapes (head, shield, two covers, a glowing drop), so at 16 px it is still a cream beetle with an amber light at its tail (the antennae drop). Nothing of Goodreads: no letter, no brown; cream and amber in a dark summer night.',
   },
 ]
