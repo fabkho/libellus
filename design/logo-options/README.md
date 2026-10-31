@@ -7,9 +7,9 @@ Once one is picked, its `icon.svg`, `monochrome.svg` and `favicon.svg` replace t
 
 ![All six options side by side](overview.png)
 
-Round 7: the owner keeps 1 and 6; 18 and 19 are new (everything else was dropped in earlier
-rounds, the creatures of rounds 4–6 included). The numbers stay as they were so a reply can name
-an option without confusion.
+Round 8: the owner keeps 1 and 6, likes the ideas of 18 and 19 (not yet their drawings), and
+asked for six more ideas: 20 to 25. The numbers stay as they were so a reply can name an option
+without confusion.
 
 | # | Option | Idea | Room |
 | --- | --- | --- | --- |
@@ -17,6 +17,12 @@ an option without confusion.
 | 6 | [Lamp over the page](6-lamp-over-page/sheet.png) | The lamp rising behind an open book like the sun | dusk plum (shift) |
 | 18 | [Locked diary](18-locked-diary/sheet.png) | A keyhole through a book's cover, its stem a bookmark ribbon, the lamp's light inside | deep mulberry (shift) |
 | 19 | [Paper boat](19-paper-boat/sheet.png) | A printed page folded into a paper boat, its sail amber, setting off | night-sea blue (shift) |
+| 20 | [Page kite](20-page-kite/sheet.png) | A printed page flown as a kite, its tail tied with ribbon bows | dusk-sky blue (shift) |
+| 21 | [Balloon](21-balloon/sheet.png) | A hot-air balloon lit like the lamp, rising, a book for its basket | twilight rose-violet (shift) |
+| 22 | [Lighthouse](22-lighthouse/sheet.png) | A tower of three books, the lamp its lantern, guiding you to the next read | slate night (shift) |
+| 23 | [Wax seal](23-wax-seal/sheet.png) | Amber wax pressed with a bookmark ribbon: an invitation, sealed | deep green (shift) |
+| 24 | [Constellation](24-constellation/sheet.png) | Stars joined into an open book, one lit amber | midnight indigo (shift) |
+| 25 | [Night window](25-night-window/sheet.png) | A window lit at night, books on the sill as silhouettes | ink-teal night (shift) |
 
 Each option's sheet has the rationale, the palette, the icon on iOS and Android home screens (and
 as a themed icon), every mask, the favicon in a browser tab and at its real pixels, the monochrome

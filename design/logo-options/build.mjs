@@ -520,7 +520,7 @@ async function overview() {
   }
   const html = `<!doctype html><html><head><style>${BASE_CSS}
   .wrap{width:2520px;padding:56px 56px 60px}
-  .cols{display:grid;grid-template-columns:repeat(${OPTIONS.length},1fr);gap:22px;margin-top:36px}
+  .cols{display:grid;grid-template-columns:repeat(${Math.min(OPTIONS.length, 5)},1fr);gap:22px;margin-top:36px}
   .col{padding:26px 20px 22px;display:flex;flex-direction:column}
   .n{font-family:'Geist Mono',monospace;font-size:44px;font-weight:400;color:#845418;line-height:1}
   .name{font-family:Newsreader,serif;font-weight:500;font-size:30px;letter-spacing:-.01em;margin-top:10px}
@@ -531,7 +531,7 @@ async function overview() {
   h1{font-family:Newsreader,serif;font-weight:500;font-size:56px;letter-spacing:-.02em;margin:0}
   </style></head><body>${SVG_DEFS}<div class="wrap">
     <div style="display:flex;align-items:flex-end;justify-content:space-between">
-      <div><div class="eyebrow">BetterReads · logo options, round 7 · kept: 1 and 6 · new: 18 and 19</div><h1>Four directions for the new name</h1></div>
+      <div><div class="eyebrow">BetterReads · logo options, round 8 · kept: 1, 6, 18, 19 · new: 20 to 25</div><h1>Ten directions for the new name</h1></div>
       <div style="display:flex;align-items:center;gap:14px"><span class="cap" style="margin:0;text-align:right">today:<br>Two ribbons</span><img class="squircle" src="${uri(current)}" width="72" height="72"></div>
     </div>
     <div class="cols">${cols.join('')}</div>
