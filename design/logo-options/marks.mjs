@@ -71,7 +71,7 @@ function lampPage(variant) {
   ]
 }
 
-// ------------------------------------------------------------------ helpers for drawn creatures
+// ------------------------------------------------------------------ path helpers
 
 /** Maps every coordinate pair of an absolute M/L/C/Q path (no arcs) through `fn`. */
 const mapPath = (d, fn) =>
@@ -80,11 +80,7 @@ const mapPath = (d, fn) =>
     return `${f(a)} ${f(b)}`
   })
 const mirrorX = (d) => mapPath(d, (x, y) => [100 - x, y])
-const rotate = (d, deg, cx = 50, cy = 50) => {
-  const a = (deg * Math.PI) / 180
-  return mapPath(d, (x, y) => [cx + (x - cx) * Math.cos(a) - (y - cy) * Math.sin(a), cy + (x - cx) * Math.sin(a) + (y - cy) * Math.cos(a)])
-}
-/** An ellipse as four cubic curves (so it can be rotated with the rest). `ccw` reverses it. */
+/** An ellipse as four cubic curves (so mapPath can move it with the rest). `ccw` reverses it. */
 function ellipse(cx, cy, rx, ry, ccw = false) {
   const k = 0.5523
   const P = (x, y) => `${f(x)} ${f(y)}`
@@ -103,51 +99,7 @@ function ellipse(cx, cy, rx, ry, ccw = false) {
   )
 }
 
-// ------------------------------------------------------------------ 18 · Locked diary
-
-function lockedDiary(variant) {
-  // A book's cover with a keyhole cut through it, the keyhole's stem a bookmark ribbon with its
-  // swallowtail, and the lamp's light showing through: what is inside is yours.
-  const fav = variant === 'fav'
-  const cover = roundedPolygon([[24, 10], [80, 10], [80, 90], [24, 90]], [3, 7, 7, 3])
-  const spine = fav ? '' : 'M31 10H33.6V90H31Z' // the hinge line along the spine, knocked out
-  // the keyhole, cut out: a round head (centre (54, 39), r 13.5) on a ribbon 15 wide with a swallowtail
-  const keyhole = (k) => {
-    const r = 13.5 - k
-    const half = 7.5 - k
-    const bottom = 78 - k
-    const notch = 70.5 - k * 0.3
-    const yJoin = 39 + Math.sqrt(r * r - half * half)
-    return (
-      `M${f(54 - half)} ${f(yJoin)}A${f(r)} ${f(r)} 0 1 1 ${f(54 + half)} ${f(yJoin)}` +
-      `L${f(54 + half)} ${f(bottom)}L54 ${f(notch)}L${f(54 - half)} ${f(bottom)}Z`
-    )
-  }
-  const g = fav ? 0 : 2.4 // the gap between the cut and the light inside it
-  const parts = [{ role: 'main', d: cover + spine + keyhole(0), evenodd: true }]
-  parts.push({ role: 'accent', d: keyhole(g) })
-  return parts
-}
-
-// ------------------------------------------------------------------ 19 · Paper boat
-
-function paperBoat(variant) {
-  // A page folded into a paper boat: a printed hull (two lines of text knocked out), the folded
-  // corners at its ends, and the middle fold standing up as an amber sail, lit by the lamp.
-  const fav = variant === 'fav'
-  const hull = roundedPolygon([[10, 58], [90, 58], [74, 80], [26, 80]], [1.5, 1.5, 3, 3])
-  const lines = fav ? '' : 'M24 64.6H76V67H24Z' + 'M29 71.2H64V73.6H29Z'
-  const flapL = roundedPolygon([[13, 54.5], [25.5, 38], [31, 54.5]], [1, 1.5, 1])
-  const flapR = roundedPolygon([[87, 54.5], [74.5, 38], [69, 54.5]], [1, 1.5, 1])
-  const sail = roundedPolygon([[50, 14], [67.5, 54.5], [32.5, 54.5]], [2, 1.2, 1.2])
-  const water = fav ? '' : 'M14 88.6C24 85.4 34 85.4 44 88.6C54 91.8 64 91.8 74 88.6L86 86.4V89.2C76 91.4 64 95.2 54 92.2C44 89.2 34 88.4 24 91.2L14 91.2Z'
-  return [
-    { role: 'main', d: hull + lines + flapL + flapR + water, evenodd: true },
-    { role: 'accent', d: sail },
-  ]
-}
-
-// ------------------------------------------------------------------ helpers for round 8
+// ------------------------------------------------------------------ more path helpers
 
 /** A straight bar from (x1, y1) to (x2, y2), `w` wide, as a polygon. */
 function bar(x1, y1, x2, y2, w) {
@@ -157,7 +109,6 @@ function bar(x1, y1, x2, y2, w) {
   const P = (x, y) => `${f(x)} ${f(y)}`
   return `M${P(x1 + nx, y1 + ny)}L${P(x2 + nx, y2 + ny)}L${P(x2 - nx, y2 - ny)}L${P(x1 - nx, y1 - ny)}Z`
 }
-const circle = (cx, cy, r) => ellipse(cx, cy, r, r)
 
 // ------------------------------------------------------------------ 20 · Page kite
 
@@ -214,62 +165,6 @@ function lighthouse(variant) {
   return [
     { role: 'main', d: tower + deck + roof },
     { role: 'accent', d: lantern + beams },
-  ]
-}
-
-// ------------------------------------------------------------------ 23 · Wax seal
-
-function waxSeal(variant) {
-  // A seal of amber wax pressed with a bookmark ribbon: an invitation, sealed. The ring and the
-  // ribbon are pressed into the wax (knocked out), so the seal is one shape.
-  const fav = variant === 'fav'
-  const pts = []
-  const lobes = 13
-  for (let i = 0; i < lobes * 2; i++) {
-    const a = (i / (lobes * 2)) * Math.PI * 2 - Math.PI / 2
-    const r = i % 2 === 0 ? 41 : 37.6
-    pts.push([50 + r * Math.cos(a), 50 + r * Math.sin(a)])
-  }
-  const blob = roundedPolygon(pts, 4.2)
-  const ring = fav ? '' : circle(50, 50, 30.5) + ellipse(50, 50, 28, 28, true)
-  const w = fav ? 9 : 7.5
-  const ribbon = roundedPolygon([[50 - w, fav ? 27 : 30], [50 + w, fav ? 27 : 30], [50 + w, fav ? 74 : 70], [50, fav ? 65.5 : 63], [50 - w, fav ? 74 : 70]], [1.2, 1.2, 0.6, 0.4, 0.6])
-  return [{ role: 'accent', d: blob + ring + ribbon, evenodd: true }]
-}
-
-// ------------------------------------------------------------------ 24 · Constellation
-
-function constellation(variant) {
-  // Stars joined into the outline of an open book, one of them lit amber: your reading as a map
-  // of the night sky, the people you follow its other stars.
-  const fav = variant === 'fav'
-  const P = { lo: [10, 38], lm: [30, 31], gt: [50, 42], rm: [70, 31], ro: [90, 38], rb: [90, 62], gb: [50, 69], lb: [10, 62] }
-  const w = fav ? 4.6 : 2.6
-  const r = fav ? 5.2 : 3.6
-  const lines = [['lo', 'lm'], ['lm', 'gt'], ['gt', 'rm'], ['rm', 'ro'], ['ro', 'rb'], ['rb', 'gb'], ['gb', 'lb'], ['lb', 'lo'], ['gt', 'gb']]
-  const lit = 'gt'
-  const gap = fav ? 8.5 : 9 // the lines stop short of the lit star
-  let d = ''
-  for (const [a, b] of lines) {
-    let [x1, y1] = P[a]
-    let [x2, y2] = P[b]
-    const len = Math.hypot(x2 - x1, y2 - y1)
-    if (a === lit) { x1 += ((x2 - x1) / len) * gap; y1 += ((y2 - y1) / len) * gap }
-    if (b === lit) { x2 -= ((x2 - x1) / len) * gap; y2 -= ((y2 - y1) / len) * gap }
-    d += bar(x1, y1, x2, y2, w)
-  }
-  for (const k of Object.keys(P)) if (k !== lit) d += circle(P[k][0], P[k][1], r)
-  if (!fav) d += circle(24, 14, 2) + circle(80, 12, 1.6) + circle(62, 88, 1.8) + circle(20, 84, 1.4)
-  // the lit star: a small five-pointed star
-  const star = []
-  for (let i = 0; i < 10; i++) {
-    const a = (-90 + i * 36) * (Math.PI / 180)
-    const rr = i % 2 === 0 ? (fav ? 8.5 : 7.8) : fav ? 4 : 3.4
-    star.push([P[lit][0] + rr * Math.cos(a), P[lit][1] + rr * Math.sin(a)])
-  }
-  return [
-    { role: 'main', d },
-    { role: 'accent', d: roundedPolygon(star, star.map((_, i) => (i % 2 === 0 ? 1 : 0.6))) },
   ]
 }
 
@@ -351,34 +246,6 @@ export const OPTIONS = [
       'An open book with the lamp rising behind it like the sun over a horizon: the design\'s founding image ("a reading lamp in a dark room") made into the mark, and a dawn that says better. It is calm, the way the app is calm, and the one option that is a picture rather than a sign. The half disc and the gull of the pages are simple enough to hold at 16 px (the gaps widen there). Its lettering is the app\'s current wordmark face, Newsreader Italic. Nothing of Goodreads: no letterform in the mark, a plum dusk instead of brown and cream.',
   },
   {
-    n: 18,
-    slug: '18-locked-diary',
-    name: 'Locked diary',
-    kind: 'A keyhole through the cover, a ribbon for its stem',
-    parts: lockedDiary,
-    room: { top: '#4a2338', bottom: '#28121f', glow: [54, 44], glowStrength: 0.3 },
-    icon: { main: CREAM, accent: AMBER },
-    font: { family: 'newsreader', weight: 500, style: 'normal', tracking: -0.01 },
-    text: 'BetterReads',
-    palette: 'Shift: a deep-mulberry room (new, warmer than cloth1), a cream cover, the light through the keyhole in lamp amber.',
-    rationale:
-      'A book\'s cover with a keyhole cut through it, and the lamp\'s light showing through from inside. The keyhole\'s stem is the bookmark ribbon of Bookmark B, swallowtail and all, so a keyhole and a bookmark are the same shape. It says two true things about BetterReads at once: a book is a door into somewhere lit, and your reading here is yours (invite-only, private by default, no ads, no trackers), like a diary with a lock. It is a single bold shape with one warm opening, so it holds at 16 px (the hinge line drops and the light fills the keyhole). Nothing of Goodreads: no letter, no brown; cream and amber on mulberry.',
-  },
-  {
-    n: 19,
-    slug: '19-paper-boat',
-    name: 'Paper boat',
-    kind: 'A page folded into a boat, setting off',
-    parts: paperBoat,
-    room: { top: '#1e3a4c', bottom: '#0e1d28', glow: [80, 10], glowStrength: 0.26 },
-    icon: { main: CREAM, accent: AMBER },
-    font: { family: 'geist-sans', weight: 500, style: 'normal', tracking: -0.025 },
-    text: 'BetterReads',
-    palette: 'Shift: a night-sea blue room (new, cloth2 toward teal), a cream boat with its printed lines, the sail in lamp amber.',
-    rationale:
-      'A page torn from a book and folded into a paper boat, two lines of print still on its hull, its middle fold standing up as an amber sail, setting off over a little wave. Every book is a voyage (want to read, reading, finished), and the boat is made of the book itself. It is playful in the way a paper boat is, childhood and calm at once, and it sits far from every other reading app (books, stars, letters) and from Goodreads (no letter, no brown). The silhouette (a hull and three triangles) is clear at 16 px, where the print and the wave drop.',
-  },
-  {
     n: 20,
     slug: '20-page-kite',
     name: 'Page kite',
@@ -419,34 +286,6 @@ export const OPTIONS = [
     palette: 'Shift: a deep slate night (new), a cream tower, the lantern and its beams in lamp amber.',
     rationale:
       'A lighthouse whose tower is three books stacked on top of each other and whose lantern is the lamp, sending two beams out into the night. It is what the friends you follow are on BetterReads: a light that guides you to your next good book, without ads or algorithms. The design\'s "reading lamp in a dark room" becomes a lamp for others. Sturdy and clear: at 16 px it is a cream tower with an amber light at the top (the beams drop). Nothing of Goodreads: no letter, no brown; cream and amber on a slate night.',
-  },
-  {
-    n: 23,
-    slug: '23-wax-seal',
-    name: 'Wax seal',
-    kind: 'An invitation, sealed with a ribbon',
-    parts: waxSeal,
-    room: { top: '#27392d', bottom: '#111b14', glow: [50, 46], glowStrength: 0.26 },
-    icon: { main: CREAM, accent: AMBER },
-    font: { family: 'newsreader', weight: 500, style: 'normal', tracking: -0.01 },
-    text: 'BetterReads',
-    palette: 'Shift: a deep green room (cloth3, deepened), the seal in lamp amber with the ring and the ribbon pressed into it.',
-    rationale:
-      'A seal of amber wax pressed with a bookmark ribbon, the way an invitation or a letter between friends is sealed. BetterReads is invite-only, private by default and shared only with the people you let in; the seal says all three, and its ribbon is the bookmark of Bookmark B pressed into wax. It is one shape (the ring and the ribbon are impressions), so the monochrome mark is the icon itself, and at 16 px it is an amber disc with a ribbon in it (the ring drops). Nothing of Goodreads: no letter, no brown; amber wax on deep green.',
-  },
-  {
-    n: 24,
-    slug: '24-constellation',
-    name: 'Constellation',
-    kind: 'Stars joined into an open book, one lit',
-    parts: constellation,
-    room: { top: '#1f2449', bottom: '#0c0e21', glow: [50, 42], glowStrength: 0.3 },
-    icon: { main: CREAM, accent: AMBER },
-    font: { family: 'newsreader', weight: 400, style: 'italic', tracking: -0.02 },
-    text: 'BetterReads',
-    palette: 'Shift: a midnight-indigo sky (new), cream stars and lines, the lit star in lamp amber.',
-    rationale:
-      'Stars joined into the outline of an open book, the way old constellations draw pictures into the sky; the star at the top of the gutter is lit amber. Your reading as a map you draw over the years, and the people you follow as its other stars: connected, at a distance, by choice. It is the quietest and most poetic of the set and fits the Night Reader room. Lines and dots are the risk at small sizes, so the favicon thickens them to a bold open-book outline with an amber star. Nothing of Goodreads: no letter, no brown; a night sky.',
   },
   {
     n: 25,

@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-<title>BetterReads — option 18, Locked diary (favicon: rounded square, the mark simplified for 16 and 32 px)</title>
-<defs><linearGradient id="o18fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4a2338"/><stop offset="1" stop-color="#28121f"/></linearGradient><radialGradient id="o18fgl" cx="16.63" cy="14.13" r="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.3"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.1"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
-<rect width="32" height="32" rx="7" fill="url(#o18fbg)"/><rect width="32" height="32" rx="7" fill="url(#o18fgl)"/>
-<g transform="translate(-0.25 0.38) scale(0.3125)"><path fill-rule="evenodd" fill="#f1e3c8" d="M24 13Q24 10 27 10L73 10Q80 10 80 17L80 83Q80 90 73 90L27 90Q24 90 24 87ZM46.5 50.22A13.5 13.5 0 1 1 61.5 50.22L61.5 78L54 70.5L46.5 78Z"/><path fill="#efb768" d="M46.5 50.22A13.5 13.5 0 1 1 61.5 50.22L61.5 78L54 70.5L46.5 78Z"/></g>
-</svg>

@@ -493,6 +493,83 @@ async function sheet(o) {
   writeFileSync(join(here, o.slug, 'sheet.png'), await page.screenshot({ fullPage: true, type: 'png' }))
 }
 
+
+/** overview.html: the same overview as a standalone page (inline SVG, fonts embedded), light or dark. */
+function overviewHtml() {
+  const current = readFileSync(join(here, '../icons/app/icon.svg'), 'utf8')
+  const sheetUrl = (o) => `https://github.com/fabkho/libellus/blob/design/logo-options/design/logo-options/${o.slug}/sheet.png`
+  const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+  const cards = OPTIONS.map((o) => {
+    const F = files[o.n]
+    const sw = (c) => `<i style="background:${c}"></i>`
+    return `<article class="card">
+      <header><span class="n">${o.n}</span><div><h2>${esc(o.name)}</h2><p class="kind">${esc(o.kind)}</p></div></header>
+      <div class="hero"><img class="squircle" src="${uri(F['icon-ios.svg'])}" width="168" height="168" alt="${esc(o.name)}, iOS icon"></div>
+      <div class="row masks">
+        <figure>${adaptive(uri(F['icon.svg']), 64, 'circle')}<figcaption>Android</figcaption></figure>
+        <figure>${themedIcon(F['monochrome.svg'], 64, MATERIAL.light)}<figcaption>themed</figcaption></figure>
+        <figure>${themedIcon(F['monochrome.svg'], 64, MATERIAL.dark)}<figcaption>themed dark</figcaption></figure>
+        <figure class="fav"><div><img src="${uri(F['favicon.svg'])}" width="32" height="32" alt=""><img src="${uri(F['favicon.svg'])}" width="16" height="16" alt=""></div><figcaption>32 · 16 px</figcaption></figure>
+      </div>
+      <div class="lock light"><img src="${uri(F['wordmark-light.svg'])}" alt="${esc(o.name)} lock-up, light"></div>
+      <div class="lock dark"><img src="${uri(F['wordmark-dark.svg'])}" alt="${esc(o.name)} lock-up, dark"></div>
+      <div class="palette">${sw(o.room.top)}${sw(o.room.bottom)}${sw(o.icon.main)}${o.icon.accent !== o.icon.main ? sw(o.icon.accent) : ''}<span>${esc(o.palette)}</span></div>
+      <p class="why">${esc(o.rationale)}</p>
+      <a class="sheet" href="${sheetUrl(o)}">Full contact sheet →</a>
+    </article>`
+  }).join('\n')
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BetterReads · logo options</title>
+<style>${FONT_CSS}
+:root{--surface:#f4f0e9;--raised:#fbf9f5;--ink:#1c1915;--muted:rgb(28 25 21 / .74);--faint:rgb(28 25 21 / .62);--hair:rgb(28 25 21 / .1);--accent:#845418}
+[data-theme=dark]{--surface:#0e0c0a;--raised:#171512;--ink:#eee7dc;--muted:rgb(238 231 220 / .74);--faint:rgb(238 231 220 / .56);--hair:rgb(238 231 220 / .085);--accent:#efb768}
+*{box-sizing:border-box}html{background:var(--surface);color:var(--ink);font-family:Geist,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{margin:0;padding:48px clamp(16px,4vw,56px) 64px;max-width:1500px;margin-inline:auto}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.eyebrow{font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+h1{font-family:Newsreader,serif;font-weight:500;font-size:clamp(34px,5vw,52px);letter-spacing:-.02em;margin:6px 0 0}
+.lede{color:var(--muted);max-width:720px;line-height:1.55;font-size:15px;margin:12px 0 0}
+.today{display:flex;align-items:center;gap:12px;font-family:'Geist Mono',monospace;font-size:11px;color:var(--faint);text-align:right}
+button{font:inherit;font-size:13px;color:var(--ink);background:var(--raised);border:0;box-shadow:0 0 0 .5px var(--hair),0 0 0 1px var(--hair);border-radius:999px;padding:8px 14px;cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:20px;margin-top:36px}
+.card{background:var(--raised);border-radius:22px;padding:22px 20px 20px;box-shadow:0 0 0 .5px var(--hair),0 10px 30px -18px rgb(0 0 0 / .3);display:flex;flex-direction:column}
+.card header{display:flex;gap:14px;align-items:flex-start}
+.n{font-family:'Geist Mono',monospace;font-size:34px;color:var(--accent);line-height:1}
+h2{font-family:Newsreader,serif;font-weight:500;font-size:26px;letter-spacing:-.01em;margin:0}
+.kind{font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:4px 0 0}
+.hero{display:flex;justify-content:center;margin:22px 0 4px}.hero img{filter:drop-shadow(0 12px 22px rgb(0 0 0 / .25))}
+.squircle{clip-path:url(#squircle)}
+.row{display:flex;justify-content:center;gap:14px;margin-top:18px;align-items:flex-end}
+figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:7px}
+figcaption{font-family:'Geist Mono',monospace;font-size:10px;color:var(--faint)}
+.fav div{display:flex;gap:8px;align-items:flex-end;height:64px;padding:0 4px}
+.lock{margin-top:12px;border-radius:14px;height:84px;display:flex;align-items:center;justify-content:center;padding:14px}
+.lock img{max-width:100%;max-height:54px}.lock.light{background:#f4f0e9;box-shadow:inset 0 0 0 .5px rgb(28 25 21 / .12)}.lock.dark{background:#0e0c0a}
+.palette{display:flex;gap:6px;align-items:flex-start;margin-top:16px;font-family:'Geist Mono',monospace;font-size:10.5px;color:var(--faint);line-height:1.5}
+.palette i{flex:none;width:16px;height:16px;border-radius:5px;box-shadow:0 0 0 .5px rgb(0 0 0 / .25)}.palette span{margin-left:4px}
+.why{font-size:14px;line-height:1.55;color:var(--muted);margin:12px 0 0;flex:1}
+.sheet{margin-top:14px;font-size:13px;color:var(--accent);text-decoration:none}
+footer{margin-top:40px;font-size:13px;color:var(--faint)}footer a{color:var(--accent)}
+</style></head><body>
+${SVG_DEFS}
+<div class="top">
+  <div><div class="eyebrow">BetterReads · logo options · ${OPTIONS.length} directions</div><h1>A new mark for BetterReads</h1>
+  <p class="lede">The directions still in the running, numbered as in every round so far. Each shows the iOS icon, the Android adaptive and themed icons, the favicon at its real 32 and 16 px, and the lock-up on the app's light and dark surfaces. All of it is plain SVG with the lettering outlined, in the tokens' colours.</p></div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:14px">
+    <button id="theme" type="button">Dark page</button>
+    <div class="today">today:<br>Two ribbons<img class="squircle" src="${uri(current)}" width="52" height="52" alt="Today's icon"></div>
+  </div>
+</div>
+<main class="grid">${cards}</main>
+<footer>Sources and sheets: <a href="https://github.com/fabkho/libellus/pull/448">fabkho/libellus#448</a> (design/logo-options/). Nothing in the app changes until one is picked.</footer>
+<script>
+const b=document.getElementById('theme');const set=(d)=>{document.documentElement.dataset.theme=d?'dark':'light';b.textContent=d?'Light page':'Dark page'};
+set(matchMedia('(prefers-color-scheme: dark)').matches);b.onclick=()=>set(document.documentElement.dataset.theme!=='dark')
+</script>
+</body></html>
+`
+}
+
 async function overview() {
   const current = readFileSync(join(here, '../icons/app/icon.svg'), 'utf8')
   const cols = []
@@ -531,7 +608,7 @@ async function overview() {
   h1{font-family:Newsreader,serif;font-weight:500;font-size:56px;letter-spacing:-.02em;margin:0}
   </style></head><body>${SVG_DEFS}<div class="wrap">
     <div style="display:flex;align-items:flex-end;justify-content:space-between">
-      <div><div class="eyebrow">BetterReads · logo options, round 8 · kept: 1, 6, 18, 19 · new: 20 to 25</div><h1>Ten directions for the new name</h1></div>
+      <div><div class="eyebrow">BetterReads · logo options, round 9 · 1, 6, 20, 21, 22, 25</div><h1>Six directions for the new name</h1></div>
       <div style="display:flex;align-items:center;gap:14px"><span class="cap" style="margin:0;text-align:right">today:<br>Two ribbons</span><img class="squircle" src="${uri(current)}" width="72" height="72"></div>
     </div>
     <div class="cols">${cols.join('')}</div>
@@ -544,6 +621,9 @@ async function overview() {
 
 const only = process.argv[2] // `node build.mjs 3` renders one sheet (the sources are always all written)
 for (const o of OPTIONS) if (!only || only === String(o.n)) await sheet(o)
-if (!only || only === 'overview') await overview()
+if (!only || only === 'overview') {
+  await overview()
+  writeFileSync(join(here, 'overview.html'), overviewHtml())
+}
 await browser.close()
 console.log('written:', OPTIONS.map((o) => o.slug).join(', '), only ? `(sheet ${only})` : '+ overview.png')

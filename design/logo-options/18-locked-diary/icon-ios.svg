@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
-<title>BetterReads — option 18, Locked diary (iOS: full square, the system rounds it; the mark at 60 % of the tile)</title>
-<defs><linearGradient id="o18ibg" x1="0" y1="0" x2="0" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4a2338"/><stop offset="1" stop-color="#28121f"/></linearGradient><radialGradient id="o18igl" cx="55.6" cy="49.2" r="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.3"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.1"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient></defs>
-<rect width="108" height="108" fill="url(#o18ibg)"/><rect width="108" height="108" fill="url(#o18igl)"/>
-<g transform="translate(12.4 14) scale(0.8)"><path fill-rule="evenodd" fill="#f1e3c8" d="M24 13Q24 10 27 10L73 10Q80 10 80 17L80 83Q80 90 73 90L27 90Q24 90 24 87ZM31 10H33.6V90H31ZM46.5 50.22A13.5 13.5 0 1 1 61.5 50.22L61.5 78L54 70.5L46.5 78Z"/><path fill="#efb768" d="M48.9 48.86A11.1 11.1 0 1 1 59.1 48.86L59.1 75.6L54 69.78L48.9 75.6Z"/></g>
-</svg>
