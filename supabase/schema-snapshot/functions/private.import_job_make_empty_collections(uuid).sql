@@ -20,7 +20,7 @@ begin
         perform public.create_collection(v_name);
       end if;
     end loop;
-  exception when others then
+  exception when others or query_canceled then
     raise warning 'import_job_make_empty_collections %: %', p_job, sqlerrm;
   end;
   update public.import_job_collections set empty_made = true where job_id = p_job;

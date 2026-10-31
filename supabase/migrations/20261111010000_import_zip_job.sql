@@ -20,12 +20,11 @@
 --                          with both left out.
 --   import_job_write       the job's FIRST write creates the empty Collections (the ones she does not have yet), as the member.
 --   import_job_release     the job's end step: when the job is done, each ranked Collection is put in order, once, as the member,
---                          through `reorder_collection`: her entries that were on it before the job (added before it started)
---                          keep their places at the front, in their order, and this import's entries follow in rank order. The
---                          keys are looked up in the job's own rows (their entry), else in her entries by import key (a retried
---                          job's rows that an earlier job wrote). A key without an entry (a row that failed, a book the device did
---                          not upload) and a list she no longer has are passed over. A failure of the end step is a warning in
---                          the log, never a failed job.
+--                          through `reorder_collection`: this import's entries (put on the Collection since the import began; a
+--                          retry takes the time over, so it also ranks the books its failed predecessor wrote, found by their import
+--                          key) are put in rank order after her older ones, which keep their places at the front. A key without an entry (a row that failed, a book the device did
+--                          not upload) and a list she no longer has are passed over. A failure of the end step (even a
+--                          statement timeout) is a warning in the log, never a failed job.
 --   retry_import_job      carries the two lists over to the new job.
 --
 -- Security: every function stays SECURITY DEFINER with the checks it had. The job acts as its own member only (the claims
@@ -45,7 +44,10 @@ create table public.import_job_collections (
   -- [name, …]: her lists without a book.
   empty_collections jsonb not null default '[]' check (jsonb_typeof(empty_collections) = 'array'),
   -- The empty Collections are made (by the job's first write).
-  empty_made        boolean not null default false
+  empty_made        boolean not null default false,
+  -- When the import began: the end step ranks the entries put on a Collection from then on. A retried job keeps its failed
+  -- predecessor's, so the books that one wrote are ranked too.
+  began_at          timestamptz not null default now()
 );
 
 comment on table public.import_job_collections is
@@ -472,6 +474,7 @@ declare
   v_rows jsonb;
   v_left integer;
   v_lists public.import_job_collections;
+  v_new uuid;
 begin
   if v_member is null then raise exception 'not_signed_in' using errcode = '42501'; end if;
   select * into v_job from public.import_jobs where id = p_job and member_id = v_member;
@@ -483,7 +486,7 @@ begin
    where r.job_id = p_job and (r.outcome is null or r.outcome = 'failed');
   if v_rows is null then raise exception 'job_unknown' using errcode = 'P0002'; end if;
   select * into v_lists from public.import_job_collections where job_id = p_job;
-  return public.start_import_job(
+  v_new := public.start_import_job(
     v_rows,
     v_job.source,
     v_job.device,
@@ -492,6 +495,11 @@ begin
     v_lists.collection_order,
     v_lists.empty_collections
   );
+  -- The retried import began when the failed one did.
+  if v_lists.job_id is not null then
+    update public.import_job_collections set began_at = v_lists.began_at where job_id = v_new;
+  end if;
+  return v_new;
 end
 $$;
 
@@ -561,7 +569,7 @@ begin
         perform public.create_collection(v_name);
       end if;
     end loop;
-  exception when others then
+  exception when others or query_canceled then
     raise warning 'import_job_make_empty_collections %: %', p_job, sqlerrm;
   end;
   update public.import_job_collections set empty_made = true where job_id = p_job;
@@ -570,11 +578,12 @@ $$;
 
 -- The job's end step, as the member, for the runner holding the job: her empty Collections (when no write made them), then each
 -- ranked Collection in order, through `reorder_collection`; then the lists are deleted (nothing is read of them again).
---   - her entries on the Collection before the job began (`added_at` before the job's start) keep their places at the front, in
---     their order;
---   - this import's entries follow in rank order: the entry of each key (the job's own row, else her entry of that import key),
---     when it is on the Collection and was added by the job.
--- A list she no longer has, a key without an entry: passed over. A failure is a warning, not a failed job.
+--   - this import's entries follow in rank order: the entry of each key (the job's own row, else her entry of that import key:
+--     a retried job finds the books its failed predecessor wrote), when it is on the Collection and was put there since the
+--     import began (`began_at`, which a retry takes over from the job it retries);
+--   - every other entry on the Collection (hers from before) keeps its place at the front, in its order.
+-- A list she no longer has, a key without an entry: passed over. A failure (including a statement timeout) is a warning, not a
+-- failed job.
 create function private.import_job_finish(p_job uuid, p_runner text)
 returns void
 language plpgsql
@@ -594,8 +603,8 @@ begin
   select * into v_lists from public.import_job_collections where job_id = p_job for update;
   if v_lists.job_id is null then return; end if;
   select * into v_job from public.import_jobs where id = p_job;
-  v_before := private.import_job_as_member(p_job, p_runner);
   begin
+    v_before := private.import_job_as_member(p_job, p_runner);
     perform private.import_job_make_empty_collections(p_job);
     for v_item in select value from jsonb_array_elements(v_lists.collection_order) loop
       begin
@@ -613,21 +622,22 @@ begin
                   left join public.library_entries le on le.member_id = v_job.member_id and le.import_key = k.key
               ) s
               join public.collection_entries ce on ce.collection_id = v_collection and ce.entry_id = s.entry_id
-             where ce.added_at >= v_job.created_at
+             where ce.added_at >= v_lists.began_at
              group by s.entry_id
           ) x;
         select coalesce(array_agg(ce.entry_id order by ce.position), '{}') into v_old
           from public.collection_entries ce
          where ce.collection_id = v_collection and not (ce.entry_id = any (v_new));
         perform public.reorder_collection(v_collection, v_old || v_new);
-      exception when others then
+      exception when others or query_canceled then
         raise warning 'import_job_finish %: a list was not put in order: %', p_job, sqlerrm;
       end;
     end loop;
-  exception when others then
+  exception when others or query_canceled then
     raise warning 'import_job_finish %: %', p_job, sqlerrm;
   end;
-  perform private.import_job_as_caller(v_before);
+  -- `import_job_as_member` raises before it sets anything, so no claims to give back when it failed.
+  if v_before is not null then perform private.import_job_as_caller(v_before); end if;
   delete from public.import_job_collections where job_id = p_job;
 end
 $$;

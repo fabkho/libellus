@@ -6,7 +6,7 @@ import { startImportJob } from '@/data/importJob'
 import { importArguments } from '@/data/bookImport'
 import { parseExport } from '@/data/import/detect'
 import { hardcoverAdapter } from '@/data/import/hardcover'
-import { COVER_HINT_MIN_SIDE, judgeCover, mapHardcoverExport, readHardcoverZip, ZIP_LIMITS } from '@/data/import/hardcoverZip'
+import { COVER_HINT_MIN_SIDE, judgeCover, LIST_LIMITS, limitLists, mapHardcoverExport, readHardcoverZip, ZIP_LIMITS } from '@/data/import/hardcoverZip'
 import { HardcoverZipError, type ImportBook, type ImportFile } from '@/data/import/rows'
 import { prepareUpload, uploadRow } from '@/data/importUpload'
 import { signUpMember } from './support/member'
@@ -678,6 +678,35 @@ describe('what the upload does with a zip', () => {
     for (const book of csv.books) {
       expect('progress' in importArguments({ ...book, collections: [], book: { title: book.title, authors: book.authors } as never })).toBe(false)
     }
+  })
+
+  it('lists over what the server takes are trimmed on the device, not refused with the whole job', () => {
+    const keys = (n: number, tag = 'k') => Array.from({ length: n }, (_, i) => `hardcover:${tag}${i}`)
+    const small = [{ name: 'A', keys: keys(3) }]
+    expect(limitLists(small, ['E'])).toEqual({ collectionOrder: small, emptyCollections: ['E'] })
+    const manyLists = Array.from({ length: 600 }, (_, i) => ({ name: `L${i}`, keys: ['hardcover:1'] }))
+    expect(limitLists(manyLists, []).collectionOrder.length).toBe(LIST_LIMITS.lists)
+    expect(limitLists([], Array.from({ length: 600 }, (_, i) => `E${i}`)).emptyCollections.length).toBe(LIST_LIMITS.lists)
+    expect(limitLists([{ name: 'Long', keys: keys(10_500) }], []).collectionOrder[0]!.keys.length).toBe(LIST_LIMITS.keys)
+    // Lists that together are over the byte cap: whole lists past it are dropped, the ones before stay.
+    const heavy = Array.from({ length: 40 }, (_, i) => ({ name: `H${i}`, keys: keys(5_000, `h${i}-`) }))
+    const trimmed = limitLists(heavy, []).collectionOrder
+    expect(trimmed.length).toBeGreaterThan(0)
+    expect(trimmed.length).toBeLessThan(heavy.length)
+    expect(JSON.stringify(trimmed).length).toBeLessThanOrEqual(LIST_LIMITS.bytes)
+    expect(trimmed).toEqual(heavy.slice(0, trimmed.length))
+  })
+
+  it('a start with trimmed lists is accepted by the server', async () => {
+    const ada = await signUpMember()
+    const keys = Array.from({ length: 2 }, (_, i) => `hardcover:${i + 1}`)
+    const { collectionOrder, emptyCollections } = limitLists(
+      Array.from({ length: 600 }, (_, i) => ({ name: `L${i}`, keys })),
+      Array.from({ length: 600 }, (_, i) => `E${i}`),
+    )
+    const rows = keys.map((key) => ({ key, title: key, authors: ['A. Author'], status: 'want_to_read' }))
+    const started = await startImportJob(ada.client, { rows, source: 'hardcover', device: null, already: 0, languages: ['en'], collectionOrder, emptyCollections })
+    expect(started.error).toBeNull()
   })
 
   it('a CSV start sends the five arguments it always did; a zip’s lists go as two more, and only when there are some', async () => {

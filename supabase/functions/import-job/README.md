@@ -160,7 +160,7 @@ migration, or a CSV import, needs nothing of it): a row's `session.progress`, an
   Out of range or the wrong shape: that row fails with `progress_invalid`; on another status: `session_invalid`.
 - **Empty Collections** are made by the job's first write (`import_job_write`: the ones she does not have yet, any case).
 - **Ranked Collections** are put in order by the end step (`import_job_release`, when the job is done, as the member, through
-  `reorder_collection`): her entries that were on the Collection before the job started keep the front, this import's entries follow in
+  `reorder_collection`): her entries that were on the Collection before the import began keep the front (a retried job takes the start over from the failed one, so it ranks that job's books too), this import's entries follow in
   rank order. A failure there is a warning in the database log, never a failed job.
 
 All of it runs as the job's own member (`import_job_as_member`), so only her Collections and entries are ever read or changed.

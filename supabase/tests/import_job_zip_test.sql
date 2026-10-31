@@ -6,7 +6,7 @@
 -- (supabase/functions/import-job/write_test.ts); the row's `progress` is import_books_progress_test.sql.
 
 begin;
-select plan(45);
+select plan(63);
 
 create schema if not exists tests;
 insert into public.invite_codes (code, label, max_uses) values ('T-ZIPJOB', 'import job zip test', 10);
@@ -89,6 +89,16 @@ begin
   return v_outcome;
 end;
 $$;
+create or replace function tests.expire_lease(p_job uuid)
+returns void language sql security definer as $$
+  update public.import_jobs set lease_until = now() - interval '1 second' where id = p_job
+$$;
+create or replace function tests.fail_reorder()
+returns trigger language plpgsql as $$
+begin
+  raise exception 'order_mismatch' using errcode = '22023';
+end;
+$$;
 grant usage on schema tests to authenticated, service_role;
 grant execute on all functions in schema tests to authenticated, service_role;
 
@@ -96,6 +106,8 @@ select tests.member('ada@zipjob.pgtap.test') as ada \gset
 select tests.member('bo@zipjob.pgtap.test') as bo \gset
 select tests.member('cy@zipjob.pgtap.test') as cy \gset
 select tests.member('di@zipjob.pgtap.test') as di \gset
+select tests.member('ed@zipjob.pgtap.test') as ed \gset
+select tests.member('fy@zipjob.pgtap.test') as fy \gset
 
 -- --------------------------------------------------------------- the shape
 
@@ -226,6 +238,74 @@ update public.import_jobs set finished_at = now() - interval '31 days' where id 
 select private.import_job_tick();
 select is(tests.lists(:'failed'), 'none', 'the tick deletes the lists of a job that ended 30 days ago');
 select is(tests.lists(:'again'), '1/1/false', 'and not a live job''s');
+-- cy's retried job is live and holds the queue: it leaves, the next jobs of this test run.
+select tests.act_as(:'cy');
+select public.cancel_import_job(:'again');
+reset role;
+
+-- ------------------------------------------- a retried job keeps the ranking of the books its failed predecessor wrote
+
+-- ed has an older entry on Ranked. Job 1 (four rows; ranked 4, 2, 3, 1; one empty list) writes rows 1 and 2, its runner dies and
+-- another resumes it (the empty Collection is made once), then it fails; the retry writes rows 3 and 4.
+select tests.act_as(:'ed');
+select public.import_books('[{"key": "goodreads:95", "book": {"title": "Old Five", "authors": ["A. Author"], "source": "manual"}, "collections": ["Ranked"]}]');
+reset role;
+update public.collection_entries set added_at = now() - interval '1 day'
+ where collection_id in (select id from public.collections where member_id = :'ed');
+select tests.act_as(:'ed');
+select public.start_import_job(tests.rows(4, 'Ranked'), 'hardcover', null, 0, '{}',
+  '[{"name": "Ranked", "keys": ["goodreads:4", "goodreads:2", "goodreads:3", "goodreads:1"]}]'::jsonb, '["Empty One"]'::jsonb) as first \gset
+reset role;
+select tests.to_write_phase(:'first', 'e1', 4);
+select is(tests.write_row(:'first', 'e1', 0), 'added', 'job 1 writes row 1');
+select tests.expire_lease(:'first');
+set local role service_role;
+select set_config('request.jwt.claims', '{"role": "service_role"}', true);
+select public.import_job_claim('e1b');
+select public.import_job_take_write_rows(:'first', 'e1b', 4);
+reset role;
+select is(tests.write_row(:'first', 'e1b', 1), 'added', 'a second runner resumes it: row 2');
+select is(tests.collections(:'ed'), 'Ranked,Empty One', 'the empty Collection is made once, by the first write, not again by the resumed job');
+update public.import_jobs set state = 'failed', error = 'stalled', finished_at = now(), runner = null, lease_until = null where id = :'first';
+select private.import_job_dequeue(:'first');
+select tests.age_jobs(:'ed');
+select tests.act_as(:'ed');
+select public.retry_import_job(:'first') as second \gset
+reset role;
+select is(tests.lists(:'second'), '1/1/false', 'the retry takes the lists over (its own first write has not made the empty one yet)');
+select is((select b.began_at = a.began_at from public.import_job_collections a, public.import_job_collections b where a.job_id = :'first' and b.job_id = :'second'), true,
+          'and the time the import began, so the books job 1 wrote are this import''s too');
+select tests.to_write_phase(:'second', 'e2', 2);
+select is(tests.write_row(:'second', 'e2', 0), 'added', 'the retry writes row 3');
+select is(tests.write_row(:'second', 'e2', 1), 'added', 'and row 4');
+select is(tests.collections(:'ed'), 'Ranked,Empty One', 'its first write does not make the empty Collection a second time');
+select is(tests.order_of(:'ed', 'Ranked'), 'goodreads:95,goodreads:1,goodreads:2,goodreads:3,goodreads:4', 'write order until the end step');
+set local role service_role;
+select set_config('request.jwt.claims', '{"role": "service_role"}', true);
+select is(public.import_job_release(:'second', 'e2'), 'done', 'the retry is done');
+reset role;
+select is(tests.order_of(:'ed', 'Ranked'), 'goodreads:95,goodreads:4,goodreads:2,goodreads:3,goodreads:1',
+          'the ranking covers the books job 1 wrote too (found by their import key); her older entry keeps the front');
+
+-- ------------------------------------------- an end step that fails does not fail the job
+
+select tests.act_as(:'fy');
+select public.start_import_job(tests.rows(3, 'Ranked'), 'hardcover', null, 0, '{}',
+  '[{"name": "Ranked", "keys": ["goodreads:3", "goodreads:2", "goodreads:1"]}]'::jsonb, '["Empty Late"]'::jsonb) as flaky \gset
+reset role;
+select tests.to_write_phase(:'flaky', 'f1', 3);
+select is(tests.write_row(:'flaky', 'f1', 0), 'added', 'a job whose reorder will fail: row 1');
+select is(tests.write_row(:'flaky', 'f1', 1), 'added', 'row 2');
+select is(tests.write_row(:'flaky', 'f1', 2), 'added', 'row 3');
+create trigger tests_fail_reorder before update on public.collection_entries for each row execute function tests.fail_reorder();
+set local role service_role;
+select set_config('request.jwt.claims', '{"role": "service_role"}', true);
+select is(public.import_job_release(:'flaky', 'f1'), 'done', 'reorder_collection fails (order_mismatch): the job is done all the same');
+reset role;
+drop trigger tests_fail_reorder on public.collection_entries;
+select is(tests.order_of(:'fy', 'Ranked'), 'goodreads:1,goodreads:2,goodreads:3', 'her Collection is as written (the failed reorder left nothing half done)');
+select is(tests.lists(:'flaky'), 'none', 'and its lists are gone');
+select is((select state from public.import_jobs where id = :'flaky'), 'done', 'state done');
 
 select * from finish();
 rollback;

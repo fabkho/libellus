@@ -16,8 +16,8 @@ begin
   select * into v_lists from public.import_job_collections where job_id = p_job for update;
   if v_lists.job_id is null then return; end if;
   select * into v_job from public.import_jobs where id = p_job;
-  v_before := private.import_job_as_member(p_job, p_runner);
   begin
+    v_before := private.import_job_as_member(p_job, p_runner);
     perform private.import_job_make_empty_collections(p_job);
     for v_item in select value from jsonb_array_elements(v_lists.collection_order) loop
       begin
@@ -35,21 +35,22 @@ begin
                   left join public.library_entries le on le.member_id = v_job.member_id and le.import_key = k.key
               ) s
               join public.collection_entries ce on ce.collection_id = v_collection and ce.entry_id = s.entry_id
-             where ce.added_at >= v_job.created_at
+             where ce.added_at >= v_lists.began_at
              group by s.entry_id
           ) x;
         select coalesce(array_agg(ce.entry_id order by ce.position), '{}') into v_old
           from public.collection_entries ce
          where ce.collection_id = v_collection and not (ce.entry_id = any (v_new));
         perform public.reorder_collection(v_collection, v_old || v_new);
-      exception when others then
+      exception when others or query_canceled then
         raise warning 'import_job_finish %: a list was not put in order: %', p_job, sqlerrm;
       end;
     end loop;
-  exception when others then
+  exception when others or query_canceled then
     raise warning 'import_job_finish %: %', p_job, sqlerrm;
   end;
-  perform private.import_job_as_caller(v_before);
+  -- `import_job_as_member` raises before it sets anything, so no claims to give back when it failed.
+  if v_before is not null then perform private.import_job_as_caller(v_before); end if;
   delete from public.import_job_collections where job_id = p_job;
 end
 $function$
