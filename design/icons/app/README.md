@@ -32,3 +32,13 @@ the same script.
 - **Search**: a magnifier whose lens holds the lamp, half risen.
 - **Update progress**: the open book with the lamp half risen behind it (the icon's mark).
 - **Library**: the open book alone, without the lamp.
+
+## The mark in place
+
+`sheets/` holds the pictures the change was judged by: `framing.png` (`icon.svg` against
+`icon-ios.svg` at 192 and 180 px, which is why `any` takes the iOS framing), `icon-forms.png` (the
+maskable icon in a circle and a squircle, the themed icon, the apple-touch-icon, the favicon at 16
+and 32 px in a tab), `shortcuts.png` (the three shortcuts on a long-press, at 96 and 44 px),
+`readme-lockup.png` (the README's lock-up in both themes), and `android-launcher.jpg` /
+`android-launch.jpg` from Chrome on the emulator (docs/TESTING.md) — the home screen with the old
+icon (the `Libellus` shortcuts) beside the new one, and Chrome's launch splash for it.
