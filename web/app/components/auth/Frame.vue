@@ -6,9 +6,9 @@ let wallWarm = false
 
 <script setup lang="ts">
 // The way in (sign in, sign up, verify): a shelf in the dark with a lamp over
-// it, the wordmark, then the screen's form (default slot) and its way out to
-// the other screen (slot `footer`). The shelf is a wall of real covers (see
-// wall.ts), tilted and veiled; each stands on a cloth-coloured board that
+// it, the mark rising above the wordmark, then the screen's form (default slot)
+// and its way out to the other screen (slot `footer`). The shelf is a wall of
+// real covers (see wall.ts), tilted and veiled; each stands on a cloth-coloured board that
 // shows from the first frame, until its image arrives, or instead of it when the image fails.
 //
 // The covers are decoration (aria-hidden), and on a phone they were the screen's largest contentful
@@ -87,6 +87,7 @@ function afterPaint(run: () => void): () => void {
       <div class="mx-auto flex w-full max-w-(--size-max-content) flex-1 flex-col px-sm">
         <div class="lead" />
         <div class="text-center">
+          <AuthMark class="mb-xs" :data-testid="`${screen}.mark`" />
           <p class="font-serif text-wordmark font-regular lowercase italic" :data-testid="`${screen}.brand`">
             {{ t('app.name') }}
           </p>
@@ -137,7 +138,9 @@ function afterPaint(run: () => void): () => void {
   border-radius: 1px;
 }
 
-/* The lamp's glow behind the wordmark, and the room closing in below it. */
+/* The lamp's glow behind the wordmark, and the room closing in below it. The mark (Mark.vue)
+   draws its own halo in the same token, around the lamp itself: the two are concentric, so they read
+   as one light — the pool in the room and the lamp's own, swelling into it — and not as two. */
 .veil {
   position: absolute;
   inset: 0;

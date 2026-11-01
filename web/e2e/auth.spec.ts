@@ -21,17 +21,24 @@ test('a new member signs up with the dev invite, lands on Home and signs out', a
   await expect(page).toHaveURL(/\/sign-in$/)
   await expect(page.getByTestId('signIn.title')).toHaveText(en.signIn.title)
 
+  // The mark rises above the wordmark (docs/MOTION.md, "The lamp rising"), and it is decoration: the
+  // wordmark is the name, so assistive tech never meets it.
+  await expect(page.getByTestId('signIn.mark')).toBeVisible()
+  await expect(page.getByTestId('signIn.mark')).toHaveAttribute('aria-hidden', 'true')
+
   // The address has no account, so sign-in hands over to sign-up with it filled in.
   await page.getByTestId('signIn.email').fill(email)
   await page.getByTestId('signIn.submit').click()
   await expect(page).toHaveURL(/\/sign-up$/)
   await expect(page.getByTestId('signUp.email')).toHaveValue(email)
+  await expect(page.getByTestId('signUp.mark')).toBeVisible()
 
   await page.getByTestId('signUp.inviteCode').fill(DEV_INVITE)
   await page.getByTestId('signUp.submit').click()
 
   await expect(page).toHaveURL(/\/verify$/)
   await expect(page.getByTestId('verify.sentTo')).toContainText(email)
+  await expect(page.getByTestId('verify.mark')).toBeVisible()
   await page.getByTestId('verify.code').fill(await readMailedCode(email))
 
   // Signed in: Home, with its empty state and the three tabs.
