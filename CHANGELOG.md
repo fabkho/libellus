@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.30.0](https://github.com/fabkho/libellus/compare/v1.29.0...v1.30.0) (2026-11-01)
+
+
+### Features
+
+* **brand:** the Lamp over the page mark, icons and shortcuts ([#456](https://github.com/fabkho/libellus/issues/456)) ([010d63f](https://github.com/fabkho/libellus/commit/010d63fa514e344c0388fd6a6781e9a6aac39de6))
+* **brand:** the launch takeover ([#459](https://github.com/fabkho/libellus/issues/459)) ([49a8be4](https://github.com/fabkho/libellus/commit/49a8be47d2c2ac101e9ac0ab0040174af0bbe180))
+
 ## [1.29.0](https://github.com/fabkho/libellus/compare/v1.28.0...v1.29.0) (2026-10-31)
 
 
