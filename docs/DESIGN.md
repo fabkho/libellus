@@ -60,12 +60,12 @@ Light is D's *Day*, dark is D's *Night*. There is no third ("Dim") theme.
 - **The splash is the app's first frame.** Android draws an installed app's launch screen itself, from the
   manifest's `background_color` (the night surface) and its icon: the plum tile's mark in the room, static and
   impossible to animate. So the app's own first paint is the same picture — the frame in
-  `app/spa-loading-template.html` puts the night room and the mark on the screen before any JavaScript, and the
-  lamp's glow then swells into the room while the app boots (docs/MOTION.md, "Launch takeover"). The handover is
-  invisible where it can be: the mark is the launch screen's own canvas at its measured size and place, drawn as
-  a generated transparent PNG (`scripts/render-icons.mjs`, `public/launch-mark-*.png`, inlined so nothing is
-  fetched). The frame draws no plum tile (the mark alone, on the room), so what a member sees change at the
-  handover is the tile's edge fading out; the launch screen's own name at the foot of the screen goes with it.
+  `app/spa-loading-template.html` puts the night room, the icon's plum tile with the mark in it and the app's name
+  at the foot on the screen before any JavaScript, at the launch screen's own size and place (measured on the
+  emulator, docs/MOTION.md "Launch takeover") — and the tile then dissolves into the room while the lamp's glow
+  swells out of the mark, so the frame becomes the mark alone and the room lit. The mark is a generated
+  transparent PNG (`scripts/render-icons.mjs`, `public/launch-mark-*.png`, inlined so nothing is fetched); the
+  tile is CSS around it, in the icon's own two room colours, because it is the one thing that has to dissolve.
   Only the installed app's cold start shows the frame: a browser tab keeps the plain background it always had.
 - The preference is a setting of the device, not of the member: signing out keeps it, so the way
   in looks the way the member left it.

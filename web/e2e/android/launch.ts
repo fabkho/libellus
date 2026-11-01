@@ -266,6 +266,31 @@ async function openChrome() {
 const app = (browser: Browser) => browser.contexts().flatMap((context) => context.pages()).find((candidate) => candidate.url().startsWith(args.base!))
 
 /**
+ * The frame's own picture, measured the way the launch screen's was: the frame is in no document once the app has
+ * mounted, so the template's markup is stood up in the running page for one screenshot — the styles and the media
+ * query are the app's own, the mark is this build's generated PNG — and taken away again. Both pictures are then in
+ * the same coordinates (the device's), which is what makes them comparable.
+ */
+async function frameInPage(page: Page, name: string) {
+  const shown = await page.evaluate(() => {
+    const frame = document.createElement('div')
+    frame.className = 'launch-frame'
+    frame.setAttribute('data-launch-frame', '')
+    frame.setAttribute('data-theme', 'dark')
+    frame.innerHTML =
+      '<div class="launch-frame-glow"></div><div class="launch-frame-tile"></div>' +
+      '<img class="launch-frame-mark" src="/launch-mark-384.png" width="128" height="128" alt="">' +
+      '<p class="launch-frame-name">BetterReads</p>'
+    document.body.append(frame)
+    return getComputedStyle(frame).display
+  })
+  const file = join(OUT, `${name}-frame.png`)
+  writeFileSync(file, adb('exec-out', 'screencap', '-p'))
+  await page.evaluate(() => document.querySelector('[data-launch-frame]')?.remove())
+  return { file, display: shown, ...(await measure(file)) }
+}
+
+/**
  * The app once it has mounted: the frame has to be gone, and nothing of it left anywhere.
  */
 async function afterMount(page: Page) {
@@ -318,7 +343,10 @@ async function main() {
   const browser = await openChrome()
   const page = app(browser)
   if (!page) throw new Error(`No page of ${args.base} in Chrome: the app is open, but not where this script looked.`)
+  // tsx (esbuild, keepNames) wraps the functions inside page.evaluate in a `__name` helper the page lacks.
+  await page.evaluate('window.__name = (fn) => fn')
   const after = await afterMount(page)
+  const inPage = await frameInPage(page, args.name!)
 
   const report = {
     app: args.base,
@@ -326,6 +354,7 @@ async function main() {
     recording: { file: launch.mp4, frames: launch.count, strip: stripResult },
     launchScreen: { file: screen.file, device: measured, css: { tile: css(measured.tile), mark: css(measured.mark) } },
     takeover: takeover && { file: takeover.file, mark: css(takeover.mark) },
+    frame: { file: inPage.file, display: inPage.display, device: { tile: inPage.tile, mark: inPage.mark }, css: { tile: css(inPage.tile), mark: css(inPage.mark) } },
     afterMount: after,
   }
   writeFileSync(join(OUT, `${args.name}.json`), JSON.stringify(report, null, 2))

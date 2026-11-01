@@ -71,6 +71,23 @@ describe('the first-paint frame', () => {
     expect(png.readUInt8(25)).toBe(6)
   })
 
+  it('draws the launch screen’s own tile and name, pinned to their sources', () => {
+    // The tile is CSS (so it can dissolve); its room colours are the icon's, and the icon is what the launch screen
+    // draws. The name is the brand from the message files, which the static frame cannot read.
+    const icon = file('../design/icons/app/icon.svg')
+    const stops = [...icon.matchAll(/<stop offset="[^"]*" stop-color="(#[0-9a-f]{6})"/g)].map((match) => match[1])
+    expect(css).toContain(`linear-gradient(180deg, ${stops[0]}, ${stops[1]})`)
+    expect(template).toContain('<div class="launch-frame-tile"></div>')
+    const messages = JSON.parse(file('i18n/locales/en.json')) as { app: { name: string } }
+    expect(template).toContain(`<p class="launch-frame-name">${messages.app.name}</p>`)
+    expect(JSON.parse(file('i18n/locales/de.json')).app.name).toBe(messages.app.name)
+  })
+
+  it('dissolves the tile and the name on the swell’s tokens, and not with Reduce Motion', () => {
+    expect(css).toContain('animation: launch-picture var(--duration-wave) var(--ease-wave) var(--duration-instant) both')
+    expect(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.launch-frame-tile,[\s\S]*?animation: none;/s.test(css)).toBe(true)
+  })
+
   it('is shown in the installed app only', () => {
     expect(css).toContain('@media (display-mode: standalone)')
     expect(/\.launch-frame \{[\s\S]*?display: none;/.test(css)).toBe(true)

@@ -14,7 +14,7 @@
 //   favicon.ico                   favicon.svg at 32 and 16 px
 //   shortcut-<name>-96.png        96 px, from design/icons/app/shortcuts/<name>.svg: the manifest's app shortcuts (#91)
 //   launch-mark-{128,256,384}.png the launch takeover's mark (PR B): the same 108 dp canvas without its plum room, alpha
-//                                 only around the mark, at 1/2/3 device pixels per CSS pixel. The template below inlines the 3x one.
+//                                 only around the mark, at 1/2/3 device pixels per CSS pixel.
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { chromium } from '@playwright/test'
 import sharp from 'sharp'
@@ -64,6 +64,8 @@ const launchPngs = []
 for (const scale of [1, 2, 3]) {
   const png = await renderMarkup(launchMark, LAUNCH_CANVAS * scale)
   const { channels, hasAlpha } = await sharp(png).metadata()
+  // The frame draws the mark alone for the swell (main.css paints the launch screen's plum tile in CSS, so that it
+  // can dissolve): this one has to be the transparent canvas.
   if (!hasAlpha || channels !== 4) throw new Error(`launch-mark-${LAUNCH_CANVAS * scale}.png has no alpha channel: the frame needs the mark alone`)
   writeFileSync(out(`launch-mark-${LAUNCH_CANVAS * scale}.png`), png)
   launchPngs.push(png)

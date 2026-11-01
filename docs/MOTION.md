@@ -53,16 +53,17 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
 - **Launch takeover.** Android (and Chrome, for the shortcut it pins) draws an installed app's launch screen
   itself, from the manifest's `background_color` and its icon: a static picture that cannot animate. The page's
   own first paint takes over from it: the frame in `app/spa-loading-template.html` draws the same picture — the
-  night room, the mark exactly where the launch screen had it — in the document before any JavaScript runs, with
-  the mark a generated transparent PNG inlined as a data URI (nothing is fetched, so nothing waits). One `instant`
-  after that paint the lamp's glow swells out of the mark into the room, over `wave` on `wave`; then the frame
-  leaves as the app arrives: `plugins/launch-takeover.client.ts` fades it out over `exit` on `exit` once the app
-  has mounted. **It never waits for the animation**: the app mounts as fast as it always did, and a quick one
-  cuts the swell short. With Reduce Motion there is no swell and the frame crossfades over `standard`. Only a cold
-  start of the installed app shows it (`display-mode: standalone`): a browser tab keeps the plain background it
-  always had, and a page the SPA navigates to loads no document at all. The launch screen also draws the icon's
-  plum room; the frame draws the mark alone (the owner's wish), so the tile's edge is what fades into the room as
-  the page takes over — the mark itself lands on the pixel. Its numbers are the launch screen's, measured against
+  night room, the icon's plum tile with the mark in it, and the app's name at the foot, all exactly where the
+  launch screen has them — in the document before any JavaScript runs (the mark is a generated PNG inlined as a
+  data URI, the tile is CSS over it, the name is set in the system's own face: nothing is fetched, so nothing
+  waits). One `instant` after that paint the tile dissolves into the room over `wave` on `wave` while the lamp's
+  glow swells out of the mark, so the frame is the mark alone on the night room; then it leaves as the app
+  arrives: `plugins/launch-takeover.client.ts` fades it out over `exit` on `exit` once the app has mounted.
+  **It never waits for the animation**: the app mounts as fast as it always did, and a quick one cuts the swell
+  short. With Reduce Motion neither the dissolve nor the swell runs — the frame stays the launch screen's own
+  picture and crossfades away over `standard`. Only a cold start of the installed app shows it
+  (`display-mode: standalone`): a browser tab keeps the plain background it always had, and a page the SPA
+  navigates to loads no document at all. Its numbers are the launch screen's, measured against
   the real one on the Android emulator (`e2e/android/launch.ts`, docs/TESTING.md; the numbers in `main.css`, "The
   launch takeover"); the decision (installed app, cold start, Reduce Motion) is `utils/launchTakeover.ts`, pinned
   by `tests/launch-takeover.test.ts`.

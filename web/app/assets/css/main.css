@@ -585,16 +585,59 @@ html:is([data-profile-transition='back'], [data-push-transition='back'])::view-t
 }
 .launch-frame > * {
   grid-area: 1 / 1;
+}
+.launch-frame-glow,
+.launch-frame-mark,
+.launch-frame-tile {
   translate: 0 calc(-1 * var(--launch-frame-lift));
 }
 .launch-frame-mark {
   width: var(--launch-frame-icon);
   height: auto;
 }
-/* The one motion here: the lamp's light. It starts one `instant` after the frame is painted, so the first
-   frame of the handover is the launch screen's own, and it holds its end until the app is ready (the frame
-   leaves over `exit`, which may cut the swell short). The resting glow is the light the launch screen's icon
-   held; the end is the room lit. */
+/* The launch screen's tile around the mark: the icon's own plum room (#3c3251 → #211b2e) and the dome of its glow,
+   exactly as `design/icons/app/icon.svg` draws them (tests/launch-takeover.test.ts pins the two colours to that file),
+   on the icon's own canvas. Painted in CSS so it can dissolve; the launch screen draws it as a square, mask and all.
+   It is the one thing a member sees change at the handover: it dissolves into the night room over `wave`, leaving the
+   mark alone with the lamp's light swelling out of it, and it starts one `instant` after the paint, with that glow, so
+   the handover's first frames are the launch screen's own. The mark sits underneath it, on the same pixels, so nothing
+   moves as the tile goes. */
+.launch-frame-tile {
+  width: var(--launch-frame-icon);
+  height: var(--launch-frame-icon);
+  background:
+    radial-gradient(
+      circle calc(var(--launch-frame-icon) / 2) at 50% 39.9%,
+      color-mix(in srgb, var(--color-accent) 40%, transparent),
+      color-mix(in srgb, var(--color-accent) 14%, transparent) 40%,
+      transparent
+    ),
+    linear-gradient(180deg, #3c3251, #211b2e);
+  animation: launch-picture var(--duration-wave) var(--ease-wave) var(--duration-instant) both;
+}
+/* The app's name, where the launch screen draws it (the system's own face, Roboto on Android: no web font to wait
+   for, and the same glyphs), on the same clock as the tile. */
+.launch-frame-name {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 24px;
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 25px;
+  font-weight: 400;
+  line-height: 1;
+  text-align: center;
+  color: white;
+  animation: launch-picture var(--duration-wave) var(--ease-wave) var(--duration-instant) both;
+}
+@keyframes launch-picture {
+  to {
+    opacity: 0;
+  }
+}
+/* The one motion here: the lamp's light. It comes up from nothing (the paint before it is the launch screen's own
+   picture, tile and all) one `instant` after the frame is painted — the delay holds its `from` state — and it
+   holds its end until the app is ready (the frame leaves over `exit`, which may cut the swell short). */
 .launch-frame-glow {
   width: calc(2 * var(--launch-frame-icon));
   height: calc(2 * var(--launch-frame-icon));
@@ -605,24 +648,30 @@ html:is([data-profile-transition='back'], [data-push-transition='back'])::view-t
     color-mix(in srgb, var(--color-accent) 10%, transparent) 45%,
     transparent
   );
-  opacity: 0.5;
-  scale: 0.9;
+  opacity: 0;
+  scale: 0.85;
   animation: launch-swell var(--duration-wave) var(--ease-wave) var(--duration-instant) both;
 }
 @keyframes launch-swell {
   from {
-    opacity: 0.5;
-    scale: 0.9;
+    opacity: 0;
+    scale: 0.85;
   }
   to {
     opacity: 1;
     scale: 1.6;
   }
 }
-/* Reduce Motion: no swell. The frame keeps its resting glow (the launch screen's own light) and the plugin
-   crossfades it away over `standard` (docs/MOTION.md, Reduce Motion). */
+/* Reduce Motion: no swell and no dissolve. The frame stays the launch screen's own picture — its tile, its name and
+   the light inside the tile, nothing outside it — and the plugin crossfades it away over `standard`
+   (docs/MOTION.md, Reduce Motion). */
 @media (prefers-reduced-motion: reduce) {
   .launch-frame-glow {
+    animation: none;
+    opacity: 0;
+  }
+  .launch-frame-tile,
+  .launch-frame-name {
     animation: none;
   }
 }
