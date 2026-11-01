@@ -25,7 +25,7 @@ const release = releaseNotes(rootFile('CHANGELOG.md'), rootFile('version.txt'))
 
 // Appended to every icon URL (?v=): bump it when the icons are redrawn so Chrome
 // and the home-screen launchers refetch them instead of keeping the old ones.
-const iconVersion = 2
+const iconVersion = 3
 
 // The hosts the first screens certainly ask, opened ahead (`app.head.link` below): the API (a returning
 // member's start asks it nine times, a visitor's sign-in once she submits; it is the instance's own host,
@@ -345,9 +345,10 @@ export default defineNuxtConfig({
       // No `orientation`: the installed app turns with the phone (WCAG 1.3.4), the layout is a centred column.
       // The manifest has no media queries (Chrome on Android doesn't support the
       // draft's user_preferences), so the splash Android draws while the app
-      // starts takes one colour for everyone: the night room. The ribbons icon
-      // sits on dark red, a light splash flashed white on dark phones, and a dark
-      // splash before the light theme reads as the brand, not a glitch.
+      // starts takes one colour for everyone: the night room. Android 12+ draws
+      // the maskable icon in a circle on it, and the plum room with the lamp on
+      // it reads on near-black; a light splash flashed white on dark phones, and
+      // a dark splash before the light theme reads as the brand, not a glitch.
       background_color: surface.dark,
       theme_color: surface.dark,
       icons: [

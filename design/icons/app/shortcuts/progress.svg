@@ -1,13 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
-<title>BetterReads shortcut — Update progress (the shorter ribbon and its lamp, as on a book being read)</title>
-<defs>
-<linearGradient id="abgc" x1="0" y1="0" x2="0" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5a302c"/><stop offset="1" stop-color="#4a2624"/></linearGradient>
-<radialGradient id="abgb" cx="65.99" cy="39.4" r="50" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.22"/><stop offset="0.35" stop-color="#efb768" stop-opacity="0.077"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient>
-<linearGradient id="afgr" x1="0" y1="20" x2="0" y2="86" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fbf0db"/><stop offset="1" stop-color="#f1e3c8"/></linearGradient>
-<radialGradient id="lamp" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#efb768" stop-opacity="0.7"/><stop offset="0.35" stop-color="#efb768" stop-opacity="0.245"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient>
-</defs>
-<rect width="108" height="108" fill="url(#abgc)"/><rect width="108" height="108" fill="url(#abgb)"/><rect y="0" width="108" height="3" fill="#000" fill-opacity="0.18"/>
-<circle cx="67" cy="38" r="20" fill="url(#lamp)"/>
-<path d="M38.5 30L55.5 30L55.5 82L47 74.5L38.5 82Z" fill="url(#afgr)"/>
-<circle cx="67" cy="38" r="7.5" fill="#efb768"/>
+<title>BetterReads shortcut — Update progress (the open book with the lamp half risen behind it)</title>
+<defs><linearGradient id="spbg" x1="0" y1="0" x2="0" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient><radialGradient id="spgl" cx="54" cy="43.1" r="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#efb768" stop-opacity="0.4"/><stop offset="0.4" stop-color="#efb768" stop-opacity="0.14"/><stop offset="1" stop-color="#efb768" stop-opacity="0"/></radialGradient><clipPath id="spc1"><path d="M0 0H100V58H90C74 52 58 54 50 66C42 54 26 52 10 58H0Z"/></clipPath></defs>
+<rect width="108" height="108" fill="url(#spbg)"/><rect width="108" height="108" fill="url(#spgl)"/>
+<g transform="translate(18.26 10.22) scale(0.7149)"><path fill="#f1e3c8" d="M48.4 70C42 58 26 56 10 62V78C26 72 42 74 48.4 86ZM51.6 70C58 58 74 56 90 62V78C74 72 58 74 51.6 86Z"/><path fill="#efb768" clip-path="url(#spc1)" d="M50 36.5A18.5 18.5 0 1 1 50 73.5A18.5 18.5 0 1 1 50 36.5Z"/></g>
 </svg>
