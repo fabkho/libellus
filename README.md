@@ -33,7 +33,7 @@ A calm, mobile-first book tracker you install from the home screen: search a boo
 | [Cloudflare Pages](https://pages.cloudflare.com) | Serves the app and the link previews of a shared reading page; its Web Analytics counts page loads |
 | [Cloudflare R2](https://developers.cloudflare.com/r2/) | Two private buckets: the nightly backup, encrypted before upload with a key only the owner holds and deleted after 35 days; and the covers of books in members' Libraries, under hashed names, deleted 30 days after no Library holds the book |
 | Resend (an email provider, over SMTP) | Sends the sign-in codes and the waitlist invites, so it sees the address it mails |
-| [Sentry](https://sentry.io), EU region (Frankfurt) | Error reports and performance measurements, only when the instance sets `NUXT_PUBLIC_SENTRY_DSN`: message and stack, app version, browser and device family, the screen as a route pattern, the last taps, freeze length. No account, name, email, IP, content or replay; kept 30 days |
+| [Sentry](https://sentry.io), EU region (Frankfurt) | Error reports and performance measurements, only when the instance turns Sentry on: message and stack, app version, browser and device family, the screen as a route pattern, the last taps, freeze length. No account, name, email, IP, content or replay; kept 30 days ([docs/THIRD-PARTY.md](docs/THIRD-PARTY.md)) |
 | [GitHub](https://github.com) | The code and its CI. None of your data: the backup job encrypts the dump as it streams and keeps no artifact |
 
 ## Tech stack
