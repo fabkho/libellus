@@ -41,14 +41,22 @@ Light is D's *Day*, dark is D's *Night*. There is no third ("Dim") theme.
 - The browser chrome and the installed app's status bar follow it: the static HTML has one
   `<meta name="theme-color">` per `prefers-color-scheme` (the theme's `surface`), a chosen theme
   overwrites both, and `apple-mobile-web-app-status-bar-style` is `default` so iOS tints the status
-  bar from it. The manifest's splash colour is the light surface (manifests have no media queries).
-- The app icon is two bookmark ribbons (the "li" of the wordmark as two ribbons, the dot of the i the
-  lamp: the accent with its glow) in a warm leather-red room (#86). One icon for both themes (an icon
-  is an object on the home screen, like a cover). Sources: `design/icons/app/{icon,monochrome,favicon}.svg`;
-  `web/scripts/render-icons.mjs` renders 192 and 512 `any`, a 512 `maskable` (the mark inside the 66 dp
-  safe zone of the 108 dp canvas; Chrome themes an installed app from it, Chromium 40277264), a 512
-  alpha-only `monochrome` (themed icons), the 180 apple-touch-icon, `favicon.svg` and `favicon.ico`.
-  Icon URLs carry `?v=<iconVersion>` (`nuxt.config.ts`): bump it when the icons change.
+  bar from it. The manifest's splash colour is the night surface (manifests have no media queries).
+- The app icon is **Lamp over the page** (#448, option 6 of the logo rounds): an open book with the
+  lamp rising behind it like the sun, in a dusk-plum room. The pages are cream (`clothInk`), the lamp
+  is the accent amber with its glow, and the mark is a picture, not a letter — the design's founding
+  image, "a reading lamp in a dark room", made into the sign of the app. One icon for both themes (an
+  icon is an object on the home screen, like a cover), and one room: a plum dusk reads lit in either
+  theme, where a room that followed the theme would be two different objects. Sources:
+  `design/icons/app/{icon,icon-ios,monochrome,favicon}.svg` (copies of
+  `design/logo-options/6-lamp-over-page/`, which keeps the round's sheets and motion);
+  `web/scripts/render-icons.mjs` renders 192 and 512 `any` and the 180 apple-touch-icon from
+  `icon-ios.svg` (the mark at 60 % of the tile, which carries better at those sizes), a 512
+  `maskable` from `icon.svg` (the mark inside the 66 dp safe zone of the 108 dp canvas; Chrome themes
+  an installed app from it, Chromium 40277264), a 512 alpha-only `monochrome` (themed icons),
+  `favicon.svg` and `favicon.ico`. The manifest's three shortcuts have their own marks in the same
+  room (`design/icons/app/shortcuts/`: a magnifier holding the lamp, the book with the lamp, the book
+  alone). Icon URLs carry `?v=<iconVersion>` (`nuxt.config.ts`): bump it when the icons change.
 - The preference is a setting of the device, not of the member: signing out keeps it, so the way
   in looks the way the member left it.
 

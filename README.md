@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/wordmark-dark.svg">
+  <img src="docs/images/wordmark-light.svg" alt="" width="360" height="85">
+</picture>
+
 # BetterReads
 
 A calm, mobile-first book tracker you install from the home screen: search a book → **Want to
