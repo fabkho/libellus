@@ -127,7 +127,7 @@ palette, radii, shadows, type scale and easings are switched off, so only tokens
 | accent | `text-accent`, `border-accent` | `#b8782a` | `#efb768` | The lamp (sparingly, see principle 2): dots, rules, carets, stars, large figures |
 | accentInk | `text-accent-ink` | `#845418` | `#efb768` | The lamp as small text (the sheet's action, a lit figure, a lamp-coloured link) and the focus ring: ≥ 4.5:1 by day |
 | accentSoft | `bg-accent-soft` | 12 % | 14 % | Focus halos, the selected cell |
-| lampLight / lampCone / lampGlow | (scoped CSS) | | | The light pool and cone of the empty-state lamp; the glow behind the wordmark |
+| lampLight / lampCone / lampGlow | (scoped CSS) | | | The light pool and cone of the empty-state lamp; the glow behind the wordmark on the way in, which the mark's own halo joins |
 | star / starTrack | `text-star`, `text-star-track` | accent / ink 20 % | | Rating stars |
 | success | `text-success` | `#4f7a3c` | `#a3c48e` | Confirmations |
 | error / errorSoft | `text-error`, `bg-error-soft` | `#b03a20` | `#ec8063` | Errors, destructive actions |
@@ -380,7 +380,8 @@ medium only inside a feed sentence (a feed row, Home's friends rows and its requ
   installed Android app) it is only that 12 px fade at the top edge. It never takes a tap. (#62:
   the first version — a blurred band down past the top bar's row — read too heavy.)
 - **The way in** (`AuthFrame`): a tilted wall of cloth Placeholder covers behind a veil, the lamp
-  glow, the serif wordmark and tagline, the screen's eyebrow, its form and the link to the other
+  glow, the mark above it (the open book with the lamp rising behind it, `components/auth/Mark.vue`,
+  MOTION.md, "The lamp rising"), the serif wordmark and tagline, the screen's eyebrow, its form and the link to the other
   screen at the bottom, then a quiet **Privacy** line (**Privacy · Imprint** once the imprint is on, `IMPRINT_ENABLED`) (`LegalLinks`: `text-caption` in
   `inkFaint`, underlined, each link 44 high; the Profile ends with the same line).
 - **Legal text** (`/privacy`, and `/imprint` once it is on; `components/legal/`): a long read, so no cards or colour: the
