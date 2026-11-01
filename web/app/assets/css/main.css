@@ -546,3 +546,83 @@ html:is([data-profile-transition='back'], [data-push-transition='back'])::view-t
     }
   }
 }
+
+/* The launch takeover (docs/plans/new-logo.md, B; docs/MOTION.md, "Launch takeover"). The installed app's
+   first paint takes over from the launch screen the system drew: the frame in app/spa-loading-template.html
+   draws the same picture — the night room, the mark where the launch screen had it — and the lamp's glow
+   swells out of the mark into the room over `wave` while the app boots; when the app is ready the frame
+   leaves over `exit` (plugins/launch-takeover.client.ts), cutting the swell short if need be, so nothing
+   ever waits for a motion. Only a cold start of the installed app shows it (below); a browser tab keeps the
+   plain background it always had, and a page the SPA navigates to loads no document at all.
+   Measured on the Pixel 9 emulator against the launch screen it really draws (1080 × 2424 at 420 dpi, so
+   411.43 × 923.43 CSS px; e2e/android/launch.ts, docs/TESTING.md): the icon is the 108 dp canvas at 128 CSS
+   px and its visible mark 67.05 × 39.62 CSS px, its centre 444.8 CSS px from the top — 16.9 above the
+   display's own middle, because the launch screen puts the app's name under the icon. The frame's mark is
+   that same canvas, so it is the same size; the two numbers below put it on the same place. */
+.launch-frame {
+  /* The canvas the mark is drawn on (the launch screen's 128 CSS px), and the lift that puts the mark back
+     where the launch screen had it: the page's viewport is not the display — the status bar (54.1 CSS px)
+     stands above it and the gesture bar (24.3) below, so its middle is 476.8, and 476.8 − 444.8 = 32. */
+  --launch-frame-icon: 128px;
+  --launch-frame-lift: 32px;
+  /* The manifest's splash colour is the night surface (`background_color`, docs/DESIGN.md, Themes: manifests
+     have no media queries), and the launch screen draws that colour whether the member reads by day or by
+     night: the frame wears the dark tokens for the same reason, and takes its room and its lamp from them. */
+  display: none;
+  position: fixed;
+  inset: 0;
+  /* Over everything: it is the picture the screen opens on, and the app is not drawn yet. */
+  z-index: 2147483647;
+  place-items: center;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+/* The installed app only: in a browser tab the frame is not there at all, as it never was. */
+@media (display-mode: standalone) {
+  .launch-frame {
+    display: grid;
+  }
+}
+.launch-frame > * {
+  grid-area: 1 / 1;
+  translate: 0 calc(-1 * var(--launch-frame-lift));
+}
+.launch-frame-mark {
+  width: var(--launch-frame-icon);
+  height: auto;
+}
+/* The one motion here: the lamp's light. It starts one `instant` after the frame is painted, so the first
+   frame of the handover is the launch screen's own, and it holds its end until the app is ready (the frame
+   leaves over `exit`, which may cut the swell short). The resting glow is the light the launch screen's icon
+   held; the end is the room lit. */
+.launch-frame-glow {
+  width: calc(2 * var(--launch-frame-icon));
+  height: calc(2 * var(--launch-frame-icon));
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--color-accent) 34%, transparent),
+    color-mix(in srgb, var(--color-accent) 10%, transparent) 45%,
+    transparent
+  );
+  opacity: 0.5;
+  scale: 0.9;
+  animation: launch-swell var(--duration-wave) var(--ease-wave) var(--duration-instant) both;
+}
+@keyframes launch-swell {
+  from {
+    opacity: 0.5;
+    scale: 0.9;
+  }
+  to {
+    opacity: 1;
+    scale: 1.6;
+  }
+}
+/* Reduce Motion: no swell. The frame keeps its resting glow (the launch screen's own light) and the plugin
+   crossfades it away over `standard` (docs/MOTION.md, Reduce Motion). */
+@media (prefers-reduced-motion: reduce) {
+  .launch-frame-glow {
+    animation: none;
+  }
+}

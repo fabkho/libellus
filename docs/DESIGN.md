@@ -57,6 +57,16 @@ Light is D's *Day*, dark is D's *Night*. There is no third ("Dim") theme.
   `favicon.svg` and `favicon.ico`. The manifest's three shortcuts have their own marks in the same
   room (`design/icons/app/shortcuts/`: a magnifier holding the lamp, the book with the lamp, the book
   alone). Icon URLs carry `?v=<iconVersion>` (`nuxt.config.ts`): bump it when the icons change.
+- **The splash is the app's first frame.** Android draws an installed app's launch screen itself, from the
+  manifest's `background_color` (the night surface) and its icon: the plum tile's mark in the room, static and
+  impossible to animate. So the app's own first paint is the same picture — the frame in
+  `app/spa-loading-template.html` puts the night room and the mark on the screen before any JavaScript, and the
+  lamp's glow then swells into the room while the app boots (docs/MOTION.md, "Launch takeover"). The handover is
+  invisible where it can be: the mark is the launch screen's own canvas at its measured size and place, drawn as
+  a generated transparent PNG (`scripts/render-icons.mjs`, `public/launch-mark-*.png`, inlined so nothing is
+  fetched). The frame draws no plum tile (the mark alone, on the room), so what a member sees change at the
+  handover is the tile's edge fading out; the launch screen's own name at the foot of the screen goes with it.
+  Only the installed app's cold start shows the frame: a browser tab keeps the plain background it always had.
 - The preference is a setting of the device, not of the member: signing out keeps it, so the way
   in looks the way the member left it.
 
