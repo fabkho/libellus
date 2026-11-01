@@ -8,7 +8,7 @@
  * her Library with a few classics whose Apple Books covers the sign-in wall already uses
  * (components/auth/wall.ts), gives her a name and two Book links, and shoots the
  * phone in WebKit at iPhone size, light and dark. Each shot is written as a JPEG at most 1000 px
- * tall, and the three phones side by side as docs/images/hero.jpg. Covers load from Apple's CDN,
+ * tall. The README's hero is not made here: design/readme/ (scripts/hero-shots.ts). Covers load from Apple's CDN,
  * so it needs the network; nothing else leaves the machine. Afterwards the member and exactly the
  * Catalogue Books this run made are deleted again.
  */
@@ -140,7 +140,7 @@ async function main() {
     const light = await phone('light')
     await light.goto(`${BASE}/`)
     await light.getByTestId('home.title').waitFor()
-    const homeLight = await shoot(light, 'home-light')
+    await shoot(light, 'home-light')
     await light.goto(`${BASE}/library`)
     await light.getByTestId('library.title').waitFor()
     await shoot(light, 'library-light')
@@ -152,26 +152,12 @@ async function main() {
     await dark.goto(`${BASE}/book/${member.piranesi}`)
     await dark.getByTestId('book.title').waitFor()
     await dark.getByTestId('book.link').first().waitFor()
-    const bookDark = await shoot(dark, 'book-dark')
+    await shoot(dark, 'book-dark')
     await dark.goto(`${BASE}/profile`)
     await dark.getByTestId('profile.title').waitFor()
     // The throwaway address is nobody's: the Profile shows the name above it.
     await dark.addStyleTag({ content: '[data-testid="profile.email"] { visibility: hidden }' })
-    const profileDark = await shoot(dark, 'profile-dark')
-
-    // Three phones on one ground: Home light, the Book dark, the Profile dark.
-    const phones = [homeLight, bookDark, profileDark]
-    const meta = await sharp(homeLight).metadata()
-    const width = meta.width!
-    const height = meta.height!
-    const gap = 40
-    const margin = 60
-    const hero = sharp({
-      create: { width: margin * 2 + width * 3 + gap * 2, height: margin * 2 + height, channels: 3, background: '#e9e4da' },
-    }).composite(phones.map((input, i) => ({ input, left: margin + i * (width + gap), top: margin })))
-    const heroBuffer = await hero.jpeg({ quality: 82, mozjpeg: true }).toBuffer()
-    await sharp(heroBuffer).resize({ width: MAX, withoutEnlargement: true }).toFile(new URL('hero.jpg', OUT).pathname)
-    console.log('docs/images/hero.jpg')
+    await shoot(dark, 'profile-dark')
   } finally {
     await browser.close()
     await sweepRun()

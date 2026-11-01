@@ -82,7 +82,10 @@ With the flag set and the layer or the library file missing, `dev` and `generate
 `docs/images/*.jpg` come from the running app, never by hand: with the stack and a dev server up,
 `LIBELLUS_SHOTS_URL=http://localhost:3020 pnpm exec tsx scripts/readme-shots.ts` (from `web/`) makes a
 throwaway member with a few classics, shoots Home, Library, a Book and the Profile at iPhone size in
-light and dark, composes `hero.jpg`, and removes the member and her Books again.
+light and dark, and removes the member and her Books again.
+
+The README's hero (`docs/images/hero.jpg`) is composed apart, from `design/readme/` (see its README): the same
+way, `pnpm exec tsx scripts/hero-shots.ts shoot` then `compose --ship b`.
 
 ### Design tokens
 
