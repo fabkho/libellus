@@ -1,149 +1,70 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/wordmark-dark.svg">
-  <img src="docs/images/wordmark-light.svg" alt="" width="360" height="85">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/lockup-stacked-dark.svg">
+  <img src="docs/images/lockup-stacked-light.svg" alt="BetterReads" width="240" height="162">
 </picture>
 
-# BetterReads
-
-A calm, mobile-first book tracker you install from the home screen: search a book → **Want to
-read** → **Currently reading** → **Finished**, with the date, a quarter-star rating and a few words.
-Friends can follow what you choose to share, and nothing else: no ads, no trackers. Built web first
-on Nuxt and Supabase, with the docs that make a later Swift/Kotlin port mechanical.
+A calm, mobile-first book tracker you install from the home screen: search a book → **Want to read** → **Currently reading** → **Finished**, with the date, a quarter-star rating and a few words. One operator runs it as a private, invite-only instance for a few friends: no ads, no trackers.
 
 ![BetterReads on a phone: Home in the light theme, a Book and the Profile in the dark theme](docs/images/hero.jpg)
 
-BetterReads runs as one private, invite-only instance for its owner and a few friends
-(libellus.fabkho.dev).
-
 ## What it does
 
-- **Find a book fast.** One search field asks Apple Books, Open Library and the instance's own
-  Catalogue at once and shows one merged list, one row per book; a barcode scan or an ISBN goes
-  straight to the edition. Where a result came from is never shown. Books with no match can be
-  typed in by hand and stay private.
-- **Every read counts.** Start and finish dates, a rating in quarter stars, a review, re-reads and
-  books you put down (DNF) are all reading sessions of their own, editable afterwards.
-- **Progress** in pages or percent, with a day-by-day chart and a reading log, and your own page
-  count when the edition's is wrong. Change edition keeps the history.
-- **Collections**, your own shelves, in your order.
-- **Your reading in figures**: the Profile with books, pages, average rating and pace by year, and
-  a year in review per year.
-- **Bring your history**: drop a Goodreads or Hardcover export (CSV) and it is told apart by its
-  header; shelves, lists, every read with its days, ratings and reviews come along. Fable exports
-  through the Goodreads format.
-- **Book links**: your own short list of links (a library catalogue, a shop) that every Book's page
-  offers, filled with its ISBN, title or author. Kept with your account, visible to nobody else.
-- **Goodreads' community rating** under a Book's facts, looked up server-side and cached (optional).
-- **Works offline**: the Library, Collections and figures are kept on the device; changes made
-  offline wait in an outbox and sync once you are back.
-- **An app, not a website**: installable (PWA), full screen, share a link from another app to open
-  the book, long-press shortcuts, light and dark themes ("Night Reader").
-- **Friends, by choice.** Share your follow link and people ask to follow you (your account is private
-  until you let them in; a public one can be followed at once). Your switches decide what they see:
-  what you are reading, Want to read, what you finished, ratings, reviews, books you put down, your year
-  in review. Hide a single Book from them, or block someone.
-- **Your friends.** Home shows what the people you follow finished, reviewed or started, and a follow
-  request to answer; the feed lists all of it, newest first.
-- **Invite-only accounts** with a six-digit code by email; no passwords. Delete your account from
-  the app.
-
-| Home (light) | Library (light) | Home (dark) | A Book (dark) | Profile (dark) |
-| --- | --- | --- | --- | --- |
-| ![Home in the light theme](docs/images/home-light.jpg) | ![The Library](docs/images/library-light.jpg) | ![Home in the dark theme](docs/images/home-dark.jpg) | ![A Book's page with its Book links](docs/images/book-dark.jpg) | ![The Profile](docs/images/profile-dark.jpg) |
+- **Find a book fast.** One field asks Apple Books, Open Library and the instance's own Catalogue at once and shows one merged list; a barcode scan or an ISBN goes straight to the edition.
+- **Every read counts.** Start and finish dates, a quarter-star rating, a review, re-reads and books you put down are reading sessions of their own, editable afterwards.
+- **Progress** in pages or percent with a day-by-day chart, and **Collections**, your own shelves, in your order.
+- **Bring your history**: a Goodreads or Hardcover export (CSV, or Hardcover's zip) is told apart by its header; its shelves, lists, reads, ratings and reviews come along.
+- **Friends, by choice.** Your switches decide what followers see, your account is private until you let them in, and you can hide a single book or block someone.
+- **Offline and installed**: the Library stays on the device, changes wait in an outbox, and the PWA runs full screen in light and dark.
 
 ## Privacy
 
-One operator, the owner, runs the one instance (libellus.fabkho.dev). This is what that instance
-does with your data.
+- **No trackers, no ads.** The app sets no cookies; Cloudflare Web Analytics counts page loads without storing anything on your device (docs/HOSTING.md).
+- **Your data is yours.** Row-level security means a member only ever reads her own Library, reviews, Collections and Book links; the people she follows see what they chose to show, through functions that check the follow and their switches, and private is the default.
+- **Sharing is opt-in.** A reading page is off until she turns it on, shows only the sections she picks (never her email, notes, highlights or a review she did not share), sits at an unguessable link out of search engines and dies when she turns it off; a cover that came with a Hardcover export shows inside the app only. The waitlist is the only address a visitor can leave: kept to send an invite, readable only by the owner, deleted on request.
+- **Delete is in the app**: Profile → Account → Delete account removes your account and everything of yours at once; the encrypted nightly backups forget it when they expire, within 35 days. An export of your data is planned; until then the app only imports.
+- **Search and the reader stay plain.** The browser asks Apple Books and Open Library directly for the words you type, the Goodreads rating is looked up by the server (so Goodreads never sees you), and *Translate* and *Define* send only the words you select (MyMemory, Wiktionary); the book itself never leaves your device.
+- **Errors** (message, stack, screen, app version; never a book, note or search) go to a table in the instance's own Supabase, kept 30 days, and — when the owner turns them on — to Sentry (EU, 30 days, no account, IP or content).
 
-- **No trackers, no ads.** The session is the only thing the app stores for sign-in; everything else on
-  the device is your own data, kept for offline use and removed when you sign out. Error reports go to
-  Sentry (EU) only when the instance turns them on, without account, IP or content (table below).
-- **Page loads are counted, nothing more.** This instance uses Cloudflare Web Analytics, which is
-  cookieless and stores no identifier on your device (docs/HOSTING.md).
-- **Your data is yours**: row-level security in the database means a member only ever reads her own
-  Library, reviews, Collections and Book links. The one exception is the people she follows: a member
-  sees what the members she follows (or a public account) chose to show, through database functions that
-  check the follow and that member's switches. A private account is the default, and nothing of it is
-  shown to strangers.
-- **Delete is in the app**: Profile → Account → Delete account removes your account and everything
-  of yours (Library, reading sessions, ratings, reviews, Collections, name, photo, follows, follow requests, blocks, activity, sign-in) from the
-  database at once. The encrypted nightly backups below forget it when they expire, within 35 days.
-  An export of your data is planned; until it exists, the app only imports (Goodreads, Hardcover).
-- **Sharing is opt-in**: a member's reading page is off until she turns it on, shows only the
-  sections she picks (never her email, notes, highlights or a review she didn't share), sits at an
-  unguessable link out of search engines, and dies at once when she makes a new link or turns it off. A cover that came with a Hardcover export is not shown to visitors or on shared or public pages (a reading page, a link preview, the published shelf); it shows inside the app.
-- **The waitlist is the only address a visitor can leave**: a reading page ends in a small form
-  ("BetterReads is invite-only for now"); the address is kept only to send an invite, readable only by
-  the owner and deleted on request. No account is made from the page.
-- **Search stays plain**: the browser asks Apple Books and Open Library directly for the words you
-  type, nothing else; the Goodreads rating is looked up by the server, so Goodreads never sees you.
-- **The reader asks outside services only for the words you select**: *Translate* (the browser's own
-  translator where there is one, otherwise MyMemory) and *Define* (Wiktionary). The book itself never
-  leaves your device.
-- **Errors stay in this instance's database**: the app reports its own crashes (message, stack,
-  screen, app version; never a Book, note or search) to a table in its Supabase (`eu-central-1`),
-  kept 30 days, readable only by the owner (docs/OPERATIONS.md). No third-party error service.
-
-**Where your data lives.** These are the services that store or process it for the owner:
+**Where your data lives** (details in [docs/THIRD-PARTY.md](docs/THIRD-PARTY.md)):
 
 | Service | What it holds or does |
 | --- | --- |
-| [Supabase](https://supabase.com), region `eu-central-1` | The database (Postgres), sign-in (Auth), profile photos (Storage) and the edge functions: everything you save, your email address, the waitlist and the error log |
-| [Cloudflare Pages](https://pages.cloudflare.com) | Serves the app's static files and the link previews of a shared reading page; Cloudflare Web Analytics counts page loads from there |
-| [Cloudflare R2](https://developers.cloudflare.com/r2/) | Two private buckets. One holds the nightly database backup, encrypted before it is uploaded with a key only the owner holds; each file is deleted after 35 days (docs/OPERATIONS.md, "Backups"). The other holds the cover images of books in members' Libraries, and nothing else: images only, under names taken from the image itself with a secret, so no name can be traced to a cover or a member, served only through the app's own address, and deleted 30 days after no member's Library holds the book (docs/THIRD-PARTY.md, "Own covers") |
-| Resend (an email provider, over SMTP) | Sends the six-digit sign-in codes and the waitlist invites, so it sees the address it mails |
-| [Sentry](https://sentry.io) (Functional Software, Inc.), EU region (Frankfurt) | Error reports and performance measurements, only when the instance sets `NUXT_PUBLIC_SENTRY_DSN`: error message and stack, app version, browser / system / device family, the screen as a route pattern, the last steps before an error (tags and test ids of taps only), how long a freeze lasted. No account id, name, email, IP address, content or replay; kept 30 days |
-| [GitHub](https://github.com) | The code and its CI. None of your data: the backup job encrypts the dump while it streams and keeps no artifact or log of it |
+| [Supabase](https://supabase.com), `eu-central-1` | The database, sign-in, profile photos and the edge functions: everything you save, your email address, the waitlist and the error log |
+| [Cloudflare Pages](https://pages.cloudflare.com) | Serves the app and the link previews of a shared reading page; its Web Analytics counts page loads |
+| [Cloudflare R2](https://developers.cloudflare.com/r2/) | Two private buckets: the nightly backup, encrypted before upload with a key only the owner holds and deleted after 35 days; and the covers of books in members' Libraries, under hashed names, deleted 30 days after no Library holds the book |
+| Resend (an email provider, over SMTP) | Sends the sign-in codes and the waitlist invites, so it sees the address it mails |
+| [Sentry](https://sentry.io), EU region (Frankfurt) | Error reports and performance measurements, only when the instance turns Sentry on: message and stack, app version, browser and device family, the screen as a route pattern, the last taps, freeze length. No account, name, email, IP, content or replay; kept 30 days ([docs/THIRD-PARTY.md](docs/THIRD-PARTY.md)) |
+| [GitHub](https://github.com) | The code and its CI. None of your data: the backup job encrypts the dump as it streams and keeps no artifact |
 
 ## Tech stack
 
-| | |
-| --- | --- |
-| App | [Nuxt 4](https://nuxt.com) as a single-page app (`ssr: false`), Vue 3, TypeScript, Pinia, Tailwind CSS v4 on generated design tokens, `@vite-pwa/nuxt` |
-| Backend | [Supabase](https://supabase.com): Postgres with the rules in the database (constraints, triggers, RPC, RLS), Auth (email codes), two Deno edge functions |
-| Hosting | Static files on Cloudflare Pages (any static host works) |
-| Tests | pgTAP for the database, Vitest for the data layer against a real local stack, Playwright flows in WebKit at iPhone size |
+- **App**: [Nuxt 4](https://nuxt.com) as a single-page app (`ssr: false`), Vue 3, TypeScript, Pinia, Tailwind CSS v4 on generated design tokens; static files on Cloudflare Pages.
+- **Backend**: [Supabase](https://supabase.com): Postgres with the rules in the database (constraints, triggers, RPC, RLS), Auth by email code, ten Deno edge functions.
+- **Tests**: pgTAP for the database, Vitest against a real local stack, Playwright flows in WebKit at iPhone size.
 
-## Quick start (local)
+## Quick start
 
-Needs access to this repository, Docker, Node 24, pnpm and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started).
+Needs this repository, Docker, Node 24, pnpm and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started).
 
 ```sh
-# clone this repository
 git clone https://github.com/fabkho/libellus && cd libellus
-supabase start                 # the local stack on ports 55320–55329: Postgres, Auth, Studio, a mail catcher
+supabase start                 # Postgres, Auth, Studio and a mail catcher on ports 55320–55329
 cd web
 cp .env.example .env           # paste the anon key `supabase start` printed
 pnpm install
 pnpm dev                       # http://localhost:3020, best in a phone-sized viewport
 ```
 
-Sign in as `dev@libellus.local` (the six-digit code lands in the local mailbox at
-http://127.0.0.1:55324), or sign up with any address and the invite code `LIBELLUS-DEV`. Tests,
-design tokens, the layout of the repository and everything else for working on the code:
-[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+Sign in as `dev@libellus.local` (the code lands in the local mailbox at http://127.0.0.1:55324), or sign up with any address and the invite code `LIBELLUS-DEV`.
 
 ## Documentation
 
-| | |
-| --- | --- |
-| [docs/SETUP.md](docs/SETUP.md) | Setting up the owner's instance: Supabase, Cloudflare Pages, invites, every setting in one table |
-| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Run, test and change it locally |
-| [docs/HOSTING.md](docs/HOSTING.md) | How the owner's instance is built and served on Cloudflare Pages |
-| [docs/OPERATIONS.md](docs/OPERATIONS.md) | The client error log and how to read it |
-| [docs/TESTING.md](docs/TESTING.md) | The test suites, CI, and checks on a real Android device |
-| [SPEC.md](SPEC.md), [CONTEXT.md](CONTEXT.md) | The spec sheet and the domain words |
-| [docs/DESIGN.md](docs/DESIGN.md), [docs/MOTION.md](docs/MOTION.md) | The design system ("Night Reader") and its motion |
-| [docs/parity.md](docs/parity.md) | Per-screen behaviour, the reference for a native port |
-| [docs/OWNER.md](docs/OWNER.md) | Tooling only the owner's instance uses (the Fable import, the 3D shelf) |
+- [docs/SETUP.md](docs/SETUP.md) — set up an instance: every variable and secret.
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — run, test and change it locally; [docs/TESTING.md](docs/TESTING.md) the suites and CI.
+- [docs/HOSTING.md](docs/HOSTING.md) — Cloudflare, domains, the build; [docs/OPERATIONS.md](docs/OPERATIONS.md) releases, monitoring, backups, own covers.
+- [docs/DESIGN.md](docs/DESIGN.md), [docs/MOTION.md](docs/MOTION.md) — the design system and its motion; [docs/parity.md](docs/parity.md) per-screen behaviour, for a native port.
+- [docs/THIRD-PARTY.md](docs/THIRD-PARTY.md) — what each external service gets; [SPEC.md](SPEC.md), [CONTEXT.md](CONTEXT.md) the spec sheet and the domain words.
 
 ## Contributing, security, license
 
-BetterReads is a personal project and the repository is public: issues and pull requests are welcome
-([CONTRIBUTING.md](CONTRIBUTING.md)). Third-party data and services are listed in
-[docs/THIRD-PARTY.md](docs/THIRD-PARTY.md). Please report
-security problems privately ([SECURITY.md](SECURITY.md)).
-
-**License: [MIT](LICENSE).** The 3D shelf (Regal) is a separate layer in its own repository and not part of this
-license; BetterReads builds and runs without it.
+Issues and pull requests are welcome ([CONTRIBUTING.md](CONTRIBUTING.md)); please report security problems privately ([SECURITY.md](SECURITY.md)). **License: [MIT](LICENSE).** The 3D shelf (Regal) is a separate layer in its own repository and not part of this license; BetterReads builds and runs without it.
