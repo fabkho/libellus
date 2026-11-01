@@ -5,16 +5,18 @@
 // here needs a font. Rendered by Playwright's Chromium (already a dev dependency for the flows), then
 // written as PNGs, a favicon.ico and a copy of favicon.svg.
 //
-//   icon-192.png, icon-512.png    the manifest's icons (`any`): icon-ios.svg — the mark at 60 % of the
-//                                 tile, which carries better at 192 and 512 px than icon.svg's framing
-//   icon-maskable-512.png         `maskable`: icon.svg, full bleed — its mark sits inside the 66 dp safe zone of the 108 dp canvas
+//   icon-192.png, icon-512.png    the manifest's icons (`any`): icon.svg with its room taken away — the mark
+//                                 alone, transparent, so a launcher and Chrome's own launch surface draw
+//                                 it on a background instead of a plum tile
+//   icon-maskable-512.png         `maskable`: the same mark on one flat night, full bleed — a maskable is a tile, so
+//                                 its room is the manifest's background_color and Android's launch screen, which paints
+//                                 that colour behind it, shows the mark alone with no tile edge (#461)
 //   icon-monochrome-512.png       `monochrome`: monochrome.svg, alpha only, for themed icons
-//   apple-touch-icon.png          180 × 180, opaque, from icon-ios.svg too; iOS rounds the corners itself
+//   apple-touch-icon.png          180 × 180, opaque, from icon-ios.svg; iOS rounds the corners itself and
+//                                 leaves a transparent square black
 //   favicon.svg                   favicon.svg as is (rounded corners, the mark enlarged)
 //   favicon.ico                   favicon.svg at 32 and 16 px
 //   shortcut-<name>-96.png        96 px, from design/icons/app/shortcuts/<name>.svg: the manifest's app shortcuts (#91)
-//   launch-mark-{128,256,384}.png the launch takeover's mark (PR B): the same 108 dp canvas without its plum room, alpha
-//                                 only around the mark, at 1/2/3 device pixels per CSS pixel.
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { chromium } from '@playwright/test'
 import sharp from 'sharp'
@@ -27,60 +29,70 @@ const svg = Object.fromEntries(
 // The app shortcuts' icons share the app icon's room; each draws its own mark.
 const SHORTCUTS = ['search', 'progress', 'library']
 for (const name of SHORTCUTS) svg[`shortcut-${name}`] = readFileSync(source(`shortcuts/${name}`), 'utf8')
+// The room the icons are drawn on: the same token the manifest paints its background_color with, so the two
+// cannot drift apart (#461).
+const surface = JSON.parse(readFileSync(new URL('../design/tokens.json', web), 'utf8')).color.surface.$value.dark
+// icon.svg's room: a plum gradient and an amber glow, two full-bleed 108 dp rects.
+const ROOM = /<rect width="108" height="108" fill="url\(#[^)]*\)"\/>/g
+// The mark alone, for the manifest's `any` icons (#461): the icon's own 108 dp canvas with its room taken
+// away — the pages and the lamp on nothing. The mark keeps the place it has in the icon, inside the 66 dp
+// safe zone, so a launcher's mask or Android's circle cannot clip it.
+svg.mark = svg.icon.replace(ROOM, '')
+if (svg.mark === svg.icon) throw new Error('icon.svg has no full-bleed room rects to take away: the `any` icons would carry the plum tile')
+// The same mark on the night, for `maskable` (#461). A maskable cannot be transparent — it is the whole tile
+// a launcher crops — so its room becomes one flat night instead: Android's launch screen paints that colour
+// and the tile's edge disappears into it, which is the mark alone on the night room, drawn by Android itself.
+svg.maskable = svg.mark.replace('<g transform=', `<rect width="108" height="108" fill="${surface}"/>\n<g transform=`)
+if (svg.maskable === svg.mark) throw new Error('icon.svg has no mark group to put the night room behind: the maskable would be a hole')
 
 const browser = await chromium.launch()
 const context = await browser.newContext({ deviceScaleFactor: 1 })
 const tab = await context.newPage()
 
 /** One SVG at `size` px square; the background stays transparent where the SVG leaves it so. */
-async function renderMarkup(markup, size) {
+async function render(name, size) {
   await tab.setViewportSize({ width: size, height: size })
   await tab.setContent(
-    `<!doctype html><style>html,body{margin:0;background:transparent}svg{display:block;width:${size}px;height:${size}px}</style>${markup}`,
+    `<!doctype html><style>html,body{margin:0;background:transparent}svg{display:block;width:${size}px;height:${size}px}</style>${svg[name]}`,
   )
   return tab.locator('svg').screenshot({ type: 'png', omitBackground: true })
 }
-const render = (name, size) => renderMarkup(svg[name], size)
 
 const out = (name) => new URL(`public/${name}`, web)
-writeFileSync(out('icon-192.png'), await render('icon-ios', 192))
-writeFileSync(out('icon-512.png'), await render('icon-ios', 512))
-writeFileSync(out('icon-maskable-512.png'), await render('icon', 512))
+/** A PNG that has to be transparent around the mark: RGBA, and all four corners at alpha 0. */
+async function checkTransparent(png, name) {
+  const { data, info } = await sharp(png).raw().toBuffer({ resolveWithObject: true })
+  const alphaAt = (x, y) => data[(y * info.width + x) * info.channels + 3]
+  if (info.channels !== 4) throw new Error(`${name} has no alpha channel (${info.channels} channels): the mark would sit on a tile`)
+  for (const [x, y] of [[0, 0], [info.width - 1, 0], [0, info.height - 1], [info.width - 1, info.height - 1]]) {
+    if (alphaAt(x, y) !== 0) throw new Error(`${name}: the corner at ${x}, ${y} is not transparent (alpha ${alphaAt(x, y)})`)
+  }
+}
+/** A PNG that has to be one flat colour at its edges: every corner exactly `hex` and opaque, so a launcher's crop
+ * and Android's launch screen see no tile edge. */
+async function checkFlat(png, name, hex) {
+  const { data, info } = await sharp(png).raw().toBuffer({ resolveWithObject: true })
+  const want = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
+  for (const [x, y] of [[0, 0], [info.width - 1, 0], [0, info.height - 1], [info.width - 1, info.height - 1]]) {
+    const at = (y * info.width + x) * info.channels
+    const px = [data[at], data[at + 1], data[at + 2], info.channels === 4 ? data[at + 3] : 255]
+    if (px.join() !== [...want, 255].join()) throw new Error(`${name}: the corner at ${x}, ${y} is ${px.join(', ')}, not ${hex}: Android's launch screen would show a tile edge`)
+  }
+}
+
+const icon192 = await render('mark', 192)
+const icon512 = await render('mark', 512)
+await checkTransparent(icon192, 'icon-192.png')
+await checkTransparent(icon512, 'icon-512.png')
+writeFileSync(out('icon-192.png'), icon192)
+writeFileSync(out('icon-512.png'), icon512)
+const maskable = await render('maskable', 512)
+await checkFlat(maskable, 'icon-maskable-512.png', surface)
+writeFileSync(out('icon-maskable-512.png'), maskable)
 writeFileSync(out('icon-monochrome-512.png'), await render('monochrome', 512))
 writeFileSync(out('apple-touch-icon.png'), await render('icon-ios', 180))
 copyFileSync(source('favicon'), out('favicon.svg'))
 for (const name of SHORTCUTS) writeFileSync(out(`shortcut-${name}-96.png`), await render(`shortcut-${name}`, 96))
-
-// The launch takeover's mark (PR B, docs/plans/new-logo.md, "The launch takeover"): the app icon with its
-// plum room taken away — the pages and the lamp alone, on nothing — which the page's first paint draws over
-// the night room (app/spa-loading-template.html; the CSS is main.css, "The launch takeover"). It is the
-// icon's own 108 dp canvas, so the mark keeps the size and the place it has on the launch screen; measured
-// there at 128 CSS px (e2e/android/launch.ts, on the emulator). Rendered at 1, 2 and 3 device pixels per CSS
-// pixel, and the 3x one is inlined into that template as a data URI below, so the first paint fetches nothing.
-const LAUNCH_CANVAS = 128
-const launchMark = svg.icon.replace(/<rect width="108" height="108" fill="url\(#[^)]*\)"\/>/g, '')
-if (launchMark === svg.icon) throw new Error('icon.svg has no full-bleed room rects to take away: the launch mark would carry the plum tile')
-const launchPngs = []
-for (const scale of [1, 2, 3]) {
-  const png = await renderMarkup(launchMark, LAUNCH_CANVAS * scale)
-  const { channels, hasAlpha } = await sharp(png).metadata()
-  // The frame draws the mark alone for the swell (main.css paints the launch screen's plum tile in CSS, so that it
-  // can dissolve): this one has to be the transparent canvas.
-  if (!hasAlpha || channels !== 4) throw new Error(`launch-mark-${LAUNCH_CANVAS * scale}.png has no alpha channel: the frame needs the mark alone`)
-  writeFileSync(out(`launch-mark-${LAUNCH_CANVAS * scale}.png`), png)
-  launchPngs.push(png)
-}
-{
-  const template = new URL('app/spa-loading-template.html', web)
-  const html = readFileSync(template, 'utf8')
-  const start = '<!-- launch-mark:start -->'
-  const end = '<!-- launch-mark:end -->'
-  const from = html.indexOf(start)
-  const to = html.indexOf(end)
-  if (from < 0 || to < from) throw new Error('app/spa-loading-template.html lost its launch-mark markers')
-  const inline = `<img class="launch-frame-mark" src="data:image/png;base64,${launchPngs[2].toString('base64')}" width="${LAUNCH_CANVAS}" height="${LAUNCH_CANVAS}" alt="">`
-  writeFileSync(template, `${html.slice(0, from + start.length)}\n  ${inline}\n  ${html.slice(to)}`)
-}
 
 // favicon.ico: an ICO directory around PNG images (every current browser reads PNG inside ICO).
 const sizes = [32, 16]

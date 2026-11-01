@@ -43,30 +43,27 @@ Light is D's *Day*, dark is D's *Night*. There is no third ("Dim") theme.
   overwrites both, and `apple-mobile-web-app-status-bar-style` is `default` so iOS tints the status
   bar from it. The manifest's splash colour is the night surface (manifests have no media queries).
 - The app icon is **Lamp over the page** (#448, option 6 of the logo rounds): an open book with the
-  lamp rising behind it like the sun, in a dusk-plum room. The pages are cream (`clothInk`), the lamp
-  is the accent amber with its glow, and the mark is a picture, not a letter — the design's founding
+  lamp rising behind it like the sun, on the dusk-plum room of its source tile. The pages are cream
+  (`clothInk`), the lamp is the accent amber with its glow, and the mark is a picture, not a letter —
+  the design's founding
   image, "a reading lamp in a dark room", made into the sign of the app. One icon for both themes (an
-  icon is an object on the home screen, like a cover), and one room: a plum dusk reads lit in either
-  theme, where a room that followed the theme would be two different objects. Sources:
+  icon is an object on the home screen, like a cover), and one room: the night the app opens into is
+  the room the maskable and the manifest's splash colour share, where a room that followed the theme
+  would be two different objects. Sources:
   `design/icons/app/{icon,icon-ios,monochrome,favicon}.svg` (copies of
   `design/logo-options/6-lamp-over-page/`, which keeps the round's sheets and motion);
-  `web/scripts/render-icons.mjs` renders 192 and 512 `any` and the 180 apple-touch-icon from
-  `icon-ios.svg` (the mark at 60 % of the tile, which carries better at those sizes), a 512
-  `maskable` from `icon.svg` (the mark inside the 66 dp safe zone of the 108 dp canvas; Chrome themes
-  an installed app from it, Chromium 40277264), a 512 alpha-only `monochrome` (themed icons),
+  `web/scripts/render-icons.mjs` renders the 192 and 512 `any` from `icon.svg` with its room taken
+  away — the mark alone, transparent, so a launcher and Chrome's own launch surface draw it on a
+  background instead of showing a plum tile inside a circle — and the 180 apple-touch-icon from
+  `icon-ios.svg` (the mark at 60 % of the tile; iOS composites a transparent icon onto black, so
+  that one stays opaque). The 512 `maskable` is the same mark full bleed on the night surface, which
+  is the manifest's `background_color`: the launch screen paints that colour and the tile's edge
+  merges into it, so the app opens on the mark alone, drawn by Android, with no takeover in between
+  (#461). Its mark stays inside the 66 dp safe zone of the 108 dp canvas (Chrome themes an installed
+  app from it, Chromium 40277264), a 512 alpha-only `monochrome` serves themed icons,
   `favicon.svg` and `favicon.ico`. The manifest's three shortcuts have their own marks in the same
   room (`design/icons/app/shortcuts/`: a magnifier holding the lamp, the book with the lamp, the book
   alone). Icon URLs carry `?v=<iconVersion>` (`nuxt.config.ts`): bump it when the icons change.
-- **The splash is the app's first frame.** Android draws an installed app's launch screen itself, from the
-  manifest's `background_color` (the night surface) and its icon: the plum tile's mark in the room, static and
-  impossible to animate. So the app's own first paint is the same picture — the frame in
-  `app/spa-loading-template.html` puts the night room, the icon's plum tile with the mark in it and the app's name
-  at the foot on the screen before any JavaScript, at the launch screen's own size and place (measured on the
-  emulator, docs/MOTION.md "Launch takeover") — and the tile then dissolves into the room while the lamp's glow
-  swells out of the mark, so the frame becomes the mark alone and the room lit. The mark is a generated
-  transparent PNG (`scripts/render-icons.mjs`, `public/launch-mark-*.png`, inlined so nothing is fetched); the
-  tile is CSS around it, in the icon's own two room colours, because it is the one thing that has to dissolve.
-  Only the installed app's cold start shows the frame: a browser tab keeps the plain background it always had.
 - The preference is a setting of the device, not of the member: signing out keeps it, so the way
   in looks the way the member left it.
 
