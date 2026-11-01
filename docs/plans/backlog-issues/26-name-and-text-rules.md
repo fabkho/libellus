@@ -1,7 +1,7 @@
-Title: Launch week: name rules on the server and a shared text rule for public content
+Title: Name rules on the server and a shared text rule for public content (postponed with open sign-up, #331)
 Labels: feature, priority:low
-Package: WP-26 · launch (revision 2); guard for #3, prerequisite for #2, #4, #5 · tier P3 (also bundled in #331) · size M · model Sonnet (Opus review: an auth.users trigger) · depends on: WP-03 ✓, the sign-in worker's auth.ts work merged · wave 2
-Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/26-name-and-text-rules.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/26-name-and-text-rules.md)
+Package: WP-26 · launch (revision 2); guard for #3, prerequisite for #2, #4, #5 · tier postponed with open sign-up (#331) · size M · model Sonnet (Opus review: an auth.users trigger) · depends on: the owner opens #331 · postponed
+Create: do not; this package is tracked in issue #331 (https://github.com/fabkho/libellus/issues/331).
 Plan: docs/plans/backlog-execution.md
 
 ---

@@ -1,6 +1,6 @@
 Title: On Hold, importers: paused shelves from Goodreads, Hardcover, Fable and Reado
 Labels: feature, priority:low
-Package: WP-19 · item #23 · tier P3 · size S–M · model Haiku · depends on: WP-18, PR #294 (Reado) · wave 7
+Package: WP-19 · item #23 · tier P3 · size S–M · model Haiku / normal · depends on: WP-18 · wave 5 · importers now also include Reado, the Hardcover zip (already notes Paused, hardcoverZip.ts:650-652) and the reading-tracker format
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/19-on-hold-importers.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/19-on-hold-importers.md)
 Plan: docs/plans/backlog-execution.md
 

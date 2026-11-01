@@ -1,6 +1,6 @@
 Title: iOS: the shelf's row and the 3D Stack cannot be scrolled (Regal)
 Labels: bug, priority:high
-Package: WP-02 · item #26 · tier P0 · size M · model Opus (debugging) · depends on: none · wave 1 · work happens in fabkho/regal
+Package: WP-02 · item #26 · tier P0 · row shipped in regal#84 (every build since 1.17.0); left: the owner's iPhone check of the Stack, then a Stack fix only if it fails (size M, Opus) and pinning Regal · wave 1 · work happens in fabkho/regal
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/02-ios-shelf-scroll.md)" --label bug --label priority:high --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/02-ios-shelf-scroll.md)
 Plan: docs/plans/backlog-execution.md
 

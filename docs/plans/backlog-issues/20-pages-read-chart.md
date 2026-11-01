@@ -1,6 +1,6 @@
 Title: Profile: pages read across all books, by week, month or a custom range
 Labels: feature, priority:low
-Package: WP-20 · item #13 · tier P3 · size L · model Sonnet · depends on: WP-08 · wave 5
+Package: WP-20 · item #13 · tier P3 · size L · model normal · depends on: none (WP-08 shipped in 1.27.0; reuse components/profile/Chart.vue and ChartNav.vue) · wave 1–2
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/20-pages-read-chart.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/20-pages-read-chart.md)
 Plan: docs/plans/backlog-execution.md
 

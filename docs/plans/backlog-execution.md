@@ -1,70 +1,138 @@
-# Backlog execution plan: 27 items, 27 work packages (revision 3: open sign-up postponed)
+# Backlog execution plan: 27 items, 27 work packages (revision 4: refreshed against release 1.30.0)
 
-**DRAFT, not merged.** Exactly one GitHub issue has been created from this plan:
-[#331](https://github.com/fabkho/libellus/issues/331), the postponed open sign-up bundle. This file is a plan,
-not a spec. It checks the owner's backlog of 27 items (grouped by Gemini; that grouping was not used) against the
-code on `origin/main` at `2b3faf91` (release 1.14.0, 2026-10-11). It then regroups the items into work packages.
-Each package is one worker and one PR, sized to merge on its own. Issue drafts, one per package, are in
-[`backlog-issues/`](backlog-issues/), ready for `gh issue create` once the owner decides.
+**DRAFT, not merged, DO NOT MERGE.** One GitHub issue was created from this plan:
+[#331](https://github.com/fabkho/libellus/issues/331), the postponed open sign-up bundle. Nothing else becomes an issue
+until the owner says so.
 
-How the items were checked: by reading code, migrations, tests and `docs/parity.md`, and by reading the Regal
-repo (`fabkho/regal`, `origin/main` `3376fce`) for #26. Nothing was run and no screenshots were taken. Line
-numbers are from `2b3faf91`. Item numbers **#1–#27** are the owner's, from the list quoted in the
-[appendix](#appendix-the-backlog-as-received).
+This file is a plan, not a spec. It checks the owner's backlog of 27 items, grouped by Gemini (a grouping this plan
+does not use), against the code. Revisions 1–3 read `2b3faf91` (release 1.14.0, 2026-10-11). **Revision 4 reads
+`origin/main` at `65998068` (release 1.30.0, 2026-11-01).** The work packages each take one worker and one PR. Issue
+drafts for the packages still open are in [`backlog-issues/`](backlog-issues/).
+
+How revision 4 checked: `CHANGELOG.md` 1.17.0 → 1.30.0 (55 entries), `docs/parity.md`, the migrations up to
+`20261112010000_hardcover_covers.sql`, the code, Regal's `origin/main` (`25da719`), `gh issue list --state open`, the
+open PRs and the worktrees on this machine. Nothing was run. Item numbers **#1–#27** are the owner's (see the
+[appendix](#appendix-the-backlog-as-received)). Sections 2–7 below keep revision 1–3 text where it is still true;
+**the tables in this section and §8 overrule them**.
 
 **Revisions:**
-- **Revision 2** expected a public launch the following week and added four packages that open sign-up safely
-  (WP-24 to WP-27).
-- **Revision 3 (2026-10-12): the owner postponed open sign-up.** The app stays invite-code only.
-  - WP-24, WP-25 and WP-27, with WP-26's server rules, are bundled in issue
-    [#331](https://github.com/fabkho/libellus/issues/331), status *postponed; do not start until the owner opens it*.
-  - The facts behind them stay in §2: what depends on invite-only today, the abuse cases, the 30-mails-an-hour
-    project limit. They are what must be true **before** sign-up opens, not what has to happen now.
+- 1: the audit and the 23 packages.
+- 2: an expected public launch added WP-24–27.
+- 3 (2026-10-12): open sign-up postponed, bundled in #331.
+- 4 (2026-11-01): refreshed against 1.30.0. Ten packages have shipped, open GitHub issues are folded in, and the
+  next 8 are ranked.
+- How the branch was brought up to date: `origin/main`'s history was rewritten. The old base `2b3faf91` is no longer
+  an ancestor, and main now has 13 commits. So `plan/backlog-execution` was **rebased** onto `origin/main` by
+  replaying only this plan's three commits; the old history was dropped from the rebase todo. The push uses
+  `--force-with-lease`.
 
-**Shipped since revision 1** (on `origin/main` at `1127a7df`, release 1.17.0):
-- WP-01 (#309)
-- WP-03 (#310)
-- WP-04 (#314, #318)
-- WP-05 (#322)
-- WP-09 (#321)
-- WP-10 (#313)
-- The BetterReads rename (#311)
-- The Reado import (#294), which unblocks WP-19's Reado part
+## Shipped since the plan (audited against the code)
 
-**For WP-02:** Regal merged "iOS: the row scrolls natively under a finger, the Stack keeps its drag" (regal#84,
-`22276c9`). The row is fixed in code. The Stack still needs the owner's iPhone to say whether it scrolls.
+| WP | What | Release (PR) | Notes against the plan |
+|---|---|---|---|
+| WP-01 | Member's "Authors" title, no in-review pill, stronger month rules (#1, #11a, #24) | 1.15.0 (#309) | as planned |
+| WP-03 | Tap your name to edit it (#3) | 1.15.0 (#310) | as planned |
+| WP-04 | Compact feed rows (#18) | 1.15.0 (#314), 1.15.1 (#318: 24 px targets) | Shipped with 24 px targets; the plan said 44 px. |
+| WP-05 | One paginated books sheet (#17) | 1.16.0 (#322) | as planned |
+| WP-06 | Tap an author, a genre, "not rated yet" (#12, #16, #15, #14 part 1) | 1.19.0 (#335; test id fix #340) | as planned |
+| WP-07 | Rate from the unrated sheet (#14 part 2) | 1.20.0 (#346) | `components/profile/RateRow.vue` |
+| WP-08 | Chart by month or by week, with a navigator (#11b, #11c) | prototype 1.26.0 (#345), 1.27.0 (#414), 1.28.0 (#442) | Shipped as an animated capsule (`Chart.vue`, `ChartNav.vue`). Unlike the plan, the capsule also stays under All, and the arrows walk All and the years. |
+| WP-09 | Every five-star book of the year (#25) | 1.16.0 (#321) | as planned |
+| WP-10 | Collection page: + from search, and sorting (#10, #9) | 1.15.0 (#313) | as planned |
+| WP-22 | Social links (#5) | 1.19.0 (#339) | Shipped as `profile_links` and `profile_link_settings` (migration `20261028010000_profile_links.sql`), not `member_links`. Five platforms: Instagram, TikTok, YouTube, Goodreads and **Reado**. StoryGraph, Hardcover and Fable were left out. Visibility defaults to followers, 10 calls an hour, and `owner_clear_profile_links` is ready for WP-25. |
+| WP-02 | iOS shelf scrolling (#26) | **partly:** regal#84 (`22276c9`, 12 Oct) | The row now scrolls natively under a finger and is in every build since 1.17.0 (Regal is unpinned, built from its default branch). The Stack kept its own drag. **No record that the owner checked the Stack on an iPhone.** That check is still open, and so is pinning Regal. |
+
+Shipped outside the 27 items (they change the plan's map):
+- The import as a server job (1.24.0, #379–#387), its Web Push (1.25.0, #398) and the Hardcover zip import
+  (1.29.0, #450, #454, #455).
+- The "You both read" slideshow (1.26.0, #412, Regal reel).
+- Own covers (1.27.0, #431–#437, off by default).
+- The app update sheet (1.22.0, #354), Sentry (1.28.0, #440) and the new logo and launch takeover (1.30.0, #456,
+  #459).
+- Sheets, confirms and Back from the UI base (1.24.0, #375).
+
+**Where the plan contradicted the code (fixed or noted in revision 4):**
+1. **UI components moved into a package.** `web/app/components/ui/` now holds only `BookLine`, `LitCard`,
+   `RatingInput`, `SearchPrompt` and `Stars`. `Sheet`, `Row`, `SeeAll`, `Segmented` and the rest come from
+   `@fabkho/ui` (`github:fabkho/ui#v0.10.6`, `web/package.json:44`). Every `components/ui/Sheet.vue`-style path
+   below is historical: changes to those parts go to the `fabkho/ui` repo, or wrap them in the app.
+2. **WP-17's list of SQL functions is stale.** `import_books` was redefined in
+   `20261111010000_import_zip_job.sql`; the read path (`member_reading_record`, `work_card`, `author_page`,
+   `series_works`) in `20261109010000_cover_read_path.sql`; and the import's write phase moved to the server job
+   (`20261104010000_import_job_write.sql`, `supabase/functions/import-job`). WP-17 must re-audit before it starts.
+3. **WP-19's importer list grew.** There are now Reado (`data/import/reado.ts`), the Hardcover zip
+   (`data/import/hardcoverZip.ts`) and the reading-tracker format (`data/import/readingTracker.ts`). The Hardcover
+   zip already reads Paused: status 4 → Currently Reading plus a `paused` problem note, and it keeps `pausedOn`
+   (`hardcoverZip.ts:286, 573, 650-652`). That is a ready hook for WP-19.
+4. **WP-22's platform list:** see the table. The plan's StoryGraph, Hardcover and Fable entries are a follow-up only
+   if members ask.
+5. **The "running elsewhere" notes in revision 3 are stale.** The import cover work and the sign-in/shelf-retry work
+   have merged (1.18.0 #332, 1.21–1.29). `data/import*`, `data/auth.ts` and `stores/shelf.ts` belong to nobody now.
+6. **#22 (filter spinner) and #27 (high-resolution covers)** stay as decided in revision 1. #27 is now covered
+   several times over by the cover pipeline (1.21.1–1.29.0).
+
+## Next 8 (ranked) and what not to start
+
+Quota rule: Claude Max 5x, **one Opus worker at a time**. "Normal" means DeepSeek V4.1 Flash on GOAT at high, or
+Sonnet at high when asked.
+
+| # | WP | What | Size | Model | Depends on | Hotspot / collision note | Token cost |
+|---|---|---|---|---|---|---|---|
+| 1 | WP-02 check | The owner swipes the Profile row and the `/profile/shelf` Stack on an iPhone (Safari and the home-screen app). A worker follows only if the Stack still fails: Stack pointer handling in Regal, then pin Regal in `web/regal.config.ts`. | S (check) / M (fix) | none / **Opus** if a fix is needed | the owner's phone | Regal repo; Libellus only `regal.config.ts` | 0 / M |
+| 2 | WP-15 | Grid or list in the Library, with each status's date line (#20, #21) | L | normal | none | `pages/library.vue`, `components/library/*`, `data/libraryView.ts`; free | L |
+| 3 | WP-13 | Refactor: the reorder list out of `EntryList.vue` (461 lines) | M | normal | none | `components/collections/EntryList.vue`; free | M |
+| 4 | WP-14 | Collections in her own order next to "last edited" (#7) | L | normal | WP-13 | collections store, data and pages; new `reorder_collections` and a `sync_write` action (`sync_write` chain head) | L |
+| 5 | WP-17 | On Hold, database: a paused open session (#23) | L | **Opus** (the one Opus slot) | WP-14 (`sync_write`); a re-audit of the functions (contradiction 2) | all status-aware SQL; the server import job (`import-job`); staging (#177) would de-risk the enum migration | L |
+| 6 | WP-18 | On Hold, app (#23) | L | normal (Opus review) | WP-17, WP-15 (library files) | library, book page, Home, queue, stats; touches `data/memberShelf.ts` | L |
+| 7 | WP-29 (new) | Export your data: BetterReads JSON and Goodreads CSV (#170) | M | normal | none | new route and `data/export/*` (shares a folder with the Regal export); include `profile_links` | M |
+| 8 | WP-20 | Pages read across books: week, month, custom range (#13) | L | normal | none (WP-08 shipped) | `data/stats.ts`, `stores/stats.ts`, `pages/profile/index.vue`; reuses `Chart.vue`/`ChartNav.vue` | L |
+
+**Not now, and why:**
+- **WP-11 and WP-12 (visible Collections):** a privacy model no invited member has asked for, and WP-11 wants the
+  Opus slot that WP-17 has.
+- **WP-16 (bio):** free text; it waits for WP-26, which is postponed.
+- **WP-19 (On Hold importers):** after WP-18. Small, and the Hardcover zip hook is ready.
+- **WP-21 (Collection covers):** parked. Own covers (#431–#437) would carry the storage if it is ever un-parked.
+- **WP-23 (counts):** parked. The self-only variant is S if the owner wants it.
+- **WP-24–27 (#331):** postponed by the owner.
+- **WP-28 (genres and tags, #344 and #358):** waits for the owner's answers to PR #357 §7. Its first PR is the
+  natural number 9.
+- Issues that are **not** next (each mapped in §1.1):
+  - #305 Google Books (needs a key, and the owner excluded Google for covers);
+  - #361 Goodreads in search (terms);
+  - #213 affiliate links;
+  - #259 next-book picker;
+  - #172 year wrapped;
+  - #95 native iOS;
+  - #90/#102 Play Store;
+  - #142 CSP reports;
+  - #177 staging;
+  - #449 declarative schemas (December).
 
 ## Now vs before open sign-up
 
-**Worth starting now** (ranked; §8 has the waves):
-1. **WP-02 follow-up**: check iOS on a device after regal#84, and fix the Stack only if it still does not scroll.
-2. **WP-06**: tappable stats (an author's, a genre's, the unrated books).
-3. **WP-22**: social links. The owner wants them. Handles are validated per platform, the app builds the URLs, and
-   nothing is free text.
-4. **WP-15**: grid or list in the Library.
-5. **WP-13 → WP-14**: Collections in her own order.
-6. **WP-07 / WP-08**: rate from the sheet; by week (both after WP-06).
-7. **WP-17 → WP-18 → WP-19**: On Hold.
+- **Safe while invite-only; revisit before open sign-up** (they show member-written content to others):
+  - WP-12 (visible Collections);
+  - WP-16 (bio);
+  - WP-21 (Collection covers);
+  - **WP-22 (social links, shipped):** before sign-up opens it needs the "links" report reason, and its owner action
+    already exists.
+- **Postponed with open sign-up (#331):** WP-24, WP-25, WP-27 and WP-26 (name and text rules). Revision 3 kept
+  WP-26 as a free-standing P3; the owner's instruction for revision 4 is to treat it as postponed with #331.
 
-**Safe while invite-only; revisit before open sign-up.** These show member-written content to others. While every
-member came in on an invite code, the risk is small, so they keep their order. Each must have its report reason
-(WP-25) and the text rule (WP-26) before sign-up opens (#331):
-- WP-12 (visible Collections).
-- WP-16 (bio).
-- WP-22 (social links).
-- WP-21 (Collection covers; parked anyway).
-
-**Postponed with open sign-up (#331):** WP-24, WP-25, WP-27. WP-26 keeps its place in the plan (P3, a guard
-against impersonation that is worth having even invite-only) but waits for the running sign-in worker to release
-`web/app/data/auth.ts`.
-
-**Running elsewhere: do not collide.**
-- The cover and import worker owns `web/app/data/import*`, the cover code (`data/covers.ts`, `data/coverFill.ts`)
-  and `data/bookImport.ts`, with open PRs #327, #328 and #329.
-- A sign-in and shelf-retry worker owns `web/app/data/auth.ts`, the sign-in screens and `stores/shelf.ts`.
-- What that means here:
-  - WP-19 (importers) and WP-17's `import_books` changes wait for the import work to settle.
-  - WP-26 waits for `auth.ts`.
+**Collisions today** (open PRs and worktrees on 2026-11-01):
+- **PR #457** `feat/way-in-lamp`: `web/app/components/auth/{Frame,Mark}.vue`, `design/tokens.json`,
+  `docs/DESIGN.md`, `docs/MOTION.md`, `web/e2e/auth.spec.ts`. No package above touches these.
+- **Worktree `boot-screen-revert`** (`fix/boot-screen-android-logo`): `web/app/assets/css/main.css`,
+  `web/nuxt.config.ts`, `web/app/plugins/launch-takeover.client.ts`, `web/public/*` icons.
+  - It collides with WP-02 only if the Stack fix needs `main.css`.
+- **Worktree `libellus-friends-visibility`** (no commits yet). Its name points at friends and privacy.
+  - It would collide with WP-11/12 and with anything in `pages/friends/*`, `components/friends/PrivacySheet.vue`
+    or the social migrations.
+  - Ask the coordinator what it holds before dispatching WP-11 or WP-12.
+- **Draft plans** #357 (genres) and #333 (buddy read): docs only.
+- **Free now** (no open work): `data/import*` and `supabase/functions/import-job`, `data/auth.ts`, `stores/shelf.ts`,
+  stats and profile, collections, library.
 
 ---
 
@@ -72,62 +140,63 @@ against impersonation that is worth having even invite-only) but waits for the r
 
 Tiers: **P0** bugs · **P1** easy wins · **P2** medium · **P3** hard · **P4** refactor, long-term or parked ·
 **postponed** = waits for the owner to open sign-up (#331).
-GitHub labels: **priority:high** = P0–P2, **priority:low** = P3–P4 and postponed.
-Models: **Opus** = `anthropic/claude-opus-5-5` (debugging, the sign-up gate, a design-critical DB model) · **Sonnet** =
-the default · **Haiku** = mechanical (DeepSeek works too).
-"Wave" counts from now (revision 3); shipped packages show their PR.
+"Wave" counts from today (revision 4); shipped packages show their release.
 
 | ID | Title | Items | Tier | Size | Model | Depends on | Wave |
 |---|---|---|---|---|---|---|---|
-| WP-01 | Profile quick fixes: a member's "Authors" label, no "in review" pill at the chart, stronger month rules | #1, #11a, #24 | P0 | S | Haiku | none | **shipped #309** |
-| WP-02 | iOS: the shelf's row and Stack do not scroll (Regal) | #26 | P0 | M | Opus | none | **row fixed (regal#84); device check and the Stack: 1** |
-| WP-03 | Tap your name on the Profile to edit it | #3 | P1 | S | Sonnet | none | **shipped #310** |
-| WP-04 | Compact rows in the Friends feed | #18 | P1 | S–M | Sonnet | none | **shipped #314, #318** |
-| WP-05 | One paginated books sheet for the stats | #17 (+ dedup refactor) | P1 | M | Sonnet | WP-01 | **shipped #322** |
-| WP-06 | Tappable stats: an author's books, a genre's books, the unrated books | #12, #16, #15, #14 (part 1) | P1 | M | Sonnet | WP-05 ✓ | 1 |
-| WP-07 | Rate books straight from the unrated sheet | #14 (part 2) | P2 | M | Sonnet | WP-06 | 2 |
-| WP-08 | Chart by month or by week, with a range navigator | #11b, #11c | P2 | M | Sonnet | WP-06 | 2 |
-| WP-09 | Year in review: every five-star book, not one favourite | #25 | P2 | M | Sonnet | WP-01 | **shipped #321** |
-| WP-10 | Collection page: a + to add from search, and sorting | #10, #9 | P2 | M | Sonnet | none | **shipped #313** |
-| WP-11 | Collection visibility, database (private by default, opt-in per Collection) | #6, #2 | P3 | L | Opus | none (no section switch: out of the SQL chain) | 3 (or any wave as filler) |
-| WP-12 | Collection visibility, app: the switch, and her collections on her profile (**safe while invite-only; revisit before open sign-up**) | #6, #2 | P3 | M–L | Sonnet | WP-11, WP-26 | 4 |
-| WP-13 | Refactor: a reusable drag-to-reorder list (from `EntryList.vue`) | enabler for #7 | P4 | M | Sonnet | WP-10 ✓ | 1 |
-| WP-14 | Manual order of Collections next to "last edited" (sort mode) | #7 | P3 | L | Sonnet | WP-13 (WP-12 rebases onto it) | 2 |
-| WP-15 | Grid or list in the Library, with each status's date line | #20, #21 | P3 | L | Sonnet | WP-10 ✓ | 1 |
-| WP-16 | A short bio under the name (**safe while invite-only; revisit before open sign-up**) | #4 | P3 | M | Sonnet | WP-03 ✓, WP-26; after WP-17 (`member_profile`) | 4 |
-| WP-17 | On Hold, database: a paused open session | #23 | P3 | L | Opus | WP-14 (`sync_write`); `import_books` after the import work settles | 3 |
-| WP-18 | On Hold, app: every screen that knows a status | #23 | P3 | L | Sonnet | WP-17, WP-15 | 4 |
-| WP-19 | On Hold, importers (Goodreads, Hardcover, Fable, Reado) | #23 | P3 | S–M | Haiku | WP-18, the import worker's PRs | 5 |
-| WP-20 | Pages read across books: a chart with week, month and custom ranges | #13 | P3 | L | Sonnet | WP-08 | 3 |
-| WP-21 | A collection's own cover image (**parked; safe only while invite-only; revisit before open sign-up**) | #8 | P4 | L | Sonnet | WP-12, WP-14, WP-25 | parked |
-| WP-22 | Social links: allow-listed platforms, handles only, visibility setting (owner decision: wanted; **safe while invite-only; revisit before open sign-up**) | #5 | P2 | M | Sonnet | none now (handles are regex-checked, no free text); the "links" report reason comes with WP-25 | 1 |
-| WP-23 | Follower counts (parked; a self-only variant is offered) | #19 | P4 | S (self-only) / M | Sonnet | none | parked |
-| WP-24 | Open sign-up safely: `signup_mode` switch (default `invite`), captcha, email budget, photo cap, age line | open sign-up | **postponed (#331)** | M | Opus | the owner opens #331 | postponed |
-| WP-25 | Report a member (name, photo, reviews) and the owner's minimal handling | open sign-up (#2, #4, #5, #8 prerequisite) | **postponed (#331)** | M | Sonnet (Opus review of the SQL) | the owner opens #331 | postponed |
-| WP-26 | Name rules on the server and a shared text rule for public content (also in #331) | #3 guard; #4, #2, #5 prerequisite | P3 | M | Sonnet (Opus review: an `auth.users` trigger) | the sign-in worker's `auth.ts` work merged | 2–3 |
-| WP-27 | Launch texts: privacy notice, community rules, moderation runbook | open sign-up | **postponed (#331)** | S–M | Sonnet (the owner reviews the legal text) | the owner opens #331 | postponed |
+| WP-01 | Profile quick fixes | #1, #11a, #24 | n/a | S | n/a | n/a | **shipped 1.15.0 (#309)** |
+| WP-02 | iOS: the shelf's row and Stack (Regal) | #26 | P0 | S check / M fix | none / Opus | the owner's phone | **row shipped (regal#84); Stack check: 1** |
+| WP-03 | Tap your name to edit it | #3 | n/a | S | n/a | n/a | **shipped 1.15.0 (#310)** |
+| WP-04 | Compact feed rows | #18 | n/a | S–M | n/a | n/a | **shipped 1.15.0 (#314, #318)** |
+| WP-05 | One paginated books sheet | #17 | n/a | M | n/a | n/a | **shipped 1.16.0 (#322)** |
+| WP-06 | Tappable stats | #12, #16, #15, #14 | n/a | M | n/a | n/a | **shipped 1.19.0 (#335)** |
+| WP-07 | Rate from the unrated sheet | #14 | n/a | M | n/a | n/a | **shipped 1.20.0 (#346)** |
+| WP-08 | Chart by month or week, with a navigator | #11b, #11c | n/a | M | n/a | n/a | **shipped 1.27.0 (#414), 1.28.0 (#442)** |
+| WP-09 | Every five-star book of the year | #25 | n/a | M | n/a | n/a | **shipped 1.16.0 (#321)** |
+| WP-10 | Collection page: + add, sorting | #10, #9 | n/a | M | n/a | n/a | **shipped 1.15.0 (#313)** |
+| WP-11 | Collection visibility, database (private by default, opt-in) | #6, #2 | P3 | L | Opus | not with WP-17 (one Opus slot); check the `libellus-friends-visibility` worktree | 4+ |
+| WP-12 | Collection visibility, app (**safe while invite-only; revisit before open sign-up**) | #6, #2 | P3 | M–L | normal | WP-11, WP-14 | 5+ |
+| WP-13 | Refactor: a reusable reorder list | enabler for #7 | P2 (enabler) | M | normal | none | 1 |
+| WP-14 | Manual order of Collections next to "last edited" | #7 | P2 | L | normal | WP-13 | 2 |
+| WP-15 | Grid or list in the Library, with each status's date line | #20, #21 | P2 | L | normal | none | 1 |
+| WP-16 | A short bio (**safe while invite-only; revisit before open sign-up**) | #4 | P3 | M | normal | WP-26 (postponed) | after #331 opens, or with its own minimal rule if the owner wants it sooner |
+| WP-17 | On Hold, database | #23 | P2 | L | Opus | WP-14 (`sync_write`); re-audit (contradiction 2) | 3 |
+| WP-18 | On Hold, app | #23 | P2 | L | normal (Opus review) | WP-17, WP-15 | 4 |
+| WP-19 | On Hold, importers (Goodreads, Hardcover CSV and zip, Fable, Reado, reading tracker) | #23 | P3 | S–M | Haiku / normal | WP-18 | 5 |
+| WP-20 | Pages read across books | #13 | P3 | L | normal | none | 1–2 |
+| WP-21 | A Collection's own cover (**parked; revisit before open sign-up**) | #8 | P4 | L | normal | WP-12, WP-14, WP-25; could reuse own covers (#431–#437) | parked |
+| WP-22 | Social links | #5 | n/a | M | n/a | n/a | **shipped 1.19.0 (#339)**; the "links" report reason comes with WP-25 (#331) |
+| WP-23 | Follower counts (a self-only variant possible) | #19 | P4 | S / M | Haiku / normal | none | parked |
+| WP-24 | Open sign-up safely (`signup_mode` switch, default `invite`) | open sign-up | **postponed (#331)** | M | Opus | the owner opens #331 | postponed |
+| WP-25 | Report a member and the owner's minimal handling | open sign-up | **postponed (#331)** | M | normal (Opus review of the SQL) | the owner opens #331 | postponed |
+| WP-26 | Name rules and a shared text rule | #3 guard; #4, #2, #5 prerequisite | **postponed (#331)** | M | normal (Opus review) | the owner opens #331 | postponed |
+| WP-27 | Launch texts: privacy notice, community rules, runbook | open sign-up | **postponed (#331)** | S–M | normal (the owner reviews) | the owner opens #331 | postponed |
+| **WP-28** (new) | Genres and tags (per `docs/plans/genres.md`, PR #357: 8 PRs) | #344, #358 | P2 | L (multi-PR) | normal; Opus for the label resolver design | the owner's answers to #357 §7 | after the answers |
+| **WP-29** (new) | Export your data: BetterReads JSON and Goodreads CSV | #170 | P2 | M | normal | none | 1–2 |
 
 **Counts:**
-- Shipped: 6 (WP-01, 03, 04, 05, 09, 10), and WP-02 in part.
-- Open: P0 1 (WP-02 follow-up) · P1 1 · P2 3 · P3 10 · P4 3 (one enabler, two parked).
-- Postponed with #331: 3 (WP-24, 25, 27).
-- Total: 27 packages.
+- Shipped: 10 (WP-01, 03–10, 22), and WP-02 in part.
+- Open: WP-02 (the Stack check) and WP-11–WP-20 (10 packages), plus the new WP-28 and WP-29; WP-30 and WP-31 are proposed for later.
+- Parked: WP-21, WP-23.
+- Postponed with #331: WP-24–27.
 
-**What changed from revision 2:**
-- WP-24, WP-25 and WP-27 are **postponed** (#331).
-- WP-26 drops from P1 to P3. It is in #331 as well, but it can land earlier as a guard.
-- WP-12, WP-16, WP-21 and WP-22 no longer wait for the postponed packages. They carry the condition *safe while
-  invite-only; revisit before open sign-up* instead.
-- WP-22 can start now: its input is handles validated by format, not free text.
-- WP-14 no longer waits for WP-12; WP-12 rebases onto it instead.
-- WP-17 moves ahead of WP-16 in the `member_profile` chain.
+### 1.1 Open GitHub issues that were not in the plan
 
-**Items with no package of their own:**
-- **#22** (a loading animation on filters): recommended **not** to do; see §4.
-- **#27** (high-resolution Goodreads covers): **already true on `main`**; what is left belonged to the import
-  cover work (merged as #315 and #326), see §4.
-- **#15** is mostly shipped; its remainder rides in WP-06.
-- **#21** is mostly shipped; its remainder rides in WP-15.
+| Issue | Verdict |
+|---|---|
+| #331 Open sign-up (postponed) | WP-24, WP-25, WP-26, WP-27 (already the plan's). |
+| #344 Raw genre labels; #358 Tags spec | **New WP-28** "Genres and tags", built from `docs/plans/genres.md` (draft PR #357: data model, resolver, 8-PR plan, 16 open questions). It starts after the owner answers #357 §7. Its chart parts touch `components/profile/Genres.vue` and `data/stats.ts` (shared with WP-20). |
+| #170 Export your data | **New WP-29** (M, normal): a JSON of everything she owns (Library, reads, reviews, Collections, profile links, settings) and a Goodreads-format CSV. It covers the GDPR export noted under WP-22. It does not need #172. |
+| #172 Year wrapped (shareable image) | **Proposed WP-30**, later (spec label). It builds on the year in review and the five-star row (WP-09), and on the reel/still from the slideshow (#412) for the image. Not in the next 8. |
+| #259 Next-book picker | **Proposed WP-31**, later. Regal now has a pick context (regal#86, #87), and prototype #268 explored the deals. It needs an owner design pick first. |
+| #305 Google Books | **Not a backlog item yet.** It needs an API key and the owner's terms decision; the cover study excluded Google (`docs/plans/cover-sources.md`). It would touch `data/import*`, search and the edition picker. If approved, a WP of its own after WP-28 (genres are one of its reasons). |
+| #361 Goodreads in search | **Not a backlog item yet** ("later", Goodreads terms). If approved, a search-only WP. |
+| #213 Affiliate links | **Not a backlog item** (business and legal decision; "later"). |
+| #177 Staging | **Ops, not a WP.** Recommended before WP-17's enum migration (a second Supabase project to try it on). |
+| #142 CSP reports | **Ops / security, not a WP.** Sentry (1.28.0) can take CSP reports through its `report-uri`, which may be simpler than the client error log the issue proposes. |
+| #449 Declarative schemas | **Tooling, not a WP.** Revisit in December, as the issue says; it would change how WP-11, 14, 17 and 26 write migrations. |
+| #90 / #102 Play Store TWA | **Distribution, not a backlog WP.** PR #102 is the owner's. |
+| #95 Native iOS | **Not now** ("later"). |
 
 ---
 
@@ -759,33 +828,13 @@ times**: in `pages/profile/index.vue:111-142`, `pages/profile/[year].vue`, `page
 
 Each package also has an issue draft in `backlog-issues/NN-slug.md`.
 
-### WP-01 Profile quick fixes (#1, #11a, #24). P0 · S · Haiku · wave 1
-- **Why grouped:** three one-line kinds of change in the same profile and year files. #1 is the bug; #11a and #24
-  ride along because they touch the same pages and are minutes each.
-- **Files:**
-  - `components/profile/Authors.vue` (a `name` prop).
-  - `pages/friends/[member]/index.vue:326` (pass the name) and `:312-314` (remove the pill).
-  - `pages/friends/[member]/[year].vue:138`.
-  - `pages/profile/index.vue:174-176` (remove the pill).
-  - `components/profile/MonthBooks.vue:118-120` (`--color-hairline` → `--color-hairline-strong`).
-  - Both locale files and `docs/parity.md` (Profile, A member's profile, Year in review: remove `profile.inReview`
-    and `member.inReview` from the By-month description and the IDs).
-- **Migration:** no.
-- **German:** `profile.authors.titleOf` ("Autoren, zu denen {name} zurückkehrt"), `profile.authors.titleNeutral`
-  ("Meistgelesene Autoren"). If `profile.inReview` is unused afterwards, delete it from both
-  (`tests/i18n-runtime-only.test.ts`).
-- **Tests:** i18n parity; the existing stats and member-profile tests; look at 390 px in DE.
-- **Acceptance:**
-  - A member's profile and year show "Authors {name} returns to"; your own is unchanged.
-  - With no name, the neutral title shows.
-  - No "in review" pill beside By month on either profile.
-  - Year cards and (under All) year columns still open a year.
-  - Month rules visibly stronger in light, dark and sepia.
-  - Parity updated.
-- **Open questions:** named or neutral label? Remove the pill on member profiles too (recommended)? A stronger
-  colour only, or a 1 px rule?
+### WP-01 Profile quick fixes (#1, #11a, #24). **Shipped in 1.15.0 (#309).**
+Its design and acceptance criteria were in revisions 1–3 of this file (see the git history).
 
-### WP-02 iOS shelf scrolling (#26). P0 · M · Opus · wave 1 · **in the Regal repo**
+### WP-02 iOS shelf scrolling (#26). P0 · **row shipped (regal#84, in every build since 1.17.0); the Stack still needs the owner's iPhone check** · fix only if it fails: M · Opus · in the Regal repo
+- **Revision 4:** regal#84 ("the row scrolls natively under a finger, the Stack keeps its drag") did hypothesis 1. The
+  Stack (hypothesis 2: the `buttons & 1` guard, no pointer capture) is untouched. Regal is still unpinned
+  (`web/regal.config.ts`): pinning it is part of this package.
 - **Why its own package:** another repository, a diagnosis loop with the owner's phone, and no Libellus files
   unless hypothesis 3 holds (§5.5).
 - **Steps:**
@@ -809,164 +858,31 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
 - **Open questions:** which iOS version? Safari tab, home-screen app, or both? Which screens exactly? Did it ever
   work on iOS? Pin Regal in Libellus?
 
-### WP-03 Tap the name to edit it (#3). P1 · S · Sonnet · wave 1 (running; revision 2: safe as is, the server-side name rule is WP-26)
-- **Files:**
-  - `components/profile/Hero.vue:57`: a button inside the `h1`, with the `profile.title` test ID kept.
-  - `components/profile/Account.vue:162,225`: share the open state, or move `ShellNameSheet` up.
-  - `pages/profile/index.vue`: wire it like `@photo`.
-  - Locales; parity (Profile, Member name).
-- **Migration:** no.
-- **German:** `profile.editName` ("Edit your name" / "Namen ändern"), the button's accessible name.
-- **Tests:** none new (UI only); keyboard and 390 px by hand.
-- **Acceptance:**
-  - Tapping the name opens the same name sheet as the Account row; saving updates the hero.
-  - Focus returns to the name.
-  - 44 px target.
-  - A member's name on her profile is not a button.
-  - Offline behaves like the Account row.
-- **Open question:** a visible pencil next to the name, or none?
+### WP-03 Tap the name to edit it (#3). **Shipped in 1.15.0 (#310).**
+Its design and acceptance criteria were in revisions 1–3 of this file (see the git history).
 
-### WP-04 Compact feed rows (#18). P1 · S–M · Sonnet · wave 1
-- **Files:** `components/friends/FeedRow.vue:80`, `FeedBatch.vue`, `RowPlaceholder.vue` (`kind="feed"`, the same
-  height), `pages/friends/index.vue`, `RowActions.vue`. Home's `compact` variant stays as it is.
-- **Approach:**
-  - Two variants in the PR, as screenshots at 390 × 844, light and dark, for the owner to pick.
-  - Variant A: cover `sm` (40 px), title and author on one line, review clamped to two lines.
-  - Variant B: a cover between the two sizes (a new token), review at three lines.
-  - Measure rows per screen before and after.
-- **Migration:** no. **German:** none expected.
-- **Tests:** `tests/feed-view.test.ts` unchanged; `e2e/friends.spec.ts` locally.
-- **Acceptance:**
-  - At least 1.5× as many rows per 390 × 844 screen.
-  - No layout shift when placeholders turn into rows.
-  - More still unfolds a review.
-  - The heart, Want to read and every row action keep a 44 px target.
-  - The cover flight still lands.
-- **Open questions:** how compact? Keep the heart and Want to read on every row?
+### WP-04 Compact feed rows (#18). **Shipped in 1.15.0 (#314), 1.15.1 (#318).**
+Its design and acceptance criteria were in revisions 1–3 of this file (see the git history).
 
-### WP-05 One paginated books sheet (#17 + refactor). P1 · M · Sonnet · wave 2 (after WP-01)
-- **Why P1 although partly a refactor:** it is the base of four easy wins (#12, #14, #15, #16) and removes a
-  four-way copy. The owner's "refactors last" does not fit an enabler.
-- **Files:**
-  - A new `composables/useStatsSheet.ts`.
-  - `stores/stats.ts` (`ProfileSheet` union at `:7-11`, `keptSheet.shown`).
-  - `components/profile/ReadsSheet.vue:24`.
-  - `composables/useSheetRestore.ts`, `useProfileSheet.ts`.
-  - `pages/profile/index.vue:111-142`, `pages/profile/[year].vue`, `pages/friends/[member]/index.vue`,
-    `pages/friends/[member]/[year].vue`.
-  - `components/home/TallySheet.vue` (also uses `ProfileReadsSheet`; check).
-- **Migration:** no.
-- **German:** `profile.sheet.showMore` ("Show {count} more" / "{count} weitere anzeigen").
-- **Tests:** Vitest for the composable's pure mapping and the paging helper (`tests/stats.test.ts` or a new file).
-- **Acceptance:**
-  - A sheet with 120 reads shows 30 rows; Show more adds 30.
-  - Opening a book and coming Back restores the sheet with the same count and scroll.
-  - The four pages have no `sheetTitle` / `sheetReads` switch of their own.
-  - Sheets under 30 rows look exactly as before.
-- **Open questions:** page size (25, 30 or 50)? A button, or auto-load near the end (with a button as fallback)?
+### WP-05 One paginated books sheet (#17 + refactor). **Shipped in 1.16.0 (#322).**
+Its design and acceptance criteria were in revisions 1–3 of this file (see the git history).
 
-### WP-06 Tappable stats (#12, #16, #15, #14 part 1). P1 · M · Sonnet · wave 3 (after WP-05)
-- **Files:**
-  - `components/profile/Authors.vue`: rows become buttons, keeping the list semantics.
-  - `Genres.vue`: no more `navigateTo('/library')` in the pick handler.
-  - `Figures.vue`: "N not rated yet" becomes a button, as the Pages line is.
-  - `Ratings.vue`: "N not yet" becomes a button.
-  - `data/stats.ts`: `readsByAuthor`, `readsOfGenre(reads, year, ofEntry)`, `readsUnrated`.
-  - `stores/stats.ts` (kinds), the pages' pick handlers, locales, parity (Profile, Genres, Year in review, A member's
-    profile).
-- **Migration:** no.
-- **German:** `profile.sheet.author` ("{name} · {year}"), `profile.sheet.genre`, `profile.sheet.unrated` ("Not
-  rated yet" / "Noch nicht bewertet"), `profile.figures.unratedOpen` and `profile.ratings.notYetOpen` (accessible
-  names), `genre.stats.inLibrary` ("Show in Library" / "In der Bibliothek zeigen").
-- **Tests:** Vitest for the three selectors (re-reads count, abandoned excluded, the year filter, an unknown genre).
-- **Acceptance:**
-  - An author row opens a sheet of that author's reads, with an author-page link when a key is known; this works on
-    member profiles too.
-  - A genre row opens a sheet, with "Show in Library" in its foot.
-  - "N not rated yet" and "N not yet" open the unrated sheet.
-  - On a member who hides ratings, nothing about ratings is tappable.
-  - Back restores each sheet.
-- **Open questions:** author row → sheet (recommended) or → the author page? Keep "Show in Library"?
+### WP-06 Tappable stats (#12, #16, #15, #14 part 1). **Shipped in 1.19.0 (#335).**
+Its design and acceptance criteria were in revisions 1–3 of this file (see the git history).
 
-### WP-07 Rate from the unrated sheet (#14 part 2). P2 · M · Sonnet · wave 4
-- **Files:** `components/profile/ReadRow.vue` or `ReadsSheet.vue` (row action slot); a rating-only write
-  (`rateSession(entryId, sessionId, rating)`) in `data/library.ts` / `stores/history.ts` that reuses the
-  `updateSession` path and the outbox; locales; parity.
-- **Migration:** no (check that `update_session` accepts a rating-only edit under `rating_when_finished`).
-- **German:** `profile.sheet.rateLabel` ("Rate {title}"), `profile.sheet.rated`.
-- **Tests:** a Vitest repository test against the local stack (`tests/` conventions); offline queueing.
-- **Acceptance:**
-  - Three books rated in a row without leaving the sheet.
-  - A rated row stays until the sheet closes, marked rated, so nothing jumps under the finger.
-  - Offline, the ratings queue and sync.
-  - The figures are right after closing.
-  - Each rating control is named by its book.
-- **Open questions:** stars inline on each row, or a tap that opens a small rating sheet? Rating only, or a review
-  too (recommended: rating only)?
+### WP-07 Rate from the unrated sheet (#14 part 2). **Shipped in 1.20.0 (#346).**
+Its design and acceptance criteria were in revisions 1–3 of this file (see the git history). `components/profile/RateRow.vue` in `ReadsSheet.vue`, written through `stores/history.ts`.
 
-### WP-08 By month or by week, with a navigator (#11b, #11c). P2 · M · Sonnet · wave 4
-- **Files:**
-  - `components/profile/Columns.vue`.
-  - `data/stats.ts` (`weeksOf`, ISO weeks, Monday first like `Days.vue`).
-  - `stores/stats.ts` (mode and offset, kept across a trip to a book).
-  - `pages/profile/index.vue`, and the member page if wanted.
-  - The `week` sheet kind; locales; parity.
-- **Recommended shape:**
-  - When a year is picked, a compact segmented control "Months · Weeks" by the chart title.
-  - Weeks show 13 columns (a quarter) with ‹ › stepping through the year.
-  - Months keep 12 columns, and ‹ › steps between years, kept in step with the pills.
-  - Under All, only years.
-- **Migration:** no.
-- **German:** `profile.byWeek` ("By week" / "Nach Woche"), `profile.chartMode.*`, `profile.prevRange` and
-  `profile.nextRange` (accessible names), `profile.sheet.week` ("Week of {date}").
-- **Tests:** Vitest `weeksOf` (a week that crosses the year, week 53, a read without an end date).
-- **Acceptance:**
-  - Toggling switches the bars without moving anything under the chart (the same height, as today).
-  - ‹ › moves through ranges and stops at the ends.
-  - A week's column opens its sheet.
-  - The state survives a trip to a book and back.
-  - Accessible names on every control.
-- **Open questions:** what range of weeks (a quarter, the last 12, the whole year in a scroll)? On member profiles
-  too? Remember the mode?
+### WP-08 By month or by week, with a navigator (#11b, #11c). **Shipped in 1.26.0 prototype (#345), 1.27.0 (#414), 1.28.0 (#442).**
+Its design and acceptance criteria were in revisions 1–3 of this file (see the git history). Shipped as the animated capsule (`components/profile/Chart.vue`, `ChartNav.vue`). It also works under All.
 
-### WP-09 Every five-star book of the year (#25). P2 · M · Sonnet · wave 2 (after WP-01)
-- **Files:** `data/stats.ts` (`favourites`: rating exactly 20 quarters, newest first; fall back to today's single
-  favourite when none), `components/profile/Favourite.vue` (a sideways row of covers, lit by the first; a skeleton),
-  `pages/profile/[year].vue:130`, `pages/friends/[member]/[year].vue:127`. `YearCards.vue` keeps one favourite.
-  Locales, parity.
-- **Migration:** no.
-- **German:** `profile.year.favourites` ("Five stars" / "Fünf Sterne") with a count.
-- **Tests:** Vitest `favourites` (4.75 excluded, the tie order, the fallback).
-- **Acceptance:**
-  - A year with four 5.00 reads shows four covers in one row, each a link named by its title.
-  - A year with none shows the top-rated one as today.
-  - A member's Manual books do not open.
-  - The `#favourite` anchor still works.
-- **Open questions:** exactly 5.00, or ≥ 4.75? A row that scrolls sideways, or a wrapped grid? The title?
+### WP-09 Every five-star book of the year (#25). **Shipped in 1.16.0 (#321).**
+Its design and acceptance criteria were in revisions 1–3 of this file (see the git history).
 
-### WP-10 Collection page: + add, and sort (#10, #9). P2 · M · Sonnet · wave 1
-- **Files:**
-  - `pages/collections/[id].vue` (a + in the top bar, a sort pill).
-  - `stores/search.ts` (a `target: { collection }` mode, like `linking`) and `components/search/{Results,ResultRow}.vue`
-    (the add action becomes "Add to {name}"; already-on rows checked).
-  - `components/collections/EntryList.vue` (drag and grips disabled while sorted).
-  - `data/collections.ts:219` (read `collection_entries.added_at`).
-  - `components/library/SortSheet.vue` (a `sorts` prop).
-  - Locales; parity (Collection, Search).
-- **Migration:** no.
-- **German:** `collection.add` ("Add books" / "Bücher hinzufügen"), `collection.addTo`, `collection.sort.*` (Your
-  order · Title · Author · Year · Date added), `collection.sortedHint`; update `collection.empty`.
-- **Tests:** Vitest for the sort function and for `added_at` in the repository (`tests/collections.test.ts`).
-- **Acceptance:**
-  - + opens search aimed at this Collection; adding puts the Book on it (and on Want to read if new, said in the UI).
-  - Already-on Books show a check.
-  - Sorting reorders the view only; "Your order" brings back drag.
-  - The saved order is untouched.
-  - With the keyboard, a disabled grip is not focusable while sorted.
-- **Open questions:** remember the sort per Collection? Which "date added" (to the Collection, recommended, or to
-  the Library)?
+### WP-10 Collection page: + add, and sort (#10, #9). **Shipped in 1.15.0 (#313).**
+Its design and acceptance criteria were in revisions 1–3 of this file (see the git history).
 
-### WP-11 Collection visibility, database (#6, #2). P3 · L · Opus · wave 1 (filler; the SQL chain head)
+### WP-11 Collection visibility, database (#6, #2). P3 · L · Opus · revision 4: wave 3+, not while WP-17 holds the Opus slot; check the `libellus-friends-visibility` worktree first
 - **Scope:** §5.2: the column, `set_collection_visibility`, `member_collections`, `member_collection`. No
   `sync_write` change.
 - **Files:** a new `supabase/migrations/2026…_collection_visibility.sql` and
@@ -984,7 +900,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
 - **Open questions:** private by default (recommended)? A section switch in Privacy as well? Ever on the public
   reading page?
 
-### WP-12 Collection visibility, app (#6, #2). P3 · M–L · Sonnet · wave 4 (after WP-11, WP-14, WP-26) · **safe while invite-only; revisit before open sign-up (#331)**
+### WP-12 Collection visibility, app (#6, #2). P3 · M–L · normal · revision 4: wave 4+ (after WP-11, WP-14) · **safe while invite-only; revisit before open sign-up (#331)**
 - **Revision 2:**
   - A visible Collection's name is content strangers can see (on public accounts, or once links travel).
   - Making a Collection visible therefore runs the name through WP-26's text rule (no URLs, no control
@@ -1008,7 +924,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   - The privacy notice says which Collections followers can see, in EN and DE.
 - **Open questions:** a member's Collection as a page (recommended) or a sheet? Where on her profile?
 
-### WP-13 Refactor: a reusable reorder list. P4 · M · Sonnet · wave 2 (after WP-10)
+### WP-13 Refactor: a reusable reorder list. P2 (enabler) · M · normal · revision 4: wave 1
 - **Scope:** move the pointer, hold, keyboard and live-region logic of `components/collections/EntryList.vue` into
   `composables/useReorderList.ts`. There is **no behaviour change**.
 - **Tests:** Vitest for the index maths and the keyboard moves.
@@ -1016,7 +932,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   announcements); parity unchanged.
 - **Open questions:** none.
 
-### WP-14 Manual order of Collections (#7). P3 · L · Sonnet · wave 4 (after WP-12, WP-13)
+### WP-14 Manual order of Collections (#7). P2 · L · normal · revision 4: wave 2 (after WP-13)
 - **Scope:** §5.3.
 - **Files:**
   - A migration (`reorder_collections`, a `sync_write` action) and pgTAP.
@@ -1037,7 +953,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
 - **Open questions:** the mode per device (recommended) or per account? A new Collection on top or at the end in
   manual mode?
 
-### WP-15 Grid or list in the Library (#20, #21). P3 · L · Sonnet · wave 2 (after WP-10)
+### WP-15 Grid or list in the Library (#20, #21). P2 · L · normal · revision 4: wave 1
 - **Files:**
   - `data/libraryView.ts` (`ListView.layout`, back-compatible parse at `:301`), `stores/libraryView.ts`.
   - `components/library/ViewBar.vue` (the toggle, `aria-pressed`).
@@ -1056,7 +972,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
 - **Open questions:** per status or one layout for all? The Collection page too (only while sorted, since drag
   stays a list)? A duration ("for 12 days") instead of a date?
 
-### WP-16 A short bio (#4). P3 · M · Sonnet · wave 4 (after WP-26; after WP-17 in the `member_profile` chain) · **safe while invite-only; revisit before open sign-up (#331)**
+### WP-16 A short bio (#4). P3 · M · normal · revision 4: after #331 opens (WP-26), or sooner with its own minimal rule if the owner asks · **safe while invite-only; revisit before open sign-up (#331)**
 - **Revision 2:**
   - `set_bio` uses WP-26's shared rule: at most 160 characters, no URLs, e-mail addresses or phone numbers (the
     spam pattern), no control, bidi or zero-width characters.
@@ -1084,7 +1000,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   - Who sees it: whoever sees her profile (recommended), or also on a private account's card, like the photo?
   - The German word.
 
-### WP-17 On Hold, database (#23). P3 · L · Opus · wave 5 (after WP-11, WP-14, WP-16)
+### WP-17 On Hold, database (#23). P2 · L · Opus · revision 4: wave 3 (after WP-14; re-audit the SQL first, see "contradictions" 2)
 - **Scope:** §5.4, database: two migration files, `pause_reading` and `resume_reading`, `sync_write` actions, and
   every function listed there.
 - **German:** none.
@@ -1104,7 +1020,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   - A feed event (recommended: none)?
   - Can a book be added straight as On hold?
 
-### WP-18 On Hold, app (#23). P3 · L · Sonnet (Opus review) · wave 6 (after WP-17, WP-15)
+### WP-18 On Hold, app (#23). P2 · L · normal (Opus review) · revision 4: wave 4 (after WP-17, WP-15)
 - **Scope:** §5.4, app; every file listed.
 - **Recommended UI:**
   - Paused Books as a quiet section at the end of the Currently reading segment, not a fourth segment: four segments
@@ -1124,7 +1040,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   - `CONTEXT.md` and parity updated.
 - **Open questions:** a section or a segment? Do paused count in the Profile's Library line? Shown on the shelf?
 
-### WP-19 On Hold, importers (#23). P3 · S–M · Haiku · wave 7 (after WP-18, PR #294)
+### WP-19 On Hold, importers (#23). P3 · S–M · Haiku / normal · revision 4: wave 5 (after WP-18); the Hardcover zip already notes Paused
 - **Files:** `data/import/goodreads.ts:80` (`on-hold`, `paused`, `on hold` shelves become a paused open read),
   `hardcover.ts` (its Paused status, if it has one), `fable.ts`, `rows.ts`, `components/import/Counts.vue`, the Reado
   mapping from #294, `import_books` (if WP-17 has not already taught it).
@@ -1133,7 +1049,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   Collection; the counts on the import page show them.
 - **Open question:** which shelf names count (in English and German)?
 
-### WP-20 Pages read across books (#13). P3 · L · Sonnet · wave 5 (after WP-08)
+### WP-20 Pages read across books (#13). P3 · L · normal · revision 4: wave 1–2 (WP-08 shipped)
 - **Files:**
   - `data/stats.ts` (`progressDaysIn(from, to)`, paginated, lazy; not inside `record()`).
   - `stores/stats.ts`.
@@ -1149,7 +1065,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   - Loads only when opened.
 - **Open questions:** where on the Profile (it may replace Reading days' figures)? The custom range's maximum?
 
-### WP-21 A Collection's own cover (#8). P4 · L · Sonnet · **parked unless members ask** (after WP-12, WP-14, WP-25) · safe only while invite-only; revisit before open sign-up (#331)
+### WP-21 A Collection's own cover (#8). P4 · L · normal · **parked unless members ask** (after WP-12, WP-14, WP-25; could reuse own covers #431–#437) · safe only while invite-only; revisit before open sign-up (#331)
 - **Revision 2 prerequisites, if un-parked:**
   - 256 KB, webp/jpeg, re-encoded on the device (drops EXIF).
   - A path pinned per member and Collection; one file per Collection; a per-member cap in the insert policy.
@@ -1171,93 +1087,8 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   - Deleting the Collection or the account leaves no file.
 - **Open question:** is this worth the cost at all? Recommended: only once #2 is live and members ask for it.
 
-### WP-22 Social links (#5). P2 · M · Sonnet · wave 1 (no hard dependency now) · owner decision: wanted · **safe while invite-only; revisit before open sign-up (#331)**
-- **Revision 3:** with sign-up postponed, WP-22 no longer waits for WP-25 or WP-27. It stores no free text (handles
-  are regex-checked per platform), so it does not need WP-26 either. It adds its own privacy-notice line. The "links"
-  report reason and the owner action come with WP-25 when #331 opens.
-- **Why this shape:** links can reach strangers (public accounts now, everyone once sign-up opens), and a free URL field is a phishing and spam
-  tool. So members store only a **validated handle or canonical ID per allow-listed platform**, and the app builds
-  every outgoing URL itself.
-- **Platforms (owner's list).** The formats are starting points; the worker checks each platform's current rules in
-  the PR and writes them down.
-
-  | Platform | Stored | URL the app builds | Format to check |
-  |---|---|---|---|
-  | Instagram | handle | `https://www.instagram.com/<handle>/` | `[A-Za-z0-9._]{1,30}`, no leading, trailing or double dot |
-  | TikTok | handle | `https://www.tiktok.com/@<handle>` | `[A-Za-z0-9._]{2,24}`, no trailing dot |
-  | YouTube | handle, or channel id | `https://www.youtube.com/@<handle>` / `…/channel/<id>` | handle `[A-Za-z0-9._-]{3,30}`; id `UC[A-Za-z0-9_-]{22}` |
-  | Goodreads | numeric user id | `https://www.goodreads.com/user/show/<id>` | `[0-9]{1,12}` |
-  | StoryGraph | username | `https://app.thestorygraph.com/profile/<username>` | to verify |
-  | Hardcover | username | `https://hardcover.app/@<username>` | to verify |
-  | Fable | username | the profile URL Fable uses | to verify |
-
-  Letterboxd is films, so it does not fit a books app. Bluesky or Threads are possible additions (owner question).
-  A pasted profile URL is parsed **on the device**, only for that platform's own hosts, into the handle. The server
-  never accepts a URL.
-- **Database (one migration):**
-  - **Table** `public.member_links (member_id → accounts on delete cascade, platform text check in (…), handle
-    text, position smallint, updated_at)`, primary key `(member_id, platform)`: one per platform, at most seven.
-    RLS: select own only.
-  - **Visibility** lives in `public.member_link_settings (member_id pk, visibility text check in
-    ('everyone','followers','me') default 'followers')`. It is its own table on purpose: it touches neither
-    `social_settings` nor `private.my_social_json`, and so stays out of the SQL chain.
-  - **Write** `set_member_links(p_links jsonb, p_visibility text)`:
-    - per-platform regex and length checks, with WP-26's `private.public_text_ok` as the base;
-    - online only, like every social write;
-    - **10 calls an hour** (a calls table, the follow pattern);
-    - errors `link_invalid:<platform>`, `rate_limited`.
-  - **Read** `member_links(p_member)`, security definer:
-    - `me`: only herself;
-    - `followers`: herself and accepted followers;
-    - `everyone`: whoever may see her profile (`private.visible`);
-    - never across a block.
-  - **Owner action** `owner_clear_member_links(member)` for WP-25.
-- **Recommended default visibility: followers only.**
-  - On a private account that is the people she accepted.
-  - On a public account it keeps links from strangers who only opened her link and did not follow.
-  - "Everyone" is her explicit choice.
-  - Not on the public reading page (`/r/<token>`) for now.
-- **App:**
-  - An Account row "Links" opens a sheet: one field per platform with the fixed prefix shown ("instagram.com/"),
-    paste-a-URL extraction, and the visibility as a segmented control.
-  - A row of platform marks under the name in `components/profile/Hero.vue` and `components/friends/MemberHero.vue`.
-    The marks are the app's own monochrome glyphs or text chips, no third-party icon kit.
-  - Each mark is a link: `target="_blank" rel="noopener noreferrer nofollow ugc"`, an external-link indicator, and the
-    accessible name "{platform}: {handle}, opens {platform}".
-  - Data layer in `data/social.ts` (or a new `data/memberLinks.ts`).
-- **Report path:** WP-25 gets the reason "links" and the owner action above.
-- **Privacy notice (EN and DE):** a new optional category, "links to your profiles on other platforms": the handles
-  she enters, who sees them (her setting), deletable at any time, deleted with the account. Opening one takes the
-  viewer to a third party with its own privacy policy, with no referrer sent.
-- **Account deletion and export:**
-  - Deletion: the cascade from `accounts`/`auth.users` covers it (pgTAP).
-  - Export: there is no member-facing data export today; `data/export/memberLibrary.ts` is the Library export for
-    Regal. Add the links to any future GDPR export.
-- **German:** `account.links` ("Links"), `links.title` ("Your profiles elsewhere" / "Deine Profile anderswo"),
-  `links.placeholder`, `links.pasteHint`, `links.invalid.<platform>`,
-  `links.visibility.everyone|followers|me` ("Everyone who can see your profile" / "Alle, die dein Profil sehen";
-  "Followers only" / "Nur Follower"; "Only me" / "Nur ich"), `links.opens` ("Opens {platform}" / "Öffnet
-  {platform}"). Platform names stay brand names.
-- **Shared profile-edit UI with WP-16?** No. Bio and links each get their own sheet and Account row, and links use
-  their own table and RPC, so **WP-22 and WP-16 can run in parallel**. They only meet in disjoint hunks of the two
-  heroes and `Account.vue` (≈). A single "Edit profile" sheet can merge them later. WP-22 is wave 3 and WP-16 is
-  wave 4, because WP-16 also waits for WP-12.
-- **Tests:**
-  - pgTAP: accept and reject lists per platform; a URL is refused; seven-link cap; rate limit; each visibility case
-    (me, followers, everyone, requester, stranger, blocked both ways); the deletion cascade; the owner action refuses
-    non-owners.
-  - Vitest: the paste parser and URL builder per platform, including other hosts and `javascript:` refused.
-  - Playwright locally only.
-- **Acceptance:**
-  - She adds an Instagram handle and a Goodreads id, picks a visibility, and the right people (and only they) see two
-    marks under her name that open the canonical profile URLs in a new tab.
-  - A pasted `https://www.instagram.com/name/?igsh=…` is stored as `name`.
-  - Any non-allow-listed host or free URL is refused, client and server.
-  - Report → "links" reaches the owner, who can clear them.
-  - The privacy notice names the category in EN and DE.
-- **Size and model:** M; Sonnet.
-- **Open questions:** Add Bluesky or Threads? Default visibility (recommended: followers only)? Show on the
-  reading page later?
+### WP-22 Social links (#5). **Shipped in 1.19.0 (#339).**
+Its design and acceptance criteria were in revisions 1–3 of this file (see the git history). Shipped as `profile_links` and `profile_link_settings` (`20261028010000_profile_links.sql`, `utils/socialLinks.ts`, `components/profile/SocialLinksSheet.vue`), with five platforms: Instagram, TikTok, YouTube, Goodreads and Reado. Before open sign-up (#331) it needs only the "links" report reason; `owner_clear_profile_links` already exists.
 
 ### WP-23 Follower counts (#19). P4 · parked (revision 2: a self-only variant offered)
 Counts were deliberately left out (`docs/proposals/social-v1.md:30,95`). Once sign-up opens (#331):
@@ -1352,7 +1183,7 @@ Counts were deliberately left out (`docs/proposals/social-v1.md:30,95`). Once si
   - Tell the reported member what was removed and why (recommended: a short email, by hand at first)?
   - Is "someone under 16" a reason?
 
-### WP-26 Name rules and a shared text rule. P3 · M · Sonnet (Opus review) · wave 2 (after the sign-in worker's `auth.ts` work merges) · also in #331
+### WP-26 Name rules and a shared text rule. **Postponed with open sign-up (issue #331)** · M · normal (Opus review)
 - **Revision 3:** not urgent while every member has an invite code, but a cheap guard against impersonation, and the
   base for WP-12 and WP-16. Before sign-up opens it is required (#331).
 - **Why:** a name is free text written through the public auth API (§2.2); the client's `cleanName` is not a
@@ -1422,101 +1253,97 @@ Counts were deliberately left out (`docs/proposals/social-v1.md:30,95`). Once si
 
 ---
 
+### WP-28 Genres and tags (#344, #358). P2 · L, several PRs · normal (Opus for the label resolver) · new in revision 4
+- **Source:** `docs/plans/genres.md` on draft PR #357. It covers the data model (vocabulary, raw signals, `book_labels`,
+  `entry_labels`, "the twenty" for the chart), label quality (a resolver, block list, trust and threshold, measured on
+  58 sample books and the 194 Catalogue Books), the member experience, costs and an 8-PR build plan.
+- **Gate:** the owner answers the 16 open questions in #357 §7. Nothing starts before that.
+- **Hotspots:**
+  - the genre components (`components/book/Genres.vue`, `GenreSheet.vue`, `components/profile/Genres.vue`);
+  - `stores/genres.ts`, `data/enrich/*`;
+  - the Library filter (`components/library/FilterSheet.vue`), which collides with WP-15;
+  - the enrich function.
+- **Issue drafts:** none here; #357's own build plan is the breakdown.
+
+### WP-29 Export your data (#170). P2 · M · normal · new in revision 4
+- **Scope:**
+  - A Profile → Account row "Export your data" that downloads two files:
+    - a BetterReads JSON with everything she owns: Library, reads, reviews, Collections, profile links, link
+      templates, settings;
+    - a Goodreads-format CSV, so she can take her reading elsewhere.
+  - Built on the device from her own rows (RLS), so no new SQL beyond what the repositories read.
+- **Files:**
+  - `data/export/*` (beside the Regal export: `memberLibrary.ts`);
+  - `components/profile/Account.vue`;
+  - locales, parity, and the privacy notice ("you can export your data").
+- **Tests:** Vitest for both formats (round-trip the CSV through the app's own Goodreads importer).
+- **Acceptance:**
+  - The JSON validates against a documented shape.
+  - The CSV re-imports through the app's own Goodreads import with the same books, reads and ratings.
+  - It works offline from the device copy, or says what it lacks.
+- **Open questions:** Include reviews and notes by default? JSON only first?
+
 ## 8. Waves, hotspots and the critical path
 
-**Waves** (packages in one wave touch disjoint files, or the same file in disjoint hunks, marked ≈):
+**Waves** (revision 4; they count from `origin/main` `65998068`, release 1.30.0). Packages in one wave touch disjoint
+files, or the same file in disjoint hunks (marked ≈). **One Opus worker at a time.**
 
-Revision 3: waves count from now (`origin/main` `1127a7df`). Shipped packages are gone from the table, and the open
-sign-up packages wait in #331.
-
-| Wave | HIGH (priority:high) | LOW (fills spare capacity) |
+| Wave | Packages | Opus slot |
 |---|---|---|
-| 1 | WP-02 follow-up (an iOS device check, then the Stack in Regal only if needed), WP-06, WP-22 (≈ `web/i18n/locales/*` with WP-06) | WP-15, WP-13 |
-| 2 | WP-07 (← WP-06), WP-08 (← WP-06; ≈ `pages/profile/index.vue` with WP-07) | WP-14 (← WP-13), WP-26 (← the sign-in worker's `auth.ts` work merged) |
-| 3 | none | WP-17 (← WP-14; `import_books` after the import work settles), WP-20 (← WP-08), WP-11 (filler, any wave) |
-| 4 | none | WP-18 (← WP-17, WP-15), WP-16 (← WP-26; after WP-17 in the `member_profile` chain), WP-12 (← WP-11, WP-14, WP-26) |
-| 5 | none | WP-19 (← WP-18; after the import worker's PRs #327, #328, #329) |
-| parked | none | WP-21, WP-23 |
-| postponed (#331) | none | WP-24, WP-25, WP-27 (and WP-26 if it has not landed by then) |
-
-**Collisions with the running workers:**
-- The **cover and import worker** owns `web/app/data/import*`, `data/covers.ts`, `data/coverFill.ts` and
-  `data/bookImport.ts`. Nothing in waves 1–2 touches them. WP-17 (`import_books`) and WP-19 (the importers) wait.
-- The **sign-in and shelf-retry worker** owns `web/app/data/auth.ts`, the sign-in screens and `stores/shelf.ts`.
-  - WP-26 (`cleanName` in `auth.ts`) waits for it.
-  - WP-02's follow-up works in Regal and does not touch `stores/shelf.ts`.
-  - WP-18 touches `data/memberShelf.ts`, not `stores/shelf.ts`.
+| 1 | WP-02 check (the owner's phone; no worker unless the Stack fails), WP-15, WP-13, WP-29, WP-20 (≈ locales and `docs/parity.md`, different sections) | WP-02 fix, only if needed |
+| 2 | WP-14 (← WP-13); WP-20 if not in wave 1 | free; keep it for WP-17 |
+| 3 | WP-17 (← WP-14; re-audit the SQL first); WP-28 PR 1 once #357 is answered (≈ `FilterSheet.vue` with WP-15, which merged in wave 1) | **WP-17** |
+| 4 | WP-18 (← WP-17, WP-15); WP-11 after WP-17 frees the Opus slot | WP-11 |
+| 5 | WP-19 (← WP-18); WP-12 (← WP-11, WP-14) | none |
+| later | WP-16 (after #331 opens, or with its own minimal rule), WP-30 (#172), WP-31 (#259) | none |
+| parked | WP-21, WP-23 | none |
+| postponed (#331) | WP-24, WP-25, WP-26, WP-27 | none |
 
 **Critical paths:**
-- **HIGH:** WP-06 → WP-07 ∥ WP-08. Two waves; all of priority:high is done after wave 2.
-- **Overall:** WP-13 → WP-14 → WP-17 → WP-18 → WP-19, five waves. The chain is set by the SQL functions redefined in
-  full (`sync_write` for WP-14 → WP-17, `member_profile` for WP-17 → WP-16) and by the import worker's files.
-- **Open sign-up (whenever the owner opens #331):** WP-24 ∥ WP-25 ∥ WP-27, then a check of WP-12, WP-16, WP-21 and
-  WP-22 against the report reasons and WP-26's text rule.
+- **Product:** WP-13 → WP-14 → WP-17 → WP-18 → WP-19, five waves. The chain is set by `sync_write` (WP-14, then
+  WP-17) and the status model.
+- **Short and parallel:** WP-15, WP-20 and WP-29 each ship in one wave.
+- **Open sign-up (whenever the owner opens #331):** WP-24 ∥ WP-25 ∥ WP-27 ∥ WP-26, then a check of WP-12, WP-16,
+  WP-21 and WP-22 against the report reasons and the text rule.
 
-**Shared-file hotspots** (who touches what):
+**Hotspots: who touches what today and in the plan:**
 
-| File | Packages |
-|---|---|
-| `web/app/pages/profile/index.vue` | WP-01, WP-03, WP-05, WP-06, WP-08, WP-18 (Library line), WP-20 |
-| `pages/profile/[year].vue`, `pages/friends/[member]/[year].vue` | WP-01, WP-05, WP-06, WP-09 |
-| `pages/friends/[member]/index.vue` | WP-01, WP-05, WP-06, WP-08 (if on member pages), WP-12 |
-| `stores/stats.ts` | WP-05, WP-06, WP-08, WP-20 |
-| `data/stats.ts` | WP-06, WP-08, WP-09, WP-18, WP-20 |
-| `components/profile/ReadsSheet.vue`, `ReadRow.vue` | WP-05, WP-07 |
-| `stores/collections.ts`, `data/collections.ts` | WP-10, WP-12, WP-14, WP-21 |
-| `pages/collections/[id].vue` | WP-10, WP-12, WP-21 |
-| `components/collections/EntryList.vue` | WP-10, WP-13, WP-18 |
-| `pages/library.vue`, `ViewBar.vue`, `EntryRow.vue`, `data/libraryView.ts` | WP-10 (`SortSheet`), WP-15, WP-18 |
-| `components/profile/Hero.vue`, `components/friends/MemberHero.vue`, `Account.vue` | WP-03, WP-16, WP-22 (≈ WP-16 and WP-22: disjoint hunks, a line each in the heroes, a row each in Account) |
-| `web/app/legal/privacy.ts` | WP-22 (its own line), WP-27 (postponed, #331), then WP-12, WP-22 (≈, different bullets), WP-16, (WP-21) |
-| `web/app/pages/sign-up.vue`, `data/auth.ts` (sign-in and sign-up), `supabase/config.toml` | WP-24 |
-| `data/auth.ts` (`cleanName`), `components/shell/NameSheet.vue` | WP-26 (WP-03 only opens the sheet) |
-| `components/friends/MemberSheet.vue`, `pages/profile/feedback.vue`, `public.feedback` | WP-25 |
-| `SPEC.md`, `docs/OPERATIONS.md`, `docs/legal-checklist.md` | WP-24 (SETUP and OPERATIONS steps), WP-27 |
-| SQL `signup_invite` and the `auth.users` triggers, the avatars policies | WP-24; WP-26 adds an `auth.users` update trigger (serialize the two migrations) |
-| SQL `private.member_name` | WP-26 |
-| SQL `sync_write` | WP-14, WP-17 |
-| SQL `member_profile`, `private.my_social_json` | WP-11 (only with a section switch), WP-16, WP-17 |
-| SQL `public_reading_page`, `feed`, `circle_reading`, `book_readers` | WP-17 |
-| SQL `delete_my_account` | WP-21 |
-| `web/i18n/locales/{en,de}.json`, `docs/parity.md` | all (add keys in each feature's own block; rebase) |
+| File / function | Open work (PRs, worktrees) | Plan packages |
+|---|---|---|
+| `web/app/components/auth/{Frame,Mark}.vue`, `design/tokens.json`, `docs/DESIGN.md`, `docs/MOTION.md` | PR #457 (way-in lamp) | none (WP-24 later touches sign-up) |
+| `web/app/assets/css/main.css`, `web/nuxt.config.ts`, launch-takeover plugin, `web/public/*` icons | worktree `boot-screen-revert` | WP-02 only if the Stack fix needs `main.css` |
+| `pages/friends/*`, `components/friends/PrivacySheet.vue`, the social migrations | worktree `libellus-friends-visibility` (no commits yet) | WP-11, WP-12: ask first |
+| `pages/library.vue`, `components/library/*`, `data/libraryView.ts`, `stores/libraryView.ts` | none | WP-15, then WP-18, WP-28 (filter) |
+| `components/collections/*`, `stores/collections.ts`, `data/collections.ts`, `pages/collections/*` | none | WP-13, WP-14, WP-12, (WP-21) |
+| `data/stats.ts`, `stores/stats.ts`, `pages/profile/index.vue`, `components/profile/Chart*.vue` | none | WP-20, WP-18 (head counts), WP-28 (genre chart) |
+| `data/import*`, `supabase/functions/import-job`, `import_books` / import-job SQL | none (the import work has merged) | WP-17 (status literals), WP-19 |
+| `data/export/*` | none | WP-29 |
+| `data/auth.ts`, `stores/shelf.ts` | none (the sign-in/shelf-retry work merged, 1.18.0 #332) | WP-24, WP-26 (postponed) |
+| SQL `sync_write` | none | WP-14, then WP-17 |
+| SQL `member_profile`, `member_reading_record`, `public_reading_page`, `feed`, `circle_reading`, `book_readers` | none | WP-17 (re-audit), WP-16, WP-11 (only with a section switch) |
+| `@fabkho/ui` (the `fabkho/ui` repo: Sheet, Row, Segmented, SeeAll) | other repo | any package that needs a new UI part: change it there or wrap it in the app |
+| `web/i18n/locales/{en,de}.json`, `docs/parity.md` | everyone | all (keys in each feature's own block; rebase) |
 
 ---
 
-## 9. Open questions for the owner (by package)
+## 9. Open questions for the owner (open packages only)
 
-- **WP-01:** a named ("Authors {name} returns to") or neutral ("Most-read authors") label? Remove the pill on member
-  profiles too?
-- **WP-02:** iOS version; Safari or the home-screen app; which screens; did it ever work; pin the Regal commit?
-- **WP-03:** a pencil beside the name?
-- **WP-04:** variant A or B; keep the heart and Want to read on each row?
-- **WP-05:** page size; a button or auto-load?
-- **WP-06:** an author row → sheet or → author page; keep "Show in Library"?
-- **WP-07:** stars inline or a small sheet; rating only?
-- **WP-08:** the range of weeks; on member profiles; remember the mode?
-- **WP-09:** 5.00 only or ≥ 4.75; row or grid; title?
-- **WP-10:** remember the sort; which "date added"?
+- **WP-02:** did the row and the Stack scroll on your iPhone after 1.17.0? Pin Regal to a commit?
 - **WP-11:** private by default; a Privacy section switch too; on the public reading page ever?
 - **WP-12:** a page or a sheet for her Collection; where on her profile?
 - **WP-14:** the mode per device or per account; a new Collection on top or at the end?
 - **WP-15:** per status or global; the Collection page too; a date or a duration?
-- **WP-16:** length; line breaks; who sees it; the German label?
+- **WP-16:** wait for #331, or now with its own minimal rule; length; line breaks; who sees it; the German label?
 - **WP-17/18:** progress resumes; followers see paused under Currently reading; no feed event; add straight as On
-  hold; a section or a segment; counted in the Library line; on the shelf?
-- **WP-19:** which shelf names?
-- **WP-20:** its place on the Profile; the custom range's maximum?
+  hold; a section or a segment; counted in the Library line; on the shelf? Staging (#177) first?
+- **WP-19:** which shelf names? Map Hardcover's Paused straight to On hold?
+- **WP-20:** its place on the Profile (beside or instead of Reading days); the custom range's maximum?
 - **WP-21:** do it at all?
-- **WP-22:** the platform list (add Bluesky or Threads?); the default visibility (recommended: followers only); show
-  links on the public reading page (recommended: not now)?
 - **WP-23:** build the self-only counts now? Keep public counts parked?
-- **WP-24 (#331, postponed):** Turnstile account and keys; the project email limit (30 an hour today); keep invite
-  codes as a perk? The waitlist's fate?
-  Turnstile? The email budget (the Resend plan, Supabase's email rate limit)?
-- **WP-25:** is the owner the only moderator? Tell members why content was removed? Is "under 16" a reason?
-- **WP-26:** the reserved-name list; unique names (recommended: no)?
-- **WP-27 (#331, postponed):** a postal address before opening; how long reports are kept; community rules wording
-  (owner's voice)?
+- **WP-28:** the 16 questions in #357 §7.
+- **WP-29:** include reviews and notes by default; JSON first, CSV later?
+- **#305, #361, #213:** yes or no before they become packages.
+- **#331 (WP-24–27):** as in the issue (Turnstile, the email limit, invite codes as a perk, moderation, legal).
 
 ---
 

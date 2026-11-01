@@ -1,6 +1,6 @@
 Title: On Hold, app: pause and resume a book, and every screen that shows a status
 Labels: feature, priority:low
-Package: WP-18 · item #23 · tier P3 · size L · model Sonnet (Opus review) · depends on: WP-17, WP-15 · wave 6
+Package: WP-18 · item #23 · tier P2 · size L · model normal (Opus review) · depends on: WP-17, WP-15 · wave 4
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/18-on-hold-app.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/18-on-hold-app.md)
 Plan: docs/plans/backlog-execution.md
 

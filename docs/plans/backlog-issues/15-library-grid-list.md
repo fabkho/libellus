@@ -1,6 +1,6 @@
 Title: Library: grid or list, with each status's date line
 Labels: feature, priority:low
-Package: WP-15 · items #20, #21 · tier P3 · size L · model Sonnet · depends on: WP-10 · wave 2
+Package: WP-15 · items #20, #21 · tier P2 · size L · model normal · depends on: none · wave 1
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/15-library-grid-list.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/15-library-grid-list.md)
 Plan: docs/plans/backlog-execution.md
 

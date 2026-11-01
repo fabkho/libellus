@@ -1,6 +1,6 @@
 Title: Refactor: extract the drag-to-reorder list from the Collection page
 Labels: refactor, priority:low
-Package: WP-13 · enabler for #7 · tier P4 · size M · model Sonnet · depends on: WP-10 · wave 2
+Package: WP-13 · enabler for #7 · tier P2 (enabler) · size M · model normal · depends on: none · wave 1
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/13-reorder-list-refactor.md)" --label refactor --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/13-reorder-list-refactor.md)
 Plan: docs/plans/backlog-execution.md
 

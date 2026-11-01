@@ -1,6 +1,6 @@
 Title: Collections: a visibility switch, and her visible Collections on her profile
 Labels: feature, priority:low
-Package: WP-12 · items #6, #2 · tier P3 · size M–L · model Sonnet · depends on: WP-11, WP-14, WP-26 (text rule) · wave 4 · safe while invite-only; revisit before open sign-up (#331)
+Package: WP-12 · items #6, #2 · tier P3 · size M–L · model normal · depends on: WP-11, WP-14 · wave 5+ · safe while invite-only; revisit before open sign-up (#331: needs WP-25's report reason and WP-26's text rule)
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/12-collection-visibility-app.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/12-collection-visibility-app.md)
 Plan: docs/plans/backlog-execution.md
 

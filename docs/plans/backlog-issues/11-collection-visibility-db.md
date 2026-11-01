@@ -1,6 +1,6 @@
 Title: Collections: one visibility model in the database (private by default, visible to followers by choice)
 Labels: feature, priority:low
-Package: WP-11 · items #6, #2 · tier P3 · size L · model Opus · depends on: none (head of the SQL chain) · wave 1 (filler)
+Package: WP-11 · items #6, #2 · tier P3 · size L · model Opus · depends on: not while WP-17 holds the one Opus slot; ask what the libellus-friends-visibility worktree holds first · wave 4+
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/11-collection-visibility-db.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/11-collection-visibility-db.md)
 Plan: docs/plans/backlog-execution.md
 

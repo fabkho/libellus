@@ -1,6 +1,6 @@
 Title: On Hold, database: a paused read
 Labels: feature, priority:low
-Package: WP-17 · item #23 · tier P3 · size L · model Opus · depends on: WP-11, WP-14, WP-16 · wave 5
+Package: WP-17 · item #23 · tier P2 · size L · model Opus (the one Opus slot) · depends on: WP-14 (sync_write); re-audit the status-aware SQL first (import_books now in 20261111010000_import_zip_job.sql, the read path in 20261109010000_cover_read_path.sql, the write phase in the import-job function) · wave 3
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/17-on-hold-db.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/17-on-hold-db.md)
 Plan: docs/plans/backlog-execution.md
 

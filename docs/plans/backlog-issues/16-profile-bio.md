@@ -1,6 +1,6 @@
 Title: Profile: a short bio under the name
 Labels: feature, priority:low
-Package: WP-16 · item #4 · tier P3 · size M · model Sonnet · depends on: WP-03 ✓, WP-26 (text rule); after WP-17 (member_profile) · wave 4 · safe while invite-only; revisit before open sign-up (#331)
+Package: WP-16 · item #4 · tier P3 · size M · model normal · depends on: WP-26 (postponed with #331), or its own minimal rule if the owner wants it sooner; after WP-17 in the member_profile chain · later · safe while invite-only; revisit before open sign-up (#331)
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/16-profile-bio.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/16-profile-bio.md)
 Plan: docs/plans/backlog-execution.md
 
