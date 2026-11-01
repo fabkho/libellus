@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.31.0](https://github.com/fabkho/libellus/compare/v1.30.0...v1.31.0) (2026-11-01)
+
+
+### Features
+
+* **brand:** the lamp rises on the way in ([#457](https://github.com/fabkho/libellus/issues/457)) ([2dd946d](https://github.com/fabkho/libellus/commit/2dd946dd1850ac8296fb81fecb3a6e955fbc288b))
+
+
+### Reverts
+
+* **brand:** the launch takeover, and the mark alone on Android's frame ([#464](https://github.com/fabkho/libellus/issues/464)) ([6358dc6](https://github.com/fabkho/libellus/commit/6358dc6021308bad5e8fe0f5c1ad896d1d8bc2f8))
+
 ## [1.30.0](https://github.com/fabkho/libellus/compare/v1.29.0...v1.30.0) (2026-11-01)
 
 
