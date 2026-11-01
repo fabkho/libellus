@@ -1,13 +1,15 @@
-// Renders BetterReads' app icons into public/ (issues #15, #86): `node scripts/render-icons.mjs`.
+// Renders BetterReads' app icons into public/ (issues #15, #86, #448): `node scripts/render-icons.mjs`.
 //
-// The sources are the three SVGs in design/icons/app/ (two ribbons, see its README): the mark is
-// already drawn as paths, so nothing here needs a font. Rendered by Playwright's Chromium (already
-// a dev dependency for the flows), then written as PNGs, a favicon.ico and a copy of favicon.svg.
+// The sources are the SVGs in design/icons/app/ (Lamp over the page, see its README; the round that
+// drew it is design/logo-options/6-lamp-over-page/): the mark is already drawn as paths, so nothing
+// here needs a font. Rendered by Playwright's Chromium (already a dev dependency for the flows), then
+// written as PNGs, a favicon.ico and a copy of favicon.svg.
 //
-//   icon-192.png, icon-512.png    the manifest's icons (`any`): icon.svg, the full square
-//   icon-maskable-512.png         `maskable`: icon.svg again — its mark sits inside the 66 dp safe zone of the 108 dp canvas
+//   icon-192.png, icon-512.png    the manifest's icons (`any`): icon-ios.svg — the mark at 60 % of the
+//                                 tile, which carries better at 192 and 512 px than icon.svg's framing
+//   icon-maskable-512.png         `maskable`: icon.svg, full bleed — its mark sits inside the 66 dp safe zone of the 108 dp canvas
 //   icon-monochrome-512.png       `monochrome`: monochrome.svg, alpha only, for themed icons
-//   apple-touch-icon.png          180 × 180, opaque; iOS rounds the corners itself
+//   apple-touch-icon.png          180 × 180, opaque, from icon-ios.svg too; iOS rounds the corners itself
 //   favicon.svg                   favicon.svg as is (rounded corners, the mark enlarged)
 //   favicon.ico                   favicon.svg at 32 and 16 px
 //   shortcut-<name>-96.png        96 px, from design/icons/app/shortcuts/<name>.svg: the manifest's app shortcuts (#91)
@@ -16,7 +18,9 @@ import { chromium } from '@playwright/test'
 
 const web = new URL('../', import.meta.url)
 const source = (name) => new URL(`../design/icons/app/${name}.svg`, web)
-const svg = Object.fromEntries(['icon', 'monochrome', 'favicon'].map((name) => [name, readFileSync(source(name), 'utf8')]))
+const svg = Object.fromEntries(
+  ['icon', 'icon-ios', 'monochrome', 'favicon'].map((name) => [name, readFileSync(source(name), 'utf8')]),
+)
 // The app shortcuts' icons share the app icon's room; each draws its own mark.
 const SHORTCUTS = ['search', 'progress', 'library']
 for (const name of SHORTCUTS) svg[`shortcut-${name}`] = readFileSync(source(`shortcuts/${name}`), 'utf8')
@@ -35,11 +39,11 @@ async function render(name, size) {
 }
 
 const out = (name) => new URL(`public/${name}`, web)
-writeFileSync(out('icon-192.png'), await render('icon', 192))
-writeFileSync(out('icon-512.png'), await render('icon', 512))
+writeFileSync(out('icon-192.png'), await render('icon-ios', 192))
+writeFileSync(out('icon-512.png'), await render('icon-ios', 512))
 writeFileSync(out('icon-maskable-512.png'), await render('icon', 512))
 writeFileSync(out('icon-monochrome-512.png'), await render('monochrome', 512))
-writeFileSync(out('apple-touch-icon.png'), await render('icon', 180))
+writeFileSync(out('apple-touch-icon.png'), await render('icon-ios', 180))
 copyFileSync(source('favicon'), out('favicon.svg'))
 for (const name of SHORTCUTS) writeFileSync(out(`shortcut-${name}-96.png`), await render(`shortcut-${name}`, 96))
 
