@@ -25,7 +25,7 @@ const release = releaseNotes(rootFile('CHANGELOG.md'), rootFile('version.txt'))
 
 // Appended to every icon URL (?v=): bump it when the icons are redrawn so Chrome
 // and the home-screen launchers refetch them instead of keeping the old ones.
-const iconVersion = 3
+const iconVersion = 4
 
 // The hosts the first screens certainly ask, opened ahead (`app.head.link` below): the API (a returning
 // member's start asks it nine times, a visitor's sign-in once she submits; it is the instance's own host,
@@ -346,9 +346,11 @@ export default defineNuxtConfig({
       // The manifest has no media queries (Chrome on Android doesn't support the
       // draft's user_preferences), so the splash Android draws while the app
       // starts takes one colour for everyone: the night room. Android 12+ draws
-      // the maskable icon in a circle on it, and the plum room with the lamp on
-      // it reads on near-black; a light splash flashed white on dark phones, and
-      // a dark splash before the light theme reads as the brand, not a glitch.
+      // the app icon on it, and the maskable's own room is that same night
+      // (scripts/render-icons.mjs), so its edge disappears and what is left is
+      // the mark alone; a light splash flashed white on dark phones, and a dark
+      // splash before the light theme reads as the brand, not a glitch. Keep
+      // background_color equal to the maskable's room and to surface.dark.
       background_color: surface.dark,
       theme_color: surface.dark,
       icons: [

@@ -6,7 +6,7 @@ stay in `design/logo-options/` as a backlog. The owner loved the animation and w
 follow-ups done:
 
 1. **Apply the mark**: the app's icons, favicon, shortcuts and the docs that describe them.
-2. **The launch takeover**: Android's static splash comes alive in the page's first paint.
+2. **The first-paint frame**: built (#459), then dropped — Android's own frame stays (B).
 3. **The way in**: the mark rises above the wordmark on sign in, sign up and verify.
 
 Everything the work needs is already drawn: read `design/logo-options/README.md`, then
@@ -23,7 +23,7 @@ Three PRs, in this order, each small enough to review on its own:
 | PR | Branch | Base | Depends on |
 | --- | --- | --- | --- |
 | A · Apply the mark | `feat/logo-lamp` | `design/logo-options` until #448 is merged, then `main` | #448 (its sources) |
-| B · Launch takeover | `feat/launch-takeover` | A | A (the icon it takes over from) |
+| B · ~~The first-paint frame~~ | — | — | dropped, see B |
 | C · The way in | `feat/way-in-lamp` | A | A; independent of B |
 
 **First ask the owner (through the coordinator) whether #448 may be merged** (it only adds
@@ -95,48 +95,15 @@ The installed app, the browser tab and the shortcuts show the new mark in both t
 for tokens and emails pass unchanged; the PR body has the screenshots (launcher, long-press shortcuts,
 themed icon, tab favicon at 1× and 2×, Android launch screen).
 
-## B · The launch takeover (`feat/launch-takeover`)
+## B · The first-paint frame — dropped
 
-What and why: Android draws an installed PWA's launch screen itself (manifest `background_color` +
-icon); it cannot animate. The page can take over from it: its first paint draws **the same frame**,
-so the handover is invisible, then the lamp's glow swells out of the icon into the room and the app
-fades in. The reference is `motion/handover.gif` and the phone on `motion/index.html`.
-
-### Build
-
-- The first-paint frame lives in the static HTML so it shows before any JavaScript: Nuxt 4 with
-  `ssr: false` renders `app/spa-loading-template.html` into the page until the app mounts (check the
-  Nuxt 4 docs for `spaLoadingTemplate`; the file path is relative to `srcDir`). Inline: the night room
-  (`surface.dark`), the icon as a circle (the maskable icon's central 72 dp, as Android 12+ crops it),
-  centred, and a glow layer. No images to fetch: inline SVG.
-- Size and place must match Android's splash. **Measure on the emulator** (`docs/TESTING.md`,
-  `e2e/android/`): launch the installed PWA, screenshot the splash, measure the icon's diameter and
-  centre in CSS px for the emulator's width, and match. Android 12+ draws the icon centred at a fixed
-  size; older Android shows icon + name, which the frame can only approximate (leave it).
-- The swell: the glow's opacity over `wave` on the `wave` curve; then the frame leaves over `exit`
-  and the app arrives over `standard`. Read durations from the tokens (`--duration-*`, `durationToken`
-  in the UI base's `utils/motion.ts`; MOTION.md explains the unit trap).
-- **It never waits for the animation.** The app mounts as fast as it does today; when it is ready the
-  frame leaves, cutting the swell short if need be. Measure LCP/CLS before and after (`docs/perf/`,
-  docs/TESTING.md's CLS section): no regression.
-- Only on a cold start of the installed app: `matchMedia('(display-mode: standalone)')`. In a browser
-  tab the template is the plain background it is today (or nothing): decide from what the app shows
-  now before mount, and keep the theme boot script's choice (a light-theme member sees the dark
-  splash from Android, then the takeover in the dark room, then her light app: that is today's
-  behaviour too, see the manifest comment).
-- Reduce Motion: no swell; the frame crossfades to the app.
-
-### Test
-
-- A unit test for the decision (standalone + cold start + reduced motion → which path) if it lives in
-  a util.
-- A flow or emulator script that checks the frame is gone after mount and nothing is left in the DOM.
-- The emulator recording (or a frame strip) of a real launch in the PR body, light and dark member.
-
-### Docs
-
-- `docs/MOTION.md`: a named motion "Launch takeover" with its tokens and rules.
-- `docs/DESIGN.md`: one paragraph in Themes next to the splash.
+Android draws a standalone app's first frame itself, from the manifest (`background_color` and the
+icon), and cannot animate it. #459 answered that with a page that reproduced the frame and then
+swelled the lamp's glow into the app. It was built, installed on the emulator and dropped: Android's
+own frame is the frame the owner wants, and a second one is something extra between the tap and the
+books. #461 reverts it and fixes what it was papering over — `any` is now the mark alone and the
+maskable's room is the splash colour, so Android's launch screen shows the mark on the night room
+with no tile edge (`docs/DESIGN.md`, `design/icons/app/README.md`).
 
 ## C · The way in (`feat/way-in-lamp`)
 
