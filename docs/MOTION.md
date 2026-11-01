@@ -31,6 +31,7 @@ its own sake. Every duration and curve is a token in `design/tokens.json` (`dura
 | `keyboard` | 250 | `keyboard` | The palette riding up and down with the iOS keyboard |
 | `caret` | 1100 | steps | One blink of a drawn caret (the code input) |
 | `wave` | 1600 | `wave` | One swell of the Profile's loading wave, repeating while the record loads |
+| `gentle` | 450 | `standard` | The way in's mark: the pages of the open book arriving (below, The lamp rising) |
 
 | Easing | Curve | Character |
 |---|---|---|
@@ -456,6 +457,18 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   pills deepen by it, the lit button lets a little of the room through. No transition beyond the
   existing ones.
 - **Sign-in wall.** The cloth boards of the wall behind the way in are there from the first frame; their covers are asked for after the form has been painted (`components/auth/Frame.vue`) and each fades in over its board over `standard`, `opacity` only, when it has been drawn (`WallCover.vue`). Nothing moves with it and nothing waits for it. With Reduce Motion there is no transition: the cover is there at once.
+- **The lamp rising** (the way in; `components/auth/Mark.vue`). The mark above the wordmark, the open book
+  with the lamp rising behind it like the sun (the picture is `design/logo-options/6-lamp-over-page/`,
+  its motion `motion/mark-animated-dark.svg`), plays once: the pages of the book arrive over `gentle` on
+  the `standard` curve (fading in and rising 6 of the viewBox's units), the lamp comes up from behind
+  them over `wave` on the `standard` curve `quick` later (150 ms in the source drawing), and its halo
+  swells in over `wave` on the `wave` curve at twice `quick` (300 ms there), then it rests on the static
+  mark — under two seconds, `transform` and `opacity` only. Nothing waits for it: the wordmark, the
+  tagline and the form are the screen's text and paint in the first frame, and the mark, an inline
+  `<svg>` rather than an `<img>`, is never the largest contentful paint (the element is the wordmark;
+  docs/perf/client-1-startup.md, F-12). It plays once per visit to the way in: sign in → sign up →
+  verify are three mounts of the same wall, and the second and third find the lamp already up (a module
+  flag, as `wallWarm` keeps the covers). Reduce Motion: the mark is there at once, at rest.
 - **Cover.** The image fades in over its thumbhash or colour over `standard` once decoded; no
   zoom, no slide.
 - **Search results.** A new answer replaces the list in place, best match at the bottom; while a
