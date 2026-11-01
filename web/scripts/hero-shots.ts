@@ -31,12 +31,8 @@ const path = (rel: string) => fileURLToPath(new URL(rel, import.meta.url))
 const SHOTS = path('../../design/readme/shots').replace(/\/$/, '')
 const DESIGN = path('../../design/readme').replace(/\/$/, '')
 const BASE = process.env.LIBELLUS_SHOTS_URL ?? 'http://localhost:3020'
-/**
- * A phone's screen, 393 x 740 CSS px. Playwright's own iPhone 15 is 659 high (the browser's bars taken out) and the
- * full screen 852: this is in between, tall enough to read as a phone and short enough that the Stack fills it.
- * The frame in hero.html takes its shape from the shots' size, so nothing is ever stretched.
- */
-const PHONE = { ...devices['iPhone 15'], viewport: { width: 393, height: 740 }, screen: { width: 393, height: 740 } }
+/** A phone's whole screen, 393 x 852 CSS px (Playwright's own iPhone 15 is 659 high: the browser's bars taken out). */
+const PHONE = { ...devices['iPhone 15'], viewport: { width: 393, height: 852 }, screen: { width: 393, height: 852 } }
 
 const M = 'https://is1-ssl.mzstatic.com/image/thumb/'
 /** Well-known books that are not on the sign-in wall: Apple Books covers, like the wall's. */
@@ -182,6 +178,15 @@ async function settle(page: Page) {
   await page.waitForTimeout(800)
 }
 
+/** Scrolls the shelf's section up under the top bar and waits for Regal to draw its row. */
+async function showRow(page: Page, section: string, row: string) {
+  await page.getByTestId(section).waitFor({ timeout: 30_000 })
+  await page.getByTestId(row).waitFor({ timeout: 30_000 })
+  await page.getByTestId(section).evaluate((el) => el.scrollIntoView({ block: 'start' }))
+  await page.evaluate(() => window.scrollBy(0, -26))
+  await page.waitForTimeout(5000)
+}
+
 async function shoot() {
   process.env.LIBELLUS_TEST_RUN ??= 'hero'
   mkdirSync(SHOTS, { recursive: true })
@@ -217,24 +222,20 @@ async function shoot() {
         await page.getByTestId('book.title').waitFor()
         await snap(page, `book-${name}-${scheme}`)
       }
-      await page.goto(`${BASE}/profile/shelf`)
-      await page.getByTestId('shelf.stage').waitFor()
-      await page.getByTestId('shelf.stage').and(page.locator('.ready')).waitFor({ timeout: 30_000 })
-      await page.waitForTimeout(3500)
-      await snap(page, `stack-${scheme}`)
-      // Tap a Book in the pile: it comes out over the room with its card.
-      await page.mouse.click(196, 350)
-      await page.waitForTimeout(3500)
-      await snap(page, `stack-out-${scheme}`)
       await page.goto(`${BASE}/profile`)
       await page.getByTestId('profile.title').waitFor()
       // The throwaway address is nobody's: the Profile shows the name above it.
       await page.addStyleTag({ content: '[data-testid="profile.email"] { visibility: hidden }' })
       await snap(page, `profile-${scheme}`)
+      // The shelf's row (Regal, the Stack turned on its side): Your shelf on the Profile, scrolled to.
+      await showRow(page, 'profile.shelf', 'profile.shelfRow')
+      await snap(page, `profile-shelf-${scheme}`)
       await page.goto(`${BASE}/profile/${new Date().getFullYear()}`)
       await page.getByTestId('yearInReview.title').waitFor()
       await page.addStyleTag({ content: '[data-testid="profile.email"] { visibility: hidden }' })
       await snap(page, `year-${scheme}`)
+      await showRow(page, 'yearInReview.shelf', 'yearInReview.shelfRow')
+      await snap(page, `year-shelf-${scheme}`)
     }
   } finally {
     await browser.close()
@@ -244,9 +245,9 @@ async function shoot() {
 }
 
 const VARIANTS = [
-  { key: 'a', width: 800, height: 690, label: 'A · a Book out of the Stack' },
-  { key: 'b', width: 800, height: 520, label: 'B · the Stack, light and dark' },
-  { key: 'c', width: 800, height: 400, label: 'C · the banner' },
+  { key: 'a', width: 800, height: 660, label: 'A · the lamp over one phone' },
+  { key: 'b', width: 800, height: 450, label: 'B · two phones, light and dark' },
+  { key: 'c', width: 800, height: 350, label: 'C · the banner' },
 ] as const
 
 async function compose() {
