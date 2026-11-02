@@ -13,7 +13,7 @@
 -- test made, never counts of a table.
 
 begin;
-select plan(196);
+select plan(220);
 
 create schema if not exists tests;
 
@@ -153,6 +153,32 @@ begin
   end loop;
 end;
 $$;
+create or replace function tests.fill_old_calls(p_member uuid, p_kind text, p_n integer)
+returns void language sql security definer as $$
+  insert into private.buddy_calls (member_id, kind, at)
+  select p_member, p_kind, now() - interval '2 hours' from generate_series(1, p_n)
+$$;
+create or replace function tests.set_auto(p_read uuid, p_member uuid, p_auto smallint)
+returns void language sql security definer as $$
+  update public.buddy_read_members set auto_through = p_auto where buddy_read_id = p_read and member_id = p_member
+$$;
+create or replace function tests.removed(p_read uuid, p_member uuid)
+returns boolean language sql security definer as $$
+  select exists (select 1 from private.buddy_read_removed where buddy_read_id = p_read and member_id = p_member)
+$$;
+-- She was in n reads that ended (made past the API).
+create or replace function tests.in_ended_reads(p_member uuid, p_book uuid, p_n integer)
+returns void language plpgsql security definer as $$
+declare v_read uuid;
+begin
+  for i in 1 .. p_n loop
+    insert into public.buddy_reads (book_id, client_id, status, finished_at)
+    values (p_book, gen_random_uuid(), 'finished', clock_timestamp()) returning id into v_read;
+    insert into public.buddy_read_members (buddy_read_id, member_id, role, joined_at)
+    values (v_read, p_member, 'member', clock_timestamp());
+  end loop;
+end;
+$$;
 create or replace function tests.book_of(p_entry uuid)
 returns uuid language sql security definer as $$ select book_id from public.library_entries where id = p_entry $$;
 
@@ -231,6 +257,9 @@ select (public.add_to_library(tests.snap('Buddy Dune, another edition', 'OL90000
 select (public.add_to_library(tests.snap('Buddy Other'))).id as e_ivo_other \gset
 select tests.act_as(:'pat');
 select (public.add_to_library(tests.snap('Buddy Pat'))).id as e_pat \gset
+select tests.act_as(:'tom');
+select (public.add_to_library(tests.snap('Buddy Tom'))).id as e_tom \gset
+select (public.add_to_library(tests.snap('Buddy Tom, the sequel'))).id as e_tom2 \gset
 select tests.act_as(:'xan');
 select (public.add_to_library(tests.snap('Buddy Xan'))).id as e_xan \gset
 select tests.act_as(:'yul');
@@ -251,6 +280,8 @@ select tests.book_of(:'e_ilium') as b_ilium \gset
 select tests.book_of(:'e_mine') as b_mine \gset
 select tests.book_of(:'e_ivo_other') as b_ivo_other \gset
 select tests.book_of(:'e_pat') as b_pat \gset
+select tests.book_of(:'e_tom') as b_tom \gset
+select tests.book_of(:'e_tom2') as b_tom2 \gset
 select tests.book_of(:'e_xan') as b_xan \gset
 select tests.book_of(:'e_ari') as b_ari \gset
 select tests.book_of(:'e_bo') as b_bo \gset
@@ -540,6 +571,16 @@ select tests.act_as(:'lu');
 select throws_ok(format($$ select public.join_buddy_read('%s') $$, :'t_a3'), 'PT429', 'rate_limited', 'the 31st join in an hour is refused');
 select tests.clear_calls(:'lu');
 
+select tests.fill_old_calls(:'tom', 'create', 25);
+select tests.act_as(:'tom');
+select ok(public.create_buddy_read(:'b_tom', gen_random_uuid(), tests.secs(3)) ->> 'id' is not null,
+  'calls older than an hour do not count');
+select is(tests.calls(:'tom', 'create'), 1, 'they are purged, and this call is the one row left');
+select tests.fill_calls(:'tom', 'create', 19);
+select throws_ok(format($$ select public.create_buddy_read('%s', gen_random_uuid(), tests.secs(3)) $$, :'b_tom2'),
+  'PT429', 'rate_limited', 'at twenty in the hour the next is refused');
+select is(tests.calls(:'tom', 'create'), 20, 'and a refused call leaves no row');
+
 select tests.in_reads(:'pat', :'b_dune', 10);
 select tests.act_as(:'pat');
 select throws_ok(format($$ select public.create_buddy_read('%s', gen_random_uuid(), tests.secs(3)) $$, :'b_pat'),
@@ -557,6 +598,23 @@ select is(tests.card(public.buddy_read(:'r_a'), :'ivo'), (
     select jsonb_build_object('id', :'ivo'::uuid, 'name', 'Ivo', 'photo', null, 'role', 'member',
                               'where', jsonb_build_object('kind', 'section', 'section', 3))),
   'the host sees Section 3 and nothing else of it');
+select tests.block(:'kim', :'ivo');
+select tests.act_as(:'kim');
+select is(tests.card(public.buddy_read(:'r_a'), :'ivo'),
+  jsonb_build_object('id', :'ivo'::uuid, 'name', 'Ivo', 'photo', null, 'role', 'member', 'where', null),
+  'Kim blocked Ivo: she sees his card, and no Section of his');
+select is(tests.card(public.buddy_read(:'r_a'), :'hana') -> 'where', '{"kind": "section", "section": 1}'::jsonb,
+  'the others'' Sections she still sees');
+select tests.act_as(:'ivo');
+select is(tests.card(public.buddy_read(:'r_a'), :'kim') -> 'where', 'null'::jsonb, 'and Ivo, blocked, sees none of hers');
+select is(public.buddy_read(:'r_a') -> 'me' -> 'where', '{"kind": "section", "section": 3}'::jsonb, 'his own he still sees');
+select tests.act_as(:'hana');
+select is(tests.card(public.buddy_read(:'r_a'), :'ivo') -> 'where', '{"kind": "section", "section": 3}'::jsonb,
+  'the host, blocked by neither, sees his Section as before');
+select tests.unblock(:'kim', :'ivo');
+select tests.act_as(:'kim');
+select is(tests.card(public.buddy_read(:'r_a'), :'ivo') -> 'where', '{"kind": "section", "section": 3}'::jsonb,
+  'the block lifted, Kim sees it again');
 select tests.act_as(:'ivo');
 select is(public.set_buddy_hand(:'r_a', 4) -> 'where', '{"kind": "end"}'::jsonb, 'every part read: the end');
 select throws_ok(format($$ select public.set_buddy_hand('%s', 5) $$, :'r_a'), '22023', 'buddy_position_invalid', 'more parts than there are is refused');
@@ -580,6 +638,10 @@ select public.set_buddy_sections(:'r_a', tests.secs(2));
 select ok(cardinality(tests.section_ids(:'r_a')) = 3 and not (tests.section_ids(:'r_a') && :'ids_before'::uuid[]),
   'another division replaces them');
 select is(tests.member_row(:'r_a', :'ivo') ->> 'hand_through', '2', 'and a hand-set Section is held to the new number of parts');
+select tests.set_auto(:'r_a', :'ivo', 4::smallint);
+select is(tests.card(public.buddy_read(:'r_a'), :'ivo') -> 'where', '{"kind": "end"}'::jsonb,
+  'parts read beyond the new number (from progress, D2) show the end, not a Section that is not there');
+select tests.set_auto(:'r_a', :'ivo', null);
 select is(jsonb_array_length(public.set_buddy_sections(:'r_a', tests.secs(100)) -> 'sections'), 101, 'a hundred parts are allowed');
 select public.set_buddy_sections(:'r_a', tests.secs(4));
 select throws_ok(format($$ select public.set_buddy_sections('%s', '[]') $$, :'r_a'), '22023', 'buddy_sections_invalid', 'a bad list is refused');
@@ -630,6 +692,17 @@ select ok(not tests.has(public.buddy_read(:'r_a') -> 'members', :'kim'), 'Kim is
 select lives_ok(format($$ select public.remove_from_buddy_read('%s', '%s') $$, :'r_a', :'kim'), 'removing her again does nothing');
 select tests.act_as(:'kim');
 select throws_ok(format($$ select public.buddy_read('%s') $$, :'r_a'), 'PT404', 'not_found', 'and she cannot open it');
+select is(public.buddy_read_target(:'t_a3'), null, 'the link answers her the same null as any bad link');
+select throws_ok(format($$ select public.join_buddy_read('%s') $$, :'t_a3'), 'PT404', 'not_found',
+  'and does not let her back in: a removal sticks');
+select tests.act_as(:'hana');
+select ok(public.invite_to_buddy_read(:'r_a', array[:'kim']::uuid[]) -> 'invited' @> jsonb_build_array(:'kim'),
+  'the host invites her again');
+select ok(not tests.removed(:'r_a', :'kim'), 'which clears the removal');
+select tests.act_as(:'kim');
+select is(public.buddy_read_target(:'t_a3') ->> 'state', 'invited', 'the link opens for her again');
+select is(public.join_buddy_read(:'t_a3') ->> 'id', :'r_a', 'and she joins');
+select public.leave_buddy_read(:'r_a');
 
 -- ------------------------------------------------------------------------- finish and archive
 
@@ -658,6 +731,7 @@ select throws_ok(format($$ select public.set_buddy_sections('%s', tests.secs(3))
 select throws_ok(format($$ select public.finish_buddy_read('%s') $$, :'r_h'), 'PT409', 'buddy_read_archived', 'and cannot be finished again');
 select tests.act_as(:'ivo');
 select throws_ok(format($$ select public.set_buddy_hand('%s', 1) $$, :'r_h'), 'PT409', 'buddy_read_archived', 'nor take a Section');
+select throws_ok(format($$ select public.link_buddy_entry('%s', null) $$, :'r_h'), 'PT409', 'buddy_read_archived', 'nor change a copy');
 
 -- ------------------------------------------------------------------------- my_buddy_reads
 
@@ -667,6 +741,11 @@ select is(tests.keys(:'v'), array['book', 'id', 'member_count', 'role', 'section
   'a read in her list');
 select ok(:'v'::jsonb ->> 'role' = 'member' and (:'v'::jsonb ->> 'member_count')::int = 2
           and :'v'::jsonb -> 'where' = '{"kind": "section", "section": 3}'::jsonb, 'with her role, how many are in it and her own Section');
+
+select tests.in_ended_reads(:'rae', :'b_dune', 22);
+select tests.act_as(:'rae');
+select is((select count(*)::int from jsonb_array_elements(public.my_buddy_reads() -> 'reads') r where r ->> 'status' <> 'active'),
+  20, 'her list holds the 20 reads that ended last, not all 22');
 
 -- ------------------------------------------------------------------------- leaving (41)
 
@@ -704,6 +783,12 @@ select tests.act_as(:'hal');
 select public.finish_buddy_read(:'r_hal');
 select throws_ok(format($$ select public.create_buddy_read('%s', gen_random_uuid(), tests.secs(3)) $$, :'b_gus'),
   'PT409', 'buddy_read_exists', 'a host by row still has her one active read of the Book');
+select tests.act_as(:'ola');
+select public.join_buddy_read(:'t_g');
+select tests.act_as(:'hal');
+select lives_ok(format($$ select public.leave_buddy_read('%s') $$, :'r_g'), 'the host by row leaves');
+select ok(tests.member_row(:'r_g', :'ola') ->> 'role' = 'host' and tests.read_row(:'r_g') ->> 'host_id' = :'ola',
+  'and hands the read on: Ola is host, host_id hers');
 
 -- ------------------------------------------------------------------------- account deletion (44)
 
@@ -725,6 +810,13 @@ select ok((public.buddy_read(:'r_x') ->> 'can_manage')::boolean, 'she manages it
 select tests.act_as(:'zed');
 select lives_ok($$ select public.delete_my_account() $$, 'a member who is not the host deletes her account');
 select ok(tests.rows_of(:'r_x') = 1 and tests.member_row(:'r_x', :'yul') ->> 'role' = 'host', 'she is gone from the read, its host stays');
+select tests.act_as(:'quin');
+select public.join_buddy_read(:'t_x');
+select tests.act_as(:'yul');
+select lives_ok($$ select public.delete_my_account() $$, 'Yul, host by her row with host_id null, deletes her account');
+select ok(tests.member_row(:'r_x', :'quin') ->> 'role' = 'host' and tests.read_row(:'r_x') ->> 'host_id' = :'quin',
+  'Quin is host, host_id his');
+select is(tests.read_row(:'r_yul'), null, 'and Yul''s own read, with nobody else in it, is gone');
 
 select tests.act_as(:'ari');
 select public.create_buddy_read(:'b_ari', gen_random_uuid(), tests.secs(3), array[:'bo']::uuid[]) ->> 'id' as r_y \gset

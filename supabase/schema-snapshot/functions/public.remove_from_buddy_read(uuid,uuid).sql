@@ -17,6 +17,10 @@ begin
   perform private.buddy_lock_read(p_id);
   perform private.buddy_host_gate(p_id, v_caller);
   delete from public.buddy_read_members where buddy_read_id = p_id and member_id = p_member;
+  if found then
+    insert into private.buddy_read_removed (buddy_read_id, member_id) values (p_id, p_member)
+    on conflict (buddy_read_id, member_id) do update set removed_at = clock_timestamp();
+  end if;
 end;
 $function$
 ;

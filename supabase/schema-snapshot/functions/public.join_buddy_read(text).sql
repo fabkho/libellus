@@ -34,7 +34,9 @@ begin
   end if;
   if exists (select 1 from public.buddy_read_members x
               where x.buddy_read_id = v_read.id and x.member_id <> v_caller
-                and private.blocked_either(x.member_id, v_caller)) then
+                and private.blocked_either(x.member_id, v_caller))
+     or exists (select 1 from private.buddy_read_removed d
+                 where d.buddy_read_id = v_read.id and d.member_id = v_caller) then
     raise exception 'not_found' using errcode = 'PT404';
   end if;
 

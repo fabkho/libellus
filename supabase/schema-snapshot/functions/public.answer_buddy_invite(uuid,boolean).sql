@@ -14,6 +14,10 @@ begin
     raise exception 'buddy_answer_invalid' using errcode = '22023';
   end if;
 
+  if not exists (select 1 from public.buddy_read_members
+                  where buddy_read_id = p_id and member_id = v_caller and joined_at is null) then
+    raise exception 'not_found' using errcode = 'PT404';
+  end if;
   if p_join then
     perform private.buddy_lock_member(v_caller);
   end if;

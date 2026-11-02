@@ -29,6 +29,13 @@ begin
         join public.buddy_reads r on r.id = m.buddy_read_id
         join public.books b on b.id = r.book_id
        where m.member_id = v_caller and m.joined_at is not null
+         and (r.status = 'active'
+              or r.id in (select e.id
+                            from public.buddy_read_members em
+                            join public.buddy_reads e on e.id = em.buddy_read_id
+                           where em.member_id = v_caller and em.joined_at is not null and e.status <> 'active'
+                           order by coalesce(e.archived_at, e.finished_at) desc nulls last, e.id
+                           limit 20))
     ), '[]'::jsonb),
     'invitations', coalesce((
       select jsonb_agg(jsonb_build_object(
@@ -42,13 +49,17 @@ begin
                                  where x.buddy_read_id = r.id and x.joined_at is not null),
                'sections', private.buddy_parts(r.id)
              ) order by m.invited_at desc, r.id)
-        from public.buddy_read_members m
+        from (select m0.*
+                from public.buddy_read_members m0
+                join public.buddy_reads r0 on r0.id = m0.buddy_read_id
+               where m0.member_id = v_caller and m0.joined_at is null and r0.status = 'active'
+                 and not exists (select 1 from public.buddy_read_members x
+                                  where x.buddy_read_id = r0.id and x.member_id <> v_caller
+                                    and private.blocked_either(x.member_id, v_caller))
+               order by m0.invited_at desc, r0.id
+               limit 50) m
         join public.buddy_reads r on r.id = m.buddy_read_id
         join public.books b on b.id = r.book_id
-       where m.member_id = v_caller and m.joined_at is null and r.status = 'active'
-         and not exists (select 1 from public.buddy_read_members x
-                          where x.buddy_read_id = r.id and x.member_id <> v_caller
-                            and private.blocked_either(x.member_id, v_caller))
     ), '[]'::jsonb)
   );
 end;

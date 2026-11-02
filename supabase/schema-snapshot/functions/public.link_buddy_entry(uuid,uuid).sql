@@ -14,6 +14,9 @@ begin
   perform private.buddy_gate(p_id, v_caller);
   perform private.buddy_lock_read(p_id);
   perform private.buddy_gate(p_id, v_caller);
+  if (select status from public.buddy_reads where id = p_id) = 'archived' then
+    raise exception 'buddy_read_archived' using errcode = 'PT409';
+  end if;
 
   if p_entry is not null and not exists (
     select 1

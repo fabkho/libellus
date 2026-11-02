@@ -40,6 +40,8 @@ begin
     end if;
     insert into public.buddy_read_members (buddy_read_id, member_id, role, invited_by)
     select p_read, m, 'member', p_host from unnest(v_new) m;
+    -- Invited again by the host: a removal no longer keeps her out.
+    delete from private.buddy_read_removed where buddy_read_id = p_read and member_id = any (v_new);
   end if;
 
   return jsonb_build_object(

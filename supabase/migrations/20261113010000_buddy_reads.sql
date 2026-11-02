@@ -7,11 +7,12 @@
 -- `not set`), never a page, a percent, a fraction or a date.
 --
 -- What this migration adds:
---   tables   public.buddy_reads, public.buddy_read_members, public.buddy_read_sections, private.buddy_calls.
+--   tables   public.buddy_reads, public.buddy_read_members, public.buddy_read_sections, private.buddy_calls,
+--            private.buddy_read_removed.
 --            RLS on, no policies, nothing granted to anon or authenticated (the default privileges of this
 --            project grant every new public table to both, so the revoke is explicit): every read and write
 --            is one of the functions below, which first proves the caller is a joined member.
---   helpers  private.buddy_member, private.buddy_active_count, private.buddy_co_members,
+--   helpers  private.buddy_active_count, private.buddy_co_members,
 --            private.buddy_sections_parse, private.buddy_rate, private.buddy_where, private.buddy_invite,
 --            private.buddy_lock_member, private.buddy_lock_read, private.buddy_card;
 --            the trigger private.buddy_member_gone (host handover, an empty read deleted).
@@ -23,6 +24,21 @@
 --            read see each other's photo without a follow while both are in it and neither blocked the
 --            other. The avatar storage policy reads it through public.can_see_member_folder and
 --            public.can_see_member_file, which change with it and need nothing else.
+--            public.delete_my_account takes the locks of her reads before it deletes her (below).
+--
+-- A block between two members of a read removes neither, but stops position sharing between them at
+-- once: in buddy_read each one's `where` is null to the other (both ways; everyone else still sees it),
+-- and the card is what the social functions show a blocked pair (name, no photo). my_buddy_reads shows
+-- only her own place, and buddy_read_target answers null to anyone blocked with any member, so neither
+-- shows another member's place at all. Messages stop between them with D3.
+--
+-- Removal sticks: remove_from_buddy_read leaves a marker in private.buddy_read_removed, and while it
+-- is there the link answers her as any bad link does (buddy_read_target null, join_buddy_read
+-- not_found), never saying she was removed. Only a new invitation from the host clears it.
+--
+-- my_buddy_reads answers every active read of hers, the 20 most recent ended ones and the 50 newest
+-- invitations. Ended reads are not capped per member: each one is a row of hers that only a create (20 an
+-- hour) or a join (30 an hour) adds, leaving deletes it, and the list never grows past those bounds.
 --
 -- What it leaves out: messages, reactions, reports, Section cursors and unread counts (D3: `count`
 -- and `unread` answer 0 until then, and leave_buddy_read's p_delete_messages does nothing yet); the
@@ -55,8 +71,13 @@
 -- it (a block, the token, the status may have changed while waiting). The trigger
 -- private.buddy_member_gone takes 2 as well; when it runs inside an account deletion the cascade
 -- already holds that member's row locks, so a host removing the same member at the same moment can
--- meet it in a deadlock, which Postgres detects and resolves by failing one of the two (retryable);
--- so can two account deletions of members who share two reads. The handover never raises: a host_id
+-- meet it in a deadlock. So can an invite or a join whose insert waits for the key-share lock on her
+-- auth.users row while her account deletion holds that row and waits, in the trigger, for the read's
+-- lock the invite holds; and two account deletions of members who share two reads. delete_my_account
+-- therefore takes the locks of all her reads first, in the order of their ids, before it deletes
+-- anything (2 before 3, as everywhere): those three cases then queue instead. An account deleted any
+-- other way (the Auth admin API, the dashboard) skips that step; there Postgres detects the deadlock
+-- and fails one of the two with 40P01, and the caller retries. The handover never raises: a host_id
 -- that would break a uniqueness rule stays null, and the new host is host by her row.
 --
 -- Changes to the plan's part 4 (the PR says why): create_buddy_read and set_buddy_sections take two
@@ -66,7 +87,8 @@
 -- clock_timestamp(), and buddy_read_members.invited_by is indexed (every foreign key is); a read has
 -- one host row (a partial unique index) and a host row is a joined one (a check); "one active read
 -- per host and Book" is decided by the host's row, so it holds for a host whose host_id stayed null;
--- a Catalogue Book that failed its check is refused too (its title is hidden from the other members).
+-- a Catalogue Book that failed its check is refused too (its title is hidden from the other members);
+-- private.buddy_read_removed keeps a removal; public.delete_my_account takes the read locks first.
 
 -- -------------------------------------------------------------------------- tables
 
@@ -153,10 +175,21 @@ create table private.buddy_calls (
 
 create index buddy_calls_member_at on private.buddy_calls (member_id, kind, at);
 
+-- Members the host removed from a read: the link does not let them back in until she invites them again.
+create table private.buddy_read_removed (
+  buddy_read_id uuid not null references public.buddy_reads (id) on delete cascade,
+  member_id     uuid not null references auth.users (id) on delete cascade,
+  removed_at    timestamptz not null default clock_timestamp(),
+  primary key (buddy_read_id, member_id)
+);
+
+create index buddy_read_removed_member on private.buddy_read_removed (member_id);
+
 alter table public.buddy_reads enable row level security;
 alter table public.buddy_read_members enable row level security;
 alter table public.buddy_read_sections enable row level security;
 alter table private.buddy_calls enable row level security;
+alter table private.buddy_read_removed enable row level security;
 
 -- Supabase grants every new public table to the API roles; these want none. No policies either.
 revoke all on public.buddy_reads from anon, authenticated;
@@ -164,19 +197,6 @@ revoke all on public.buddy_read_members from anon, authenticated;
 revoke all on public.buddy_read_sections from anon, authenticated;
 
 -- -------------------------------------------------------------------------- helpers
-
--- She is a joined member of this read.
-create or replace function private.buddy_member(p_read uuid, p_member uuid)
-returns boolean
-language sql
-stable
-set search_path = pg_catalog, public
-as $$
-  select p_read is not null and p_member is not null and exists (
-    select 1 from public.buddy_read_members
-     where buddy_read_id = p_read and member_id = p_member and joined_at is not null
-  )
-$$;
 
 -- The active reads she has joined: the 10-read limit.
 create or replace function private.buddy_active_count(p_member uuid)
@@ -263,7 +283,8 @@ as $$
   end
 $$;
 
--- A member's card in a read: name, photo (when she may see it), role.
+-- A member's card in a read: name, photo (when she may see it), role, where she is. Between two
+-- members of whom one blocked the other, `where` is null, both ways (and the photo is not shown).
 create or replace function private.buddy_card(p_caller uuid, p_member public.buddy_read_members, p_parts integer)
 returns jsonb
 language sql
@@ -271,7 +292,11 @@ stable
 set search_path = pg_catalog, public, private
 as $$
   select private.member_card(p_caller, p_member.member_id)
-         || jsonb_build_object('role', p_member.role, 'where', private.buddy_where(p_member, p_parts))
+         || jsonb_build_object(
+              'role', p_member.role,
+              'where', case when p_member.member_id <> p_caller and private.blocked_either(p_caller, p_member.member_id)
+                            then null
+                            else private.buddy_where(p_member, p_parts) end)
 $$;
 
 -- The client's list of Sections, checked: a JSON array of objects
@@ -370,7 +395,7 @@ $$;
 
 -- Invite these members to a read, as its host (the caller has the read's lock): only people she
 -- follows (accepted) and nobody blocked either way with her or with any other member of the read.
--- The others are skipped, not refused. The cap of 12 counts waiting invitations: a list that would
+-- The others are skipped, not refused. An invitation clears a removal (private.buddy_read_removed). The cap of 12 counts waiting invitations: a list that would
 -- pass it is refused whole. Answers { invited: everyone in the list who is in the read now (joined or
 -- invited), skipped: the rest }.
 create or replace function private.buddy_invite(p_read uuid, p_host uuid, p_members uuid[])
@@ -415,6 +440,8 @@ begin
     end if;
     insert into public.buddy_read_members (buddy_read_id, member_id, role, invited_by)
     select p_read, m, 'member', p_host from unnest(v_new) m;
+    -- Invited again by the host: a removal no longer keeps her out.
+    delete from private.buddy_read_removed where buddy_read_id = p_read and member_id = any (v_new);
   end if;
 
   return jsonb_build_object(
@@ -563,6 +590,40 @@ as $$
           or private.buddy_co_members(p_caller, p_owner))
 $$;
 
+-- ------------------------------------------------------------- account deletion
+
+-- As 20261009120000_avatars.sql left it, and first the locks of her buddy reads (the header's lock
+-- order). create or replace keeps its grants.
+create or replace function public.delete_my_account()
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_member uuid := auth.uid();
+  v_read   uuid;
+begin
+  if v_member is null then
+    raise exception 'not_signed_in' using errcode = '42501';
+  end if;
+
+  if exists (select 1 from storage.objects
+              where bucket_id = 'avatars' and (storage.foldername(name))[1] = v_member::text) then
+    raise exception 'photo_remains' using errcode = '55000';
+  end if;
+
+  -- Buddy reads: the lock of every read she is in, in one order, before any row of hers is deleted, so
+  -- the host handover of private.buddy_member_gone never waits behind a lock this deletion holds.
+  for v_read in select buddy_read_id from public.buddy_read_members where member_id = v_member order by buddy_read_id loop
+    perform private.buddy_lock_read(v_read);
+  end loop;
+
+  delete from public.library_entries where member_id = v_member;
+  delete from auth.users where id = v_member;
+end;
+$$;
+
 -- ------------------------------------------------------------------------- the RPCs
 
 -- Start a buddy read of a Catalogue Book she holds in her Library; her member row links that entry.
@@ -656,9 +717,9 @@ end;
 $$;
 
 -- Her reads and her waiting invitations. A read: its Book, status, her role, how many joined, her
--- own Section (`where`), unread (0 until D3). An invitation: the Book, the host, who invited her,
--- how many joined; one that a block with any member of the read would refuse is left out.
--- Active reads first, then by start, newest first.
+-- own Section (`where`), unread (0 until D3). Every active read of hers and the 20 that ended last;
+-- active first, then by start, newest first. An invitation: the Book, the host, who invited her, how
+-- many joined; one that a block with any member of the read would refuse is left out; the 50 newest.
 create or replace function public.my_buddy_reads()
 returns jsonb
 language plpgsql
@@ -691,6 +752,13 @@ begin
         join public.buddy_reads r on r.id = m.buddy_read_id
         join public.books b on b.id = r.book_id
        where m.member_id = v_caller and m.joined_at is not null
+         and (r.status = 'active'
+              or r.id in (select e.id
+                            from public.buddy_read_members em
+                            join public.buddy_reads e on e.id = em.buddy_read_id
+                           where em.member_id = v_caller and em.joined_at is not null and e.status <> 'active'
+                           order by coalesce(e.archived_at, e.finished_at) desc nulls last, e.id
+                           limit 20))
     ), '[]'::jsonb),
     'invitations', coalesce((
       select jsonb_agg(jsonb_build_object(
@@ -704,13 +772,17 @@ begin
                                  where x.buddy_read_id = r.id and x.joined_at is not null),
                'sections', private.buddy_parts(r.id)
              ) order by m.invited_at desc, r.id)
-        from public.buddy_read_members m
+        from (select m0.*
+                from public.buddy_read_members m0
+                join public.buddy_reads r0 on r0.id = m0.buddy_read_id
+               where m0.member_id = v_caller and m0.joined_at is null and r0.status = 'active'
+                 and not exists (select 1 from public.buddy_read_members x
+                                  where x.buddy_read_id = r0.id and x.member_id <> v_caller
+                                    and private.blocked_either(x.member_id, v_caller))
+               order by m0.invited_at desc, r0.id
+               limit 50) m
         join public.buddy_reads r on r.id = m.buddy_read_id
         join public.books b on b.id = r.book_id
-       where m.member_id = v_caller and m.joined_at is null and r.status = 'active'
-         and not exists (select 1 from public.buddy_read_members x
-                          where x.buddy_read_id = r.id and x.member_id <> v_caller
-                            and private.blocked_either(x.member_id, v_caller))
     ), '[]'::jsonb)
   );
 end;
@@ -841,8 +913,10 @@ $$;
 -- The read behind a link, for the join card: its Book, the host, the joined members' cards, how many,
 -- the number of parts, the start day, and where the caller stands ('none', 'invited', 'member').
 -- Null, the one answer for all of them, for a malformed or unknown token (wrong, off or renewed), a
--- read that ended, a read that is full (to a caller with no place in it), and a caller who blocked or
--- was blocked by any member of it: nothing tells which.
+-- read that ended, a read that is full (to a caller with no place in it), a caller who blocked or was
+-- blocked by any member of it, and a member the host removed: nothing tells which. Anyone holding the
+-- link sees the names of its members (and their photos only as can_see_photo allows), private
+-- accounts included: a link shared is a room opened, as the privacy text says.
 create or replace function public.buddy_read_target(p_token text)
 returns jsonb
 language plpgsql
@@ -866,7 +940,9 @@ begin
   if not found or v_read.status <> 'active'
      or exists (select 1 from public.buddy_read_members x
                  where x.buddy_read_id = v_read.id and x.member_id <> v_caller
-                   and private.blocked_either(x.member_id, v_caller)) then
+                   and private.blocked_either(x.member_id, v_caller))
+     or exists (select 1 from private.buddy_read_removed d
+                 where d.buddy_read_id = v_read.id and d.member_id = v_caller) then
     return null;
   end if;
   select * into v_mine from public.buddy_read_members where buddy_read_id = v_read.id and member_id = v_caller;
@@ -898,7 +974,8 @@ $$;
 
 -- Join by link. Idempotent (a member already in answers the read and counts no call); a waiting
 -- invitation becomes her membership. Refused as not_found for everything buddy_read_target answers
--- null to except a full read, which is buddy_read_full; rate_limited (30 an hour), buddy_read_limit.
+-- null to (a removed member too, until the host invites her again) except a full read, which is
+-- buddy_read_full; rate_limited (30 an hour), buddy_read_limit.
 -- Answers { id }.
 create or replace function public.join_buddy_read(p_token text)
 returns jsonb
@@ -936,7 +1013,9 @@ begin
   end if;
   if exists (select 1 from public.buddy_read_members x
               where x.buddy_read_id = v_read.id and x.member_id <> v_caller
-                and private.blocked_either(x.member_id, v_caller)) then
+                and private.blocked_either(x.member_id, v_caller))
+     or exists (select 1 from private.buddy_read_removed d
+                 where d.buddy_read_id = v_read.id and d.member_id = v_caller) then
     raise exception 'not_found' using errcode = 'PT404';
   end if;
 
@@ -978,6 +1057,10 @@ begin
     raise exception 'buddy_answer_invalid' using errcode = '22023';
   end if;
 
+  if not exists (select 1 from public.buddy_read_members
+                  where buddy_read_id = p_id and member_id = v_caller and joined_at is null) then
+    raise exception 'not_found' using errcode = 'PT404';
+  end if;
   if p_join then
     perform private.buddy_lock_member(v_caller);
   end if;
@@ -1029,6 +1112,7 @@ end;
 $$;
 
 -- The host removes a member, or withdraws an invitation. Someone not in the read: nothing to do.
+-- Either way she stays out: the link does not let her back in until the host invites her again.
 create or replace function public.remove_from_buddy_read(p_id uuid, p_member uuid)
 returns void
 language plpgsql
@@ -1048,6 +1132,10 @@ begin
   perform private.buddy_lock_read(p_id);
   perform private.buddy_host_gate(p_id, v_caller);
   delete from public.buddy_read_members where buddy_read_id = p_id and member_id = p_member;
+  if found then
+    insert into private.buddy_read_removed (buddy_read_id, member_id) values (p_id, p_member)
+    on conflict (buddy_read_id, member_id) do update set removed_at = clock_timestamp();
+  end if;
 end;
 $$;
 
@@ -1189,6 +1277,9 @@ begin
   perform private.buddy_gate(p_id, v_caller);
   perform private.buddy_lock_read(p_id);
   perform private.buddy_gate(p_id, v_caller);
+  if (select status from public.buddy_reads where id = p_id) = 'archived' then
+    raise exception 'buddy_read_archived' using errcode = 'PT409';
+  end if;
 
   if p_entry is not null and not exists (
     select 1
@@ -1248,7 +1339,6 @@ $$;
 -- ------------------------------------------------------------------------- grants
 
 -- The helpers are for the functions above only.
-revoke all on function private.buddy_member(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.buddy_active_count(uuid) from public, anon, authenticated;
 revoke all on function private.buddy_co_members(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.buddy_lock_member(uuid) from public, anon, authenticated;

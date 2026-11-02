@@ -20,7 +20,9 @@ begin
   if not found or v_read.status <> 'active'
      or exists (select 1 from public.buddy_read_members x
                  where x.buddy_read_id = v_read.id and x.member_id <> v_caller
-                   and private.blocked_either(x.member_id, v_caller)) then
+                   and private.blocked_either(x.member_id, v_caller))
+     or exists (select 1 from private.buddy_read_removed d
+                 where d.buddy_read_id = v_read.id and d.member_id = v_caller) then
     return null;
   end if;
   select * into v_mine from public.buddy_read_members where buddy_read_id = v_read.id and member_id = v_caller;
