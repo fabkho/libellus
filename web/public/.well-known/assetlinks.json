@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "de.betterreads.app",
+      "sha256_cert_fingerprints": [
+        "8C:F9:C1:85:76:F1:27:ED:8F:2A:11:C4:50:B2:B9:27:9F:71:94:46:0E:C6:81:B6:1B:E6:FD:85:7E:9E:86:AD",
+        "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
+      ]
+    }
+  }
+]

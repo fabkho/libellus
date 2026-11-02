@@ -41,3 +41,11 @@
 # branch addresses (<id>.libellus-3q1.pages.dev) get noindex from Pages already.
 https://:project.pages.dev/*
   X-Robots-Tag: noindex
+
+# Digital Asset Links (docs/ANDROID.md): Android and Chrome fetch this file to trust the Android
+# app. It has to come back as JSON, straight, with no redirect; a short cache so a fingerprint
+# added later is seen soon.
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=3600
