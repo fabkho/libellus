@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The splash's animated icon (Android 12+), the brand's mark motion (design/logo-options/6-lamp-over-page/motion,
+     docs/MOTION.md) squeezed into the 1000 ms the system allows: there it is `gentle` 450 ms for the pages,
+     `wave` 1600 ms for the lamp's rise (150 ms in) and its glow (300 ms in), 1900 ms in all; here the
+     same order and overlap at about 0.45 of the time, started 120 ms late: the window opens over the
+     first ~300 ms of the animation (measured, docs/ANDROID.md), so the first beat would be played
+     to nobody. The pages arrive (opacity, 6 units of rise), the lamp rises behind them from 34 units
+     below the page line, the glow swells; everything is at rest at 1000 ms, the most the system allows. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:drawable="@drawable/splash_icon_static">
+    <target android:name="pages">
+        <aapt:attr name="android:animation">
+            <objectAnimator android:propertyName="translateY" android:valueFrom="6" android:valueTo="0"
+                android:valueType="floatType" android:startOffset="120" android:duration="200" android:interpolator="@interpolator/standard" />
+        </aapt:attr>
+    </target>
+    <target android:name="pagesFill">
+        <aapt:attr name="android:animation">
+            <objectAnimator android:propertyName="fillAlpha" android:valueFrom="0" android:valueTo="1"
+                android:valueType="floatType" android:startOffset="120" android:duration="200" android:interpolator="@interpolator/standard" />
+        </aapt:attr>
+    </target>
+    <target android:name="sun">
+        <aapt:attr name="android:animation">
+            <objectAnimator android:propertyName="translateY" android:valueFrom="34" android:valueTo="0"
+                android:valueType="floatType" android:startOffset="170" android:duration="680"
+                android:interpolator="@interpolator/standard" />
+        </aapt:attr>
+    </target>
+    <target android:name="glow">
+        <aapt:attr name="android:animation">
+            <objectAnimator android:propertyName="fillAlpha" android:valueFrom="0" android:valueTo="1"
+                android:valueType="floatType" android:startOffset="250" android:duration="750"
+                android:interpolator="@interpolator/wave" />
+        </aapt:attr>
+    </target>
+</animated-vector>
