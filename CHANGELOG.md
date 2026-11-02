@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.31.1](https://github.com/fabkho/libellus/compare/v1.31.0...v1.31.1) (2026-11-02)
+
+
+### Fixes
+
+* **e2e:** the Profile chart's flow runs on a fixed day, in three flows ([#469](https://github.com/fabkho/libellus/issues/469)) ([edb821c](https://github.com/fabkho/libellus/commit/edb821cde9a1fc8919446679616dba43fa7d6d93))
+
 ## [1.31.0](https://github.com/fabkho/libellus/compare/v1.30.0...v1.31.0) (2026-11-01)
 
 
