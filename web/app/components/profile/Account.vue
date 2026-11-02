@@ -24,6 +24,7 @@
 // the row — to compare on a phone.
 import { useAppUpdateStore, type UpdateResult } from '~/stores/appUpdate'
 import { useAvatarStore } from '~/stores/avatar'
+import { useBuddyReadsSwitchStore } from '~/stores/buddyReadsSwitch'
 import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useGlassStore } from '~/stores/glass'
 import { useEbooksStore } from '~/stores/ebooks'
@@ -64,6 +65,14 @@ onMounted(() => void waitlist.load())
 // Friends tab: the feed in the tab bar, on until she turns it off (stores/friendsTab.ts).
 const friendsTab = useFriendsTabStore()
 const showFriendsTab = computed({ get: () => friendsTab.enabled, set: (on: boolean) => friendsTab.set(on) })
+// Buddy reads: the switch the whole feature sits behind, off until she turns it on (stores/buddyReadsSwitch.ts).
+const buddyReads = useBuddyReadsSwitchStore()
+const showBuddyReads = computed({
+  get: () => buddyReads.enabled,
+  // The store refuses while she is in an active room (leaving is what stops the sharing): the switch then stays on.
+  set: (on: boolean) => void buddyReads.set(on),
+})
+const buddyReadsHintId = useId()
 
 // Glass: the owner's, like Errors.
 const glass = useGlassStore()
@@ -237,6 +246,16 @@ const whatsNew = useWhatsNew()
         <span v-else-if="whatsNew.notes.version" class="figures text-ink-muted" data-testid="profile.updateValue">{{ whatsNew.notes.version }}</span>
       </UiRow>
       <UiSwitchRow v-model="showFriendsTab" icon="people" :label="t('profile.account.friendsTab')" testid="profile.friendsTab" />
+      <UiSwitchRow
+        v-model="showBuddyReads"
+        icon="chat"
+        :label="t('profile.account.buddyReads')"
+        :aria-describedby="buddyReadsHintId"
+        testid="profile.buddyReads"
+      />
+      <p :id="buddyReadsHintId" class="buddyReadsHint px-inset pb-sm -mt-xs text-footnote text-ink-faint" data-testid="profile.buddyReadsHint">
+        {{ t('profile.account.buddyReadsHint') }}
+      </p>
       <UiRow as="button" icon="signOut" :label="t('profile.account.signOut')" data-testid="profile.signOut" @click="askSignOut" />
       <UiRow
         as="button"
@@ -309,3 +328,17 @@ const whatsNew = useWhatsNew()
     />
   </section>
 </template>
+
+<style scoped>
+/* UiRow draws the hairline above every row that follows another row (Row.vue). The Buddy reads hint is
+   no row, so the row after it would lose its line: the hint draws the same line above it. */
+.buddyReadsHint + .ui-row::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: var(--spacing-inset);
+  height: var(--stroke-hairline);
+  content: '';
+  background: var(--color-hairline-strong);
+}
+</style>

@@ -247,6 +247,8 @@
       "theme": "Dark mode",
       "glass": "Glass",
       "friendsTab": "Friends tab",
+      "buddyReads": "Buddy reads",
+      "buddyReadsHint": "Read one Book with friends. Its other members see which Section you are in, never your page.",
       "glassLevel": {
         "strong": "Strong",
         "medium": "Medium",

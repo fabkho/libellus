@@ -3,6 +3,7 @@ import { createAuth, type Auth, type AuthErrorCode, type DeleteAccountError, typ
 import { readSavedMember } from '~/data/deviceLibrary'
 import { forgetMemberData, otherMemberHere } from '~/data/localData'
 import { browserPort, disablePush, readPushChoice } from '~/data/pushSubscription'
+import { useBuddyReadsSwitchStore } from '~/stores/buddyReadsSwitch'
 import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useSyncStore } from '~/stores/sync'
 import { keepCodeSent, recentCode, stepFor, whoIs, type CodeSent } from '~/utils/codeCooldown'
@@ -394,6 +395,8 @@ export const useSessionStore = defineStore('session', () => {
       )
       // The Friends tab setting went with the rest: back to its default, on.
       useFriendsTabStore().reload()
+      // So did the Buddy reads switch: back to its default, off in the first release.
+      useBuddyReadsSwitchStore().reload()
     }
     if (!sessionEnded) pending.value = null
     adopt(null)
