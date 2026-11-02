@@ -14,7 +14,7 @@ A calm, mobile-first book tracker you install from the home screen: search a boo
 - **Progress** in pages or percent with a day-by-day chart, and **Collections**, your own shelves, in your order.
 - **Bring your history**: a Goodreads or Hardcover export (CSV, or Hardcover's zip) is told apart by its header; its shelves, lists, reads, ratings and reviews come along.
 - **Friends, by choice.** Your switches decide what followers see, your account is private until you let them in, and you can hide a single book or block someone.
-- **Offline and installed**: the Library stays on the device, changes wait in an outbox, and the PWA runs full screen in light and dark.
+- **Offline and installed**: the Library stays on the device, changes wait in an outbox, and the PWA runs full screen in light and dark. On Android there is also an installable app, a thin shell around the same site ([docs/ANDROID.md](docs/ANDROID.md)).
 
 ## Privacy
 
