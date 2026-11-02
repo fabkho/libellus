@@ -43,6 +43,9 @@ begin
         as n(s_position smallint, s_kind text, s_label text, s_start_page integer, s_end_page integer, s_to_fraction numeric)
      where s.buddy_read_id = p_id and s.position = n.s_position;
   else
+    if exists (select 1 from public.buddy_messages where buddy_read_id = p_id and section_id is not null) then
+      raise exception 'buddy_sections_locked' using errcode = 'PT409';
+    end if;
     delete from public.buddy_read_sections where buddy_read_id = p_id;
     insert into public.buddy_read_sections (buddy_read_id, position, kind, label, start_page, end_page, to_fraction)
     select p_id, n.s_position, n.s_kind, n.s_label, n.s_start_page, n.s_end_page, n.s_to_fraction

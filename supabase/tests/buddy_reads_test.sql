@@ -429,7 +429,7 @@ select is(public.buddy_read(:'r_h') ->> 'sections_from', 'pages', 'and the read 
 select public.buddy_read(:'r_a') as v \gset
 select is(tests.keys(:'v'),
   array['archived_at', 'book', 'can_manage', 'finished_at', 'id', 'invited', 'link_token', 'me', 'members', 'page_count',
-        'role', 'sections', 'sections_from', 'starts_on', 'status'],
+        'role', 'room', 'sections', 'sections_from', 'starts_on', 'status'],
   'buddy_read answers the screen');
 select ok((:'v'::jsonb ->> 'can_manage')::boolean and :'v'::jsonb ->> 'role' = 'host', 'the host manages it');
 select is(:'v'::jsonb -> 'book' ->> 'title', 'Buddy Dune', 'with its Book');

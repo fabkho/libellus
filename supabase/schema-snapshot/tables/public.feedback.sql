@@ -14,7 +14,7 @@ alter table public.feedback add constraint feedback_body_length CHECK (((char_le
 alter table public.feedback add constraint feedback_body_trimmed CHECK ((char_length(btrim(body)) >= 10));
 alter table public.feedback add constraint feedback_context_object CHECK ((jsonb_typeof(context) = 'object'::text));
 alter table public.feedback add constraint feedback_context_size CHECK ((octet_length((context)::text) <= 4000));
-alter table public.feedback add constraint feedback_kind CHECK ((kind = ANY (ARRAY['bug'::text, 'feature'::text, 'other'::text])));
+alter table public.feedback add constraint feedback_kind CHECK ((kind = ANY (ARRAY['bug'::text, 'feature'::text, 'other'::text, 'report'::text])));
 alter table public.feedback add constraint feedback_member_id_fkey FOREIGN KEY (member_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 alter table public.feedback add constraint feedback_owner_note_length CHECK (((owner_note IS NULL) OR (char_length(owner_note) <= 2000)));
 alter table public.feedback add constraint feedback_pkey PRIMARY KEY (id);

@@ -10,6 +10,7 @@ declare
   v_read   public.buddy_reads;
   v_parts  integer;
   v_host   boolean;
+  v_counts jsonb;
 begin
   if v_caller is null then
     raise exception 'not_signed_in' using errcode = '42501';
@@ -18,6 +19,10 @@ begin
   select * into v_read from public.buddy_reads where id = p_id;
   v_parts := private.buddy_parts(p_id);
   v_host := v_me.role = 'host';
+  select coalesce(jsonb_object_agg(coalesce(c.section_id::text, 'room'),
+                                   jsonb_build_object('count', c.total, 'unread', c.unread)), '{}'::jsonb)
+    into v_counts
+    from private.buddy_counts(p_id, v_caller) c;
 
   return jsonb_build_object(
     'id', v_read.id,
@@ -30,11 +35,13 @@ begin
     'page_count', v_read.page_count,
     'role', v_me.role,
     'can_manage', v_host,
+    'room', coalesce(v_counts -> 'room', jsonb_build_object('count', 0, 'unread', 0)),
     'sections', coalesce((
       select jsonb_agg(jsonb_build_object(
                'id', s.id, 'position', s.position, 'kind', s.kind, 'label', s.label,
                'start_page', s.start_page, 'end_page', s.end_page, 'to_fraction', s.to_fraction,
-               'count', 0, 'unread', 0
+               'count', coalesce((v_counts -> s.id::text ->> 'count')::integer, 0),
+               'unread', coalesce((v_counts -> s.id::text ->> 'unread')::integer, 0)
              ) order by s.position)
         from public.buddy_read_sections s where s.buddy_read_id = p_id
     ), '[]'::jsonb),
