@@ -29,16 +29,16 @@ Four tracks. Sizes are one worker's days, tests and docs included (S < 0.5, M �
 
 | # | PR | Repo | Size | Tier | Starts after |
 |---|---|---|---|---|---|
-| **D1** | Database: buddy reads, members, Sections | libellus | L | **Opus** | nothing: **start now** |
-| **S1** | Chat layer prep: `threadId`, `inviteState` out | trappist (draft) | M | normal | nothing: **start now** |
-| **W1** | The Profile → Account switch | libellus | S | normal | nothing: **start now** |
-| **P1** | The progress promise removed, privacy text | libellus | M | normal | nothing: **start now**; merged with the release |
-| D2 | Database: Section from reading progress, co-member view | libellus | M | normal (high) | D1 |
-| S2 | Chat layer: the Realtime core | trappist (draft) | M | normal | S1 |
-| S3 | Chat layer: photo, KLIPY client, error codes | trappist (draft) | M | normal | S1 |
-| D3 | Database: messages, reactions, delete, reports | libellus | L | **Opus** | D1 (after D1 frees the Opus slot) |
+| **D1** | Database: buddy reads, members, Sections | libellus | L | **Opus** | **built**, draft PR #473 |
+| **S1** | Chat layer prep: `threadId`, `inviteState` out | trappist (draft) | M | normal | **built**, Trappist draft PR #366 |
+| **W1** | The Profile → Account switch | libellus | S | normal | **built**, draft PR #472, held for the release |
+| **P1** | The progress promise removed, privacy text | libellus | M | normal | owner's wording (O6); merged with the release |
+| D2 | Database: Section from reading progress | libellus | M | normal (high) | **now**, stacked on D1's branch |
+| S2 | Chat layer: the Realtime core | trappist (draft) | M | normal (high) | **now**, stacked on S1's branch |
+| S3 | Chat layer: photo, KLIPY client, error codes | trappist (draft) | M | normal | S2's branch; off the critical path |
+| D3 | Database: messages, reactions, delete, reports | libellus | L | **Opus** | **now**, stacked on D1's branch |
 | S4 | `fabkho/chat` 0.1.0 (new repo) | fabkho/chat | M | normal | S2, S3, owner action O1 |
-| D4 | Database: live updates (per-member topics) | libellus | M | normal (high) | D2, D3 |
+| D4 | Database: live updates (per-member topics) | libellus | M | normal (high) | D3's branch (not D2) |
 | S5 | Trappist takes `@fabkho/chat` | trappist (draft) | S | normal | S4 released |
 | S6 | Libellus takes `@fabkho/chat` | libellus | S | normal | S4 released |
 | W2 | Data layer, store, live | libellus | L | normal | D1–D4, S6 |
@@ -49,8 +49,7 @@ Four tracks. Sizes are one worker's days, tests and docs included (S < 0.5, M �
 | K1 | GIFs from KLIPY | libellus | M | normal | release 1, owner action O4 |
 | X1–X3 | Later: reply push, ebook TOC and saved lists, photos | libellus | each M–L | per spec | release 1, owner decisions |
 
-**Start now, in parallel (four workers, one Opus):** D1 (Opus), S1 (Trappist, Sonnet), W1 (Sonnet), P1 (Sonnet).
-Their files do not overlap (part 8). When D1 is done, D3 takes the Opus slot, D2 starts on D1's branch.
+**Status (2 November):** wave 0 is built: D1 (draft PR #473), S1 (Trappist draft PR #366), W1 (draft PR #472, held for the release); P1 waits for the owner's wording. **Next, in this order** (three workers, one Opus): D3 (Opus), D2, S2; then S3 and D4 as slots free. Details, stacking and the schedule: part 8.
 
 **The first release** can be cut when D1–D4, S6, W1–W5 and P1 are merged and a staging check (part 9) passed: about
 three weeks of work if the Trappist reviews keep pace (an estimate, not a promise: it is bounded by the owner's review
@@ -69,6 +68,7 @@ These cannot be done by a worker. Dates are estimates from the order above, coun
 | O4 | **Create a KLIPY app key for Libellus** in KLIPY's Partner Panel (a new app, "Powered by KLIPY", the strictest content filter), then set `NUXT_PUBLIC_KLIPY_KEY` in Cloudflare Pages (production and preview) and in CI | after release 1, before K1: by Mon 30 Nov | K1 cannot be tested against the live API without it; tests use recorded answers and do not need it |
 | O5 | Decide staging (#177) before release 1: recommendation in part 9 | before release 1 | part 9 |
 | O6 | Read and approve the EN/DE wording of P1 (privacy notice, Privacy sheet, README) | before P1 merges | it changes a promise in the privacy notice; `docs/legal-checklist.md` says the notice is a draft, not legal advice |
+| O8 | The independent security review of D1 (PR #473) before it merges; D2 and D3 are stacked on it, so a fix there is a rebase for them | before D1 merges | `private.can_see_photo` (read by the avatar storage policy) and the first RPCs that take a member's progress into a room are security-relevant |
 | O7 | Close draft PR #333 (the old plan) once #468 is accepted | any time | it says "What never leaves … her progress" and "copy from Trappist" |
 
 ## 2. The spike (what works, what breaks, the exact configuration)
@@ -164,34 +164,15 @@ from the tip of S3. If the owner changes an earlier PR, the later ones are rebas
 - *Depends on:* nothing. *Risk:* a missed mapping silently drops the thread id of a chapter comment. *Acceptance:* all listed suites green;
   `grep -rn "chapterId" web/layers/chat` empty; a manual look: a chapter comment still arrives in its thread (the store tests prove it).
 
-**S2 · `refactor(chat): the Realtime core into the layer`** — trappist, branch `refactor/chat-layer-live`, draft, on S1.
-- *Scope:* new `web/layers/chat/app/utils/liveChannel.ts` (framework-free): `liveChannel({ loadRealtime, supabaseUrl, anonKey, token, topic,
-  parse(event, payload), onEvent, onStatus, onResync })` with the mechanics now in `app/data/realtime.ts` (join a private topic, `ChannelStatus`,
-  resync on rejoin, `COLD_START_RESYNC_MS` = 3 s cold-start resync, `refused`) and the mechanics now in `app/stores/realtime.ts` lines ~50–196 (replace a channel
-  that is not live on `online`/`visibilitychange`, one revival at a time, `revivedAt` guard). `loadRealtime` is **injected** so an app that aliases
-  `@supabase/realtime-js` to a stub reaches the real client through its own door. `app/data/realtime.ts` keeps `RealtimeEvent`, `toRealtimeEvent` and the
-  Feed/connection events and calls the core; `app/stores/realtime.ts` stays Pinia over it. Move the mechanical tests of `tests/realtime.test.ts` (244 lines) to
-  `tests/chat-layer-live.test.ts`; extend the guard to the new file (no `@supabase/realtime-js` import in the layer).
-- *Not in it:* the event union, Pinia, any new event, the database.
-- *Tests:* Vitest unit (plain Node, fake timers/channel, as `realtime.test.ts` does today): rejoin → one resync; first join → resync after 3 s once; dead socket
-  on `online` and on visible → replaced once; two triggers at once → one revival; `refused` → no retry; sign-out → stopped; stale callbacks of an older channel ignored.
-  pgTAP `realtime_test.sql` (377 lines) untouched and green. No flows.
-- *Docs:* `docs/parity.md` Realtime note if it names the file; `web/AGENTS.md` layer rules (one line: "the layer never imports realtime-js").
-- *Tier:* normal (Sonnet high); promote to Opus only if the existing tests cannot be kept meaningful. *Size:* M. *Depends on:* S1.
-- *Risk:* **the iOS-PWA suspend fix cannot be tested in CI**; the unit tests pin the logic, the owner checks one real phone (background the PWA for a minute, return, a message arrives).
-  *Acceptance:* every existing realtime test still passes against the moved code; Trappist's chat still updates live on the owner's phone after a background/foreground cycle.
+**S2 · `refactor(chat): the Realtime core into the layer`** — trappist, branch `refactor/chat-layer-live`, draft, **stacked on S1's branch `refactor/chat-layer-names`**. **Spec: [`S2`](buddy-read-specs/S2-trappist-realtime-core.md).**
+- *Scope (as specced after reading the S1 branch):* `web/layers/chat/app/utils/liveChannel.ts` with `subscribeTopic(client, topic, parse, handlers)` (the body of `subscribeToMember`: private topic, `setAuth` first, rejoin resync, the 3 s cold-start resync, `refused` without retry) and `createLiveConnection` (the store's mechanics: generation guard, `revive` on `online`/visible after > 2 s, one revival at a time, the `revivedAt` skip window), **the client injected as a structural `RealtimeLike` = `{ setAuth, channel, removeChannel }`**, which is what Libellus' lazily loaded Realtime client already offers (`web/app/data/importJobFeed.ts`); Trappist adapts supabase-js in three lines. `data/realtime.ts` and `stores/realtime.ts` keep their event union, names and Pinia API and become thin.
+- *Differs from the first version of this plan:* the plan said `loadRealtime` is injected and that "the mechanical tests of `tests/realtime.test.ts` move". Reading the code: `tests/realtime.test.ts` is a **stack-backed round trip through the real Realtime server**, and the revive logic has **no unit test**. So S2 injects the *client*, leaves `realtime.test.ts` unchanged as the proof that behaviour did not move, and **adds** `tests/chat-layer-live.test.ts` (plain Node, fake client and timers) for the 3 s cold start, rejoin, refused, generation, revival and the skip window.
+- *Tier:* normal at `high`. *Size:* M. *Risk:* the iOS suspend path cannot be tested in CI: the owner checks one real phone.
 
-**S3 · `refactor(chat): photo, the KLIPY client and the error codes into the layer`** — trappist, branch `refactor/chat-layer-utils`, draft, on S2.
-- *Scope:* `app/data/photo.ts` (177 lines, already framework-free) → `layers/chat/app/utils/photo.ts` (re-exported at the old path, as `saveQueue.ts` is);
-  `app/data/klipy.ts` (244 lines) → `layers/chat/app/utils/klipy.ts` with `locale`, the topic list and the failure
-  words injected (today `LOCALE = 'de'`, `GIF_FEEDS`/`TOPIC_QUERIES` with German chips, `translateChatError`), `KLIPY_MEDIA_HOST` kept; the SQL error-code list
-  (`CHAT_ERROR_KEYS` / the keys in `RULES`, `app/data/chat.ts` ~lines 160–252) → `layers/chat/app/utils/errors.ts` as **codes only** (`message_rate_limited`, `message_client_id_reused`,
-  `message_chapter_unavailable` → neutral names kept as the SQL raises them, `buddy_read_archived`, …); Trappist's sentences stay in `app/data/chat.ts`. Tests move with the files
-  (`tests/klipy.test.ts` 282 lines with recorded answers, `chat-media.test.ts` photo parts).
-- *Not in it:* Libellus' error codes (they are Libellus', added in W2), `storageCache.ts`, the repository.
-- *Tests:* Vitest unit; recorded KLIPY answers untouched; `hasMetadata`/`stripJpegMetadata` tests untouched; the guard extended. pgTAP unchanged.
-- *Docs:* none beyond the layer README stub added in S4. *Tier:* normal. *Size:* M. *Depends on:* S2 (guard and file list).
-- *Acceptance:* `pnpm --dir web test:unit` green; the Feed's photo post and a GIF still work in the app (both use these modules); the layer has no German string (`grep -rn "[äöüß]" web/layers/chat` empty).
+**S3 · `refactor(chat): photo, the KLIPY client and the error codes into the layer`** — trappist, branch `refactor/chat-layer-utils`, draft, **stacked on S2's branch `refactor/chat-layer-live`**. **Spec: [`S3`](buddy-read-specs/S3-trappist-photo-klipy-errors.md).**
+- *Scope (as specced):* `data/photo.ts` → the layer's `utils/photo.ts` (re-exported at the old path; two comments reworded because the guard bans domain words); `data/klipy.ts` → `utils/klipy.ts` **parametrised** (`locale`, `topics`, `customerIdFor(memberId, salt)` with Trappist passing `'bookretreats-klipy:'` so KLIPY's `customer_id` hashes do not change; the calls answer a neutral result, not a German sentence; the variable `feed` renamed) with Trappist keeping a thin wrapper (German chips, `Loaded`); `utils/errors.ts` with the generic SQL error **codes only** (the phone, host and group rules stay Trappist's), plus a parity test that every layer code has a Trappist sentence; the guard gains "no German in the layer".
+- *Off the critical path for Release 1:* Libellus' first release has no GIFs and no photos. If the owner's review of S3 is slow, **S4 is cut from S2's tip** and S3 re-lands as chat 0.2.0 before K1.
+- *Tier:* normal. *Size:* M.
 
 **S4 · `fabkho/chat` 0.1.0, the new repository** — repo `fabkho/chat` (owner action O1), branch `main`/`feat/import`.
 - *Scope:* **a squashed import, not a subtree split**: one commit "feat: import of trappist `web/layers/chat` at `<sha of S3's tip>`" (a split would carry Trappist's
@@ -243,29 +224,17 @@ RPCs with a pinned `search_path = pg_catalog, public, private`, `revoke all on f
 - *Depends on:* nothing. *Risks:* locking (two joins at once vs the cap; a block vs a join; host leaving while an invite is answered): each has an advisory-lock order stated in the header and a test with `pg_advisory_xact_lock` contention only where pgTAP can show it; `can_see_photo` is read by the avatar storage policy: its change is a security change and gets its own tests.
 - *Acceptance:* `supabase test db` green with the new file; `pnpm schema:snapshot` committed and CI's snapshot check green; a member calls every RPC through PostgREST from `psql`/the Vitest stack and gets the documented shapes; no table is readable by `authenticated` (`select` on each fails).
 
-**D2 · `feat(db): a member's Section from her reading progress`** — libellus, `feat/buddy-read-position`, migration `20261113020000_buddy_read_position.sql`, pgTAP `buddy_read_position_test.sql`. On D1.
-- *Scope:* `private.buddy_fraction(entry, joined_at)`, `private.buddy_refresh(read, member)` (part 5), triggers `after insert or update of progress_page, progress_percent, outcome, ended_on` on `public.reading_sessions` and `after update of book_id, page_count_override` on `public.library_entries` that refresh the memberships linked to that entry
-  (one indexed lookup on `buddy_read_members(entry_id)` when there is none), a `before update of entry_id` rule that freezes `hand_through = read_through` when the link is lost (entry removed from the Library), `buddy_read()` returns each co-member's `where` (part 5.5); `link_buddy_entry` calls the refresh;
-  `set_buddy_sections` (replace while no Section thread has a message) recomputes everyone.
-- *Not in it:* realtime events for a changed Section (D4), the messages, the web.
-- *Tests:* pgTAP: **every row of the edge-case table in part 5.3** (page, percent, finished, abandoned, no session, open re-read after a finish, edition change with a different page count, `page_count_override`, no page count, entry removed, hand above and below auto, tolerance at the boundary, host edits Sections), the refresh does nothing and writes nothing when no membership is linked (a progress update by a member in no room changes no row), and what a co-member can and cannot read from `buddy_read()` (never `progress_*`, `fraction`, dates, outcome, `entry_id`, `hand`, source).
-- *Docs:* the migration header states the exception to social v1's promise in one paragraph (the applied `20261017040000_social_readers.sql` comment is not edited). *Tier:* normal at `high` (Sonnet), Opus only if the edge cases need it. *Size:* M. *Depends on:* D1.
-- *Risk:* a trigger on `reading_sessions`, a hot table (the reader writes progress at most once a minute): the extra cost is one index probe; verified by `EXPLAIN` in the PR description. *Acceptance:* the pgTAP file green; `update_progress` of a member in no room is unchanged (the existing `progress_test`, `clear_progress_test` stay green).
+**D2 · `feat(db): a member's Section from her reading progress`** — libellus, `feat/buddy-read-position`, migration `20261113020000_buddy_read_position.sql`, pgTAP `buddy_read_position_test.sql`. **Stacked on D1's branch `feat/buddy-read-db` (PR #473).** **Spec: [`D2`](buddy-read-specs/D2-position-from-progress.md).**
+- *Scope (as specced after reading D1):* `private.buddy_fraction`, `private.buddy_refresh` (takes the read's lock so it serialises with `set_buddy_sections`), triggers on `reading_sessions`, `library_entries`, `buddy_read_members` (link/join, and the `before update of entry_id` freeze: unlink keeps her Section as `hand_through`) and **statement-level triggers on `buddy_read_sections`**. **No D1 RPC is redefined**: D1 already computes `where` from the stored `read_through`, and `set_buddy_sections` / `create_buddy_read` are made correct by the section triggers. That keeps D2 and D3 (which does replace D1 functions) from colliding.
+- *Tests:* one named assertion per row of the part 5.3 table, the no-op for members in no room, no number reaching a co-member. *Tier:* normal at `high`. *Size:* M.
 
-**D3 · `feat(db): buddy read messages, reactions, delete and reports`** — libellus, `feat/buddy-read-messages`, migration `20261113030000_buddy_read_messages.sql`, pgTAP `buddy_messages_test.sql`. On D1; **Opus**, after D1.
-- *Scope:* tables `buddy_messages`, `buddy_reactions`, `buddy_section_cursors`; RPCs `post_buddy_message`, `buddy_read_messages`, `react_to_buddy_message`, `delete_buddy_message`, `mark_buddy_read`, `report_buddy_message` (part 4.3); `feedback.kind` gains `report` (drop and re-add `feedback_kind`, a new migration step, never an edit of `20261024010000_feedback.sql`);
-  the rate limits; the tombstone; the block filter in the reader; `my_buddy_reads()` gains unread counts (after the cursors, only over what she may open). Messages carry `kind` text | gif, `media_url` (KLIPY hosts only, the constraint is written now so K1 needs no migration) and `spoiler`.
-- *Not in it:* photos (`kind = 'image'` is refused by the check until X3), the Realtime triggers (D4), push, any web code, the owner inbox's label for the new kind (W4).
-- *Tests:* pgTAP, the Trappist checklist of part 4.5 per RPC: idempotent replay (same `client_id` returns the same row, no second insert), `message_client_id_reused`, order (two messages in one transaction get distinct, increasing `created_at`; a message never sorts before one written earlier), rate 30 a minute and 600 a day, member gate and the **removal race** (a message that passed the gate while the host removes her is refused), thread gate (a Section of another read refused), replies stay in their thread, tombstone clears body and gif and the reactions, host deletes any, member only her own, reactions one per member (`upsert`, the same again removes), refused across a block and on a tombstone, reader excludes both directions of a block, `report_buddy_message` writes one `feedback` row with the context and is bounded by the feedback limiter (5/h, 20/day), cursors only move forward, `anon` refused, direct table access refused, account deletion deletes her messages (cascade) and reactions.
-- *Docs:* migration header; `docs/THIRD-PARTY.md` is K1's. *Tier:* **Opus**. *Size:* L. *Depends on:* D1 (and the Opus slot).
-- *Risk:* the largest SQL here, ported from `trappist:supabase/schema-snapshot/functions/public.post_message(…).sql` (100 lines) and its tests; the temptation to copy Trappist's table-policy reads and direct reaction writes must be resisted (Libellus has no table grants). *Acceptance:* pgTAP green; every Trappist behaviour in part 4.5 has a named assertion; the snapshot is committed.
+**D3 · `feat(db): buddy read messages, reactions, delete and reports`** — libellus, `feat/buddy-read-messages`, migration `20261113030000_buddy_read_messages.sql`, pgTAP `buddy_messages_test.sql`. **Stacked on D1's branch `feat/buddy-read-db`; Opus.** **Spec: [`D3`](buddy-read-specs/D3-messages.md).**
+- *Scope (as specced after reading D1):* the three tables and six RPCs of part 4; `feedback_kind` widened with `report` in a new step; and `create or replace` of **four D1 functions** whose bodies D1 left as placeholders: `buddy_read` (real Section `count`/`unread` and a `room` object), `my_buddy_reads` (real `unread`, only over what she may open), `leave_buddy_read` (`p_delete_messages` now deletes her messages), `set_buddy_sections` (`buddy_sections_locked` PT409 once a Section thread has a message, because replacing deletes Sections and cascades their messages).
+- *Numbering:* D2 `…020000`, D3 `…030000`, D4 `…040000`; they are independent, so the order they merge in does not matter (release applies with `--include-all`). *Tier:* **Opus**. *Size:* L.
 
-**D4 · `feat(db): buddy read live updates over private per-member topics`** — libellus, `feat/buddy-read-realtime`, migration `20261113040000_buddy_read_realtime.sql`, pgTAP `buddy_realtime_test.sql`. On D2 and D3.
-- *Scope:* `private.member_topic(uuid)`, the policy `buddy_member_topic_select` on `realtime.messages` (`extension = 'broadcast' and realtime.topic() = private.member_topic(auth.uid())`), **no insert policy**, triggers that call `realtime.send(payload, event, topic, true)`: `message.new`, `message.deleted`, `message.reaction`, `buddy_read.changed` (Sections, status, a member joined, left, or a member's Section changed: **no numbers in it, only the read's id**), `buddy.invitation`; fan-out to active members without a block with the author; payloads in part 4.4.
-- *Not in it:* the client (W2), the dashboard setting (O3).
-- *Tests:* pgTAP (`realtime_test.sql` in Trappist is the model, 377 lines): a member can `select` only her own topic's rows from `realtime.messages`, not another member's; no one can insert; a message reaches each active member except a blocked author's pair and not a stranger; payloads never contain `progress_*`, `read_through`, fractions or entry ids; a Section change sends the id only. Note: **the schema snapshot does not cover `realtime.messages` policies** (`supabase/schema-snapshot/README.md`, "Left out on purpose"), so the pgTAP file is the only guard.
-- *Docs:* the migration header and `docs/OPERATIONS.md` (a short "Realtime" paragraph: the topic shape, the dashboard setting, what to watch). *Tier:* normal at `high`. *Size:* M. *Depends on:* D2, D3.
-- *Risk:* policy syntax on `realtime.messages` is unfamiliar here (the repo has none yet: `grep -rn "realtime.messages" supabase/migrations` is empty); Trappist's `20261110140000_realtime_member_channels.sql` is the model; hosted behaviour differs from the local stack in one setting (O3). *Acceptance:* pgTAP green; on the local stack a second client subscribed to `member:<id>` (private channel) receives a `message.new` after `post_buddy_message` (shown in W2's Vitest, which needs the real client through `#realtime-client`).
+**D4 · `feat(db): buddy read live updates over private per-member topics`** — libellus, `feat/buddy-read-realtime`, migration `20261113040000_buddy_read_realtime.sql`, pgTAP `buddy_realtime_test.sql`. **Stacked on D3's branch `feat/buddy-read-messages`.** **Spec: [`D4`](buddy-read-specs/D4-realtime.md).**
+- *Scope (as specced):* `private.member_topic`, the select policy `buddy_member_topic_select` on `realtime.messages` (no insert policy), `private.buddy_recipients` (joined members minus a block with the actor, plus the actor's own topic), triggers for `message.new` (the whole row: the veil is the app's), `message.deleted`, `message.reaction`, `buddy_read.changed` (`{buddy_read_id}` only, fired on a `read_through` change **whatever wrote it**, so D2 is not a prerequisite), `buddy.invitation`; a failed send never fails the write; a short "Realtime" paragraph in `docs/OPERATIONS.md`. The schema snapshot does not cover `realtime.messages` policies: the pgTAP file is the only guard.
+- *Tier:* normal at `high`. *Size:* M. *Depends on:* D3 (not D2).
 
 ### Track W: the web app
 
@@ -279,7 +248,7 @@ RPCs with a pinned `search_path = pg_catalog, public, private`, `revoke all on f
 
 **W2 · `feat(web): buddy reads, the data layer, the store and the live channel`** — libellus, `feat/buddy-reads-data`. Depends on D1–D4 and S6.
 - *Scope:* `web/app/data/buddyReads.ts` (framework-free repository: one function per RPC of part 4.3, taking the Supabase client; maps rows to the layer's `ChatRecord`, `BuddyReadData`, `BuddyChapter`; Libellus' error codes → keys), `web/app/data/buddyLive.ts`
-  (`liveChannel` from `@fabkho/chat` with `loadRealtime: () => import('#realtime-client')` and the event parser for `message.new`, `message.deleted`, `message.reaction`, `buddy_read.changed`, `buddy.invitation`; started only while a buddy read screen or the Home card needs it),
+  (`subscribeTopic` / `createLiveConnection` from `@fabkho/chat` over a `RealtimeLike` built from the lazily loaded real client, `import('#realtime-client')`, as `importJobFeed.ts` builds its own (S2's injected-client design), and the event parser for `message.new`, `message.deleted`, `message.reaction`, `buddy_read.changed`, `buddy.invitation`; started only while a buddy read screen or the Home card needs it),
   `web/app/stores/buddyRead.ts` (a small Pinia store on the layer's `createSaveQueue`, `thread` and `veil` modules: threads keyed by `threadKey(read, section)`, optimistic send by `clientId`, unread, her Section, the peeks in `localStorage` per member), `web/app/utils/` for the glue,
   EN keys for the error codes, `web/tests/support` helpers.
 - *Not in it:* any screen (W3–W5), GIFs (K1), photos.
@@ -506,6 +475,25 @@ Each line is one named assertion in the file named (the "bugs it paid for", from
 **`buddy_realtime_test.sql` (D4)**
 - (46) she can read only her own topic's broadcast rows; (47) no insert policy; (48) fan-out to members but not to a blocked pair with the author nor to a stranger; (49) payloads carry no progress, fractions or `read_through`; (50) a Section change sends only the id; (51) a removed member stops receiving.
 
+### 4.6 Changes from the build (D1, PR #473; read 2 November 2026 from the branch and its PR body)
+
+Part 4 above is the design; D1 is what was built. Where they differ, **D1 wins** and D2–D4 start from it:
+
+- **Signatures.** `create_buddy_read(p_book, p_client_id, p_sections, p_invite, p_link, p_starts, p_from text default 'count', p_page_count integer default null)` and `set_buddy_sections(p_id, p_sections, p_from default 'count', p_page_count default null)` take two more trailing arguments (the table stores `sections_from` and `page_count`); `create_buddy_read` answers `{id, link_token, invited, skipped}`, `set_buddy_sections` answers the read as `buddy_read` does. **`set_buddy_hand(p_id uuid, p_through integer)` takes `integer`**, not `smallint` (a `smallint` parameter is not found from SQL with a plain number). `leave_buddy_read(p_id, p_delete_messages default false)` has the parameter already; it does nothing until D3.
+- **Refusal codes.** `buddy_read_exists` (the id in `details`), `buddy_read_full`, `buddy_read_ended`, `buddy_read_archived` are **PT409**; `not_found` PT404 (strangers, pending invitees, bad or blocked tokens: one answer), `not_host` PT403, `rate_limited` and `buddy_read_limit` PT429, 22023 for invalid input (`client_id_required`, `buddy_book_invalid`, `buddy_sections_invalid`, `buddy_entry_invalid`, `buddy_position_invalid`, `buddy_starts_invalid`, `buddy_remove_self`). D3 adds `message_*`, `buddy_sections_locked` (PT409) and `buddy_section_invalid` (22023) in the same style.
+- **Tables.** One host row per read by a partial unique index (`buddy_read_members_one_host`) and `check (role = 'member' or joined_at is not null)`; `invited_at` defaults to `clock_timestamp()`; `invited_by` is indexed. "One active read per host and Book" is decided by the host's **member row**, so it holds for a host whose `buddy_reads.host_id` stayed null after a handover that would have broken a uniqueness rule.
+- **What the RPCs show.** `buddy_read()` answers `members[]` with `where` as an object `{kind: 'section', section: k}`, `{kind: 'end'}` or `{kind: 'not_set'}` (never a number about reading), her own `me = {entry_id, auto, hand, read_through, where}`, `link_token` and `invited[]` for the host only, and Sections with **`count: 0, unread: 0` placeholders that D3 makes real**. `my_buddy_reads()` answers `{reads: [...], invitations: [...]}` (`unread: 0` until D3); an invitation that a block with any member of the read would refuse is left out.
+- **Ended and blocked.** Finishing or archiving stops the link, invitations and accepting (`buddy_read_target` null, `join_buddy_read` `not_found`, `invite_to_buddy_read` / `buddy_read_link(on)` `buddy_read_ended`). A block with **any** member (not only the host) counts everywhere: invitees blocked with any member are skipped, accepting such an invitation is `not_found`, the blocked-visitor rule counts pending invitees as members, joining a full read by link answers `buddy_read_full` except for a blocked visitor (always `not_found`). **Known and intended:** `invite_to_buddy_read` lists a followed person who is blocked with someone in the read under `skipped`, which lets the host infer a block, as `follow()` answering `not_found` does.
+- **Photos.** `private.can_see_photo` passes for co-members in **any** status (an ended room still lists its members): plan 4.2 ("both joined in one read") wins over part 3's "an active buddy read".
+- **Lock order** (header of the migration): 1. the caller's member lock `hashtextextended('buddy:' || member, 0)` (her rate limits, her 10-read limit); 2. the read's lock `hashtextextended('buddy_read:' || read, 0)` (every change to a read's rows, the cap of 12); 3. row locks. `create` takes 1; `invite`, `join`, `accept` take 1 then 2; everything else takes 2 only; a check made before a lock is made again after it. The trigger `private.buddy_member_gone` takes 2, so a host removing the same member at the same moment as an account deletion, or two deletions of members who share two reads, can deadlock; Postgres fails one of them, retryable. The handover never raises. **D2's `buddy_refresh` and D3's writes follow this order.**
+- **Helper names D2–D4 build on:** `private.buddy_gate(read, member)` (her own row or `not_found`), `buddy_host_gate`, `buddy_lock_member`, `buddy_lock_read`, `buddy_rate(member, kind, limit)` (hourly), `buddy_parts(read)`, `buddy_where`, `buddy_card`, `buddy_me`, `buddy_member`, `buddy_active_count`, `buddy_co_members`, `buddy_sections_parse`, `buddy_invite`.
+- **Tests.** `supabase/tests/buddy_reads_test.sql` has 196 assertions (items 33–45 of 4.5) with helpers `tests.member`, `tests.act_as`, `tests.act_anon`, `tests.act_nobody`, `tests.snap`, `tests.secs` that later pgTAP files **copy** (each file is self-contained). PR #473 reports 3,695 assertions over all 90 files green except `cover_store_test.sql` on a stale **local** stack (the same failure with the new objects dropped; CI on `main` is green).
+- **Before D2, D3, D4 start:** the shared local stack must have D1's migration applied: **`supabase migration up`** first (the stack may be older than the branch), then `supabase test db supabase/tests/buddy_reads_test.sql` (196/196) as the baseline.
+- **Not checked by D1:** the cap under real concurrency was shown by a manual two-session run (pgTAP has one session; the test asserts the join takes both keys); no hosted project, no hosted advisor run; an independent security review of #473 is pending (the owner's, before merge).
+
+**S1** (Trappist draft PR #366, built): the test of the moved `inviteState` stays at `web/tests/chat-layer-invite-state.test.ts` (only its import changed), and two doc lines in `web/AGENTS.md` and `docs/parity.md` that named the old path were corrected too. The field rename stops at `data/groups.ts` (`toChatRecord`, `createChatAdapter.page/.send/.markRead`); the app keeps its own `chapterId`. S2 and S3 build on that branch.
+**W1** (draft PR #472, built): the switch icon is the base's `chat` (the Friends tab row above already draws `people`); the German hint is the spec's text; the keys are `profile.account.buddyReads` and `profile.account.buddyReadsHint` with the testid `profile.buddyReads`; `canTurnOff` exists on the store (`set(false)` answers false while it is false) for W2/W4 to set; **held for the first release** (merge it with the release candidate, or earlier: it gates nothing).
+
 ## 5. Section and position design
 
 ### 5.1 What a Section is
@@ -625,34 +613,86 @@ Built from the base, nothing copied (`web/AGENTS.md`: "nothing of the app replac
 - **Veiled rows** say why in text (a lock icon is never the only cue): "Section 9, hidden, 12 comments"; a veiled Section never shows its label, avatar-of-who-is-there beyond a count, or an unread dot.
 - **a11y:** the thread is `role="log"` with polite announcements for arriving messages only; every long-press has a focusable ⋯; 44 px targets; 360 px with no sideways scroll (`docs/DESIGN.md`); text at 200 % reflows; Reduce Motion respected; one `docs/parity.md` entry per screen with states, copy keys, test ids. Accessibility scans run in the dark theme of the one flow (`docs/TESTING.md`).
 - **The invite link page** is behind sign-in (it is not a public path): `web/app/utils/publicPath.ts` is untouched.
+- **W1 as built** (PR #472): the row is `UiSwitchRow` with the base's `chat` icon and the hint line as a footnote linked by `aria-describedby` (`UiSwitchRow` has no hint slot); German "Buddy-Reads"; the store's `canTurnOff` is for W2/W4 to drive, with the "Leave my buddy reads and turn off" confirm.
 
-## 8. Order and dispatch table for the coordinator
+## 8. Order, dispatch table, parallelism and the critical path
 
-Tiers: **hard** = Opus 5.5 `high`; **normal** = the coordinator's normal tier; **S-high** = Sonnet 5.5 at `high` where the work is subtle SQL or iOS timing and the cheaper model has failed before (my judgement, not measured here). One Opus at a time (D1, then D3); the Claude Max 5x note in the coordinator's rules makes that cheap to keep.
+### 8.1 Status on 2 November 2026
 
-| Wave | PR | Repo / branch | Tier | Needs | Owns (no other PR touches these) | Spec |
+| PR | State | Notes |
+|---|---|---|
+| D1 database core | **draft PR #473**, branch `feat/buddy-read-db` (migration `20261113010000_buddy_reads.sql`, 4 tables, 15 RPCs, 196 pgTAP assertions) | the owner's independent security review is pending (O8); see part 4.6 for what changed from the plan |
+| S1 Trappist layer names | **Trappist draft PR #366**, branch `refactor/chat-layer-names` | 84 unit files and 133 files with the stack green per its body |
+| W1 Profile switch | **draft PR #472**, branch `feat/buddy-reads-switch` | gates nothing; **held for the first release** |
+| P1 promise removal | not started | waits for the owner's EN/DE wording approval (O6) |
+
+D2, D3, D4, S2, S3 are specced (`docs/plans/buddy-read-specs/`); S4, S5, S6, W2–W5 are outlined in 8.5 and specced when their blockers are near.
+
+### 8.2 What to dispatch now, and in which order
+
+Stacked PRs are the rule while the base PRs are drafts: a worker branches from the **base branch** (not from `main`) and opens its PR with that base; when the base merges, the PR is retargeted to `main`. A review fix in the base (D1's security review, S1's review) means the stacked worker **rebases**; the specs say so.
+
+1. **D3 first (Opus, the one Opus slot).** It is the longest job (L) and the only Opus PR in this wave, so it starts first. Base `feat/buddy-read-db`. Branch `feat/buddy-read-messages`.
+2. **D2 second (Sonnet high).** Base `feat/buddy-read-db`. Branch `feat/buddy-read-position`. Independent of D3 (different objects, no D1 RPC redefined by D2).
+3. **S2 third (Trappist, Sonnet high).** Base `refactor/chat-layer-names`. Branch `refactor/chat-layer-live`. Draft PR in Trappist.
+
+That is **three workers, one Opus**, the cap. When a slot frees: **S3** (after S2's PR is open: base `refactor/chat-layer-live`), then **D4** (after D3's PR is open: base `feat/buddy-read-messages`). **P1** takes a free slot the day the owner approves the wording (it touches no database or Trappist file). Nothing else can start: W2–W5 and S4–S6 are blocked (8.5).
+
+### 8.3 The dispatch table
+
+| Step | PR | Repo / branch (base) | Tier | Needs | Owns (no other PR touches these) | Spec |
 |---|---|---|---|---|---|---|
-| **0, now** | **D1** | libellus `feat/buddy-read-db` | **hard** | — | `supabase/migrations/20261113010000_*`, `supabase/tests/buddy_reads_test.sql`, `supabase/schema-snapshot/**`, `CONTEXT.md` | [`D1`](buddy-read-specs/D1-database-rooms.md) |
-| **0, now** | **S1** | trappist `refactor/chat-layer-names` (draft) | normal | — | `web/layers/chat/**`, the Trappist files that import it, `web/tests/chat-layer*.test.ts`, `docs/plans/groups.md` | [`S1`](buddy-read-specs/S1-trappist-layer-names.md) |
-| **0, now** | **W1** | libellus `feat/buddy-reads-switch` | normal | — | `web/app/utils/buddyReadsSwitch.ts`, `stores/buddyReadsSwitch.ts`, `components/profile/Account.vue`, the `profile.*` keys, a parity paragraph, its test | [`W1`](buddy-read-specs/W1-profile-switch.md) |
-| **0, now** | **P1** | libellus `docs/progress-promise` | normal | — | `web/app/legal/privacy.ts`, the `privacy.never` key, `SPEC.md`, `README.md`, `docs/proposals/*`, `docs/parity.md:619`; **not** `CONTEXT.md` | [`P1`](buddy-read-specs/P1-progress-promise.md) |
-| 1 | D2 | libellus `feat/buddy-read-position` on D1 | S-high | D1 | `20261113020000_*`, `buddy_read_position_test.sql` | paragraph in part 3 |
-| 1 | D3 | libellus `feat/buddy-read-messages` on D1 | **hard** | D1 merged (Opus slot free) | `20261113030000_*`, `buddy_messages_test.sql` | part 3, part 4 |
-| 1 | S2 | trappist `refactor/chat-layer-live` on S1 (draft) | S-high | S1 | `layers/chat/app/utils/liveChannel.ts`, `data/realtime.ts`, `stores/realtime.ts`, `tests/realtime.test.ts` | part 3 |
-| 1 | S3 | trappist `refactor/chat-layer-utils` on S2 (draft) | normal | S2 | `data/photo.ts`, `data/klipy.ts`, `data/chat.ts` (error list only), the layer's `utils/photo.ts`, `klipy.ts`, `errors.ts` | part 3 |
-| 2 | D4 | libellus `feat/buddy-read-realtime` | S-high | D2, D3 | `20261113040000_*`, `buddy_realtime_test.sql`, `docs/OPERATIONS.md` Realtime paragraph | part 3 |
-| 2 | S4 | fabkho/chat `main` | normal | S2, S3, O1 | the whole new repo | part 3 |
-| 3 | S5 / S6 | trappist `chore/chat-package` (draft) / libellus `feat/chat-package` | normal | S4 released | S5: Trappist `web/package.json`, `vitest.config.ts`, `nuxt.config.ts`, `.github/**`; S6: Libellus `web/package.json`, `nuxt.config.ts`, `vitest.config.ts`, `.github/scripts/ui-bump.sh`, `ui-bump.yml` | part 3 |
-| 3 | W2 | libellus `feat/buddy-reads-data` | normal | D1–D4, S6 | `web/app/data/buddyReads.ts`, `buddyLive.ts`, `stores/buddyRead.ts`, `tests/buddy-*.test.ts` | part 3 |
-| 4 | W3, W4 | libellus `feat/buddy-reads-setup`, `feat/buddy-reads-room` | normal | W2 (W4 also D3) | `components/together/**`, `pages/t/**`, `pages/together/**`, `utils/pendingBuddyRead.ts`, `middleware/auth.global.ts` (W3), `e2e/buddy-read.spec.ts` (W4); the two can run in parallel, they share `docs/parity.md` and `en.json`: the second to merge re-runs `pnpm i18n:translate` | part 3 |
-| 5 | W5 | libellus `feat/buddy-reads-entries` | normal | W3 | `pages/book/[key].vue`, `components/home/**` | part 3 |
-| 6 | **Release 1** | libellus | owner | all of the above, O3, O5, O6 | — | part 9 |
-| 7 | K1, X1–X3 | libellus | per spec | release 1, O4 | — | part 3 |
+| done | D1 | libellus `feat/buddy-read-db` | hard | — | `20261113010000_*`, `buddy_reads_test.sql`, snapshot, `CONTEXT.md` | [D1](buddy-read-specs/D1-database-rooms.md) |
+| done | S1 | trappist `refactor/chat-layer-names` | normal | — | `web/layers/chat/**` names, `inviteState` | [S1](buddy-read-specs/S1-trappist-layer-names.md) |
+| done | W1 | libellus `feat/buddy-reads-switch` | normal | — | switch util/store/row | [W1](buddy-read-specs/W1-profile-switch.md) |
+| **now 1** | **D3** | libellus `feat/buddy-read-messages` (base `feat/buddy-read-db`) | **hard** | D1 branch, `supabase migration up` | `20261113030000_*`, `buddy_messages_test.sql`, snapshot | [D3](buddy-read-specs/D3-messages.md) |
+| **now 2** | **D2** | libellus `feat/buddy-read-position` (base `feat/buddy-read-db`) | S-high | D1 branch | `20261113020000_*`, `buddy_read_position_test.sql`, snapshot | [D2](buddy-read-specs/D2-position-from-progress.md) |
+| **now 3** | **S2** | trappist `refactor/chat-layer-live` (base `refactor/chat-layer-names`) | S-high | S1 branch | `liveChannel.ts`, `data/realtime.ts`, `stores/realtime.ts`, `tests/chat-layer-live.test.ts` | [S2](buddy-read-specs/S2-trappist-realtime-core.md) |
+| next | S3 | trappist `refactor/chat-layer-utils` (base `refactor/chat-layer-live`) | normal | S2 branch | `photo.ts`, `klipy.ts`, `errors.ts`, `data/klipy.ts`, `data/photo.ts` | [S3](buddy-read-specs/S3-trappist-photo-klipy-errors.md) |
+| next | D4 | libellus `feat/buddy-read-realtime` (base `feat/buddy-read-messages`) | S-high | D3 branch | `20261113040000_*`, `buddy_realtime_test.sql`, OPERATIONS Realtime paragraph | [D4](buddy-read-specs/D4-realtime.md) |
+| when approved | P1 | libellus `docs/progress-promise` | normal | O6 | `privacy.ts`, `privacy.never`, SPEC, README, proposals, parity:619 | [P1](buddy-read-specs/P1-progress-promise.md) |
+| blocked | S4, S5, S6, W2–W5 | see 8.5 | | | | outlines in 8.5 |
 
-**Parallel starts and their conflicts.** The four wave-0 PRs touch disjoint files except `web/i18n/locales/{en,de}.json`, `web/.i18n-kit.lock.json` and `docs/parity.md` (W1 adds `profile.*` keys and a paragraph; P1 changes one key and one line):
-merge W1 first (it is small), P1 rebases and re-runs `pnpm i18n:translate`. `CONTEXT.md` belongs to D1 alone.
+**Conflicts.** `web/i18n/locales/{en,de}.json`, `web/.i18n-kit.lock.json` and `docs/parity.md` are touched by W1 and P1 (and later W2–W5): merge W1 first (it is small; #472 is held for the release, so merge it into `main` once the owner is happy: it gates nothing) and let the others rebase and re-run `pnpm i18n:translate`. `supabase/schema-snapshot/**` is regenerated by D2, D3, D4 (and was by D1): the second PR to merge **regenerates it again after rebasing** (CI's stale-snapshot check will say so). Migration versions `…010000` to `…040000` are unique and independent of merge order; release applies `supabase db push --include-all`.
 
-**What the coordinator should check at each step.** D1/D3: that `supabase test db` and the snapshot check are green in the PR's `check` job (not only locally); S2: the owner's phone check; S4: the install-from-GitHub acceptance; W4: the `full-e2e` label before merge; release 1: part 9.
+**What the coordinator checks at each step.** D2/D3/D4: `supabase test db` and the snapshot check green in the PR's `check` job (not only locally), and the worker ran `supabase migration up` first; S2: the owner's one-phone check; S3: the German-in-layer grep and unchanged assertions; S4: the install from GitHub with no token; W4: the `full-e2e` label before merge; release 1: part 9.
+
+### 8.4 Parallelism schedule (at most 3 workers, at most 1 Opus)
+
+Working days are the sizes of part 1 (S < 0.5, M ≈ 1, L ≈ 2–3) and **do not include the owner's review time**, which is the real bottleneck for the Trappist stack (nothing there merges without the owner). Counted from the moment wave 1 is dispatched ("day 0").
+
+| Days | Worker 1 (Opus slot) | Worker 2 | Worker 3 | Waiting on |
+|---|---|---|---|---|
+| 0–1 | **D3** | **D2** | **S2** | owner: review of D1 (security), S1, W1 |
+| 1–2 | D3 | free (P1 if O6; D1/D2 review fixes) | **S3** (S2's PR is open) | O1 (repo `fabkho/chat`) |
+| 2–3 | D3 finishes (~day 3) | D4 can start when D3's PR is open | S3 finishes (~day 2–3) | owner: review S1→S2→S3 in order |
+| 3–5 | (free: Opus no longer needed) | **D4** | **S4** (needs S2, S3 merged by the owner, and O1) | owner: merges |
+| 5–6 | — | D4 done (~day 4–5) | S4 done; owner merges release-please's PR → `fabkho/chat` v0.1.0 | O1 done, release-please |
+| 6–6.5 | — | **S6** (Libellus adopts) | **S5** (Trappist adopts, draft) | D1–D4 merged |
+| 6.5–9 | | **W2** (L) | | S6, D1–D4 merged |
+| 9–11.5 | | **W3** | **W4** (needs D3; carries the one flow) | W2 |
+| 11.5–12 | | **W5** (S) | (a11y/flow fixes) | W3 |
+| 13–14 | **Release 1**: scratch-project check of D4 and O3 (part 9.5), P1 merged with it, flows in the release run | | | O3, O5, O6, O8 |
+
+About **13 working days of worker time, three calendar weeks** with realistic review lag. **A shorter path, at the cost of one more PR:** split W2 into **W2a** (the repository `data/buddyReads.ts` for D1–D3's RPCs, tests against the stack: needs only D1–D3, no layer) which can start at day ~3 beside S4, and **W2b** (store, live channel and the lazy door: needs S6 and D4). Then W3 (which needs W2a and the layer's `chapters.ts` through S6) starts at day ~6.5 and the web track gains about two days. Recommended only if the coordinator has the worker slot at days 3–6 (the table shows worker 1 free then).
+
+### 8.5 Critical path to Release 1, and the PRs still to be written
+
+**Counts.** In flight: 3 built and waiting for the owner (D1, S1, W1) and P1 not started. To write and run: **D2, D3, D4, S2, S3, S4, S5, S6, W2, W3, W4, W5 = 12 PRs** (13 with the W2a/W2b split), of which S5 (Trappist adopts the package) and S3 (see below) are **not on the critical path**. **Longest chain (6 PRs): S2 → S4 → S6 → W2 → W3 or W4 → W5**, then the release; with S3 kept before S4 (the plan's order) it is **7 PRs**. The database chain D3 → D4 (2 PRs, plus D2 beside) is shorter and feeds W2. The release itself adds the release-please merge, the scratch-project check (O3, O5) and the owner's approvals (O6, O8).
+
+**S4 · `fabkho/chat` 0.1.0.** Blocked by O1 (the empty public repo exists) and by S2 and S3 being **merged in Trappist by the owner**: S4 is a squashed import of `web/layers/chat` at the tip of S3 (S2's tip if S3 slips and re-lands as 0.2.0), plus package.json (`@fabkho/ui: "*"` as a peer, part 2), release-please, a vitest CI, the layer's tests moved from Trappist and rewritten to relative imports, a README with the adapter contract. Acceptance: CI green, the release PR merged makes `v0.1.0`, `pnpm add -E github:fabkho/chat#v0.1.0` installs with no token in a scratch app. Blocks S5, S6 and therefore W2. One worker, M.
+
+**S5 · Trappist takes `@fabkho/chat`.** Blocked by S4's release. Trappist draft PR: the dependency, `chat.config.ts`, `extends`, delete `web/layers/chat`, the vitest alias, the bump workflow for two packages. Not on the critical path for Libellus; it only retires the local copy. One worker, S.
+
+**S6 · Libellus takes `@fabkho/chat`.** Blocked by S4's release. `web/package.json` pin, `chat.config.ts`, `extends: [uiLayer(), ...regalLayer(), chatLayer()]`, the vitest alias, `ui-bump.sh`/`ui-bump.yml` for two packages (spike E), a guard test for `#layers/chat`, and the **entry-chunk guard** that fails the build if the entry imports `@supabase/realtime-js` (the stub is allowed). Blocks W2. One worker, S.
+
+**W2 · data layer, store, live channel.** Blocked by D1–D4 merged (the RPCs and the topics must exist on the stack) and S6 (the layer). `web/app/data/buddyReads.ts` (one function per RPC), `buddyLive.ts` (`subscribeTopic`/`createLiveConnection` over the **lazily loaded real Realtime client**, `loadRealtime: () => import('#realtime-client')`, built into a `RealtimeLike` the way `importJobFeed.ts` builds its client), `stores/buddyRead.ts` on the layer's queue, thread and veil, Vitest against the stack (including the live round trip that closes D4's loop). Blocks W3, W4 (and W5 through W3). L. **Compression option:** W2a/W2b (8.4).
+
+**W3 · set up, invite, join by link.** Blocked by W2 (and W1 merged). The setup sheet, invite sheet, `/t/<token>` page, pending-token handling through sign-in, the members sheet, EN/DE, parity, a11y; opening a link with the switch off asks to turn it on. L. Parallel with W4.
+
+**W4 · the room, a Section's thread, finish.** Blocked by W2 and D3 (W3's setup is not required: the flow creates its read through the RPCs). The room and Section screens, the veil view, reactions, delete, report (the owner screen labels `report`), the marker sheet, finish/archive, and the **one** `@full` Playwright flow, run early with the label `full-e2e`. L. Parallel with W3.
+
+**W5 · Book page row and Home card.** Blocked by W3 (the entry opens the setup sheet) and W1. Hidden with the switch off. S. Last PR before the release.
 
 ## 9. Risks, rollback and the release plan
 
@@ -715,6 +755,8 @@ If the owner prefers the full #177 first, release 1 slips by about a day of #177
 6. **Q-f. The report reasons** (harassment, spam, inappropriate, other) and that a reported message's text is sent to the owner with the report (already in P1's privacy text).
 7. **Q-g. German word for *Host*:** "Host" (default, neutral loanword) or a gendered "Gastgeberin/Gastgeber" (the old plan's draft). *Section* is "Abschnitt" and *Buddy read* "Buddy-Read" as you decided.
 
+8. **Q-h. If the owner's review of the Trappist stack lags,** cut `fabkho/chat` 0.1.0 from S2's tip and let S3 (photo, KLIPY, error codes) land as 0.2.0 before K1 (default yes: Release 1 needs none of it).
+
 ### 10.2 Not verified, and why
 
 - A real `github:fabkho/chat#vX` install and a Cloudflare Pages build: the repo does not exist yet (the spike used a `file://` git repo; the public `fabkho/ui` route was proven end to end, part 2 A).
@@ -723,7 +765,7 @@ If the owner prefers the full #177 first, release 1 slips by about a day of #177
 - The Free-plan quotas (old plan's table, 12 October, from supabase.com): not re-read.
 - Trappist's `git subtree split` (S4 uses a squashed import instead); the behaviour of Trappist's PWA on a real phone after S2 (the owner's check).
 - Estimates (dates, sizes) are judgement, not measurement.
-- I did not run any migration or the pgTAP suite: this turn is documentation only; part 4's SQL is a design, not tested code.
+- I did not run any migration or the pgTAP suite: these turns are documentation only; part 4's SQL is a design, and 4.6 is what D1 built, read from its branch and PR body, not re-run here. The D2–D4, S2 and S3 specs are written from reading D1's migration and the S1 branch; the first worker of each confirms the names against the branch before relying on them.
 
 ---
 
