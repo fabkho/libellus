@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { RealtimeClient } from '#realtime-client'
-console.log(RealtimeClient)
 const { t, locale } = useI18n()
 
 // The document title comes out of the message file like every other string; <html lang> is the language on screen.
