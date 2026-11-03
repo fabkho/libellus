@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.32.0](https://github.com/fabkho/libellus/compare/v1.31.1...v1.32.0) (2026-11-03)
+
+
+### Features
+
+* **db:** buddy read live updates over private per-member topics ([#477](https://github.com/fabkho/libellus/issues/477)) ([9922b18](https://github.com/fabkho/libellus/commit/9922b189ddb885ca7ceda1d02fbfa77d4a2cffb1))
+* **db:** buddy read messages, reactions, delete and reports ([#475](https://github.com/fabkho/libellus/issues/475)) ([4faa821](https://github.com/fabkho/libellus/commit/4faa821817e25a37cd3b645794a46dbd61426f00))
+* **db:** buddy reads: a member's Section from her reading progress (D2) ([#474](https://github.com/fabkho/libellus/issues/474)) ([2d000a6](https://github.com/fabkho/libellus/commit/2d000a651d3d65c75dbcd68887aa456cbe7f712e))
+* **db:** buddy reads: rooms, members and Sections ([#473](https://github.com/fabkho/libellus/issues/473)) ([9224503](https://github.com/fabkho/libellus/commit/922450338d50f85e71242d33a9e69acbff56ce6e))
+
+
+### Fixes
+
+* **db:** a member can block a co-member of a buddy read ([#476](https://github.com/fabkho/libellus/issues/476)) ([54b5473](https://github.com/fabkho/libellus/commit/54b5473a4f3b64e1a6d73aed158f3f550d3f8351))
+
 ## [1.31.1](https://github.com/fabkho/libellus/compare/v1.31.0...v1.31.1) (2026-11-02)
 
 
