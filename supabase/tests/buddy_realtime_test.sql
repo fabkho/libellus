@@ -14,8 +14,8 @@
 --
 -- realtime.send adds an `id` (the broadcast's own uuid) to a payload that has none: the key checks
 -- below allow exactly that one key more.
--- D2 (her Section from her progress) is not in this branch's base: a Section change is checked through
--- set_buddy_hand; the trigger reads the row's read_through, whatever wrote it.
+-- A Section change is checked through set_buddy_hand; the trigger reads the row's read_through,
+-- whatever wrote it (D2, below this migration, writes it from her reading progress).
 -- (W2's tests/buddy-live.test.ts does the round trip through the Realtime server.)
 -- Assertions ask about rows this test made, never counts of a table.
 

@@ -21,8 +21,8 @@
 --   buddy_read.changed  {buddy_read_id} and nothing else: read buddy_read() again. Sent when a member
 --                       joins (link or accepted invitation), leaves, is removed or her account goes,
 --                       a role changes (the host handover), a member's Section changes (her row's
---                       generated read_through, whatever wrote it: set_buddy_hand, or her progress
---                       once D2 is in), the Sections change, or the read's status changes. For a member's
+--                       generated read_through, whatever wrote it: set_buddy_hand, or her reading
+--                       progress through D2's triggers), the Sections change, or the read's status changes. For a member's
 --                       change: to every joined member not blocked either way with her, and her own
 --                       topic (also when she just left or was removed: her screen closes). For the
 --                       Sections or the status: to every joined member. At most once per read and
