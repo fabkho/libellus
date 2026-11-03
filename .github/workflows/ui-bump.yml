@@ -1,9 +1,10 @@
-name: UI base bump
+name: Package bumps
 
-# Weekly: when fabkho/ui publishes a release newer than the tag web/package.json pins, open the bump
-# pull request (.github/scripts/ui-bump.sh; docs/DEVELOPMENT.md, "The UI base bump"). Nothing newer,
-# nothing opened. No secret: GITHUB_TOKEN opens the pull request, and the job dispatches the checks of
-# ci.yml on its branch (flows=false), because a pull request made with GITHUB_TOKEN starts no workflow
+# Weekly: when fabkho/ui or fabkho/chat publishes a release newer than the tag web/package.json pins for
+# @fabkho/ui or @fabkho/chat, open the bump pull request (.github/scripts/ui-bump.sh; docs/DEVELOPMENT.md,
+# "The package bumps"). One job and one pull request per package: they release independently, and a bad
+# release of one must not hold the other up (fail-fast is off). Nothing newer, nothing opened. No secret:
+# GITHUB_TOKEN opens the pull request, and the job dispatches the checks of ci.yml on its branch (flows=false), because a pull request made with GITHUB_TOKEN starts no workflow
 # (workflow_dispatch is the one exception). Nothing is billed for this public repository's hosted runners
 # beyond the job itself, which takes about a minute, and nothing runs in weeks without a release.
 on:
@@ -12,7 +13,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ui-bump
+  group: package-bumps
   cancel-in-progress: false
 
 permissions:
@@ -20,9 +21,13 @@ permissions:
 
 jobs:
   bump:
-    name: open the @fabkho/ui bump
+    name: open the @fabkho/${{ matrix.package }} bump
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [ui, chat]
     permissions:
       contents: write
       pull-requests: write
@@ -40,7 +45,7 @@ jobs:
         with:
           node-version: 24
 
-      - name: Open the bump pull request if fabkho/ui has a newer release
+      - name: Open the bump pull request if fabkho/${{ matrix.package }} has a newer release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: .github/scripts/ui-bump.sh
+        run: .github/scripts/ui-bump.sh ${{ matrix.package }}

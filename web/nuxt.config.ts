@@ -3,8 +3,10 @@ import tailwindcss from '@tailwindcss/vite'
 import { themeBootScript, type ThemeColors } from './app/utils/theme'
 import { releaseNotes } from './app/utils/changelog'
 import { uiLayer, uiLayerHolds } from './ui.config'
+import { chatLayer } from './chat.config'
 import { isRegalModule, isRegalPreloadModule, isRegalShelfModule, regalAssets, regalContainment, regalLayer, REGAL_ENABLED, REGAL_LIBRARY_SRC } from './regal.config'
 import { REALTIME_CLIENT, REALTIME_STUB } from './realtime.config'
+import { entryGuard } from './entry-guard.config'
 
 // The browser chrome, the installed app's status bar and its splash take their
 // colour from the same token source as the CSS: the room's surface, per theme.
@@ -59,8 +61,9 @@ const isReaderModule = (id: string) =>
 // static files for Cloudflare Pages.
 export default defineNuxtConfig({
   // Regal, the owner's 3D shelf (#23): a Nuxt layer, only with LIBELLUS_REGAL=1 (regal.config.ts says
-  // where it comes from and how it is kept to the shelf's pages).
-  extends: [uiLayer(), ...regalLayer()],
+  // where it comes from and how it is kept to the shelf's pages). The chat layer (@fabkho/chat, chat.config.ts) comes last;
+  // nothing imports it yet.
+  extends: [uiLayer(), ...regalLayer(), chatLayer()],
   compatibilityDate: '2026-10-02',
   ssr: false,
   nitro: {
@@ -104,7 +107,7 @@ export default defineNuxtConfig({
   // Sentry"): `hidden` writes the `.map` files without a `sourceMappingURL` comment, so no chunk changes and the
   // names equal those of Cloudflare's own build of the same commit. Pages' build never sets this: members get no maps.
   sourcemap: process.env.SENTRY_SOURCEMAPS ? { client: 'hidden', server: false } : undefined,
-  modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt', regalContainment],
+  modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt', regalContainment, entryGuard],
   // Accessibility and hints in Nuxt DevTools (docs/ACCESSIBILITY.md): `nuxt dev` only, never in a
   // build (both modules also do nothing outside dev, and `$development` keeps them out of the
   // generate run altogether), and not in the Playwright run, where the DevTools are off and an

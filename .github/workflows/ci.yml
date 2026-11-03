@@ -195,7 +195,7 @@ jobs:
           FILTER_IMPORTJOB: ${{ steps.filter.outputs.importjob }}
           FILTER_COVERSTORE: ${{ steps.filter.outputs.coverstore }}
           INPUT_SHARDS: ${{ vars.E2E_SHARDS || env.DEFAULT_E2E_SHARDS }}
-          # A manual run has every flow unless it says flows=false (the UI base bump does: ui-bump.yml).
+          # A manual run has every flow unless it says flows=false (the package bumps do: ui-bump.yml).
           INPUT_FLOWS: ${{ inputs.flows }}
         run: |
           all=false

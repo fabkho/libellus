@@ -29,6 +29,8 @@ export default defineConfig({
       '~': resolve('./app'),
       // The shared UI base, as Nuxt aliases it (`#layers/ui`, its layer's name; plain Node does not know it): the checkout `UI_LAYER` names, or the package.
       '#layers/ui': process.env.UI_LAYER ? pathResolve(process.env.UI_LAYER) : resolve('./node_modules/@fabkho/ui'),
+      // The shared chat layer, the same way (`#layers/chat`): the checkout `CHAT_LAYER` names, or the package.
+      '#layers/chat': process.env.CHAT_LAYER ? pathResolve(process.env.CHAT_LAYER) : resolve('./node_modules/@fabkho/chat'),
       // As in nuxt.config.ts: the suite exercises the client the app ships.
       '@supabase/realtime-js': resolve('./app/data/realtimeStub.ts'),
       // The real client, for the one place that loads it (realtime.config.ts).
