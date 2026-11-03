@@ -593,6 +593,19 @@ Two small tables keep the import and its upstreams from running into their limit
   `next_at` far in the future (an upstream's `Retry-After`, capped at a minute in the function) clears itself; to clear it by
   hand: `update edge_pace set next_at = now();`.
 
+## Realtime
+
+Buddy reads go live over Realtime Broadcast, one **private** channel per member: topic `member:<her id>`
+(`supabase/migrations/20261113040000_buddy_read_realtime.sql`, whose header lists the events and their payloads). Only
+the database sends (triggers, `realtime.send(..., private => true)`); the policy `buddy_member_topic_select` on
+`realtime.messages` lets a signed-in member join her own topic and no other, and there is no insert policy. The schema
+snapshot leaves `realtime` policies out, so `supabase/tests/buddy_realtime_test.sql` is what guards it. **Dashboard, once
+per project (owner):** Realtime settings → turn off public access ("Allow public access"; the wording is from memory),
+so private channels are the only way to listen; with it off, check that the import job's live feed (`postgres_changes`,
+`web/app/data/importJobFeed.ts`) still arrives. **Watch** (Usage page): Realtime messages a month (Free: 2 million; a
+post in a full read of 12 is 12 messages) and peak concurrent connections (Free: 200; one per device with a buddy read
+open). A missed event costs nothing: the app reads the state again after a reconnect.
+
 ## Own covers
 
 The stored copies of the covers of Books in members' Libraries: what they are, why, and the terms in docs/HOSTING.md,
