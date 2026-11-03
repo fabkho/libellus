@@ -83,7 +83,9 @@ describe('the chat layer does not take over what the app has', () => {
     const fromLayer = readFileSync(imports, 'utf8')
       .split('\n')
       .filter((line) => /\/@fabkho\/chat\/app\//.test(line) || line.includes(layer))
-    const taken = shared.filter((name) => fromLayer.some((line) => new RegExp(`[{,\\s]${name.replace('$', '\\$')}[,\\s}]`).test(line.split(/ from /)[0] ?? '')))
+    // The names a line exports: what stands before ` from `, cut at everything that is not part of an identifier.
+    const namesOf = (line: string) => new Set((line.split(/ from /)[0] ?? '').split(/[^\w$]+/))
+    const taken = shared.filter((name) => fromLayer.some((line) => namesOf(line).has(name)))
     expect(taken).toEqual([])
   })
 
