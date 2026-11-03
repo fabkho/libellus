@@ -1,7 +1,12 @@
 # Progress on an earlier day
 
-**Status: plan, nothing built.** Phase 1 of the owner's request: UI options, data rules, database design and
-the pull-request plan. No feature code, no migration in this PR. DRAFT, DO NOT MERGE.
+**Status: plan, nothing built, WAITING FOR THE OWNER'S "GO"** (§10). Phase 1 of the owner's request: UI options,
+data rules, database design, the pull-request plan and who builds what. No feature code, no migration in this
+PR. DRAFT, DO NOT MERGE.
+
+**Decided with the owner so far:** the day is chosen with the **platform's native date picker** (a real
+`<input type="date">`, as `UiDateRow` does; nothing of our own is drawn) behind the **day pills** (B). Questions
+2–4 of §8 are *assumed* as recommended until the owner says otherwise.
 
 Owner's words (intent): *"Let a member record the progress she made on a specific earlier date: she forgot
 to update two days ago, seven days ago, yesterday."* In three parts:
@@ -524,3 +529,120 @@ spec; PR 1's reviewer reads §4 and §6 first.
 - The shared local stack changed under the run (another worktree's `libellus-d3` project took the ports; its
   signup mail is a link, not a code); the mocks' seed signs in with the link's token. Nothing of this repo
   was changed for it.
+
+## 10. Execution plan and worker assignments
+
+### 10.1 The gate
+
+**Nothing in this section starts until the owner says "go".** The orchestrator spawns no worker, creates no
+worktree and opens no PR for it before that. At "go" the orchestrator first asks the owner for a yes or a
+change on questions 2–4 of §8 (assumed: bounded range; Remove of the latest day lowers her progress with a
+confirm; open reads only), because W1 builds them into the database. A change to a rule is a change to §4 and
+to W1's spec, made by the orchestrator in this file before W1 starts.
+
+### 10.2 Rules for every worker
+
+- Pi workers (`--agent pi`), one worktree and one branch each, the dev-server port that `orca_spawn` allocates.
+- Read first: root `AGENTS.md` ("The database"), `web/AGENTS.md`, `CONTEXT.md`, this file (§4, §5, §6 for
+  database and data work; §3 and the mocks for UI work), and the files named in the assignment.
+- No mocks in Vitest (the local stack), pgTAP for database rules, targeted tests only (never `nuxi typecheck`
+  or `tsc --noEmit`), `pnpm schema:snapshot` after a migration and the result committed with it, an applied
+  migration is never edited, every new control has a `data-testid`, copy in EN **and** DE in the PR that uses
+  it, tokens and existing components only (`UiRow`, `UiConfirm`, `UiButton`, the pill of the sheet).
+- Nothing is invented: a rule that §4 does not decide is a question to the coordinator (`orca_report`
+  `question`), not a guess. The rules are the owner's decisions; the code follows them.
+- A commit per logical step, normal commit messages (`feat(db): …`), a PR that says which rules (R1–R12) and
+  which cases (E1–E15) it covers. No GitHub issues, no Slack. The PR is opened ready for review but not merged
+  by the worker.
+- CI is never watched blockingly: a cheap background watcher reports; a red CI is fixed by a DeepSeek worker
+  (the orchestrator's rule), not by the Opus worker.
+- Report with `orca_report`: three sentences (what was done, what was found, what is left), the PR number, the
+  tests that ran and their result.
+
+### 10.3 Assignments
+
+| Worker | Branch (base) | Model / tier | Owns (writes only here) | Done when |
+|---|---|---|---|---|
+| **W1 database** | `feat/progress-day-edit-db` (`origin/main`) | `anthropic/claude-opus-5-5:high` (hard) | `supabase/migrations/20261114010000_progress_day_edit.sql`, `supabase/schema-snapshot/**` (generated), `supabase/tests/progress_day_edit_test.sql` | §6 built exactly: `set_progress_day`, `delete_progress_day`, the two `private` helpers, `sync_write` replaced whole with the two branches and no day clamp, grants as `update_progress`; every row of the pgTAP table of §6 and E1–E15 pass; the chain invariant is asserted after each case; `supabase test db` green; snapshot regenerated and clean; `reading_sessions` written only when `P` changes (R5). Diff of `sync_write` against the snapshot shows only the two added branches. |
+| **W2 data layer** | `feat/progress-day-edit-data` (W1's branch; retarget to `main` once W1 merges) | `command-code/deepseek/deepseek-v4.1-flash:high` (normal) | `web/app/data/progressDays.ts`, `data/library.ts`, `data/queuedWrites.ts`, `data/outbox.ts` (only if needed), `stores/progressDays.ts`, `stores/reading.ts`, `composables/useReadingDays.ts`, `web/tests/progress-day-edit*.test.ts`, existing tests it must update | The contract of §10.4 exists and is exported; R12 (`readingLogOf` keeps `≠ 0`); the random test (the pure functions against the database) agrees on at least 200 operations; the repository, outbox replay in order, idempotent replay, the offline overlay and `forgetUndo()` are covered; `pnpm test` for the touched files green. **No component, no copy.** |
+| **W3 sheet** | `feat/progress-day-edit-sheet` (W2's branch) | `command-code/deepseek/deepseek-v4.1-flash:high` (normal) | `web/app/components/progress/DayPills.vue`, `components/book/ProgressSheet.vue`, EN/DE keys for §3.5 that it uses, `web/e2e/progress-earlier-day.spec.ts` | States 1–6 of §3.2 behave as the mocks 01, 02, 05 show (same classes and sizes); the third pill is a native `input type="date"` over the pill with `min` = the read's start and `max` = today; range line, effect line, wheel floor/ceiling, hidden total and Finish/DNF in earlier mode; a polite status line; the pill row wraps at 200 % text; flow green on WebKit; axe clean; screenshots at 390 and 360 px, light and dark, and German, attached to the PR. |
+| **W4 log** | `feat/progress-day-edit-log` (W2's branch, rebased on W3 when W3 is in review) | `command-code/deepseek/deepseek-v4.1-flash:high` (normal) | `web/app/components/book/ProgressLog.vue`, the Remove button and `UiConfirm` (a small `components/book/RemoveDay.vue` if the sheet would grow), EN/DE keys for §3.3, additions to `progress-earlier-day.spec.ts` (a second spec file if it avoids a conflict) | Mock 04 and 05b as built; Add opens the newest day without an entry; a row tap opens the sheet on that day; negative days are listed; the older-rows rule of PR 4 is decided and written in the PR; Remove (middle: pages move on; latest: progress goes back, the card shows it); offline Remove waits; flow and axe green; screenshots as W3. |
+| **W5 docs** | `docs/progress-day-edit` (`main` after W1–W4 merged) | `anthropic/claude-haiku-5-5` (simple) | `docs/parity.md`, `docs/ACCESSIBILITY.md`, `docs/TESTING.md`, `docs/i18n/**` if the German pass lists strings | "Progress by day", "Reading progress" and the sheet's section describe the shipped behaviour (rules R1–R12, IDs, copy keys, flow names, native notes: `UIDatePicker`/`DatePicker`, Material date picker, list rows); the German pass lists the new strings. Edits only text that is now untrue. |
+| **R reviewer** (sub-agent, `reviewer`) | none (reads each PR) | `anthropic/claude-sonnet-5-5:high` | nothing | One review per PR against §4 (rules), §6 (database) or §3 (UI) and the project's own conventions (`project-review-router`); a list of findings the worker fixes; a second review after the fixes. |
+| **CI watcher** (sub-agent, `watcher`/cheap model) | none | Haiku or the free watcher | nothing | Reports each PR's CI result to the orchestrator once; a failure goes to a DeepSeek fixer with the log. |
+
+### 10.4 The contract W2 delivers and W3/W4 build against
+
+Fixed here so W3 and W4 can start against stubs while W2 finishes (names may only change with the
+orchestrator's say-so):
+
+```ts
+// data/library.ts (Library repository)
+setProgressDay(entryId: string, day: string, progress: ProgressValue): Promise<Result<LibraryEntry>>
+deleteProgressDay(entryId: string, day: string): Promise<Result<LibraryEntry>>
+
+// data/progressDays.ts (pure)
+dayBoundsOf(days, day, current, pageCount, unit): { lo: number; hi: number; start: number; end: number | null; leads: boolean }
+withDaySet(days, day, value, ctx): ProgressDay[]        // the database's R3/R4, for the overlay and the effect line
+withDayRemoved(days, day): ProgressDay[]
+effectOf(days, day, value, ctx): { kind: 'add' | 'edit' | 'now' | 'none'; day: string; next?: { day: string; was: number; now: number }; value?: number }
+newestEmptyDay(days, startedOn, today): string | null   // what "Add day" opens on
+readingLogOf(...)                                         // R12: every row with amount !== 0
+
+// stores/reading.ts
+progressDay: Ref<string | null>                           // null = Today
+openProgress(entry, { day?: string; total?: boolean })
+chooseProgressDay(day: string | null)
+progressFloor: ComputedRef<number>                        // with the existing progressLimit
+progressBounds: ComputedRef<{ lo; hi; start; end; leads } | null>   // null while the days are not loaded
+removeProgressDay(): Promise<LibraryEntry | null>         // after the confirm
+```
+
+Test ids W3/W4 add: `progress.day`, `progress.day.today`, `progress.day.yesterday`, `progress.day.pick`,
+`progress.range`, `progress.effect`, `progress.remove`, `removeDay` (+ `.confirm`, `.cancel`), `book.logAdd`;
+`book.logDay` stays and becomes a button.
+
+### 10.5 Order, parallelism and merging
+
+```
+go ─► W1 (db, hard) ───────────────┐
+        └─► W2 (data) ─┬─► W3 (sheet) ─┬─► W5 (docs)
+                       └─► W4 (log) ───┘
+reviewer after each PR · CI watcher per PR · W3 and W4 in parallel once W2's contract is exported
+```
+
+- W2 starts when W1 has pushed a first green migration (its tests need the functions); until then it may write
+  the pure functions and their unit tests against §4's table.
+- W3 and W4 start when W2 has exported the §10.4 names (stubs allowed). W4 touches `ProgressLog.vue` only and
+  the sheet only through `openProgress(entry, { day })`, so the two do not edit the same file except
+  `en.json`/`de.json` (each adds its own keys under its own sub-tree; rebase, never reformat the file).
+- Merge order: W1 → W2 → W3 → W4 → W5, each PR green on its own. Stacked PRs are retargeted to `main` after
+  their base merges. The release PR (release-please) is the orchestrator's, as always.
+- Any W1 change after W2 started (a rule changed by review) is told to W2 and W3/W4 by the orchestrator in
+  one message, with the diff of §4.
+
+### 10.6 Checks before "done", whole feature (the orchestrator runs them after W4)
+
+1. The full flow on a fresh member: start a read, three days of progress, **forget** two, add them from the
+   pills (yesterday) and from the picker (a week back), edit a day from the log, Remove a middle day and the
+   latest day; Home's card, the book page's figures and chart, Profile's *Days* and *since* each show the
+   result (§4, consumers table).
+2. Offline: the same three writes queued, replayed in order after the reconnect, the days equal the online
+   run.
+3. 390 and 360 px, light and dark, English and German, 200 % text, Reduce Motion, axe, VoiceOver spot check
+   by the owner on a phone (the native picker, the pill group's names, the log row's name).
+4. The buddy-read D2 branch, if merged by then: its pgTAP with a backdated edit that changes `P` and one that
+   does not (§6, interaction).
+
+### 10.7 Escalation
+
+A worker asks (`orca_report` `question`) when: a rule is ambiguous; D2 or another PR changed `sync_write`,
+`update_progress` or `reading_progress_days` since this plan; a test shows that two rules disagree (the plan
+would then be wrong, not the test); the native picker behaves differently from §3 on the owner's device. The
+orchestrator answers from this file or asks the owner. No worker widens its scope (no change to
+`update_progress`, no closed-read editing, no date move) without the orchestrator's yes.
+
+### 10.8 Cost
+
+One Opus worker (W1) at `high`; one Sonnet review pass per PR at `high`; the rest on DeepSeek (GOAT) and Haiku.
+Raise W1 to `xhigh` only if its first pgTAP run shows the chain invariant failing in more than one case.
