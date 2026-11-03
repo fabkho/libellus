@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { createPinia, setActivePinia } from 'pinia'
 import { computed, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -90,10 +91,12 @@ describe('the setting', () => {
 describe('the store', () => {
   let device: ReturnType<typeof storage>
 
-  async function fresh(initial: Record<string, string> = {}) {
+  /** A store on a device; `build` is what `NUXT_PUBLIC_BUDDY_READS` made of this build (composables/useBuddyReadsFlag.ts). */
+  async function fresh(initial: Record<string, string> = {}, build: 'on' | 'off' = 'on') {
     device = storage(initial)
     vi.stubGlobal('ref', ref)
     vi.stubGlobal('computed', computed)
+    vi.stubGlobal('useBuddyReadsFlag', () => build === 'on')
     vi.stubGlobal('window', { localStorage: device })
     setActivePinia(createPinia())
     const { useBuddyReadsSwitchStore } = await import('@/stores/buddyReadsSwitch')
@@ -138,5 +141,68 @@ describe('the store', () => {
     store.reload()
     expect(store.enabled).toBe(false)
     expect(store.canTurnOff).toBe(true)
+  })
+})
+
+describe('the build flag (NUXT_PUBLIC_BUDDY_READS)', () => {
+  /** What the composable answers for one value of the build variable (`useRuntimeConfig` stood in for). */
+  async function flag(value: string | undefined) {
+    vi.stubGlobal('useRuntimeConfig', () => ({ public: { buddyReads: value } }))
+    const { useBuddyReadsFlag } = await import('@/composables/useBuddyReadsFlag')
+    return useBuddyReadsFlag()
+  }
+
+  beforeEach(() => vi.unstubAllGlobals())
+
+  it('is off in a build that never named it, and off for anything but on', async () => {
+    expect(await flag(undefined)).toBe(false)
+    expect(await flag('off')).toBe(false)
+    expect(await flag('')).toBe(false)
+    expect(await flag('yes')).toBe(false)
+    expect(await flag('on')).toBe(true)
+  })
+
+  /** A store in a build of one kind; `device` is what it had to read. */
+  async function fresh(build: 'on' | 'off', initial: Record<string, string> = {}) {
+    const device = storage(initial)
+    vi.stubGlobal('ref', ref)
+    vi.stubGlobal('computed', computed)
+    vi.stubGlobal('useBuddyReadsFlag', () => build === 'on')
+    vi.stubGlobal('window', { localStorage: device })
+    setActivePinia(createPinia())
+    const { useBuddyReadsSwitchStore } = await import('@/stores/buddyReadsSwitch')
+    return { store: useBuddyReadsSwitchStore(), device }
+  }
+
+  it('leaves the store disabled in a build without buddy reads, whatever the device remembered', async () => {
+    const { store, device } = await fresh('off', { [BUDDY_READS_KEY]: 'on' })
+    expect(store.available).toBe(false)
+    expect(store.enabled).toBe(false)
+    // Nothing can turn it on either: the feature is not in this build.
+    expect(store.set(true)).toBe(false)
+    expect(store.enabled).toBe(false)
+    // The store wrote nothing: the key is still only what the device remembered.
+    expect(device.items.get(BUDDY_READS_KEY)).toBe('on')
+    expect((await fresh('off')).device.items.has(BUDDY_READS_KEY)).toBe(false)
+    store.reload()
+    expect(store.enabled).toBe(false)
+  })
+
+  it('leaves it to the member in a build that carries them: on when the device kept it on', async () => {
+    const { store } = await fresh('on', { [BUDDY_READS_KEY]: 'on' })
+    expect(store.available).toBe(true)
+    expect(store.enabled).toBe(true)
+  })
+
+  it('draws the row and its hint in the Profile only in a build that carries buddy reads', () => {
+    const account = readFileSync(new URL('../app/components/profile/Account.vue', import.meta.url), 'utf8')
+    /** The tag that holds one testid, `v-if` and all. */
+    function tag(needle: string) {
+      const at = account.indexOf(needle)
+      expect(at).toBeGreaterThan(-1)
+      return account.slice(account.lastIndexOf('<', at), account.indexOf('>', at) + 1)
+    }
+    expect(tag('testid="profile.buddyReads"')).toContain('v-if="buddyReads.available"')
+    expect(tag('data-testid="profile.buddyReadsHint"')).toContain('v-if="buddyReads.available"')
   })
 })

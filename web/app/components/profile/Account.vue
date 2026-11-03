@@ -65,7 +65,8 @@ onMounted(() => void waitlist.load())
 // Friends tab: the feed in the tab bar, on until she turns it off (stores/friendsTab.ts).
 const friendsTab = useFriendsTabStore()
 const showFriendsTab = computed({ get: () => friendsTab.enabled, set: (on: boolean) => friendsTab.set(on) })
-// Buddy reads: the switch the whole feature sits behind, off until she turns it on (stores/buddyReadsSwitch.ts).
+// Buddy reads: the switch the whole feature sits behind, off until she turns it on, and drawn only in a build
+// that carries the feature (`NUXT_PUBLIC_BUDDY_READS`: stores/buddyReadsSwitch.ts, composables/useBuddyReadsFlag.ts).
 const buddyReads = useBuddyReadsSwitchStore()
 const showBuddyReads = computed({
   get: () => buddyReads.enabled,
@@ -247,13 +248,19 @@ const whatsNew = useWhatsNew()
       </UiRow>
       <UiSwitchRow v-model="showFriendsTab" icon="people" :label="t('profile.account.friendsTab')" testid="profile.friendsTab" />
       <UiSwitchRow
+        v-if="buddyReads.available"
         v-model="showBuddyReads"
         icon="chat"
         :label="t('profile.account.buddyReads')"
         :aria-describedby="buddyReadsHintId"
         testid="profile.buddyReads"
       />
-      <p :id="buddyReadsHintId" class="buddyReadsHint px-inset pb-sm -mt-xs text-footnote text-ink-faint" data-testid="profile.buddyReadsHint">
+      <p
+        v-if="buddyReads.available"
+        :id="buddyReadsHintId"
+        class="buddyReadsHint px-inset pb-sm -mt-xs text-footnote text-ink-faint"
+        data-testid="profile.buddyReadsHint"
+      >
         {{ t('profile.account.buddyReadsHint') }}
       </p>
       <UiRow as="button" icon="signOut" :label="t('profile.account.signOut')" data-testid="profile.signOut" @click="askSignOut" />
