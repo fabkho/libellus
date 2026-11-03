@@ -23,7 +23,7 @@ begin
                                  where x.buddy_read_id = r.id and x.joined_at is not null),
                'sections', private.buddy_parts(r.id),
                'where', private.buddy_where(m, private.buddy_parts(r.id)),
-               'unread', 0
+               'unread', private.buddy_unread(r.id, v_caller)
              ) order by (r.status = 'active') desc, r.starts_on desc, r.created_at desc, r.id)
         from public.buddy_read_members m
         join public.buddy_reads r on r.id = m.buddy_read_id
