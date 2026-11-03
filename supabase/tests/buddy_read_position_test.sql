@@ -11,7 +11,7 @@
 -- number about progress reaches another member: they see a Section.
 
 begin;
-select plan(60);
+select plan(98);
 
 create schema if not exists tests;
 
@@ -105,6 +105,11 @@ create or replace function tests.member_rows_version()
 returns text language sql security definer as $$
   select coalesce(string_agg(buddy_read_id || ':' || member_id || ':' || xmin::text, ',' order by buddy_read_id, member_id), '')
     from public.buddy_read_members
+$$;
+
+create or replace function tests.xmin_of(p_read uuid, p_member uuid)
+returns text language sql security definer as $$
+  select xmin::text from public.buddy_read_members where buddy_read_id = p_read and member_id = p_member
 $$;
 
 -- Where she is, as another member of the read sees it: the card's `where`.
@@ -469,6 +474,229 @@ select public.update_progress(:'nox_e', 120);
 select public.update_progress(:'nox_e', 150);
 reset role;
 select is(tests.member_rows_version(), :'v_before', 'a progress update by a member in no read writes no buddy row');
+
+-- ------------------------------------------------------------------------- review additions
+
+-- One entry in two rooms: a progress update moves both, and another member's row is not written.
+select * from tests.room('tw', 300) \gset tw_
+select tests.member('tw-host2@pos.test', 'Host tw2') as tw_h2 \gset
+select tests.act_as(:'tw_h2');
+select (public.add_to_library(tests.bk('Book tw', 300))).id as tw_he2 \gset
+select public.create_buddy_read((select book_id from public.library_entries where id = :'tw_he2'),
+  gen_random_uuid(), tests.secs(10), '{}', true) as tw_read2 \gset
+select (:'tw_read2'::jsonb ->> 'id') as tw_rd2, (:'tw_read2'::jsonb ->> 'link_token') as tw_token2 \gset
+select tests.act_as(:'tw_m');
+select public.join_buddy_read(:'tw_token2');
+select public.link_buddy_entry(:'tw_rd2'::uuid, :'tw_me');
+select public.start_reading(:'tw_me', :'today'::date);
+reset role;
+select tests.xmin_of(:'tw_rd', :'tw_h') as tw_host_xmin, tests.xmin_of(:'tw_rd2'::uuid, :'tw_h2') as tw_host2_xmin \gset
+select tests.act_as(:'tw_m');
+select public.update_progress(:'tw_me', 150);
+reset role;
+select is(tests.auto(:'tw_rd', :'tw_m'), 2, 'one entry in two rooms: the first room (four parts) moved');
+select is(tests.auto(:'tw_rd2'::uuid, :'tw_m'), 5, 'and the second (ten parts), by the same update');
+select is(tests.xmin_of(:'tw_rd', :'tw_h') || ',' || tests.xmin_of(:'tw_rd2'::uuid, :'tw_h2'), :'tw_host_xmin' || ',' || :'tw_host2_xmin',
+  'the hosts'' rows are untouched');
+
+-- Deleting a session and deleting an account, for members with a linked entry and several sessions.
+select * from tests.room('dm', 300) \gset dm_
+select tests.act_as(:'dm_h');
+select public.start_reading(:'dm_he', :'today'::date - 30);
+select public.finish_reading(:'dm_he', :'today'::date - 20);
+select public.read_again(:'dm_he', :'today'::date - 10);
+select public.finish_reading(:'dm_he', :'today'::date - 5);
+select public.read_again(:'dm_he', :'today'::date - 2);
+select public.update_progress(:'dm_he', 60);
+select (select id from public.reading_sessions where entry_id = :'dm_he' and outcome = 'finished'
+         order by ended_on limit 1) as dm_old \gset
+select tests.act_as(:'dm_m');
+select public.start_reading(:'dm_me', :'today'::date - 10);
+select public.finish_reading(:'dm_me', :'today'::date - 5);
+select public.read_again(:'dm_me', :'today'::date);
+select public.update_progress(:'dm_me', 150);
+reset role;
+select tests.where_for(:'dm_rd', :'dm_h', :'dm_m') as dm_where \gset
+select tests.auto(:'dm_rd', :'dm_h') as dm_host_auto \gset
+select tests.act_as(:'dm_h');
+select lives_ok(format($$ select public.delete_session(%L) $$, :'dm_old'),
+  'the host deletes one of her older sessions: no error');
+reset role;
+select is(tests.auto(:'dm_rd', :'dm_h'), :'dm_host_auto'::int, 'her Section does not move');
+select tests.act_as(:'dm_m');
+select lives_ok(format($$ select public.delete_session(%L) $$,
+  (select id from public.reading_sessions where entry_id = :'dm_me' and outcome = 'finished' limit 1)),
+  'the member deletes her older finished session: no error');
+reset role;
+select is(tests.where_for(:'dm_rd', :'dm_h', :'dm_m'), :'dm_where'::jsonb, 'and the others still see her Section');
+select tests.act_as(:'dm_h');
+select lives_ok($$ select public.delete_my_account() $$, 'the host, with a linked entry and several sessions, deletes her account');
+reset role;
+select is(tests.member_row(:'dm_rd', :'dm_m') ->> 'role', 'host', 'her heir is the host');
+select is(tests.where_for(:'dm_rd', :'dm_m', :'dm_m'), :'dm_where'::jsonb, 'and the heir''s Section is where it was');
+select * from tests.room('d2', 300) \gset d2_
+select tests.act_as(:'d2_m');
+select public.start_reading(:'d2_me', :'today'::date - 3);
+select public.update_progress(:'d2_me', 150);
+reset role;
+select tests.where_for(:'d2_rd', :'d2_h', :'d2_h') as d2_host_where \gset
+select tests.act_as(:'d2_m');
+select lives_ok($$ select public.delete_my_account() $$, 'a member with a linked entry and progress deletes her account');
+reset role;
+select is(tests.where_for(:'d2_rd', :'d2_h', :'d2_h'), :'d2_host_where'::jsonb, 'the host''s Section is unchanged');
+
+-- A finished or an archived read keeps the Section it ended with.
+select * from tests.room('fz', 300) \gset fz_
+select tests.act_as(:'fz_m');
+select public.start_reading(:'fz_me', :'today'::date);
+select public.update_progress(:'fz_me', 75);
+select tests.act_as(:'fz_h');
+select public.finish_buddy_read(:'fz_rd');
+select tests.act_as(:'fz_m');
+select lives_ok(format($$ select public.update_progress(%L, 270) $$, :'fz_me'), 'a progress update in a finished read does not error');
+reset role;
+select is(tests.auto(:'fz_rd', :'fz_m'), 1, 'and does not move her Section');
+select tests.act_as(:'fz_m');
+select public.link_buddy_entry(:'fz_rd', null);
+select public.link_buddy_entry(:'fz_rd', :'fz_me');
+reset role;
+select is(tests.auto(:'fz_rd', :'fz_m'), 3, 'linking again in a finished read recomputes: her own act');
+select * from tests.room('az', 300) \gset az_
+select tests.act_as(:'az_m');
+select public.start_reading(:'az_me', :'today'::date);
+select public.update_progress(:'az_me', 75);
+select tests.act_as(:'az_h');
+select public.archive_buddy_read(:'az_rd');
+select tests.act_as(:'az_m');
+select lives_ok(format($$ select public.update_progress(%L, 270) $$, :'az_me'), 'a progress update in an archived read does not error');
+reset role;
+select is(tests.auto(:'az_rd', :'az_m'), 1, 'and does not move her Section');
+
+-- The day she joined: a closed session that ended that day counts, the day before does not.
+select * from tests.room('jd', 300) \gset jd_
+select tests.act_as(:'jd_m');
+select public.start_reading(:'jd_me', :'today'::date - 5);
+select public.update_progress(:'jd_me', 150);
+select public.abandon_reading(:'jd_me', :'today'::date - 1);
+reset role;
+select is(tests.auto(:'jd_rd', :'jd_m'), null, 'a session that ended the day before she joined (UTC) is not counted');
+select tests.act_as(:'jd_m');
+select public.read_again(:'jd_me', :'today'::date - 1);
+select public.update_progress(:'jd_me', 150);
+select public.abandon_reading(:'jd_me', :'today'::date);
+reset role;
+select is(tests.auto(:'jd_rd', :'jd_m'), 2, 'one that ended on the day she joined counts');
+
+-- A relink to a copy with less progress: the frozen hand stays; she clears it to go back.
+select * from tests.room('rl', 300, 4, 300) \gset rl_
+select tests.act_as(:'rl_m');
+select public.start_reading(:'rl_me', :'today'::date);
+select public.update_progress(:'rl_me', 270);
+select public.link_buddy_entry(:'rl_rd', null);
+select (public.add_to_library(tests.bk('Book rl (second)', 300, 'rl'))).id as rl_second \gset
+select public.start_reading(:'rl_second', :'today'::date);
+select public.update_progress(:'rl_second', 30);
+select public.link_buddy_entry(:'rl_rd', :'rl_second');
+reset role;
+select is(tests.auto(:'rl_rd', :'rl_m'), 0, 'relinked to a copy at 10 %: her automatic Section is that copy''s');
+select is(tests.hand(:'rl_rd', :'rl_m'), 3, 'the hand frozen at the unlink stays');
+select is(tests.thru(:'rl_rd', :'rl_m'), 3, 'so she does not move back');
+select tests.act_as(:'rl_m');
+select public.set_buddy_hand(:'rl_rd', null);
+reset role;
+select is(tests.thru(:'rl_rd', :'rl_m'), 0, 'she clears her hand and her Section is the copy''s');
+
+-- Unlinking when nothing was ever set writes no hand.
+select * from tests.room('un', 300) \gset un_
+select tests.act_as(:'un_m');
+select public.link_buddy_entry(:'un_rd', null);
+reset role;
+select is(tests.hand(:'un_rd', :'un_m'), null, 'never begun, unlinked: no hand is written');
+select is(tests.where_for(:'un_rd', :'un_h', :'un_m'), '{"kind": "not_set"}'::jsonb, 'and she is shown as not set');
+select * from tests.room('u0', 300) \gset u0_
+select tests.act_as(:'u0_m');
+select public.start_reading(:'u0_me', :'today'::date);
+select public.link_buddy_entry(:'u0_rd', null);
+reset role;
+select is(tests.hand(:'u0_rd', :'u0_m'), null, 'begun with no progress (Section 1), unlinked: no hand is written either');
+select is(tests.where_for(:'u0_rd', :'u0_h', :'u0_m'), '{"kind": "not_set"}'::jsonb, 'and she is shown as not set, not as Section 1');
+
+-- import_books: an entry she has stays as it is; a new entry from an import can be linked and is right.
+select * from tests.room('im', 300) \gset im_
+select tests.act_as(:'im_m');
+select public.start_reading(:'im_me', :'today'::date);
+select public.update_progress(:'im_me', 150);
+select public.import_books(format($$ [{"key": "hardcover:9001", "book": %s, "status": "reading",
+  "started_on": "2026-09-01", "progress": {"page": 30}}] $$, tests.bk('Book im', 300))::jsonb) -> 0 ->> 'outcome' as im_outcome \gset
+reset role;
+select is(:'im_outcome'::text, 'in_library', 'an import of a Book she already has, in a room: no error, and the entry stays as it is');
+select is(tests.auto(:'im_rd', :'im_m'), 2, 'her Section is where her progress put it');
+select tests.member('im3-host@pos.test', 'Host im3') as im3_h \gset
+select tests.member('im3-member@pos.test', 'Member im3') as im3_m \gset
+select tests.act_as(:'im3_h');
+select (public.add_to_library(tests.bk('Book im3', 300))).id as im3_he \gset
+select public.create_buddy_read((select book_id from public.library_entries where id = :'im3_he'),
+  gen_random_uuid(), tests.secs(4), '{}', true) as im3_read \gset
+select tests.act_as(:'im3_m');
+select public.import_books(format($$ [{"key": "hardcover:9002", "book": %s, "status": "reading",
+  "started_on": "%s", "progress": {"page": 150}}] $$, tests.bk('Book im3', 300), (:'today'::date - 2)::text)::jsonb) -> 0 as im3_res \gset
+select (:'im3_res'::jsonb ->> 'entry_id') as im3_me, (:'im3_res'::jsonb ->> 'outcome') as im3_outcome \gset
+select public.join_buddy_read(:'im3_read'::jsonb ->> 'link_token');
+select public.link_buddy_entry((:'im3_read'::jsonb ->> 'id')::uuid, :'im3_me'::uuid);
+reset role;
+select is(:'im3_outcome'::text, 'added', 'a Book new to her is imported with its progress');
+select is(tests.auto((:'im3_read'::jsonb ->> 'id')::uuid, :'im3_m'), 2, 'linked afterwards, her Section is the right one');
+select tests.act_as(:'im3_m');
+select public.import_books(format($$ [{"key": "hardcover:9002", "book": %s, "status": "reading",
+  "started_on": "%s", "progress": {"page": 150}}] $$, tests.bk('Book im3', 300), (:'today'::date - 2)::text)::jsonb) -> 0 ->> 'outcome' as im3_again \gset
+reset role;
+select is(:'im3_again'::text, 'imported', 'the same row again: no error, it was imported already');
+select is(tests.auto((:'im3_read'::jsonb ->> 'id')::uuid, :'im3_m'), 2, 'and nothing moved');
+
+-- The lock order: her entry row is locked before the read's lock; an unchanged Section takes no lock.
+create or replace function private.buddy_lock_read(p_read uuid)
+returns void language plpgsql set search_path = pg_catalog as $$
+declare v_watch text := coalesce(current_setting('tests.watch', true), '');
+begin
+  perform set_config('tests.locks', (coalesce(nullif(current_setting('tests.locks', true), ''), '0')::int + 1)::text, true);
+  if v_watch <> '' and coalesce(current_setting('tests.saw', true), '') = '' then
+    perform set_config('tests.saw', (select xmax::text from public.library_entries where id = v_watch::uuid), true);
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('buddy_read:' || p_read::text, 0));
+end;
+$$;
+select * from tests.room('lk', 300, 4, 300) \gset lk_
+select tests.act_as(:'lk_m');
+select (public.add_to_library(tests.bk('Book lk (second)', 300, 'lk'))).id as lk_second \gset
+reset role;
+select xmax::text as lk_xmax_before from public.library_entries where id = :'lk_second' \gset
+select set_config('tests.watch', :'lk_second', true);
+select set_config('tests.saw', '', true);
+select tests.act_as(:'lk_m');
+select public.link_buddy_entry(:'lk_rd', :'lk_second');
+reset role;
+-- The row's xmax names who locks it (a transaction, a sub-transaction or a multixact): it has changed
+-- by the time the read's lock is asked for, which only a lock taken on the row first can do.
+select isnt(current_setting('tests.saw'), :'lk_xmax_before'::text,
+  'link_buddy_entry has locked her entry row (for no key update) when it takes the read''s lock');
+select set_config('tests.watch', '', true);
+select tests.act_as(:'lk_m');
+select public.start_reading(:'lk_second', :'today'::date);
+select public.update_progress(:'lk_second', 150);
+select set_config('tests.locks', '0', true);
+select public.update_progress(:'lk_second', 151);
+reset role;
+select is(current_setting('tests.locks'), '0', 'a progress update that leaves her Section where it was takes no read lock');
+select tests.act_as(:'lk_m');
+select public.update_progress(:'lk_second', 225);
+reset role;
+select ok(current_setting('tests.locks')::int >= 1, 'one that moves it takes the read''s lock');
+select is(tests.auto(:'lk_rd', :'lk_m'), 3, 'and moves it');
+select set_config('tests.locks', '0', true);
+select tests.act_as(:'nox');
+select public.update_progress(:'nox_e', 160);
+reset role;
+select is(current_setting('tests.locks'), '0', 'a member in no read takes no lock');
 
 -- ------------------------------------------------------------------------- grants
 

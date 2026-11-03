@@ -12,6 +12,10 @@ begin
     raise exception 'not_signed_in' using errcode = '42501';
   end if;
   perform private.buddy_gate(p_id, v_caller);
+  -- Her entry first (an entry that is not hers or not there is refused below, as before).
+  if p_entry is not null then
+    perform 1 from public.library_entries where id = p_entry and member_id = v_caller for no key update;
+  end if;
   perform private.buddy_lock_read(p_id);
   perform private.buddy_gate(p_id, v_caller);
   if (select status from public.buddy_reads where id = p_id) = 'archived' then

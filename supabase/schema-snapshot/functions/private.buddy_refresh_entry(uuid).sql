@@ -10,6 +10,7 @@ begin
   for v_row in
     select m.buddy_read_id, m.member_id
       from public.buddy_read_members m
+      join public.buddy_reads r on r.id = m.buddy_read_id and r.status = 'active'
      where m.entry_id = p_entry and m.joined_at is not null
      order by m.buddy_read_id, m.member_id
   loop

@@ -17,6 +17,7 @@
 -- function.
 --
 -- What this migration adds:
+--   private.buddy_auto(read, member row)    her Sections done, read-only (the first pass of the refresh)
 --   private.buddy_fraction(entry, joined)   the fraction of the book she has read (plan 5.2)
 --   private.buddy_refresh(read, member)     recompute her auto_through, under the read's lock
 --   private.buddy_refresh_entry(entry)      every joined membership linked to an entry
@@ -46,24 +47,56 @@
 -- trigger) or deleting it freeze her Section: before entry_id becomes null, hand_through becomes
 -- greatest(hand_through, read_through) and auto_through null, so nothing silently opens or closes and
 -- she can change it by hand. (A generated column is not computed yet in a before trigger: the old
--- row's read_through is used.)
+-- row's read_through is used.) Nothing is written when there is nothing to keep: with no hand value and
+-- read_through 0 (never set, or linked but not begun) the hand stays null, so `where` is `not_set` after
+-- the unlink, never `section 1` made up from a 0. (A linked member who has begun but has no progress was
+-- shown Section 1; unlinked she is shown not_set: there is no place left to show.)
 --
--- Locks. buddy_refresh takes the read's advisory lock (D1's lock 2) so it serialises with
--- set_buddy_sections and sees the new Sections. The progress triggers hold no buddy lock before it,
--- so taking 2 alone is order-safe; where one entry is linked in several reads they are taken in the
--- order of their ids. buddy_refresh never takes the member lock (1). The member trigger skips an
--- unlink (nothing to compute there). One narrow cycle remains: update_progress holds her entry
--- row (for update) and then waits for the read's lock, while link_buddy_entry holds the read's lock
--- and then waits for the key share of the same entry row; Postgres detects it and fails one of the
--- two with 40P01, retryable (a member working in two apps at the same second on the same entry).
+-- Linking again, to the same or another copy, recomputes auto_through from that copy; a frozen hand
+-- stays. The rule: hand_through is changed only by her (set_buddy_hand, null clears it) or by the host's
+-- replaced division (clamped), never by progress, so a relink to a copy with less progress does not move
+-- her back: read_through is still the greater of the two. She lowers or clears her hand to go back.
+--
+-- Which rooms follow progress. Progress-driven refreshes (a session written, an edition or own total
+-- changed) touch only ACTIVE rooms: a finished or archived room keeps the Section it ended with, a
+-- progress update by a member of one neither errors nor moves it. Her explicit acts (link, accept, the
+-- host's division) recompute whatever the room's status, except that D1 refuses them in an archived room.
+--
+-- Locks. The order, for everything that touches a linked entry (new in D2, and link_buddy_entry is
+-- replaced below to follow it):
+--   (member lock 1, where a function takes it)  ->  her ENTRY row  ->  the read's lock 2  ->  member rows.
+-- update_progress, finish_reading, abandon_reading, read_again and change_edition already lock her entry
+-- row (for update) before writing a session, so the progress triggers run with the entry locked.
+-- buddy_refresh computes her Section first, read-only, and returns when it is unchanged (the usual
+-- case for a progress update: no lock at all, nothing waits behind a room's chat traffic); only a
+-- changed Section takes the read's lock, computes again under it (it serialises with set_buddy_sections
+-- and sees the new Sections) and writes. Where one entry is linked in several reads the locks are taken
+-- in the order of their ids. buddy_refresh never takes the member lock (1).
+-- link_buddy_entry used to take the read's lock first and then needed a key share of her entry row
+-- (the foreign key check of the new entry_id), against update_progress holding that row and waiting for
+-- the read's lock: a deadlock (40P01). The replacement below locks her entry row (for no key update:
+-- it conflicts with the for update of update_progress and change_edition) before the read's lock, and
+-- is otherwise D1's function (same signature, grants kept, search_path pinned).
+-- The member trigger skips an unlink (nothing to compute there) and the refresh skips an entry that is
+-- already deleted, so deleting an entry or an account never waits for a room's lock.
+-- Residual and accepted: the first, unlocked pass can miss a Section change that another transaction
+-- (set_buddy_sections, at setup: D3 closes it once a Section has messages) has made but not committed,
+-- at the very moment of a progress write that did not move her Section by the old division. Her Section
+-- is then computed from the old progress until her next progress write, a link, or the next change of
+-- the division; her hand override is the way out.
 --
 -- Cost. A progress update by a member in no buddy read does one index probe on
 -- buddy_read_members(entry_id) (the partial index buddy_read_members_entry) and writes nothing. The
 -- reading_sessions trigger skips updates that change none of the columns it follows; the
--- library_entries one skips an update that changes neither the Book nor the override.
+-- library_entries one skips an update that changes neither the Book nor the override. One in a room
+-- whose Section does not move reads her sessions and the room's Sections, takes no lock, writes nothing.
+-- Bulk import: import_books (and so the import job, which calls it per row) only ever adds an entry for
+-- a Book she does not have, and a new entry has no membership: its sessions cost the one probe and no
+-- lock; an entry she already has "stays as it is" and gets no session. Known limit, should a bulk write
+-- of sessions of linked entries ever exist: each room whose Section moves is locked until the commit.
 --
 -- Left out: Realtime events for a changed Section (D4: its member-row trigger fires on read_through,
--- whatever wrote it), messages (D3), any change to a D1 function, to update_progress, finish_reading,
+-- whatever wrote it), messages (D3), any change to a D1 function (but the lock order of link_buddy_entry), to update_progress, finish_reading,
 -- start_reading, change_edition or to a follower-facing function. Not followed: a change to a Book's
 -- own page_count (enrichment) does not refresh the rooms of members who read it; her next progress
 -- update does.
@@ -73,7 +106,7 @@
 -- trigger has no column list (Postgres refuses transition tables on one) and the function looks for a
 -- changed to_fraction or kind itself; the sections delete trigger leaves a read with no Section at
 -- all alone (set_buddy_sections deletes and inserts in one call and the insert refreshes, and a read
--- being deleted is not refreshed).
+-- being deleted is not refreshed); public.link_buddy_entry is replaced, for its lock order only (above).
 
 -- -------------------------------------------------------------------------- the fraction
 
@@ -131,8 +164,26 @@ comment on function private.buddy_fraction(uuid, timestamptz) is
 
 -- -------------------------------------------------------------------------- the refresh
 
--- Recompute one joined member's auto_through from her linked entry. Under the read's lock; writes
--- only when the number changes.
+-- The Sections a member's progress has completed: null when she has no linked entry or no fraction.
+create or replace function private.buddy_auto(p_read uuid, p_m public.buddy_read_members)
+returns smallint
+language plpgsql
+stable
+set search_path = pg_catalog, public, private
+as $$
+declare
+  v_f numeric := private.buddy_fraction(p_m.entry_id, p_m.joined_at);
+begin
+  if v_f is null then
+    return null;
+  end if;
+  return (select count(*)::smallint from public.buddy_read_sections s
+           where s.buddy_read_id = p_read and s.kind = 'part' and s.to_fraction <= v_f + 0.005);
+end;
+$$;
+
+-- Recompute one joined member's auto_through from her linked entry. A first pass without a lock: when
+-- nothing changes, that is all. Otherwise under the read's lock, again; written only on a change.
 create or replace function private.buddy_refresh(p_read uuid, p_member uuid)
 returns void
 language plpgsql
@@ -140,39 +191,36 @@ security definer
 set search_path = pg_catalog, public, private
 as $$
 declare
-  v_m       public.buddy_read_members;
-  v_f       numeric;
-  v_through smallint;
+  v_m public.buddy_read_members;
 begin
-  perform private.buddy_lock_read(p_read);
+  for v_pass in 1 .. 2 loop
+    select * into v_m from public.buddy_read_members
+     where buddy_read_id = p_read and member_id = p_member and joined_at is not null;
+    if not found then
+      return;
+    end if;
+    -- An entry that is already deleted: the foreign key's set null is on its way and freezes her
+    -- Section first (the before trigger below); do not move it now.
+    if v_m.entry_id is not null
+       and not exists (select 1 from public.library_entries where id = v_m.entry_id) then
+      return;
+    end if;
 
-  select * into v_m from public.buddy_read_members
-   where buddy_read_id = p_read and member_id = p_member and joined_at is not null;
-  if not found then
-    return;
-  end if;
-  -- An entry that is already deleted: the foreign key's set null is on its way and freezes her
-  -- Section first (the before trigger below); do not move it now.
-  if v_m.entry_id is not null
-     and not exists (select 1 from public.library_entries where id = v_m.entry_id) then
-    return;
-  end if;
-
-  v_f := private.buddy_fraction(v_m.entry_id, v_m.joined_at);
-  if v_f is not null then
-    select count(*)::smallint into v_through
-      from public.buddy_read_sections s
-     where s.buddy_read_id = p_read and s.kind = 'part' and s.to_fraction <= v_f + 0.005;
-  end if;
-
-  if v_through is distinct from v_m.auto_through then
-    update public.buddy_read_members set auto_through = v_through
-     where buddy_read_id = p_read and member_id = p_member;
-  end if;
+    if private.buddy_auto(p_read, v_m) is not distinct from v_m.auto_through then
+      return;
+    end if;
+    if v_pass = 1 then
+      perform private.buddy_lock_read(p_read);
+    else
+      update public.buddy_read_members set auto_through = private.buddy_auto(p_read, v_m)
+       where buddy_read_id = p_read and member_id = p_member;
+    end if;
+  end loop;
 end;
 $$;
 
--- Every joined membership linked to this entry (one entry can sit in several reads: ids in order).
+-- Every joined membership linked to this entry, in an active read (one entry can sit in several reads:
+-- ids in order). A finished or archived read keeps the Section it ended with.
 create or replace function private.buddy_refresh_entry(p_entry uuid)
 returns void
 language plpgsql
@@ -185,6 +233,7 @@ begin
   for v_row in
     select m.buddy_read_id, m.member_id
       from public.buddy_read_members m
+      join public.buddy_reads r on r.id = m.buddy_read_id and r.status = 'active'
      where m.entry_id = p_entry and m.joined_at is not null
      order by m.buddy_read_id, m.member_id
   loop
@@ -297,7 +346,10 @@ security definer
 set search_path = pg_catalog, public, private
 as $$
 begin
-  new.hand_through := greatest(coalesce(old.hand_through, 0), old.read_through);
+  -- Nothing to keep (no hand value, read_through 0): the hand stays null and `where` becomes not_set.
+  if old.hand_through is not null or old.read_through > 0 then
+    new.hand_through := greatest(coalesce(old.hand_through, 0), old.read_through);
+  end if;
   new.auto_through := null;
   return new;
 end;
@@ -391,6 +443,57 @@ create trigger buddy_refresh_on_sections_delete
   referencing old table as old_rows
   for each statement execute function private.buddy_on_sections_deleted();
 
+-- -------------------------------------------------------------------------- link_buddy_entry: lock order
+
+-- D1's function with one change: her entry row is locked (for no key update, which conflicts with the
+-- for update of update_progress, finish_reading and change_edition) BEFORE the read's lock, as
+-- update_progress does, so the two cannot wait for each other (see "Locks" above). The body is
+-- otherwise D1's, word for word.
+create or replace function public.link_buddy_entry(p_id uuid, p_entry uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private
+as $$
+declare
+  v_caller uuid := auth.uid();
+  v_me     public.buddy_read_members;
+begin
+  if v_caller is null then
+    raise exception 'not_signed_in' using errcode = '42501';
+  end if;
+  perform private.buddy_gate(p_id, v_caller);
+  -- Her entry first (an entry that is not hers or not there is refused below, as before).
+  if p_entry is not null then
+    perform 1 from public.library_entries where id = p_entry and member_id = v_caller for no key update;
+  end if;
+  perform private.buddy_lock_read(p_id);
+  perform private.buddy_gate(p_id, v_caller);
+  if (select status from public.buddy_reads where id = p_id) = 'archived' then
+    raise exception 'buddy_read_archived' using errcode = 'PT409';
+  end if;
+
+  if p_entry is not null and not exists (
+    select 1
+      from public.library_entries e
+      join public.books eb on eb.id = e.book_id
+      join public.buddy_reads r on r.id = p_id
+      join public.books rb on rb.id = r.book_id
+     where e.id = p_entry and e.member_id = v_caller
+       and (eb.id = rb.id
+            or (rb.openlibrary_work_key is not null and eb.openlibrary_work_key = rb.openlibrary_work_key
+                and not eb.check_failed and not rb.check_failed))
+  ) then
+    raise exception 'buddy_entry_invalid' using errcode = '22023';
+  end if;
+
+  update public.buddy_read_members set entry_id = p_entry
+   where buddy_read_id = p_id and member_id = v_caller
+  returning * into v_me;
+  return private.buddy_me(v_me, private.buddy_parts(p_id));
+end;
+$$;
+
 -- -------------------------------------------------------------------------- what a co-member sees
 
 comment on function public.buddy_read(uuid) is
@@ -407,6 +510,7 @@ comment on function private.buddy_where(public.buddy_read_members, integer) is
 -- -------------------------------------------------------------------------- grants
 
 revoke all on function private.buddy_fraction(uuid, timestamptz) from public, anon, authenticated;
+revoke all on function private.buddy_auto(uuid, public.buddy_read_members) from public, anon, authenticated;
 revoke all on function private.buddy_refresh(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.buddy_refresh_entry(uuid) from public, anon, authenticated;
 revoke all on function private.buddy_refresh_read(uuid) from public, anon, authenticated;
