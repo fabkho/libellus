@@ -36,7 +36,7 @@ begin
   v_page_count := coalesce(v_override, v_book_count);
 
   if num_nonnulls(p_page, p_percent) <> 1
-     or (p_page is not null and not public.progress_page_fits(p_page, v_page_count))
+     or (p_page is not null and (v_page_count is null or not public.progress_page_fits(p_page, v_page_count)))
      or p_percent not between 0 and 100 then
     raise exception 'progress_invalid' using errcode = '22023';
   end if;

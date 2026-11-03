@@ -25,6 +25,10 @@
 --       own end always stays inside its range (the range widens to it), so a row that already
 --       went back (a re-read booked "-n" by the Today sheet) is not wiped by setting it again;
 --       where lo > hi (a gap whose next day went back) lo wins and a new day gets no row.
+--       A value that lands on hi (equal in the unit) takes hi's STORED value: end(next) as stored
+--       (page and percent as they are), or P as stored when P bounded it. So a percent clamped to
+--       a page day's end ends on that page, the next day goes (R4), the day after it still starts
+--       where this one ends, and the days lead P in both units afterwards.
 --       Clamping, not refusing: a write queued offline lands even when another device changed
 --       the neighbours meanwhile; the answer is the read, the client asks for the days again.
 --   R4  Re-chaining: start(next) := the day's new end (in its kind); a next row that then ends
@@ -41,7 +45,11 @@
 --       uses for every time zone); no other limit back. A row already before started_on (the
 --       start date was edited later) stays editable and removable.
 --   R8  Exactly one of page / percent (page within the page count that counts, percent 0-100),
---       else progress_invalid. The page count is not an input.
+--       else progress_invalid; a page on a read with no page count is refused too (the read counts
+--       in percent then, and a page could not be placed between its days). The page count is not
+--       an input. Known and accepted: on a very short book a percent day can stand for 0 pages
+--       (2 % of 20 pages rounds to 0), so the client reads it as a day of 0 pages and hides it
+--       (R12); the row stays and can be edited or removed in percent.
 --   R9  Idempotent: setting a day to the end it has (in the unit) writes nothing; removing a
 --       missing day writes nothing. Ordered and at most once offline through sync_write. A value
 --       outside the range (only a queued write whose neighbours changed sends one) is clamped
@@ -51,6 +59,10 @@
 --   R11 A read with a value but no rows (an import, a late first value) takes a first row from
 --       none, bounded by P, and P stays.
 --   R12 (what the log and the chart show) is the client's; nothing here.
+--
+-- A queued write names the entry, not the read: replayed after the member finished the read and
+-- began it again, it lands on the NEW open read when its day is on or after that read's start
+-- (before it: date_invalid for a new day), exactly as a queued update_progress does.
 --
 -- Errors: not_signed_in (42501); date_invalid (22023: no day, after UTC today + 1, a new row
 -- before started_on); entry_not_found (P0002: not hers); not_reading (22023: no open read);
@@ -201,6 +213,19 @@ begin
   else
     v_end_page := case when v_unit = 'page' then v_x end;
     v_end_pct  := case when v_unit = 'percent' then v_x end;
+    -- On the bound it was clamped to or set at (equal in the unit): the bound's STORED value, so
+    -- the day ends exactly where the next day ended (it goes below, and the day after it still
+    -- starts where this one ends) or exactly at the read's value (the days then lead it in both
+    -- units). Otherwise a percent could stop a page short of the page it stands for.
+    if v_has_next
+       and v_x = private.progress_value_in(v_next.end_page, v_next.end_percent, v_unit, p_page_count) then
+      v_end_page := v_next.end_page;
+      v_end_pct  := v_next.end_percent;
+    elsif not v_has_next and not v_lead and v_x = v_p
+          and num_nonnulls(p_session.progress_page, p_session.progress_percent) = 1 then
+      v_end_page := p_session.progress_page;
+      v_end_pct  := p_session.progress_percent;
+    end if;
     if v_has_cur then
       update public.reading_progress_days
          set end_page = v_end_page, end_percent = v_end_pct, updated_at = now()
@@ -304,7 +329,7 @@ begin
   v_page_count := coalesce(v_override, v_book_count);
 
   if num_nonnulls(p_page, p_percent) <> 1
-     or (p_page is not null and not public.progress_page_fits(p_page, v_page_count))
+     or (p_page is not null and (v_page_count is null or not public.progress_page_fits(p_page, v_page_count)))
      or p_percent not between 0 and 100 then
     raise exception 'progress_invalid' using errcode = '22023';
   end if;

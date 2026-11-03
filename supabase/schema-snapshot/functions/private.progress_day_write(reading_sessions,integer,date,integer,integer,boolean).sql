@@ -103,6 +103,19 @@ begin
   else
     v_end_page := case when v_unit = 'page' then v_x end;
     v_end_pct  := case when v_unit = 'percent' then v_x end;
+    -- On the bound it was clamped to or set at (equal in the unit): the bound's STORED value, so
+    -- the day ends exactly where the next day ended (it goes below, and the day after it still
+    -- starts where this one ends) or exactly at the read's value (the days then lead it in both
+    -- units). Otherwise a percent could stop a page short of the page it stands for.
+    if v_has_next
+       and v_x = private.progress_value_in(v_next.end_page, v_next.end_percent, v_unit, p_page_count) then
+      v_end_page := v_next.end_page;
+      v_end_pct  := v_next.end_percent;
+    elsif not v_has_next and not v_lead and v_x = v_p
+          and num_nonnulls(p_session.progress_page, p_session.progress_percent) = 1 then
+      v_end_page := p_session.progress_page;
+      v_end_pct  := p_session.progress_percent;
+    end if;
     if v_has_cur then
       update public.reading_progress_days
          set end_page = v_end_page, end_percent = v_end_pct, updated_at = now()

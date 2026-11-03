@@ -12,7 +12,7 @@
 -- day reads a negative amount) is checked after it. Assertions ask about the rows this test made.
 
 begin;
-select plan(167);
+select plan(208);
 
 create schema if not exists tests;
 
@@ -84,6 +84,47 @@ create or replace function tests.days_version(p_session uuid)
 returns text language sql security definer as $$
   select coalesce(string_agg(day::text || '@' || ctid::text, ',' order by day), '')
     from public.reading_progress_days where session_id = p_session
+$$;
+
+-- A day's start / end, in a unit, through the read's page count (the client's valueIn).
+create or replace function tests.start_in(p_session uuid, p_ago integer, p_unit text)
+returns integer language sql security definer as $$
+  select private.progress_value_in(d.start_page, d.start_percent, p_unit, coalesce(e.page_count_override, b.page_count))
+    from public.reading_progress_days d
+    join public.reading_sessions s on s.id = d.session_id
+    join public.library_entries e on e.id = s.entry_id
+    join public.books b on b.id = e.book_id
+   where d.session_id = p_session and d.day = tests.today() - p_ago
+$$;
+create or replace function tests.end_in(p_session uuid, p_ago integer, p_unit text)
+returns integer language sql security definer as $$
+  select private.progress_value_in(d.end_page, d.end_percent, p_unit, coalesce(e.page_count_override, b.page_count))
+    from public.reading_progress_days d
+    join public.reading_sessions s on s.id = d.session_id
+    join public.library_entries e on e.id = s.entry_id
+    join public.books b on b.id = e.book_id
+   where d.session_id = p_session and d.day = tests.today() - p_ago
+$$;
+-- Do the days lead the read's value: the latest day's end equals it in pages AND in percent.
+create or replace function tests.leads(p_session uuid)
+returns boolean language sql security definer as $$
+  with x as (
+    select s.progress_page, s.progress_percent, coalesce(e.page_count_override, b.page_count) as n,
+           (select d from public.reading_progress_days d where d.session_id = s.id order by d.day desc limit 1) as l
+      from public.reading_sessions s
+      join public.library_entries e on e.id = s.entry_id
+      join public.books b on b.id = e.book_id
+     where s.id = p_session
+  )
+  select bool_and(private.progress_value_in(progress_page, progress_percent, u, n)
+                  = private.progress_value_in((l).end_page, (l).end_percent, u, n))
+    from x, unnest(array['page', 'percent']) u
+$$;
+-- Every buddy member row's version (any write gives a row a new ctid).
+create or replace function tests.buddy_rows_version()
+returns text language sql security definer as $$
+  select coalesce(string_agg(buddy_read_id || ':' || member_id || '@' || ctid::text, ',' order by buddy_read_id, member_id), '')
+    from public.buddy_read_members
 $$;
 
 -- The chain invariant, in the read's unit (pages with a page count, else percent), conversions as
@@ -274,6 +315,13 @@ select throws_ok(
 select throws_ok(
   format($$ select public.set_progress_day(%L, %L, null, 101) $$, :'dune', :'today'::date - 3),
   '22023', 'progress_invalid', 'percent 101: refused');
+select throws_ok(
+  format($$ select public.set_progress_day(%L, %L, 10) $$, :'emma', :'today'::date - 3),
+  '22023', 'progress_invalid', 'N1: a page on a read with no page count: refused (it counts in percent)');
+select lives_ok(
+  format($$ select public.set_progress_day(%L, %L, null, 10) $$, :'emma', :'today'::date - 3),
+  'N1: a percent on it is taken');
+select tests.seed(:'emma_s', '', '');
 
 -- ------------------------------------------------------------------ days (R7)
 
@@ -426,6 +474,23 @@ select is(tests.set(:'dune', 1, 197), '11:-30 10:30-58 8:58-96 7:96-120 5:120-15
 select is(tests.set(:'dune', 0, 199), '11:-30 10:30-58 8:58-96 7:96-120 5:120-151 4:151-170 2:170-188 1:188-197 0:197-199',
   'and the latest day moves the read');
 select is(tests.p(:'dune_s'), '199', '(to 199)');
+-- The same flow in percent: a page count changed, then set_progress_day against the clamped value.
+select tests.seed(:'dune_s', :'chain', '212');
+select tests.act_as(:'ida');
+select public.update_progress(:'dune', null, null, true, 200);
+reset role;
+select is(tests.p(:'dune_s'), '200', '(percent flow: the page count of 200 clamps the read to 200; days end at 212 = 106 %)');
+select is(tests.set(:'dune', 1, null, 97), '11:-30 10:30-58 8:58-96 7:96-120 5:120-151 4:151-170 2:170-188 1:188-%97',
+  'the latest day brought under the page count in percent (97 % of 200)');
+select is(tests.p(:'dune_s'), '200', 'the read stays: the days did not lead it');
+select is(tests.set(:'dune', 0, null, 100), '11:-30 10:30-58 8:58-96 7:96-120 5:120-151 4:151-170 2:170-188 1:188-%97 0:%97-200',
+  'a day after it set to 100 %: bounded by the read (200 = 100 %), it ends on the read''s stored value');
+select ok(tests.leads(:'dune_s'), 'so the days lead the read again, in pages and in percent');
+select ok(tests.chain_ok(:'dune_s'), '(chain whole)');
+select tests.days_version(:'dune_s') as dv_pc \gset
+select is(tests.set(:'dune', 0, 200), '11:-30 10:30-58 8:58-96 7:96-120 5:120-151 4:151-170 2:170-188 1:188-%97 0:%97-200',
+  'page 200 on it then is the end it has');
+select is(tests.days_version(:'dune_s'), :'dv_pc', 'and writes nothing');
 select tests.act_as(:'ida');
 select public.update_progress(:'dune', null, null, true, 480);
 reset role;
@@ -435,7 +500,9 @@ select tests.seed(:'kin_s', '', '');
 select is(tests.set(:'kindred', 5, 40), '5:-40', 'E11: a first day from nothing');
 select is(tests.p(:'kin_s'), '40', 'E11: the days lead, so it is the read''s value');
 select ok(tests.stamp(:'kin_s') is not null, 'E11: stamped, as a value must be');
+select tests.days_version(:'kin_s') || tests.session_version(:'kin_s') as kv0 \gset
 select is(tests.set(:'kindred', 5, 40), '5:-40', 'E14: the same write again');
+select is(tests.days_version(:'kin_s') || tests.session_version(:'kin_s'), :'kv0', 'E14: writes neither the day nor the read');
 select is(tests.del(:'kindred', 5), '', 'R6: removing the only day of a never-tracked read');
 select is(tests.p(:'kin_s'), '', 'takes the read back to no value');
 select ok(tests.stamp(:'kin_s') is null, 'and its stamp with it');
@@ -462,16 +529,35 @@ select tests.seed(:'dune_s', :'chain', '212');
 select is(tests.set(:'dune', 3, null, 36), '11:-30 10:30-58 8:58-96 7:96-120 5:120-151 4:151-170 3:170-%36 2:%36-188 1:188-212',
   'E13: a percent day between page days: its start is the page before, the next day starts at its percent');
 select ok(tests.chain_ok(:'dune_s'), '(chain whole, through the conversion)');
+-- S1 (review): a percent on the next day's end (in percent) ends the day on that day's STORED end.
 select tests.seed(:'dune_s', :'chain', '212');
-select is(tests.set(:'dune', 3, null, 50), '11:-30 10:30-58 8:58-96 7:96-120 5:120-151 4:151-170 3:170-%39 1:188-212',
-  'E13: clamped in percent to the next day''s end (188 = 39 %), which then reads nothing in percent and goes (the 1-unit slack of R8)');
+select is(tests.set(:'dune', 3, null, 39), '11:-30 10:30-58 8:58-96 7:96-120 5:120-151 4:151-170 3:170-188 1:188-212',
+  'S1 repro 1: 39 % on day 3, which is the next day''s end in percent (188 = 39 %): the day ends on page 188 and the next day goes');
+select ok(tests.chain_ok(:'dune_s'), 'S1 repro 1: the chain is whole (no 1-page seam before day 1)');
+select ok(tests.end_in(:'dune_s', 3, 'page') = tests.start_in(:'dune_s', 1, 'page')
+          and tests.end_in(:'dune_s', 3, 'percent') = tests.start_in(:'dune_s', 1, 'percent'),
+  'S1 repro 1: day 3 ends where day 1 starts, in pages and in percent');
+select is(tests.p(:'dune_s'), '212', 'S1 repro 1: the read is untouched');
+select tests.days_version(:'dune_s') as dv_s1 \gset
+select is(tests.set(:'dune', 3, null, 39), '11:-30 10:30-58 8:58-96 7:96-120 5:120-151 4:151-170 3:170-188 1:188-212',
+  'S1: the same percent again');
+select is(tests.days_version(:'dune_s'), :'dv_s1', 'S1: is a no-op');
+select tests.seed(:'dune_s', :'chain', '212');
+select is(tests.set(:'dune', 3, null, 50), '11:-30 10:30-58 8:58-96 7:96-120 5:120-151 4:151-170 3:170-188 1:188-212',
+  'E13: 50 % clamped in percent to the next day''s end (188 = 39 %) ends the day on that page too');
+select ok(tests.chain_ok(:'dune_s'), '(chain whole)');
 select tests.seed(:'dune_s', :'chain', '212');
 select is(tests.set(:'dune', 3, null, 30), :'chain',
   'E13: clamped in percent to the start (170 = 35 %): no row');
 select tests.seed(:'dune_s', :'chain', '212');
-select is(tests.set(:'dune', 2, null, 44), '11:-30 10:30-58 8:58-96 7:96-120 5:120-151 4:151-170 2:170-%44',
-  'a percent equal to the next day''s end in percent (212 = 44 %) deletes the next day, compared in one unit');
-select is(tests.p(:'dune_s'), '212', 'and the read keeps its page value (equal in the unit): not rewritten as a percent');
+select is(tests.set(:'dune', 2, null, 44), '11:-30 10:30-58 8:58-96 7:96-120 5:120-151 4:151-170 2:170-212',
+  'S1 repro 2: 44 % on day 2, the latest day''s end in percent (212 = 44 %): day 2 ends on page 212 and day 1 goes');
+select is(tests.p(:'dune_s'), '212', 'S1 repro 2: the read keeps its page value');
+select ok(tests.leads(:'dune_s'), 'S1 repro 2: and the days lead it in pages and in percent');
+select ok(tests.chain_ok(:'dune_s'), '(chain whole)');
+select is(tests.set(:'dune', 2, 230), '11:-30 10:30-58 8:58-96 7:96-120 5:120-151 4:151-170 2:170-230',
+  'S1 repro 2: so the next page write on the latest day goes past 212 in one call');
+select is(tests.p(:'dune_s'), '230', '(and moves the read)');
 select tests.seed(:'dune_s', :'chain', '212');
 select is(tests.set(:'dune', 1, null, 46), '11:-30 10:30-58 8:58-96 7:96-120 5:120-151 4:151-170 2:170-188 1:188-%46',
   'the latest day set in percent');
@@ -620,6 +706,70 @@ select throws_ok(
 select throws_ok(
   $$ select public.sync_write(gen_random_uuid(), 'set_progress_days', '{}') $$,
   '22023', 'action_invalid', 'an unknown action is still refused');
+-- Malformed queued payloads and stale replays. The outbox (web/app/data/outbox.ts, createSender)
+-- drops a refusal and goes on: a code raised by name (mapLibraryError's list) whatever the HTTP
+-- status, and anything else answered with a 4xx (PostgREST answers class 22 with 400). None of
+-- these is kept as sent: the claim rolls back with the error, so nothing is recorded for its id.
+select gen_random_uuid() as rq_bad \gset
+select throws_ok(
+  format($$ select public.sync_write(%L, 'set_progress_day', '{}') $$, :'rq_bad'),
+  '22023', 'date_invalid', 'an empty payload: refused by name (no day comes first)');
+reset role;
+select is((select count(*)::int from public.synced_writes where request_id = :'rq_bad'), 0,
+  'and nothing is recorded for its request id');
+select tests.act_as(:'ida');
+select throws_ok(
+  format($$ select public.sync_write(gen_random_uuid(), 'delete_progress_day', '{}') $$),
+  '22023', 'date_invalid', 'an empty remove: refused by name');
+select throws_ok(
+  format($$ select public.sync_write(gen_random_uuid(), 'set_progress_day', %L::jsonb) $$,
+         jsonb_build_object('p_entry_id', :'dune', 'p_day', :'today'::date - 3, 'p_page', 'many')),
+  '22P02', null, 'a page that is no number: invalid_text_representation (a 400, refused)');
+select throws_ok(
+  format($$ select public.sync_write(gen_random_uuid(), 'set_progress_day', %L::jsonb) $$,
+         jsonb_build_object('p_entry_id', :'dune', 'p_day', :'today'::date - 3, 'p_page', 99999999999)),
+  '22003', null, 'a page past an integer: numeric_value_out_of_range (a 400, refused)');
+select throws_ok(
+  format($$ select public.sync_write(gen_random_uuid(), 'set_progress_day', %L::jsonb) $$,
+         jsonb_build_object('p_entry_id', :'dune', 'p_day', :'today'::date - 3, 'p_page', 178, 'p_percent', 40)),
+  '22023', 'progress_invalid', 'both a page and a percent: refused by name');
+select throws_ok(
+  format($$ select public.sync_write(gen_random_uuid(), 'set_progress_day', %L::jsonb) $$,
+         jsonb_build_object('p_entry_id', :'dune', 'p_day', :'today'::date - 3)),
+  '22023', 'progress_invalid', 'neither: refused by name');
+select throws_ok(
+  format($$ select public.sync_write(gen_random_uuid(), 'set_progress_day', %L::jsonb) $$,
+         jsonb_build_object('p_entry_id', :'dune', 'p_day', 'someday', 'p_page', 178)),
+  '22007', null, 'a day that is no day: invalid_datetime_format (date_invalid to the client)');
+select throws_ok(
+  format($$ select public.sync_write(gen_random_uuid(), 'delete_progress_day', %L::jsonb) $$,
+         jsonb_build_object('p_entry_id', :'mm', 'p_day', :'today'::date - 2)),
+  '22023', 'not_reading', 'a queued remove replayed after the read was finished: not_reading');
+select (public.add_to_library('{"title":"Gone","source":"apple","apple_id":"990000478007","page_count":300}',
+  'reading', :'today'::date - 5)).id as gone \gset
+select public.remove_from_library(:'gone');
+select throws_ok(
+  format($$ select public.sync_write(gen_random_uuid(), 'set_progress_day', %L::jsonb) $$,
+         jsonb_build_object('p_entry_id', :'gone', 'p_day', :'today'::date - 2, 'p_page', 60)),
+  'P0002', 'entry_not_found', 'a queued write replayed after the entry left her Library: entry_not_found');
+select throws_ok(
+  format($$ select public.sync_write(gen_random_uuid(), 'delete_progress_day', %L::jsonb) $$,
+         jsonb_build_object('p_entry_id', :'gone', 'p_day', :'today'::date - 2)),
+  'P0002', 'entry_not_found', 'a queued remove too');
+reset role;
+select tests.days(:'dune_s') as dune_days \gset
+select tests.act_as(:'max');
+select throws_ok(
+  format($$ select public.sync_write(gen_random_uuid(), 'set_progress_day', %L::jsonb) $$,
+         jsonb_build_object('p_entry_id', :'dune', 'p_day', :'today'::date - 3, 'p_page', 178)),
+  'P0002', 'entry_not_found', 'another member queueing a write to her entry: entry_not_found');
+select throws_ok(
+  format($$ select public.sync_write(gen_random_uuid(), 'delete_progress_day', %L::jsonb) $$,
+         jsonb_build_object('p_entry_id', :'dune', 'p_day', :'today'::date - 2)),
+  'P0002', 'entry_not_found', 'or a remove');
+reset role;
+select is(tests.days(:'dune_s'), :'dune_days', 'her days are unchanged');
+select tests.act_as(:'ida');
 select lives_ok(
   format($$ select public.sync_write(gen_random_uuid(), 'update_progress', %L::jsonb) $$,
          jsonb_build_object('p_entry_id', :'emma', 'p_percent', 40, 'p_day', :'today'::date - 5)),
@@ -693,6 +843,24 @@ select tests.act_as(:'ida');
 select tests.set(:'ie', 2, 305);
 reset role;
 select is(tests.auto(:'rd', :'ida'), 3, 'a new latest day at 305 moves it on to Section 3');
+
+-- A member in no room: a change of her read's value writes no buddy row and raises nothing.
+select tests.member('zoe@dayedit.test', 'Zoe') as zoe \gset
+select tests.act_as(:'zoe');
+select (public.add_to_library('{"title":"Room Book","source":"apple","apple_id":"990000478010","page_count":400}',
+  'reading', :'today'::date - 6)).id as ze \gset
+reset role;
+select tests.open_session(:'ze') as ze_s \gset
+select tests.seed(:'ze_s', '5:-80 3:80-150', '150');
+select tests.buddy_rows_version() as bv0 \gset
+select ok(:'bv0' <> '', '(there are buddy member rows to watch: the room above)');
+select tests.act_as(:'zoe');
+select lives_ok(format($$ select tests.set(%L, 3, 250) $$, :'ze'),
+  'a member in no room moves her latest day (and so her read)');
+select lives_ok(format($$ select tests.del(%L, 3) $$, :'ze'), 'and removes it');
+reset role;
+select is(tests.p(:'ze_s'), '80', '(her read moved: 150, 250, then back to 80)');
+select is(tests.buddy_rows_version(), :'bv0', 'no buddy member row was written');
 
 select * from finish();
 rollback;
