@@ -1,5 +1,6 @@
 grant execute on function private.cover_allowed(text) to service_role;
 grant execute on function private.cover_artwork(text) to service_role;
+grant execute on function private.member_topic(uuid) to authenticated;
 grant execute on function public."like"(uuid) to authenticated;
 grant execute on function public."like"(uuid) to service_role;
 grant execute on function public.abandon_reading(uuid,date,text) to authenticated;
