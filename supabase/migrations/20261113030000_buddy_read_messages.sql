@@ -22,7 +22,7 @@
 --            only where said: buddy_read (each Section's count and unread, and the room's as
 --            `room: {count, unread}`), my_buddy_reads (unread, over the room and only the Sections she may
 --            open, so a number never tells of a veiled Section), leave_buddy_read (p_delete_messages
---            deletes her messages in that read), set_buddy_sections (replacing the division is refused
+--            deletes her messages and her reactions in that read), set_buddy_sections (replacing the division is refused
 --            as buddy_sections_locked once a Section thread has a message, a tombstone included, because
 --            it deletes the Sections and their messages with them; a rename stays free).
 --            public.feedback: the kind check gains 'report' (a step of its own below; the feedback
@@ -33,8 +33,12 @@
 -- the veil is drawn by the app (Q8, plan part 5.4), not by the database. Nothing here holds or answers a
 -- page, a percent or a fraction. A block between two members removes nothing: each stops seeing the
 -- other's messages and reactions, and cannot answer, react to or report them (both ways; her own she
--- always sees). A member who left keeps her messages, under her name (private.member_name works for a
--- name whose member left), unless she left with p_delete_messages. Her account deleted: her messages,
+-- always sees); the host deletes any message of her room, blocked or not, and a reply_to that points
+-- at a hidden message reads null. A member who left keeps her messages and reactions, under her name
+-- (private.member_name works for a member who left), unless she left with p_delete_messages: the choice
+-- to delete is made when leaving; after that only account deletion removes them. A tombstone reads as
+-- kind 'text' with deleted_at set (a deleted GIF does not say it was one). A report is once per reporter
+-- and message. Her account deleted: her messages,
 -- her reactions and her cursors go with it (the foreign keys cascade); a reply to one of her messages
 -- keeps its text and loses the link (reply_to set null).
 --
@@ -74,13 +78,18 @@
 -- left), checks the gate, then takes 2 and checks the gate again: a poster who passed the first check
 -- while the host's removal (or her own leave) held 2 is refused after it, not written after she was
 -- gone. react_to_buddy_message, delete_buddy_message, mark_buddy_read and report_buddy_message take 2
--- only, then their row; the reads (buddy_read_messages, buddy_read, my_buddy_reads) take none.
+-- only, then their row (mark_buddy_read none when the cursor would not move); the reads
+-- (buddy_read_messages, buddy_read, my_buddy_reads) take none.
+--
+-- Limits: posts 30 a minute and 600 a day, reactions 60 a minute, reports by the feedback limiter.
+-- Deletes and cursors have none: a delete ends at most one message and a tombstone stays one; a cursor
+-- call writes at most her one row, sends nothing, and answers before the lock when it would not move.
 --
 -- Changes to the plan's part 4 (the PR says why): the six RPCs keep the plan's signatures; refusals the
 -- plan did not name are added in its style (above); a member out of a read (left, removed, declined, her
 -- account gone) loses her Section cursors by trigger, not only when she leaves; leave_buddy_read with
--- p_delete_messages deletes her messages and leaves her reactions; the members' feedback insert policy
--- refuses kind 'report'.
+-- p_delete_messages deletes her reactions in the read too; the members' feedback insert policy refuses
+-- kind 'report'; a report is idempotent per reporter and message.
 
 -- -------------------------------------------------------------------------- tables
 
@@ -122,6 +131,7 @@ create table public.buddy_messages (
 );
 
 create index buddy_messages_read on public.buddy_messages (buddy_read_id, created_at desc, id desc);
+create index buddy_messages_room on public.buddy_messages (buddy_read_id, created_at desc) where section_id is null;
 create index buddy_messages_section on public.buddy_messages (section_id, created_at desc) where section_id is not null;
 create index buddy_messages_author on public.buddy_messages (author_id, created_at desc);
 create index buddy_messages_reply_to on public.buddy_messages (reply_to) where reply_to is not null;
@@ -232,7 +242,9 @@ as $$
 $$;
 
 -- A message as the API answers it. A tombstone carries no body and no media (and no reactions: they
--- were deleted with it).
+-- were deleted with it), and its kind reads 'text': deleted_at is what marks it, and a deleted GIF
+-- does not say it was a GIF. reply_to is null when the message answered is one she is not shown
+-- (its author is blocked with her either way), so a hidden message's id never reaches her.
 create or replace function private.buddy_message_json(p_caller uuid, p_message public.buddy_messages)
 returns jsonb
 language sql
@@ -244,12 +256,13 @@ as $$
     'section_id', p_message.section_id,
     'author', jsonb_build_object('id', p_message.author_id, 'name', private.member_name(p_message.author_id)),
     'client_id', p_message.client_id,
-    'kind', p_message.kind,
+    'kind', case when p_message.deleted_at is null then p_message.kind else 'text' end,
     'body', case when p_message.deleted_at is null then p_message.body end,
     'media_url', case when p_message.deleted_at is null then p_message.media_url end,
     'media_width', case when p_message.deleted_at is null then p_message.media_width end,
     'media_height', case when p_message.deleted_at is null then p_message.media_height end,
-    'reply_to', p_message.reply_to,
+    'reply_to', (select r.id from public.buddy_messages r
+                  where r.id = p_message.reply_to and not private.buddy_hidden(p_caller, r.author_id)),
     'spoiler', p_message.spoiler,
     'created_at', p_message.created_at,
     'deleted_at', p_message.deleted_at,
@@ -260,14 +273,17 @@ $$;
 
 -- The message a reaction, a delete or a report is about, for a joined member of its read who may see
 -- it, after the read's lock (lock 2) and with the row locked (3): not_found for no such message, a
--- member of another read, or an author blocked with her either way.
-create or replace function private.buddy_message_for(p_message uuid, p_caller uuid)
+-- member of another read, or an author blocked with her either way. With p_as_host the block does
+-- not hide it from the read's host (her row checked after the lock): a host moderating her room
+-- deletes what a member wrote there, also from someone she blocked.
+create or replace function private.buddy_message_for(p_message uuid, p_caller uuid, p_as_host boolean default false)
 returns public.buddy_messages
 language plpgsql
 set search_path = pg_catalog, public, private
 as $$
 declare
   v_read uuid;
+  v_me   public.buddy_read_members;
   v_row  public.buddy_messages;
 begin
   select buddy_read_id into v_read from public.buddy_messages where id = p_message;
@@ -276,9 +292,10 @@ begin
   end if;
   perform private.buddy_gate(v_read, p_caller);
   perform private.buddy_lock_read(v_read);
-  perform private.buddy_gate(v_read, p_caller);
+  v_me := private.buddy_gate(v_read, p_caller);
   select * into v_row from public.buddy_messages where id = p_message for update;
-  if not found or private.buddy_hidden(p_caller, v_row.author_id) then
+  if not found
+     or (private.buddy_hidden(p_caller, v_row.author_id) and not (p_as_host and v_me.role = 'host')) then
     raise exception 'not_found' using errcode = 'PT404';
   end if;
   return v_row;
@@ -321,21 +338,43 @@ $$;
 
 -- Her unread messages in a read, over the threads she may open: the room, every part up to her Section
 -- (position <= read_through) and the end Section once every part is read. A veiled Section's activity
--- never shows in this number.
+-- never shows in this number. Cheap: it reads only the open threads and, in each, only what is newer
+-- than her cursor there (the index ranges buddy_messages_read and buddy_messages_section), never the
+-- read's whole history; my_buddy_reads calls it once per read.
 create or replace function private.buddy_unread(p_read uuid, p_caller uuid)
 returns integer
 language sql
 stable
 set search_path = pg_catalog, public, private
 as $$
-  select coalesce(sum(c.unread), 0)::integer
-    from private.buddy_counts(p_read, p_caller) c
-    cross join (select m.read_through from public.buddy_read_members m
-                 where m.buddy_read_id = p_read and m.member_id = p_caller) me
-    left join public.buddy_read_sections s on s.id = c.section_id
-   where c.section_id is null
-      or (s.kind = 'part' and s.position <= me.read_through)
-      or (s.kind = 'end' and me.read_through >= private.buddy_parts(p_read))
+  with me as (
+    select m.joined_at, m.last_read_at, m.read_through, private.buddy_parts(p_read) as parts
+      from public.buddy_read_members m
+     where m.buddy_read_id = p_read and m.member_id = p_caller and m.joined_at is not null
+  ), hidden as (
+    select coalesce(array_agg(h.id), '{}') as ids
+      from (select b.blocked_id as id from public.blocks b where b.blocker_id = p_caller
+            union
+            select b.blocker_id from public.blocks b where b.blocked_id = p_caller) h
+  ), open as (
+    select s.id, coalesce(c.last_read_at, me.joined_at) as since
+      from public.buddy_read_sections s
+      cross join me
+      left join public.buddy_section_cursors c on c.section_id = s.id and c.member_id = p_caller
+     where s.buddy_read_id = p_read
+       and ((s.kind = 'part' and s.position <= me.read_through)
+            or (s.kind = 'end' and me.read_through >= me.parts))
+  )
+  select ((select count(*)
+             from public.buddy_messages x, me, hidden
+            where x.buddy_read_id = p_read and x.section_id is null
+              and x.created_at > coalesce(me.last_read_at, me.joined_at)
+              and x.deleted_at is null and x.author_id <> p_caller and not (x.author_id = any (hidden.ids)))
+        + (select count(*)
+             from open o
+             join public.buddy_messages x on x.section_id = o.id and x.created_at > o.since
+             cross join hidden
+            where x.deleted_at is null and x.author_id <> p_caller and not (x.author_id = any (hidden.ids))))::integer
 $$;
 
 -- ------------------------------------------------------------- the trigger: a member out, her cursors
@@ -572,9 +611,11 @@ begin
 end;
 $$;
 
--- Delete a message: the author hers, the host any. It stays as a tombstone (its place in the thread,
--- the answers to it), without its words, its GIF or its reactions. Also in an archived read. Again:
--- nothing changes.
+-- Delete a message: the author hers, the host any (also one by a member she blocked, or who blocked
+-- her: she moderates her room). It stays as a tombstone (its place in the thread, the answers to it),
+-- without its words, its GIF or its reactions. Also in an archived read. Again: nothing changes. No
+-- rate limit: each call ends one message at most (the author's own, or, for the host, one of her
+-- room's), and a tombstone stays one.
 create or replace function public.delete_buddy_message(p_message uuid)
 returns void
 language plpgsql
@@ -588,7 +629,7 @@ begin
   if v_caller is null then
     raise exception 'not_signed_in' using errcode = '42501';
   end if;
-  v_msg := private.buddy_message_for(p_message, v_caller);
+  v_msg := private.buddy_message_for(p_message, v_caller, p_as_host => true);
   if v_msg.author_id <> v_caller and (private.buddy_gate(v_msg.buddy_read_id, v_caller)).role <> 'host' then
     raise exception 'message_not_yours' using errcode = 'PT403';
   end if;
@@ -604,7 +645,10 @@ end;
 $$;
 
 -- She has read a thread (p_section null = the room) up to p_through (null: up to now). A cursor only
--- moves forward, and never past the read's newest message or the clock, whichever is later.
+-- moves forward, and never past the read's newest message or the clock, whichever is later. No rate
+-- limit: a call writes at most her own one cursor row and sends nothing, and a call that would not
+-- move it (the screen marks as it scrolls) answers before the read's lock, so it never queues behind
+-- or ahead of the read's writes.
 create or replace function public.mark_buddy_read(p_read uuid, p_section uuid, p_through timestamptz)
 returns void
 language plpgsql
@@ -619,6 +663,18 @@ begin
     raise exception 'not_signed_in' using errcode = '42501';
   end if;
   perform private.buddy_gate(p_read, v_caller);
+  if p_section is not null
+     and not exists (select 1 from public.buddy_read_sections where id = p_section and buddy_read_id = p_read) then
+    raise exception 'buddy_section_invalid' using errcode = '22023';
+  end if;
+  -- Nothing to move: answer before the lock.
+  if p_through is not null and p_through <= (
+       case when p_section is null
+            then (select last_read_at from public.buddy_read_members where buddy_read_id = p_read and member_id = v_caller)
+            else (select last_read_at from public.buddy_section_cursors where section_id = p_section and member_id = v_caller)
+       end) then
+    return;
+  end if;
   perform private.buddy_lock_read(p_read);
   perform private.buddy_gate(p_read, v_caller);
   if p_section is not null
@@ -645,8 +701,11 @@ $$;
 -- Report someone else's message to the instance owner: one feedback row as her, kind 'report', the
 -- body her reason and note, the context {buddy_read, section, message, author, excerpt} with the
 -- message's first 300 characters. Reasons: harassment, spam, inappropriate, other; a note of at most
--- 1000 characters. Not her own message, not a tombstone, members only. The feedback limiter (5 an hour,
--- 20 a day) refuses the rest as rate_limited.
+-- 1000 characters. Not her own message, not a tombstone, members only. Once per reporter and message:
+-- reporting the same message again changes nothing (her first report stands), so one message cannot
+-- fill the owner's inbox. The feedback limiter (5 an hour, 20 a day) refuses the rest as rate_limited.
+-- A report is her feedback row: it goes with her account (feedback cascades from auth.users), and it
+-- stays when the author's account or the message goes (it holds ids and the excerpt).
 create or replace function public.report_buddy_message(p_message uuid, p_reason text, p_note text default null)
 returns void
 language plpgsql
@@ -673,6 +732,11 @@ begin
   end if;
   if v_msg.deleted_at is not null then
     raise exception 'message_unavailable' using errcode = 'PT409';
+  end if;
+  -- Reported before: her first report stands. Under the read's lock, so two at once make one row.
+  if exists (select 1 from public.feedback f
+              where f.member_id = v_caller and f.kind = 'report' and f.context ->> 'message' = v_msg.id::text) then
+    return;
   end if;
 
   insert into public.feedback (member_id, kind, body, context)
@@ -835,9 +899,12 @@ begin
 end;
 $$;
 
--- As 20261113010000_buddy_reads.sql left it, and p_delete_messages deletes her messages in this read
--- (their reactions go with them, answers to them keep their text and lose the link). Without it her
--- messages stay, under her name. Her Section cursors go either way (private.buddy_cursors_gone).
+-- As 20261113010000_buddy_reads.sql left it, and p_delete_messages deletes what she wrote in this
+-- read: her messages (their reactions go with them, answers to them keep their text and lose the
+-- link) and her reactions on the others' messages. Without it her messages and reactions stay, under
+-- her name. The choice to delete is made when leaving; after that only account deletion removes them
+-- (a member who left can no longer call anything of the read). Her Section cursors go either way
+-- (private.buddy_cursors_gone).
 -- She leaves: her member row goes, and with it her Section from every member's view at once. The host
 -- role passes to the earliest-joined member; the last one out deletes the read (the trigger).
 create or replace function public.leave_buddy_read(p_id uuid, p_delete_messages boolean default false)
@@ -856,6 +923,9 @@ begin
   perform private.buddy_lock_read(p_id);
   perform private.buddy_gate(p_id, v_caller);
   if coalesce(p_delete_messages, false) then
+    delete from public.buddy_reactions r
+     using public.buddy_messages m
+     where m.id = r.message_id and m.buddy_read_id = p_id and r.member_id = v_caller;
     delete from public.buddy_messages where buddy_read_id = p_id and author_id = v_caller;
   end if;
   delete from public.buddy_read_members where buddy_read_id = p_id and member_id = v_caller;
@@ -944,7 +1014,7 @@ revoke all on function private.buddy_rate_window(uuid, text, integer, interval) 
 revoke all on function private.buddy_hidden(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.buddy_reactions_json(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.buddy_message_json(uuid, public.buddy_messages) from public, anon, authenticated;
-revoke all on function private.buddy_message_for(uuid, uuid) from public, anon, authenticated;
+revoke all on function private.buddy_message_for(uuid, uuid, boolean) from public, anon, authenticated;
 revoke all on function private.buddy_counts(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.buddy_unread(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.buddy_cursors_gone() from public, anon, authenticated;

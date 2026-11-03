@@ -41,6 +41,7 @@ CREATE INDEX buddy_messages_author ON public.buddy_messages USING btree (author_
 CREATE INDEX buddy_messages_deleted_by ON public.buddy_messages USING btree (deleted_by) WHERE (deleted_by IS NOT NULL);
 CREATE INDEX buddy_messages_read ON public.buddy_messages USING btree (buddy_read_id, created_at DESC, id DESC);
 CREATE INDEX buddy_messages_reply_to ON public.buddy_messages USING btree (reply_to) WHERE (reply_to IS NOT NULL);
+CREATE INDEX buddy_messages_room ON public.buddy_messages USING btree (buddy_read_id, created_at DESC) WHERE (section_id IS NULL);
 CREATE INDEX buddy_messages_section ON public.buddy_messages USING btree (section_id, created_at DESC) WHERE (section_id IS NOT NULL);
 
 -- row level security

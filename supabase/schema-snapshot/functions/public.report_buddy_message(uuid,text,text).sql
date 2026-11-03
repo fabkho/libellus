@@ -25,6 +25,11 @@ begin
   if v_msg.deleted_at is not null then
     raise exception 'message_unavailable' using errcode = 'PT409';
   end if;
+  -- Reported before: her first report stands. Under the read's lock, so two at once make one row.
+  if exists (select 1 from public.feedback f
+              where f.member_id = v_caller and f.kind = 'report' and f.context ->> 'message' = v_msg.id::text) then
+    return;
+  end if;
 
   insert into public.feedback (member_id, kind, body, context)
   values (v_caller, 'report',

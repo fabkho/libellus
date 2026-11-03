@@ -11,7 +11,7 @@ begin
   if v_caller is null then
     raise exception 'not_signed_in' using errcode = '42501';
   end if;
-  v_msg := private.buddy_message_for(p_message, v_caller);
+  v_msg := private.buddy_message_for(p_message, v_caller, p_as_host => true);
   if v_msg.author_id <> v_caller and (private.buddy_gate(v_msg.buddy_read_id, v_caller)).role <> 'host' then
     raise exception 'message_not_yours' using errcode = 'PT403';
   end if;

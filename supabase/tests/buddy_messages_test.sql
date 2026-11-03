@@ -14,7 +14,7 @@
 -- Assertions ask about rows this test made, never counts of a table.
 
 begin;
-select plan(171);
+select plan(206);
 
 create schema if not exists tests;
 
@@ -98,6 +98,12 @@ $$;
 create or replace function tests.in_page(p_page jsonb, p_message uuid)
 returns jsonb language sql as $$
   select m from jsonb_array_elements(p_page) m where m ->> 'id' = p_message::text
+$$;
+
+-- The card of a member in buddy_read()'s list.
+create or replace function tests.card(p_read jsonb, p_member uuid)
+returns jsonb language sql as $$
+  select c from jsonb_array_elements(p_read -> 'members') c where c ->> 'id' = p_member::text
 $$;
 
 -- A Section of buddy_read()'s list, by position.
@@ -227,6 +233,28 @@ create or replace function tests.live_in_room(p_read uuid)
 returns integer language sql security definer as $$
   select count(*)::integer from public.buddy_messages where buddy_read_id = p_read and section_id is null and deleted_at is null
 $$;
+create or replace function tests.fill_old_calls(p_member uuid, p_kind text, p_n integer, p_age interval)
+returns void language sql security definer as $$
+  insert into private.buddy_calls (member_id, kind, at) select p_member, p_kind, now() - p_age from generate_series(1, p_n)
+$$;
+create or replace function tests.old_calls(p_member uuid, p_kind text, p_age interval)
+returns integer language sql security definer as $$
+  select count(*)::integer from private.buddy_calls where member_id = p_member and kind = p_kind and at <= now() - p_age
+$$;
+create or replace function tests.removed(p_read uuid, p_member uuid)
+returns boolean language sql security definer as $$
+  select exists (select 1 from private.buddy_read_removed where buddy_read_id = p_read and member_id = p_member)
+$$;
+create or replace function tests.live_by(p_read uuid, p_author uuid, p_room boolean)
+returns integer language sql security definer as $$
+  select count(*)::integer from public.buddy_messages
+   where buddy_read_id = p_read and author_id = p_author and deleted_at is null and (section_id is null) = p_room
+$$;
+create or replace function tests.filler_of(p_read uuid, p_author uuid)
+returns uuid language sql security definer as $$
+  select id from public.buddy_messages where buddy_read_id = p_read and author_id = p_author and body like 'filler %'
+   order by created_at limit 1
+$$;
 create or replace function tests.read_gone(p_read uuid)
 returns boolean language sql security definer as $$
   select not exists (select 1 from public.buddy_reads where id = p_read)
@@ -305,9 +333,20 @@ select is(
   0, 'the six functions: members only, security definer, search path pinned');
 select is(
   (select count(*)::int from unnest(array[
+      'public.buddy_read(uuid)', 'public.my_buddy_reads()', 'public.leave_buddy_read(uuid, boolean)',
+      'public.set_buddy_sections(uuid, jsonb, text, integer)'
+    ]) f where has_function_privilege('anon', f::regprocedure, 'execute')
+            or has_function_privilege('public', f::regprocedure, 'execute')
+            or not has_function_privilege('authenticated', f::regprocedure, 'execute')
+            or not (select prosecdef from pg_proc where oid = f::regprocedure)
+            or (select proconfig from pg_proc where oid = f::regprocedure)
+                   is distinct from array['search_path=pg_catalog, public, private']),
+  0, 'the four D1 functions D3 replaces keep their grants, security definer and search path');
+select is(
+  (select count(*)::int from unnest(array[
       'private.buddy_rate_window(uuid, text, integer, interval)', 'private.buddy_hidden(uuid, uuid)',
       'private.buddy_reactions_json(uuid, uuid)', 'private.buddy_message_json(uuid, public.buddy_messages)',
-      'private.buddy_message_for(uuid, uuid)', 'private.buddy_counts(uuid, uuid)', 'private.buddy_unread(uuid, uuid)',
+      'private.buddy_message_for(uuid, uuid, boolean)', 'private.buddy_counts(uuid, uuid)', 'private.buddy_unread(uuid, uuid)',
       'private.buddy_cursors_gone()'
     ]) f, unnest(array['public', 'anon', 'authenticated']) r
     where has_function_privilege(r, f::regprocedure, 'execute')),
@@ -606,6 +645,13 @@ select throws_ok(format($$ select public.react_to_buddy_message('%s', '❤️') 
 select throws_ok(format($$ select public.react_to_buddy_message('%s', '❤️') $$, gen_random_uuid()),
   'PT404', 'not_found', 'nor on a message that is not there');
 
+reset role;
+select tests.fill_old_calls(:'ivo', 'react', 3, interval '2 minutes');
+select tests.act_as(:'ivo');
+select public.react_to_buddy_message(:'m2', '❤️');
+select is(tests.old_calls(:'ivo', 'react', interval '2 minutes'), 0, 'calls older than the window are forgotten by the next one');
+select public.react_to_buddy_message(:'m2', null);
+
 select tests.clear_calls(:'kim');
 select tests.fill_calls(:'kim', 'react', 59);
 select tests.act_as(:'kim');
@@ -616,7 +662,8 @@ select throws_ok(format($$ select public.react_to_buddy_message('%s', '📚') $$
 -- ------------------------------------------------------------------------- blocks (14, 19)
 
 select tests.act_as(:'jo');
-select tests.say(:'r_a', null, 'Jo speaking') as m_jo \gset
+select gen_random_uuid() as c_jo \gset
+select public.post_buddy_message(:'r_a', null, :'c_jo', 'text', 'Jo speaking') ->> 'id' as m_jo \gset
 select tests.act_as(:'pat');
 select tests.say(:'r_a', null, 'Pat speaking') as m_pat \gset
 select public.react_to_buddy_message(:'m2', '😮');
@@ -648,6 +695,19 @@ select throws_ok(format($$ select tests.say('%s', null, 'answering Jo', '%s') $$
   '22023', 'message_reply_unavailable', 'no answer across a block');
 select throws_ok(format($$ select public.report_buddy_message('%s', 'spam') $$, :'m_jo'),
   'PT404', 'not_found', 'no report across a block');
+select is(tests.outcome(format($$ select tests.say('%s', null, 'x', '%s') $$, :'r_a', :'m_jo')),
+          tests.outcome(format($$ select tests.say('%s', null, 'x', '%s') $$, :'r_a', gen_random_uuid())),
+  'an answer to a hidden message is refused exactly as one to a message that is not there');
+select ok(tests.card(public.buddy_read(:'r_a'), :'jo') -> 'where' = 'null'::jsonb, 'D1''s rule still holds: her `where` is null to him');
+select tests.act_as(:'jo');
+select ok(tests.card(public.buddy_read(:'r_a'), :'pat') -> 'where' = 'null'::jsonb, 'and his to her');
+select tests.act_as(:'ivo');
+select tests.say(:'r_a', null, 'Answering Jo', :'m_jo') as m_ivo_jo \gset
+select tests.act_as(:'pat');
+select is(tests.in_page(public.buddy_read_messages(:'r_a'), :'m_ivo_jo') -> 'reply_to', 'null'::jsonb,
+  'an answer to a hidden message shows her no id of it');
+select tests.act_as(:'hana');
+select is(tests.in_page(public.buddy_read_messages(:'r_a'), :'m_ivo_jo') ->> 'reply_to', :'m_jo', 'others see what it answers');
 select tests.act_as(:'jo');
 select throws_ok(format($$ select public.delete_buddy_message('%s') $$, :'m_pat'),
   'PT404', 'not_found', 'and the other way round, the same');
@@ -663,9 +723,9 @@ select ok(tests.msg(:'g1') ->> 'body' = '' and tests.msg(:'g1') -> 'media_url' =
           and tests.msg(:'g1') -> 'deleted_at' <> 'null'::jsonb and tests.reactions_on(:'g1') = 0,
   'a tombstone: no body, no address, no size, no reactions, deleted by her (22)');
 select tests.in_page(public.buddy_read_messages(:'r_a'), :'g1') as v \gset
-select ok(:'v'::jsonb -> 'body' = 'null'::jsonb and :'v'::jsonb -> 'media_url' = 'null'::jsonb
+select ok(:'v'::jsonb -> 'body' = 'null'::jsonb and :'v'::jsonb -> 'media_url' = 'null'::jsonb and :'v'::jsonb ->> 'kind' = 'text'
           and :'v'::jsonb -> 'reactions' = '[]'::jsonb and :'v'::jsonb -> 'deleted_at' <> 'null'::jsonb,
-  'the page shows it as a tombstone, with no body or address (15)');
+  'the page shows it as a tombstone, with no body or address, and not as a GIF (15)');
 select tests.msg(:'g1') ->> 'deleted_at' as g1_deleted \gset
 select lives_ok(format($$ select public.delete_buddy_message('%s') $$, :'g1'), 'deleting it again (25)');
 select is(tests.msg(:'g1') ->> 'deleted_at', :'g1_deleted', 'changes nothing');
@@ -743,6 +803,45 @@ select is(tests.keys((select r from jsonb_array_elements(public.my_buddy_reads()
 select is(public.buddy_read_messages(:'r_a')::text ~ '"(read_through|hand_through|auto_through|progress[a-z_]*|percent|fraction|page[a-z_]*)":',
   false, 'and a page of messages carries no number about reading');
 
+-- A blocked pair (Pat blocked Jo): neither one's numbers count the other's messages, both ways.
+select tests.act_as(:'pat');
+select public.mark_buddy_read(:'r_a', null, null);
+select tests.set_hand(:'r_a', :'pat', 4::smallint);
+select public.mark_buddy_read(:'r_a', :'a4', null);
+select tests.unread_in_list(:'r_a') as pat_list \gset
+select tests.act_as(:'jo');
+select public.mark_buddy_read(:'r_a', null, null);
+select tests.set_hand(:'r_a', :'jo', 4::smallint);
+select public.mark_buddy_read(:'r_a', :'a4', null);
+select tests.unread_in_list(:'r_a') as jo_list \gset
+select tests.say(:'r_a', null, 'Jo in the room') as m_jo2 \gset
+select tests.say(:'r_a', :'a4', 'Jo on four') as s_jo4 \gset
+select tests.act_as(:'pat');
+select tests.say(:'r_a', null, 'Pat in the room') as m_pat2 \gset
+select tests.say(:'r_a', :'a4', 'Pat on four') as s_pat4 \gset
+select public.react_to_buddy_message(:'m1', '🔥');
+select public.buddy_read(:'r_a') as v \gset
+select ok((:'v'::jsonb -> 'room' ->> 'unread')::int = 0 and (tests.sec(:'v', 4) ->> 'unread')::int = 0,
+  'the blocker: no unread from the blocked member, in the room or a Section (a)');
+select is((:'v'::jsonb -> 'room' ->> 'count')::int, tests.live_in_room(:'r_a') - tests.live_by(:'r_a', :'jo', true),
+  'her room count leaves out every message of his');
+select is((tests.sec(:'v', 4) ->> 'count')::int, 1, 'and her Section count: only her own message there');
+select is(tests.unread_in_list(:'r_a'), :'pat_list'::int, 'and her list''s unread does not move');
+select tests.act_as(:'jo');
+select public.buddy_read(:'r_a') as v \gset
+select ok((:'v'::jsonb -> 'room' ->> 'unread')::int = 0 and (tests.sec(:'v', 4) ->> 'unread')::int = 0,
+  'the blocked member: no unread from the blocker either');
+select is((:'v'::jsonb -> 'room' ->> 'count')::int, tests.live_in_room(:'r_a') - tests.live_by(:'r_a', :'pat', true),
+  'his room count leaves out every message of hers');
+select is((tests.sec(:'v', 4) ->> 'count')::int, 1, 'and his Section count');
+select is(tests.unread_in_list(:'r_a'), :'jo_list'::int, 'and his list''s unread');
+select ok(not (tests.in_page(public.buddy_read_messages(:'r_a'), :'m1') -> 'reactions' @> '[{"emoji": "🔥"}]'::jsonb),
+  'nor does he see her reaction');
+select tests.act_as(:'hana');
+select public.buddy_read(:'r_a') as v \gset
+select ok((tests.sec(:'v', 4) ->> 'count')::int = 2 and (tests.sec(:'v', 4) ->> 'unread')::int = 2,
+  'the host counts both');
+
 -- ------------------------------------------------------------------------- archived and finished (9)
 
 select tests.act_as(:'ivo');
@@ -753,6 +852,7 @@ select tests.say(:'r_b', :'b1', 'Section one of B') as sb1 \gset
 select tests.act_as(:'ivo');
 select lives_ok(format($$ select public.react_to_buddy_message('%s', '❤️') $$, :'sb1'), 'and reactions');
 select public.delete_buddy_message(:'sb1');
+select tests.say(:'r_b', null, 'Ivo in B') as mb_ivo \gset
 select throws_ok(format($$ select public.set_buddy_sections('%s', tests.secs(3)) $$, :'r_b'),
   'PT409', 'buddy_sections_locked', 'a tombstone in a Section thread locks the division too');
 select public.archive_buddy_read(:'r_b');
@@ -764,6 +864,8 @@ select throws_ok(format($$ select public.react_to_buddy_message('%s', '❤️') 
 select ok(jsonb_array_length(public.buddy_read_messages(:'r_b')) > 0, 'its messages can still be read');
 select lives_ok(format($$ select public.delete_buddy_message('%s') $$, :'mb1'), 'and her own deleted');
 select lives_ok(format($$ select public.mark_buddy_read('%s', null, null) $$, :'r_b'), 'and marked read');
+select lives_ok(format($$ select public.report_buddy_message('%s', 'spam') $$, :'mb_ivo'), 'and a message reported (d)');
+select is(tests.reports_of(:'hana'), 1, 'one report');
 
 -- ------------------------------------------------------------------------- Sections: rename, not replace
 
@@ -783,8 +885,10 @@ select tests.name_owner(:'tom');
 select tests.act_as(:'hana');
 select tests.say(:'r_a', :'a2', repeat('Long words ', 100)) as s_long \gset
 select tests.act_as(:'jo');
+select tests.set_hand(:'r_a', :'jo', 0::smallint);
+select is(public.buddy_read(:'r_a') -> 'me' -> 'read_through', '0'::jsonb, 'Jo has not read Section 2: it is veiled for him');
 select lives_ok(format($$ select public.report_buddy_message('%s', 'harassment', '  She keeps doing this.  ') $$, :'s_long'),
-  'Jo reports a message');
+  'Jo reports a message of that Section all the same (d)');
 select is(tests.reports_of(:'jo'), 1, 'one feedback row of kind report (27)');
 select tests.last_report(:'jo') as v \gset
 select ok(:'v'::jsonb ->> 'member_id' = :'jo' and :'v'::jsonb ->> 'body' = E'Buddy read report: harassment\n\nShe keeps doing this.',
@@ -817,6 +921,10 @@ select tests.fill_feedback(:'jo', 4);
 select tests.act_as(:'jo');
 select throws_ok(format($$ select public.report_buddy_message('%s', 'spam') $$, :'m1'),
   'PT429', 'rate_limited', 'the feedback limiter applies: a sixth message within the hour is refused (30)');
+select lives_ok(format($$ select public.report_buddy_message('%s', 'spam', 'once more') $$, :'s_long'),
+  'reporting the same message again');
+select ok(tests.reports_of(:'jo') = 1 and tests.last_report(:'jo') ->> 'body' = E'Buddy read report: harassment\n\nShe keeps doing this.',
+  'changes nothing: her first report stands, the inbox gets no second row');
 select tests.act_as(:'kim');
 select throws_ok($$ insert into public.feedback (member_id, kind, body) values (auth.uid(), 'report', 'A made-up report') $$,
   '42501', null, 'a member cannot write a report herself');
@@ -837,7 +945,9 @@ select lives_ok(format($$ select public.leave_buddy_read('%s', true) $$, :'r_a')
 select is(tests.msgs_by(:'r_a', :'pat'), 0, 'hers are gone');
 select is(tests.msgs_in(:'r_a'), :'before_leave'::int - :'pat_msgs'::int, 'and only hers');
 select is(tests.msg(:'s_ivo') -> 'reply_to', 'null'::jsonb, 'an answer to one of hers stays, without the link');
-select is(tests.reaction_of(:'m2', :'pat'), '😮', 'her reactions stay');
+select ok(tests.reaction_of(:'m2', :'pat') is null and tests.reaction_of(:'m1', :'pat') is null,
+  'and so are her reactions on the others'' messages');
+select is(tests.reaction_of(:'m2', :'jo'), '😮', 'the others'' reactions stay');
 select is(tests.cursors_of(:'pat'), 0, 'her Section cursors are gone');
 select tests.act_as(:'hana');
 select public.mark_buddy_read(:'r_a', :'a1', null);
@@ -845,7 +955,14 @@ select tests.act_as(:'jo');
 select public.mark_buddy_read(:'r_a', :'a1', null);
 select tests.act_as(:'hana');
 select public.remove_from_buddy_read(:'r_a', :'jo');
-select is(tests.cursors_of(:'jo'), 0, 'a removed member''s cursors go too');
+select is(tests.cursors_of(:'jo'), 0, 'a removed member''s cursors go too (b)');
+select ok(tests.live_by(:'r_a', :'jo', true) > 0 and tests.msg(:'m_jo') ->> 'body' = 'Jo speaking', 'his messages stay');
+select ok(tests.removed(:'r_a', :'jo'), 'D1''s removal marker is set');
+select tests.act_as(:'jo');
+select is(public.post_buddy_message(:'r_a', null, :'c_jo', 'text', 'Jo speaking') ->> 'id', :'m_jo',
+  'replaying his old client id still answers his first message');
+select throws_ok(format($$ select public.delete_buddy_message('%s') $$, :'m_jo'), 'PT404', 'not_found',
+  'but he cannot delete it any more: the choice was made when he left the room');
 select tests.act_as(:'quin');
 select public.leave_buddy_read(:'r_c');
 select is(tests.msgs_by(:'r_c', :'quin'), 600, 'leaving without deleting keeps every message');
@@ -861,10 +978,16 @@ select tests.clear_calls(:'kim');
 select tests.act_as(:'kim');
 select public.react_to_buddy_message(:'m_ola', '❤️');
 select tests.say(:'r_a', null, 'Answering Ola', :'m_ola') as m_kim_ola \gset
+select public.report_buddy_message(:'m_ola', 'inappropriate');
 select public.post_buddy_message(:'r_a', null, :'c_ola', 'text', 'Kim with the same client id') ->> 'id' as m_kim_same \gset
 select isnt(:'m_kim_same'::uuid, :'m_ola'::uuid, 'another member''s client id is her own: the same value is a new message (32)');
 select tests.act_as(:'ola');
+select public.report_buddy_message(:'m_kim_ola', 'other', 'Testing a report that goes with me');
+select is(tests.reports_of(:'ola'), 1, 'Ola reported a message');
 select lives_ok($$ select public.delete_my_account() $$, 'Ola deletes her account');
+select is(tests.reports_of(:'ola'), 0, 'her report goes with her account, like all her feedback (d)');
+select is(tests.last_report(:'kim') -> 'context' ->> 'message', :'m_ola',
+  'a report of one of her messages stays, with its ids and excerpt');
 select ok(tests.msg(:'m_ola') is null and tests.reactions_by(:'ola') = 0 and tests.cursors_of(:'ola') = 0,
   'her messages, reactions and cursors are gone (31)');
 select is(tests.reactions_on(:'m1'), 1, 'the other reactions on the message she reacted to stay');
@@ -875,10 +998,27 @@ select tests.act_as(:'kim');
 select is(public.post_buddy_message(:'r_a', null, :'c_ola', 'text', 'again') ->> 'id', :'m_kim_same',
   'for whom it still answers the first message');
 
--- ------------------------------------------------------------------------- a read deleted takes its messages
+-- ------------------------------------------------------------------------- the host moderates
 
+select tests.block(:'sam', :'rae');
+select tests.filler_of(:'r_c', :'rae') as m_rae \gset
+select tests.act_as(:'sam');
+select lives_ok(format($$ select public.delete_buddy_message('%s') $$, :'m_rae'),
+  'the host deletes a message of a member she blocked (1)');
+select is(tests.msg(:'m_rae') ->> 'deleted_by', :'sam', 'as the host');
+select tests.act_as(:'hana');
+select throws_ok(format($$ select public.delete_buddy_message('%s') $$, tests.filler_of(:'r_c', :'quin')),
+  'PT404', 'not_found', 'a host of one read cannot delete in another');
 select tests.act_as(:'ivo');
 select public.leave_buddy_read(:'r_b');
+select throws_ok(format($$ select public.delete_buddy_message('%s') $$, :'mb_ivo'),
+  'PT404', 'not_found', 'after the handover the old host cannot delete');
+select tests.act_as(:'hana');
+select lives_ok(format($$ select public.delete_buddy_message('%s') $$, tests.filler_of(:'r_b', :'ivo')),
+  'and the new host can');
+
+-- ------------------------------------------------------------------------- a read deleted takes its messages
+
 select tests.act_as(:'hana');
 select public.leave_buddy_read(:'r_b');
 select ok(tests.read_gone(:'r_b') and tests.msgs_in(:'r_b') = 0, 'the last member out: the read and its messages are gone');

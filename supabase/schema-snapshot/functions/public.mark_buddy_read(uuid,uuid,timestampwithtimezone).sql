@@ -12,6 +12,18 @@ begin
     raise exception 'not_signed_in' using errcode = '42501';
   end if;
   perform private.buddy_gate(p_read, v_caller);
+  if p_section is not null
+     and not exists (select 1 from public.buddy_read_sections where id = p_section and buddy_read_id = p_read) then
+    raise exception 'buddy_section_invalid' using errcode = '22023';
+  end if;
+  -- Nothing to move: answer before the lock.
+  if p_through is not null and p_through <= (
+       case when p_section is null
+            then (select last_read_at from public.buddy_read_members where buddy_read_id = p_read and member_id = v_caller)
+            else (select last_read_at from public.buddy_section_cursors where section_id = p_section and member_id = v_caller)
+       end) then
+    return;
+  end if;
   perform private.buddy_lock_read(p_read);
   perform private.buddy_gate(p_read, v_caller);
   if p_section is not null
