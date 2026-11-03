@@ -56,3 +56,16 @@ are stored and enforced is in [SPEC.md](SPEC.md) and issue #1.
   her followers.
 - **Hidden from followers** — a Book a Member hides from her followers (the Book's ⋯): gone from their
   feed, her profile, her counts and her figures. It stays in her own Library and figures.
+- **Buddy read** — one Book read together by 2 to 12 Members in a room of its own, divided into Sections, with
+  a thread for each (German: *Buddy-Read*). A Member joins by an invitation from the Host or by the read's link;
+  she can leave at any time. Not a Follow: a co-member need not follow her, and sees only what the room shows.
+- **Host** — the Member who started a Buddy read, or the one it passed to: she invites, turns the link on or off,
+  removes members (who stay out until she invites them again), changes the Sections, finishes and archives
+  it. When she leaves, the Member who joined earliest becomes Host; when the last one leaves, the Buddy read
+  is gone.
+- **Section** — one of the parts a Buddy read divides its Book into, by count, by pages or by a list, each
+  ending at a fraction of the Book; the last is always *The whole book* (German: *Abschnitt*).
+- **Position (where she is)** — the Section a Member is in, worked out from her progress or set by her; the only
+  thing about her progress that leaves her account, and only to the members of a Buddy read she joined, while
+  she is in it. Shown as "Section k", "the whole book" or "not set", never as a page, a percent or a date.
+  Between two members of whom one blocked the other it is not shown at all, either way.
