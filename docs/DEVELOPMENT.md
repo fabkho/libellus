@@ -222,17 +222,27 @@ against a local stack, `nuxt generate`, and the generated-tokens and generated-e
 the same checks; docs-only changes run nothing. The Playwright flows run in the release run, or on a pull request
 labelled `full-e2e` (docs/TESTING.md, "CI: what runs when").
 
-### The UI base bump
+### The package bumps
 
-`.github/workflows/ui-bump.yml` runs on Mondays (05:23 UTC) and by hand. It reads the tag `web/package.json` pins for
-`@fabkho/ui` (`github:fabkho/ui#vX.Y.Z`) and the newest non-draft, non-pre-release of `fabkho/ui`. If that release is
-newer, `.github/scripts/ui-bump.sh` runs `pnpm add -E "@fabkho/ui@github:fabkho/ui#<tag>"`, checks that only
-`web/package.json` and `web/pnpm-lock.yaml` changed, and opens `chore(web): bump @fabkho/ui to <tag>` on
-`chore/ui-bump-<tag>` with the release notes in the body. Nothing newer, or a branch that already has a pull request
-(open or closed): nothing happens. No secret: `GITHUB_TOKEN` opens the pull request (`fabkho/ui` is public).
+Two packages are pinned to a tag in `web/package.json` and bumped the same way: `@fabkho/ui` (the UI base, from
+`fabkho/ui`) and `@fabkho/chat` (the chat layer's logic, from `fabkho/chat`). `.github/workflows/ui-bump.yml` runs on
+Mondays (05:23 UTC) and by hand, as a matrix of two jobs, one per package. A job reads the tag `web/package.json` pins
+(`github:fabkho/<ui|chat>#vX.Y.Z`) and the newest non-draft, non-pre-release of that repository. If that release is
+newer, `.github/scripts/ui-bump.sh <ui|chat>` runs `pnpm add -E "@fabkho/<name>@github:fabkho/<name>#<tag>"`, checks that
+only `web/package.json` and `web/pnpm-lock.yaml` changed (and in `package.json` only that package's line), and opens
+`chore(web): bump @fabkho/<name> to <tag>` on `chore/ui-bump-<tag>` or `chore/chat-bump-<tag>`, with the release notes in
+the body; the first paragraph names the pin that changed. One package per pull request, never both together: they
+release independently, a bad release of one does not hold the other up (the matrix does not stop at a failed job), and
+each can be merged, reverted or left open alone. Nothing newer, or a branch that already has a pull request (open or
+closed): nothing happens. No secret: `GITHUB_TOKEN` opens the pull request (both repositories are public).
+
+By hand: `.github/scripts/ui-bump.sh ui` or `... chat` for one package, no argument for both, one after the other.
+`DRY_RUN=1` prints a plan per package (pinned tag, latest release, branch and title, the diff and the pull request
+body) and leaves the working tree as it found it: no push, no pull request, no change left in `package.json` or
+the lockfile.
 
 A pull request opened with `GITHUB_TOKEN` starts no workflow, so the job dispatches the checks of `ci.yml` on its
 branch (`gh workflow run ci.yml --ref <branch> -f flows=false`, the one event a `GITHUB_TOKEN` may start). The Playwright
 flows stay out of it: a bump is reviewed like a release candidate, and the release run gates it (`release.yml`).
 Dispatched by hand, `ci.yml` keeps its meaning (every flow); `-f flows=false` is the checks only. The owner reviews and
-merges; the bump is never automatic. If the dispatch fails, run `gh workflow run CI --ref chore/ui-bump-<tag> -f flows=false`.
+merges; the bump is never automatic. If the dispatch fails, run `gh workflow run CI --ref chore/<ui|chat>-bump-<tag> -f flows=false`.
