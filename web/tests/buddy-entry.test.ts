@@ -111,7 +111,16 @@ describe('where she is, in words', () => {
 
 describe('with buddy reads off, neither entry exists', () => {
   const app = join(process.cwd(), 'app')
-  const read = (file: string) => readFileSync(join(app, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '').replace(/^\s*\/\/.*$/gm, '')
+  /** The source without comments. Each pattern is applied until the text stops changing, so removing one comment can never leave a new one behind (`<!<!-- -->--`). */
+  const withoutAll = (source: string, patterns: RegExp[]): string => {
+    let text = source
+    for (let before = ''; before !== text; ) {
+      before = text
+      for (const pattern of patterns) text = text.replace(pattern, '')
+    }
+    return text
+  }
+  const read = (file: string) => withoutAll(readFileSync(join(app, file), 'utf8'), [/\/\*[\s\S]*?\*\//g, /<!--[\s\S]*?-->/g, /^\s*\/\/.*$/gm])
 
   it('the Book page draws the row only behind the flag and the switch, lazily', () => {
     const page = read('pages/book/[key].vue')
