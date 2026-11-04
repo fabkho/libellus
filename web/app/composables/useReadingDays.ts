@@ -33,7 +33,7 @@ export function useReadingDays(entry: () => LibraryEntry | null) {
   const sessionId = computed(() => entry()?.latestSession?.id ?? null)
   watchEffect(() => store.want(sessionId.value))
 
-  const days = computed(() => (sessionId.value ? (store.bySession[sessionId.value] ?? null) : null))
+  const days = computed(() => (sessionId.value ? (store.shown[sessionId.value] ?? null) : null))
   const loaded = computed(() => days.value !== null)
   /** The read's days are being asked for again after a save or Undo. */
   const refreshing = computed(() => (sessionId.value ? store.refreshing[sessionId.value] === true : false))
