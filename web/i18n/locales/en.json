@@ -1987,6 +1987,15 @@
     "wantAll": "See all {count}",
     "finishedAll": "See all {count}",
     "seeAllLabel": "See all {count}, {section}",
+    "buddy": {
+      "title": "Potential buddy reads",
+      "label": "{title}. {reason}",
+      "bothWant": "On both your want-to-read lists",
+      "youReading": "You're reading it and {name} wants to read it",
+      "theyReading": "{name} is reading it and it's on your want-to-read list",
+      "authorYours": "You've read something by {author}",
+      "authorTheirs": "{name} has read something by {author}"
+    },
     "finished": "Recently finished",
     "yearEyebrow": "{name} · Year in review",
     "someone": "A reader",
