@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.33.0](https://github.com/fabkho/libellus/compare/v1.32.0...v1.33.0) (2026-11-04)
+
+
+### Features
+
+* **db:** progress on an earlier day: set_progress_day and delete_progress_day ([#482](https://github.com/fabkho/libellus/issues/482)) ([5351275](https://github.com/fabkho/libellus/commit/535127524f29812a9c51550b6749af9301a9b010))
+* **web:** buddy reads, the data layer, the store and the live channel ([#484](https://github.com/fabkho/libellus/issues/484)) ([fd5c46b](https://github.com/fabkho/libellus/commit/fd5c46bdcd0ced7bcaf06b398c5157739eb1d284))
+* **web:** progress on an earlier day, the data layer ([#485](https://github.com/fabkho/libellus/issues/485)) ([baea53e](https://github.com/fabkho/libellus/commit/baea53e9b5b2fcec6be26018e5d16762146d28fc))
+* **web:** progress on an earlier day, the reading log ([#492](https://github.com/fabkho/libellus/issues/492)) ([fcd242c](https://github.com/fabkho/libellus/commit/fcd242ce8f5a9971f6f7b94df31dc9f320855a89))
+* **web:** progress on an earlier day, the sheet's day switch ([#489](https://github.com/fabkho/libellus/issues/489)) ([952dca0](https://github.com/fabkho/libellus/commit/952dca0a67ac2edc0553e37c776ddbdf430b5265))
+* **web:** start a buddy read, invite friends, join by link ([#488](https://github.com/fabkho/libellus/issues/488)) ([47b4070](https://github.com/fabkho/libellus/commit/47b4070776006cf63f656cc14082f8b740d09dee))
+* **web:** take @fabkho/chat ([#481](https://github.com/fabkho/libellus/issues/481)) ([1752bc3](https://github.com/fabkho/libellus/commit/1752bc3746d90b5438be18c293896ebf57af620e))
+* **web:** the Book page row and the Home card ([#490](https://github.com/fabkho/libellus/issues/490)) ([94bc113](https://github.com/fabkho/libellus/commit/94bc113867db3025cf3f37110c3dd7b0b4a7256b))
+* **web:** the Buddy reads switch in Profile → Account ([#472](https://github.com/fabkho/libellus/issues/472)) ([39c281d](https://github.com/fabkho/libellus/commit/39c281d47d0d101f788818b2f28fed16f97f5622))
+* **web:** the room, a Section's thread, reactions, delete, report, finish ([#487](https://github.com/fabkho/libellus/issues/487)) ([6da5adf](https://github.com/fabkho/libellus/commit/6da5adfc1176b7b003029011d79c40daf2bbaf0a))
+* **web:** turn Buddy reads off only after leaving the rooms ([#491](https://github.com/fabkho/libellus/issues/491)) ([19d72dc](https://github.com/fabkho/libellus/commit/19d72dce938cfddb7e6e89e2dc74fbae2c0b0bc9))
+
 ## [1.32.0](https://github.com/fabkho/libellus/compare/v1.31.1...v1.32.0) (2026-11-03)
 
 
