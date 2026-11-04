@@ -18,6 +18,7 @@ import { threadKey } from '#layers/chat/app/utils/thread'
 import type { BuddyErrorCode } from '~/data/buddyReads'
 import { isReadId, isSectionSegment, roomPath, sectionOfSegment } from '~/utils/buddyRoute'
 import { buddyErrorKey } from '~/utils/buddyRead'
+import { sectionTitle } from '~/utils/buddySectionTitle'
 import { quoteOf, threadItems, type ThreadItem } from '~/utils/buddyThread'
 import { useBuddyReadStore } from '~/stores/buddyRead'
 import { useSessionStore } from '~/stores/session'
@@ -51,6 +52,8 @@ const chapter = computed(() => (sectionId.value ? (read.value?.chapters.find((c)
 const view = computed(() => (read.value ? store.view(readId.value, sectionId.value) : null))
 const isHost = computed(() => read.value?.canManage ?? false)
 const archived = computed(() => read.value?.status === 'archived')
+/** Live updates are paused: the channel has not been live for a while and the device is online (offline says its own). */
+const paused = computed(() => store.liveStuck && online.value)
 
 // ------------------------------------------------------------------ loading
 
@@ -74,7 +77,8 @@ async function openThread() {
 }
 
 onMounted(async () => {
-  const stop = await store.retain()
+  // Never throws: a channel that cannot be had is `store.liveStuck`, said above the thread, and asked for again by the store.
+  const stop = await store.retain(readId.value)
   if (gone) stop()
   else release = stop
 })
@@ -144,12 +148,14 @@ async function loadOlder(): Promise<boolean> {
   return items.value.length > before
 }
 
+const sectionWords = { whole: () => t('together.wholeBook'), label: (n: string) => t('together.sectionLabel', { n }) }
 const quoteWords = computed(() => ({ deleted: t('uiText.chat.reply.deleted'), spoiler: t('uiText.chat.veiled.label'), someone: t('member.someone'), you: t('uiText.chat.reply.you') }))
 const quoteFor = (item: ThreadItem) => quoteOf(items.value, item.replyTo, quoteWords.value)
 
 // ------------------------------------------------------------------ title and banners
 
-const title = computed(() => (sectionId.value === null ? t('together.room') : (chapter.value?.title ?? '')))
+// A Section's name is the viewer's own words for what the host's tool wrote ("Section 3", "The whole book"): the host's language is not hers.
+const title = computed(() => (sectionId.value === null ? t('together.room') : chapter.value ? sectionTitle(chapter.value, sectionWords) : ''))
 const range = computed(() => (chapter.value?.pages ? t('together.pages', { from: chapter.value.pages[0], to: chapter.value.pages[1] }) : null))
 useHead({ title: () => `${title.value || t('together.title')} · ${t('app.name')}` })
 
@@ -194,7 +200,13 @@ async function send() {
 
 async function retry(key: string) {
   const item = items.value.find((i) => i.key === key)
-  if (item) await store.retry(readId.value, sectionId.value, key)
+  // Refused for a reason a second try cannot change: the tap on the bubble leads nowhere, "Delete" is what is offered.
+  if (item && !item.permanent) await store.retry(readId.value, sectionId.value, key)
+}
+
+/** A message that was refused (or still waits) is given up: the bubble goes, and the refusal the device kept with it. */
+function discard(key: string) {
+  store.discard(readId.value, sectionId.value, key)
 }
 
 async function react(messageId: string, emoji: string) {
@@ -257,9 +269,23 @@ function answer(key: string) {
 // ------------------------------------------------------------------ the veil
 
 const showOpen = ref(false)
-function showAnyway() {
+/** She said "Show anyway": once the thread is up, focus goes to the composer (the quiet screen she tapped on is gone; focus would be lost at the top of the page). */
+let focusComposerWhenReady = false
+function focusComposer() {
+  if (!focusComposerWhenReady || status.value !== 'ready') return
+  const field = document.querySelector<HTMLElement>('[data-testid="buddyThread.composer"] textarea, [data-testid="buddyThread.composer"] input')
+  if (!field) return
+  focusComposerWhenReady = false
+  field.focus()
+}
+watch(status, () => void nextTick(focusComposer))
+async function showAnyway() {
   if (!sectionId.value) return
+  focusComposerWhenReady = true
   store.peek(sectionId.value)
+  await nextTick()
+  await nextTick()
+  focusComposer()
 }
 
 function back() {
@@ -316,8 +342,10 @@ function back() {
       <span />
     </template>
 
-    <template v-if="ahead" #banner>
-      <p class="glass edge mx-auto w-fit max-w-full rounded-pill px-md py-xs text-center text-caption text-ink-muted" data-testid="together.thread.ahead">{{ t('together.thread.ahead') }}</p>
+    <template v-if="ahead || paused" #banner>
+      <p v-if="ahead" class="glass edge mx-auto w-fit max-w-full rounded-pill px-md py-xs text-center text-caption text-ink-muted" data-testid="together.thread.ahead">{{ t('together.thread.ahead') }}</p>
+      <!-- The Free plan's connection limit says nothing: the channel just never goes live. Said quietly; the store reads what was missed every 25 s meanwhile. -->
+      <p v-if="paused" class="glass edge mx-auto w-fit max-w-full rounded-pill px-md py-xs text-center text-caption text-ink-muted" role="status" data-testid="together.thread.paused">{{ t('together.thread.paused') }}</p>
     </template>
 
     <template #head>
@@ -357,6 +385,33 @@ function back() {
       >
         <template #face>
           <FriendsAvatar :card="{ id: item.authorId ?? '', name: item.author, photo: read?.members.find((m) => m.id === item.authorId)?.photo ?? null }" />
+        </template>
+        <!-- A message that was refused: why, "Try again" unless nothing can change it (removed, blocked, archived, invalid), and "Delete" for good. -->
+        <template v-if="item.delivery === 'failed'" #meta="{ time, showTime }">
+          <time :datetime="item.createdAt" class="px-xs pt-xs text-caption text-ink-faint tabular-nums" :class="showTime ? '' : 'sr-only'">{{ time }}</time>
+          <p class="max-w-[78%] px-xs pt-xs text-right text-caption text-error" role="status" data-testid="buddyThread.failed">
+            {{ item.error }} {{ item.permanent ? t('together.thread.notSentFinal') : t('uiText.chat.retryHint') }}
+          </p>
+          <div class="flex justify-end gap-xs">
+            <button
+              v-if="!item.permanent"
+              type="button"
+              class="min-h-(--size-touch) px-xs text-caption text-accent-ink focus-visible:outline-2 focus-visible:outline-accent"
+              data-testid="buddyThread.retry"
+              @click="retry(item.key)"
+            >
+              {{ t('together.retry') }}
+            </button>
+            <button
+              type="button"
+              class="min-h-(--size-touch) px-xs text-caption text-error focus-visible:outline-2 focus-visible:outline-accent"
+              :aria-label="t('together.thread.discardLabel')"
+              data-testid="buddyThread.discard"
+              @click="discard(item.key)"
+            >
+              {{ t('together.thread.discard') }}
+            </button>
+          </div>
         </template>
       </UiBubble>
     </template>

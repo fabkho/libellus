@@ -2298,7 +2298,11 @@
       "spoiler": "Spoiler",
       "veiledTitle": "Abschnitt {n} ist verborgen",
       "veiledEnd": "Das ganze Buch ist verborgen",
-      "veiledText": "Es könnte verraten, was du noch nicht gelesen hast. Es bleibt zu, bis du es öffnest."
+      "veiledText": "Es könnte verraten, was du noch nicht gelesen hast. Es bleibt zu, bis du es öffnest.",
+      "paused": "Live-Updates pausiert. Wir suchen weiter nach neuen Nachrichten.",
+      "notSentFinal": "Kann nicht gesendet werden.",
+      "discard": "Löschen",
+      "discardLabel": "Nicht gesendete Nachricht löschen"
     },
     "hint": "Alle lesen im eigenen Tempo. Kommentare gehören zu Abschnitten, und ein Abschnitt bleibt verborgen, bis du ihn gelesen hast. Die anderen sehen, in welchem Abschnitt du bist, nie deine Seite.",
     "count": {

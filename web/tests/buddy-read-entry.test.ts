@@ -81,4 +81,13 @@ describe('the buddy read store and the live module are not part of the entry', (
     const others = filesIn(app).filter((f) => /\.(ts|vue)$/.test(f) && /import\(\s*['"]#realtime-client['"]/.test(codeOf(f)))
     expect(others.map((f) => f.slice(app.length + 1)).sort()).toEqual(['stores/buddyRead.ts', 'stores/import.ts'])
   })
+
+  it('keeps a buddy read’s storage keys in a file with no chat layer in it, and the profile’s turn-off lazy', () => {
+    const storage = readFileSync(join(app, 'utils/buddyStorage.ts'), 'utf8')
+    expect(staticImports(storage)).toEqual([])
+    // The turn-off store (and the big store under it) is imported when asked, never by the Profile's own import list.
+    const account = readFileSync(join(app, 'components/profile/Account.vue'), 'utf8')
+    expect(staticImports(account).filter((spec) => /buddyTurnOff|buddyRead(?!sSwitch)/.test(spec))).toEqual([])
+    expect(account).toMatch(/import\('~\/stores\/buddyTurnOff'\)/)
+  })
 })

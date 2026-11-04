@@ -88,6 +88,12 @@ export function openLocalDatabase(factory: IDBFactory, { name = LOCAL_DATABASE, 
  * member signing in clear them with the rest (security round F10); the names are here so
  * nothing else has to be told, and tests/device-data.test.ts keeps them equal to the owners'.
  */
+/**
+ * The send queue of a buddy read starts its keys with this (utils/buddyStorage.ts, which owns it; written out here so the shell's sign-out does not
+ * carry that file: tests/device-data.test.ts keeps the two equal). A session that ended keeps what starts with it.
+ */
+export const BUDDY_QUEUE_PREFIX = 'libellus.buddyRead.queue.'
+
 export const MEMBER_KEYS_OUTSIDE_PREFIX: readonly string[] = ['libellus-import-hint', 'libellus-library-view']
 
 /**
@@ -97,11 +103,11 @@ export const MEMBER_KEYS_OUTSIDE_PREFIX: readonly string[] = ['libellus-import-h
  * not the member's (a sign-in or a share that waits for one: a session that ended
  * on its own keeps those). Returns what it removed.
  */
-export function clearLocalData(storage: KeyValueStorage, { keep = [] }: { keep?: readonly string[] } = {}): string[] {
+export function clearLocalData(storage: KeyValueStorage, { keep = [], keepPrefixes = [] }: { keep?: readonly string[]; keepPrefixes?: readonly string[] } = {}): string[] {
   const keys: string[] = []
   for (let index = 0; index < storage.length; index++) {
     const key = storage.key(index)
-    if (key && !keep.includes(key) && (key.startsWith(LOCAL_DATA_PREFIX) || MEMBER_KEYS_OUTSIDE_PREFIX.includes(key))) keys.push(key)
+    if (key && !keep.includes(key) && !keepPrefixes.some((prefix) => key.startsWith(prefix)) && (key.startsWith(LOCAL_DATA_PREFIX) || MEMBER_KEYS_OUTSIDE_PREFIX.includes(key))) keys.push(key)
   }
   // Collected first: removing while iterating shifts the indexes.
   for (const key of keys) storage.removeItem(key)
@@ -236,20 +242,25 @@ export type DeviceEnvironment = {
  * The device forgets the member: every `libellus.` key and the member-keyed ones outside the prefix
  * (`clearLocalData`), the IndexedDB database (outbox, ebook records, profile photo), the ebook files,
  * the caches of what she browsed and their expiry list (`clearLocalFiles`). `sessionEnded` is a
- * session that died by itself: the keys named in `keep` (the sign-in or share that waits) and the
- * outbox stay, as her unsynced writes are not lost by a token that expired; her own sign-out and
+ * session that died by itself: the keys named in `keep` (the sign-in or share that waits), the
+ * outbox and a buddy read's unsent messages (`libellus.buddyRead.queue.*`) stay, as her unsynced writes are not lost by a token that expired; her own sign-out and
  * another member signing in clear all of it but when a code was last mailed
  * (`CODE_SENT_KEY`: a fingerprint and a time, gone after the 20 s window it describes, and the server's
  * limit, not hers: signing in again right after signing out must not ask for a second mail), while
  * deleting her account (`accountDeleted`) clears that key too and keeps only what `keep` names,
- * as nothing of hers outlives the account. The one place that knows the list, run
+ * as nothing of hers outlives the account. `keepForNext` names what the member now signing in brought with her
+ * (a buddy read link opened signed out): it stays when another member's data is cleared out of her way. The one place that knows the list, run
  * by `stores/session.ts` and by tests/device-data.test.ts.
  */
 export async function forgetMemberData(
   { storage, indexedDB, caches, files }: DeviceEnvironment,
-  { sessionEnded = false, keep = [], memberId = null, accountDeleted = false }: { sessionEnded?: boolean; keep?: readonly string[]; memberId?: string | null; accountDeleted?: boolean } = {},
+  { sessionEnded = false, keep = [], memberId = null, accountDeleted = false, keepForNext = [] }: { sessionEnded?: boolean; keep?: readonly string[]; memberId?: string | null; accountDeleted?: boolean; keepForNext?: readonly string[] } = {},
 ): Promise<void> {
-  clearLocalData(storage, { keep: accountDeleted ? keep : sessionEnded ? [...keep, CODE_SENT_KEY] : [CODE_SENT_KEY] })
+  clearLocalData(storage, {
+    keep: accountDeleted ? keep : sessionEnded ? [...keep, CODE_SENT_KEY] : [CODE_SENT_KEY, ...keepForNext],
+    // A dead session keeps the messages she had not sent yet (a buddy read's send queue, keyed by her id and sent only for her), as it keeps the outbox.
+    keepPrefixes: sessionEnded && !accountDeleted ? [BUDDY_QUEUE_PREFIX] : [],
+  })
   if (indexedDB) await clearLocalDatabase(indexedDB, LOCAL_DATABASE, { keep: sessionEnded ? ['outbox'] : [] })
   await clearLocalFiles({ storage: files, caches, databases: indexedDB })
   // The outbox that stays is hers: if another member signs in, it goes (`otherMemberHere`).

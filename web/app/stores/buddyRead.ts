@@ -22,10 +22,9 @@ import {
 import type { BuddyLive, BuddyLiveEvent, LiveRealtimeModule } from '~/data/buddyLive'
 import { useSessionStore } from '~/stores/session'
 import { parseAppConfig } from '~/utils/appConfig'
+import { buddyPeekKey, buddyQueueKey, deviceHasBuddyLine } from '~/utils/buddyStorage'
 import {
   bumpCounts,
-  buddyPeekKey,
-  buddyQueueKey,
   buddySendKey,
   clearUnread,
   countsOf,
@@ -86,6 +85,14 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
   const liveStatus = ref<string>('idle')
   /** Raised when a peek is added, so rows that read `peeked` follow. */
   const peekVersion = ref(0)
+  /** The channel has not been live for a while (the Free plan's connection limit says nothing else): the screens say so, and the store reads on its own. */
+  const liveStuck = ref(false)
+  /**
+   * Bumped by `reset` (sign-out, another member): an answer that was asked before it belongs to the member who is gone and is dropped.
+   * Every call that awaits the network keeps the number it started under and checks it after the await.
+   */
+  let epoch = 0
+  const stale = (since: number) => since !== epoch
 
   const me = computed(() => session.member?.id ?? null)
   const online = useOnline()
@@ -130,7 +137,9 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
   async function openThread(readId: string, sectionId: string | null): Promise<BuddyErrorCode | null> {
     const key = keyOf(readId, sectionId)
     viewing[key] = (viewing[key] ?? 0) + 1
+    const since = epoch
     await ensureQueue()
+    if (stale(since)) return 'not_signed_in'
     const t = thread(readId, sectionId)
     if (t.loaded) {
       void markThread(readId, sectionId)
@@ -146,9 +155,11 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
   async function loadNewest(readId: string, sectionId: string | null): Promise<BuddyErrorCode | null> {
     const r = repo()
     if (!r) return 'offline'
+    const since = epoch
     const t = thread(readId, sectionId)
     t.loading = true
     const answer = await r.messages(readId, sectionId, { limit: MESSAGES_PAGE })
+    if (stale(since)) return 'not_signed_in'
     t.loading = false
     if (answer.error) return answer.error
     takePage(readId, sectionId, answer.data.items)
@@ -165,8 +176,10 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     const t = thread(readId, sectionId)
     const oldest = t.messages.find((m) => m.state === 'sent')
     if (!r || !oldest || t.loading || !t.more) return null
+    const since = epoch
     t.loading = true
     const answer = await r.messages(readId, sectionId, { before: oldest.createdAt, limit: MESSAGES_PAGE })
+    if (stale(since)) return 'not_signed_in'
     t.loading = false
     if (answer.error) return answer.error
     takePage(readId, sectionId, answer.data.items)
@@ -187,9 +200,10 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     )
     if (!r || !point) return
     t.marked = point
+    const since = epoch
     const answer = await r.mark(readId, sectionId, point)
     // Not moved after all: the next look asks again.
-    if (answer.error) t.marked = null
+    if (!stale(since) && answer.error) t.marked = null
   }
 
   // ------------------------------------------------------------------ the send queue
@@ -198,12 +212,18 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
   let queueFor: string | null = null
   let queueTab: TabQueue | null = null
   let opening: Promise<void> | null = null
+  let openingFor: string | null = null
 
   /** Sends one queued message; the stored row (or the one a retry made before) replaces the bubble. */
   async function runSend(job: SendJob): Promise<JobOutcome> {
     const r = repo()
     if (!r) return { ok: false, retry: true, error: 'offline' }
+    // The line is the member's whose it was made for: a send under another session would be posted as somebody else.
+    const since = epoch
+    if (!me.value || me.value !== queueFor) return { ok: false, retry: true, error: 'offline' }
     const answer = await r.post({ readId: job.conversationId, sectionId: job.threadId, clientId: job.clientId, body: job.body, replyTo: job.replyTo, spoiler: job.spoiler })
+    // She was gone in the meantime: nothing of the answer is shown to the next member (the line itself is stopped).
+    if (stale(since)) return { ok: false, retry: true, error: 'offline' }
     if (answer.error) {
       if (isRetryableBuddyError(answer.error)) return { ok: false, retry: true, error: answer.error, giveUpAfter: answer.error === 'offline' ? undefined : UNEXPLAINED_ATTEMPTS }
       return { ok: false, retry: false, error: answer.error, field: null }
@@ -234,31 +254,43 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     }
   }
 
-  /** The line of the signed-in member, restored from the device, sending. One tab owns it (Web Locks); without them the single key does. */
+  /**
+   * The line of the signed-in member, restored from the device, sending. One tab owns it (Web Locks); without them the single key does.
+   * If she is gone by the time the tab's lock is claimed (sign-out, another member), the lock is let go and no line is made.
+   */
   function ensureQueue(): Promise<void> {
     const member = me.value
     if (!member) return Promise.resolve()
     if (queue && queueFor === member) return Promise.resolve()
-    opening ??= (async () => {
+    if (opening && openingFor === member) return opening
+    const since = epoch
+    const gone = () => stale(since) || me.value !== member
+    const made: Promise<void> = (async () => {
       closeQueue()
       const storage = deviceStorage()
       const prefix = buddyQueueKey(member)
       const locks = typeof navigator !== 'undefined' ? (navigator as Navigator & { locks?: LockManager }).locks : undefined
       let storageKey = prefix
+      let tab: TabQueue | null = null
       if (storage && locks) {
         try {
-          queueTab = await claimQueue({ storage, locks, tabStorage: typeof sessionStorage === 'undefined' ? null : sessionStorage, prefix })
-          storageKey = queueTab.key
+          tab = await claimQueue({ storage, locks, tabStorage: typeof sessionStorage === 'undefined' ? null : sessionStorage, prefix })
+          storageKey = tab.key
         } catch {
-          queueTab = null
+          tab = null
         }
       }
+      if (gone()) {
+        tab?.release()
+        return
+      }
+      queueTab = tab
       const q = createSaveQueue<SendJob>({
         storage,
         storageKey,
         run: runSend,
         onChange: (snapshot) => {
-          waiting.value = snapshot.jobs.length
+          if (queue === q) waiting.value = snapshot.jobs.length
         },
         onRefused: refused,
       })
@@ -271,11 +303,17 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
           const orphan = parseStoredQueue<SendJob>(raw)
           q.adopt(orphan.jobs, orphan.refusals)
         })
+        if (gone() || queue !== q) return
       }
       showRestored(q, member)
       q.start()
-    })().finally(() => (opening = null))
-    return opening
+    })().finally(() => {
+      // A newer opening (another member, after a reset) is not this one's to clear.
+      if (opening === made) opening = null
+    })
+    opening = made
+    openingFor = member
+    return made
   }
 
   /** What the device kept in line shows as bubbles again (their threads are read when a screen opens them). */
@@ -307,7 +345,9 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     const member = me.value
     if (!member) return { ok: false, error: 'not_signed_in' }
     if (!/[^\s\u00a0\u200b\p{Cc}]/u.test(body) || body.length > 2000) return { ok: false, error: 'message_body_invalid' }
+    const since = epoch
     await ensureQueue()
+    if (stale(since) || !queue) return { ok: false, error: 'not_signed_in' }
     const job: SendJob = { conversationId: readId, threadId: sectionId, clientId: newId(), kind: 'text', body, replyTo, spoiler: sectionId === null ? false : spoiler, createdAt: new Date().toISOString() }
     mergeBubble(thread(readId, sectionId).messages, pendingBubble(job, member, nameOf(readId, member)))
     queue!.enqueue(buddySendKey(job.clientId), job)
@@ -320,12 +360,17 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     const refusal = queue?.snapshot().refusals.find((r) => r.payload.clientId === clientId)
     const bubble = messagesOf(readId, sectionId).find((m) => m.clientId === clientId)
     if (!queue || !refusal || !bubble) return
+    // Refused for a reason a second try cannot change (removed, blocked, archived, invalid): only discarding is left.
+    if (!isRetryableBuddyError(refusal.error as BuddyErrorCode)) return
     bubble.state = 'sending'
     bubble.error = null
     queue.enqueue(refusal.key, refusal.payload)
   }
 
-  /** Gives up on a message that was refused or is still waiting: the bubble goes. */
+  /**
+   * Gives up on a message that was refused or is still waiting: the bubble goes and so does the refusal the line kept (it is stored on the
+   * device, so a reload does not bring it back).
+   */
   function discard(readId: string, sectionId: string | null, clientId: string) {
     queue?.remove(buddySendKey(clientId))
     queue?.dismissRefusal(buddySendKey(clientId))
@@ -345,7 +390,9 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
   async function loadMine(): Promise<BuddyErrorCode | null> {
     const r = repo()
     if (!r) return 'offline'
+    const since = epoch
     const answer = await r.mine()
+    if (stale(since)) return 'not_signed_in'
     if (answer.error) return answer.error
     mine.value = answer.data
     return null
@@ -355,7 +402,9 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
   async function load(readId: string): Promise<BuddyErrorCode | null> {
     const r = repo()
     if (!r) return 'offline'
+    const since = epoch
     const answer = await r.read(readId)
+    if (stale(since)) return 'not_signed_in'
     if (answer.error) {
       // She is not in it (any more): nothing of it is kept.
       if (answer.error === 'not_found') forget(readId)
@@ -366,6 +415,13 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
   }
 
   function forget(readId: string) {
+    // What the line still holds for the room (a message waiting, a refusal she never answered) goes with it: it could only be refused again, and the
+    // refusal is stored on the device.
+    if (queue) {
+      const snapshot = queue.snapshot()
+      for (const waitingJob of snapshot.jobs) if (waitingJob.payload.conversationId === readId) queue.remove(waitingJob.key)
+      for (const refusal of snapshot.refusals) if (refusal.payload.conversationId === readId) queue.dismissRefusal(refusal.key)
+    }
     delete reads.value[readId]
     for (const key of Object.keys(threads.value)) if (key === readId || key.startsWith(`${readId}#`)) delete threads.value[key]
     if (mine.value) mine.value = { ...mine.value, reads: mine.value.reads.filter((x) => x.id !== readId) }
@@ -375,8 +431,9 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
   async function act<T>(readId: string | null, call: (r: BuddyReads) => Promise<BuddyResult<T>>, after: 'read' | 'forget' | 'mine' | 'none' = 'read'): Promise<BuddyResult<T>> {
     const r = repo()
     if (!r) return unavailable()
+    const since = epoch
     const answer = await call(r)
-    if (answer.error || !readId) return answer
+    if (stale(since) || answer.error || !readId) return answer
     if (after === 'forget') forget(readId)
     else if (after === 'read') await load(readId)
     if (after === 'forget' || after === 'mine') void loadMine()
@@ -404,8 +461,9 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
   async function changeMe(readId: string, call: (r: BuddyReads) => Promise<BuddyResult<BuddyMe>>): Promise<BuddyResult<BuddyMe>> {
     const r = repo()
     if (!r) return unavailable()
+    const since = epoch
     const answer = await call(r)
-    if (!answer.error) {
+    if (!stale(since) && !answer.error) {
       const read = reads.value[readId]
       if (read) {
         read.me = answer.data
@@ -448,7 +506,12 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
   function tombstone(readId: string, sectionId: string | null, messageId: string) {
     const list = messagesOf(readId, sectionId)
     const at = list.findIndex((m) => m.id === messageId)
-    if (at < 0 || list[at]!.deletedAt) return
+    if (at < 0) {
+      // A thread this device has not read: it does not know whether the message was counted, so the read's numbers are read again.
+      if (!threads.value[keyOf(readId, sectionId)]?.loaded && reads.value[readId]) void load(readId)
+      return
+    }
+    if (list[at]!.deletedAt) return
     const read = reads.value[readId]
     if (read) bumpCounts(read, sectionId, { count: -1 })
     list[at] = tombstoneOf(list[at]!, new Date().toISOString())
@@ -464,13 +527,21 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     if (!me.value) return null
     return createPeeks({ get: (k) => storage?.getItem(k) ?? null, set: (k, v) => storage?.setItem(k, v) }, buddyPeekKey(me.value))
   }
+  /** What the device said of each Section, kept until a peek is added or another member is here (every row asks on every draw). */
+  let peekMemo: { member: string; version: number; seen: Map<string, boolean> } | null = null
   const peeked = (sectionId: string): boolean => {
-    void peekVersion.value
-    return peeksOf()?.has(sectionId) ?? false
+    const version = peekVersion.value
+    const member = me.value
+    if (!member) return false
+    if (!peekMemo || peekMemo.member !== member || peekMemo.version !== version) peekMemo = { member, version, seen: new Map() }
+    let seen = peekMemo.seen.get(sectionId)
+    if (seen === undefined) peekMemo.seen.set(sectionId, (seen = peeksOf()?.has(sectionId) ?? false))
+    return seen
   }
   /** She opened a Section anyway ("Show anyway"): remembered on this device, her marker does not move. */
   function peek(sectionId: string) {
     peeksOf()?.add(sectionId)
+    peekMemo = null
     peekVersion.value++
   }
 
@@ -499,34 +570,51 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
   let liveOpening: Promise<BuddyLive | null> | null = null
   const stops: Array<() => void> = []
 
-  /** The lazy door: the module and the real client load when a screen first retains the channel, not before. */
+  /**
+   * The lazy door: the module and the real client load when a screen first retains the channel, not before. A failed import (a start
+   * while offline: the Realtime chunk is not precached) is not kept: the next try imports again.
+   */
   function liveOf(): Promise<BuddyLive | null> {
     if (live) return Promise.resolve(live)
     if (!backend || !config.ok || typeof window === 'undefined') return Promise.resolve(null)
     const app = config.config
-    liveOpening ??= import('~/data/buddyLive').then(({ browserLiveEnv, createBuddyLive }) => {
-      const made = createBuddyLive({
-        url: app.supabaseUrl,
-        anonKey: app.supabaseAnonKey,
-        token: async () => (await backend.auth.getSession()).data.session?.access_token ?? null,
-        load: () => import('#realtime-client') as unknown as Promise<LiveRealtimeModule>,
-        env: browserLiveEnv(window),
-        onChange: (state) => {
-          liveStatus.value = state.status
-          if (state.status === 'live' && state.online) kick()
-        },
+    const since = epoch
+    liveOpening ??= import('~/data/buddyLive')
+      .then(({ browserLiveEnv, createBuddyLive }) => {
+        // She was gone while the module came: nothing is made for the next member from her door.
+        if (stale(since)) return null
+        const made = createBuddyLive({
+          url: app.supabaseUrl,
+          anonKey: app.supabaseAnonKey,
+          token: async () => (await backend.auth.getSession()).data.session?.access_token ?? null,
+          load: () => import('#realtime-client') as unknown as Promise<LiveRealtimeModule>,
+          env: browserLiveEnv(window),
+          onChange: (state) => {
+            liveStatus.value = state.status
+            if (state.status === 'live') {
+              liveStuck.value = false
+              if (state.online) kick()
+            }
+          },
+          onStuck: (stuck) => {
+            liveStuck.value = stuck
+          },
+        })
+        stops.push(
+          made.on('message', (e) => arrived(sentBubble(withName(e.message)), true)),
+          made.on('deleted', (e) => tombstone(e.readId, e.sectionId, e.messageId)),
+          made.on('reaction', (e) => void reacted(e)),
+          made.on('changed', (e) => void changedRead(e.readId)),
+          made.on('invitation', () => void loadMine()),
+          made.on('resync', () => void resync()),
+        )
+        live = made
+        return made
       })
-      stops.push(
-        made.on('message', (e) => arrived(sentBubble(withName(e.message)), true)),
-        made.on('deleted', (e) => tombstone(e.readId, e.sectionId, e.messageId)),
-        made.on('reaction', (e) => void reacted(e)),
-        made.on('changed', (e) => void changedRead(e.readId)),
-        made.on('invitation', () => void loadMine()),
-        made.on('resync', () => void resync()),
-      )
-      live = made
-      return made
-    })
+      .catch((error) => {
+        liveOpening = null
+        throw error
+      })
     return liveOpening
   }
 
@@ -541,7 +629,9 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
       if (!bubble || bubble.conversationId !== e.readId) continue
       // Her own, already shown by her tap.
       if (e.memberId === me.value && (bubble.reactions.find((x) => x.mine)?.emoji ?? null) === e.emoji) return
+      const since = epoch
       const answer = await r.messages(e.readId, bubble.threadId, { before: justAfter(bubble.createdAt), limit: 5 })
+      if (stale(since)) return
       const fresh = answer.data?.items.find((m) => m.id === e.messageId)
       if (fresh) bubble.reactions = fresh.reactions
       return
@@ -553,54 +643,160 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     if (reads.value[readId]) await load(readId)
   }
 
-  /** The channel was down or may have missed something: the reads she has open, their open threads and her list are read again. */
-  async function resync() {
-    await Promise.all(Object.keys(reads.value).map((id) => load(id)))
+  /** The reads a screen has right now: retained by one (`retain(readId)`) or with a thread somebody looks at. */
+  function readsInUse(): Set<string> {
+    const used = new Set<string>()
+    for (const hold of holds) if (hold.read) used.add(hold.read)
+    for (const [key, count] of Object.entries(viewing)) if (count > 0) used.add(key.split('#')[0]!)
+    return used
+  }
+
+  /** At most one `resync` in this many ms: a rejoin and a return to the foreground come together, and a flapping channel rejoins often. */
+  const RESYNC_GAP_MS = 10_000
+  let resyncAt = 0
+  let resyncTimer: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * The channel was down or may have missed something: what a screen has open (its read, its open threads) and her list are read again, at
+   * most once in `RESYNC_GAP_MS` (a call inside the gap runs once when it is over). A read nobody has open is not read: it is dropped and read
+   * afresh when a screen opens it.
+   */
+  function resync(): Promise<void> | void {
+    const wait = RESYNC_GAP_MS - (Date.now() - resyncAt)
+    if (wait > 0) {
+      resyncTimer ??= setTimeout(() => {
+        resyncTimer = null
+        void resync()
+      }, wait)
+      return
+    }
+    resyncAt = Date.now()
+    return readAgain()
+  }
+
+  async function readAgain() {
+    const since = epoch
+    const used = readsInUse()
+    for (const id of Object.keys(reads.value)) if (!used.has(id)) delete reads.value[id]
+    await Promise.all([...used].map((id) => load(id)))
+    if (stale(since)) return
     for (const [key, t] of Object.entries(threads.value)) {
       if (!t.loaded) continue
       const [readId, sectionId] = key.includes('#') ? (key.split('#') as [string, string]) : [key, null]
-      if (!reads.value[readId]) continue
+      if (!reads.value[readId]) {
+        t.loaded = false
+        continue
+      }
       if ((viewing[key] ?? 0) > 0) await loadNewest(readId, sectionId)
       // A thread nobody looks at is read afresh when it is opened again, not kept stale.
       else t.loaded = false
+      if (stale(since)) return
     }
     if (mine.value) await loadMine()
-    kick()
+    if (!stale(since)) kick()
   }
 
-  /**
-   * A buddy read screen (or the invitation row) needs the live channel. Returns the function that lets it go: call it when the screen
-   * closes. Nothing starts without a signed-in member, and nothing loads before this is called.
-   */
-  async function retain(): Promise<() => void> {
+  /** What a screen holds of the live channel: `release` is the door's, null while the channel could not be taken (the chunk was not there, offline). */
+  type Hold = { release: (() => void) | null; released: boolean; read: string | null }
+  const holds: Hold[] = []
+  let pollTimer: ReturnType<typeof setInterval> | null = null
+  /** While the channel is stuck a screen is open: the channel is asked for again, and what was missed is read, this often. */
+  const POLL_MS = 25_000
+
+  async function attach(hold: Hold) {
     const member = me.value
-    if (!member) return () => {}
-    const door = await liveOf()
-    if (!door) return () => {}
-    return door.retain(member)
+    if (!member || hold.release || hold.released) return
+    const since = epoch
+    try {
+      const door = await liveOf()
+      if (!door || stale(since) || hold.released) return
+      hold.release = door.retain(member)
+    } catch {
+      // The Realtime chunk could not be fetched (an offline start): live updates are paused, and the poll asks for it again.
+      if (!stale(since)) liveStuck.value = true
+    }
+  }
+
+  function updatePoll() {
+    const want = liveStuck.value && holds.length > 0
+    if (want && !pollTimer) pollTimer = setInterval(() => void pollLive(), POLL_MS)
+    else if (!want && pollTimer) {
+      clearInterval(pollTimer)
+      pollTimer = null
+    }
+  }
+  async function pollLive() {
+    await Promise.all(holds.map(attach))
+    if (online.value) void resync()
+  }
+  watch(liveStuck, updatePoll)
+
+  /**
+   * A buddy read screen (or the invitation row) needs the live channel; `readId` is the read it shows, so a `resync` reads that one. Returns
+   * the function that lets it go: call it when the screen closes. It never throws: a channel that cannot be had (no chunk offline, the Free
+   * plan's connection limit) is `liveStuck`, the screen says so and the store reads on its own until it is live. Nothing starts without a
+   * signed-in member, and nothing loads before this is called. It also starts the line of unsent messages, if she has one.
+   */
+  async function retain(readId?: string): Promise<() => void> {
+    if (!me.value) return () => {}
+    const hold: Hold = { release: null, released: false, read: readId ?? null }
+    holds.push(hold)
+    void ensureQueue()
+    await attach(hold)
+    updatePoll()
+    return () => {
+      if (hold.released) return
+      hold.released = true
+      hold.release?.()
+      const at = holds.indexOf(hold)
+      if (at >= 0) holds.splice(at, 1)
+      if (holds.length === 0) liveStuck.value = false
+      updatePoll()
+    }
   }
 
   // ------------------------------------------------------------------ sign-out
 
   /** Forgets everything of the member and closes what is open (sign-out, another member). */
   async function reset() {
+    // Everything asked before this is the member's who is gone: its answers are dropped (`stale`).
+    epoch++
     closeQueue()
     opening = null
+    openingFor = null
     reads.value = {}
     mine.value = null
     threads.value = {}
     waiting.value = 0
+    peekMemo = null
     for (const key of Object.keys(viewing)) delete viewing[key]
+    for (const hold of holds.splice(0)) hold.released = true
+    liveStuck.value = false
+    updatePoll()
+    if (resyncTimer) clearTimeout(resyncTimer)
+    resyncTimer = null
+    resyncAt = 0
     for (const stop of stops.splice(0)) stop()
     const door = live
     live = null
     liveOpening = null
     liveStatus.value = 'idle'
-    await door?.stop()
+    await door?.dispose()
   }
-  watch(me, (now, before) => {
-    if (before && now !== before) void reset()
-  })
+
+  /** What the device kept in line (a reload, a killed app) is sent without a screen having to open a thread. */
+  function startLine(member: string) {
+    const storage = deviceStorage()
+    if (storage && deviceHasBuddyLine(storage, member)) void ensureQueue()
+  }
+  watch(
+    me,
+    (now, before) => {
+      if (before && now !== before) void reset()
+      if (now) startLine(now)
+    },
+    { immediate: true },
+  )
   // The connection is back: the line goes at once instead of waiting out its pause.
   watch(online, (now) => {
     if (now) kick()
@@ -612,6 +808,7 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     threads,
     waiting,
     liveStatus,
+    liveStuck,
     peekVersion,
     // threads
     messagesOf,

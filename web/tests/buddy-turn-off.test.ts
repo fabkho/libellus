@@ -348,14 +348,17 @@ describe('the store', () => {
 describe('the Profile', () => {
   const account = readFileSync(new URL('../app/components/profile/Account.vue', import.meta.url), 'utf8')
 
-  it('asks the question instead of switching off, and builds the asking store only in a build that carries the feature', () => {
-    expect(account).toMatch(/buddyReads\.available \? useBuddyTurnOffStore\(\) : null/)
-    expect(account).toMatch(/else if \(turnOff\) void turnOff\.request\(\)/)
+  it('asks the question instead of switching off, and builds the asking store only in a build that carries the feature, from a lazy import', () => {
+    // The store (and the chat layer under it) is imported when it is needed, never statically: with the flag off nothing of it loads.
+    expect(account).not.toMatch(/^import \{[^}]*useBuddyTurnOffStore[^}]*\} from/m)
+    expect(account).toMatch(/import type \{ useBuddyTurnOffStore \} from '~\/stores\/buddyTurnOff'/)
+    expect(account).toMatch(/if \(!turnOff\.value && buddyReads\.available\) turnOff\.value = \(await import\('~\/stores\/buddyTurnOff'\)\)\.useBuddyTurnOffStore\(\)/)
+    expect(account).toMatch(/else void turnOffStore\(\)\.then\(\(store\) => store\?\.request\(\)\)/)
     expect(account).not.toMatch(/buddyReads\.set\(on\)/)
-    expect(account).toMatch(/<ProfileBuddyReadsOff v-if="turnOff" \/>/)
+    expect(account).toMatch(/<LazyProfileBuddyReadsOff v-if="turnOff" \/>/)
   })
 
   it('reads her rooms only with the switch on', () => {
-    expect(account).toMatch(/if \(buddyReads\.available && buddyReads\.enabled\) void turnOff\?\.refresh\(\)/)
+    expect(account).toMatch(/if \(buddyReads\.available && buddyReads\.enabled\) void turnOffStore\(\)\.then\(\(store\) => store\?\.refresh\(\)\)/)
   })
 })

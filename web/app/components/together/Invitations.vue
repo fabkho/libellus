@@ -20,7 +20,7 @@ const invites = useBuddyInvitesStore()
 const store = useBuddyReadStore()
 const online = useOnline()
 
-onMounted(() => props.load && void invites.load())
+onMounted(() => props.load && void invites.load({ force: true }))
 
 const busy = ref<string | null>(null)
 const error = ref<string | null>(null)

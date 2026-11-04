@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { BuddyMember, BuddyRead } from '@/data/buddyReads'
-import { currentChoice, markerChoices, roomRows, trackOf, trackPlace } from '@/utils/buddyRoom'
+import { currentChoice, markerChoices, roomRows, titleSaysNumber, trackOf, trackPlace } from '@/utils/buddyRoom'
+import { sectionTitle } from '@/utils/buddySectionTitle'
 import { isReadId, isSectionSegment, sectionOfSegment, threadPath } from '@/utils/buddyRoute'
 import { sentBubble, type BuddyBubble } from '@/utils/buddyRead'
 import { quoteOf, reportInput, threadItems, type ThreadContext } from '@/utils/buddyThread'
@@ -177,5 +178,63 @@ describe('the addresses', () => {
     expect(sectionOfSegment('x')).toBeUndefined()
     expect(threadPath(id, null)).toBe(`/together/${id}/room`)
     expect(threadPath(id, 's1')).toBe(`/together/${id}/s1`)
+  })
+})
+
+describe('a message that was refused', () => {
+  const failed = (error: 'buddy_read_archived' | 'not_found' | 'message_body_invalid' | 'unknown' | 'message_rate_limited' | 'busy') => ({ ...bubble('7', { senderId: 'ada' }), state: 'failed' as const, error })
+
+  it('is permanent when a second try cannot change why (removed, blocked, archived, invalid), and has no id to answer or react to', () => {
+    for (const code of ['buddy_read_archived', 'not_found', 'message_body_invalid'] as const) {
+      expect(threadItems([failed(code)], ctx())[0], code).toMatchObject({ delivery: 'failed', permanent: true, id: null, error: `word:${code}` })
+    }
+  })
+
+  it('may be tried again when it was the connection, the limit or a failure nobody explained', () => {
+    for (const code of ['unknown', 'message_rate_limited', 'busy'] as const) expect(threadItems([failed(code)], ctx())[0]!.permanent, code).toBe(false)
+  })
+
+  it('is never permanent while it is on its way or stored', () => {
+    const sending = { ...bubble('8', { senderId: 'ada' }), state: 'sending' as const }
+    expect(threadItems([sending, bubble('9')], ctx()).map((i) => i.permanent)).toEqual([false, false])
+  })
+})
+
+describe('what a row says about its number, and a Section in the viewer’s words', () => {
+  it('says its number only when the title ends with it on its own: not as the tail of a longer number or a range', () => {
+    expect(titleSaysNumber('Section 9', '9')).toBe(true)
+    expect(titleSaysNumber('Abschnitt 9 ', '9')).toBe(true)
+    expect(titleSaysNumber('9', '9')).toBe(true)
+    expect(titleSaysNumber('Chapter 19', '9')).toBe(false)
+    expect(titleSaysNumber('Section 1–2', '2')).toBe(false)
+    expect(titleSaysNumber('Part 3-4', '4')).toBe(false)
+    expect(titleSaysNumber('The Storm', '9')).toBe(false)
+    expect(titleSaysNumber('Anything', '')).toBe(false)
+  })
+
+  const words = { whole: () => 'The whole book', label: (n: string) => `Section ${n}` }
+  it('words the setup’s own labels again in the viewer’s language, in any language the setup writes, and keeps a title the host typed', () => {
+    expect(sectionTitle({ kind: 'chapter', title: 'Abschnitt 3' }, words)).toBe('Section 3')
+    expect(sectionTitle({ kind: 'chapter', title: 'Section 3–4' }, words)).toBe('Section 3–4')
+    expect(sectionTitle({ kind: 'chapter', title: 'Abschnitt 12–13' }, words)).toBe('Section 12–13')
+    expect(sectionTitle({ kind: 'chapter', title: 'The Storm' }, words)).toBe('The Storm')
+    expect(sectionTitle({ kind: 'chapter', title: 'Section 3: The Storm' }, words)).toBe('Section 3: The Storm')
+    // The whole book is the viewer's own words whatever the host's tool wrote.
+    expect(sectionTitle({ kind: 'end', title: 'Das ganze Buch' }, words)).toBe('The whole book')
+  })
+
+  it('puts them on the rows of the room, and never the title of a veiled one', () => {
+    const read = {
+      room: { count: 0, unread: 0 },
+      members: [],
+      chapters: [
+        { id: 's1', position: 1, kind: 'chapter', title: 'Abschnitt 1', pages: null, count: 0, unread: 0 },
+        { id: 's2', position: 2, kind: 'chapter', title: 'Abschnitt 2', pages: null, count: 0, unread: 0 },
+        { id: 'e', position: 3, kind: 'end', title: 'Das ganze Buch', pages: null, count: 0, unread: 0 },
+      ],
+    } as unknown as BuddyRead
+    const open = { open: true, veiled: false, showTitle: true, showUnread: true }
+    const rows = roomRows(read, (id) => (id === 's2' ? { ...open, open: false, veiled: true, showTitle: false, showUnread: false } : open), (c) => sectionTitle(c, words))
+    expect(rows.map((r) => r.title)).toEqual(['', 'Section 1', '', 'The whole book'])
   })
 })

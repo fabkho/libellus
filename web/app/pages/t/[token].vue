@@ -28,7 +28,8 @@ const switchStore = useBuddyReadsSwitchStore()
 const online = useOnline()
 const coverHosts = { ...useCoverHosts(), proxy: false }
 
-useHead({ title: () => `${t('together.link.pageTitle')} · ${t('app.name')}` })
+// The address carries the link's token: no request this page makes (covers, the API) says where it was opened from (public/_headers does the same for the document).
+useHead({ title: () => `${t('together.link.pageTitle')} · ${t('app.name')}`, meta: [{ name: 'referrer', content: 'no-referrer' }] })
 
 const token = computed(() => String(route.params.token ?? ''))
 const outcome = ref<Outcome>('loading')
@@ -55,6 +56,8 @@ async function open() {
   if (!result.data) return void (outcome.value = 'missing')
   target.value = result.data
   outcome.value = result.data.state === 'member' ? 'member' : 'card'
+  // The token has done its work in the address: the history, a share sheet and a screenshot of the bar need not carry it (the join uses the one in memory).
+  window.history.replaceState(window.history.state, '', '/t/')
 }
 
 /** "Turn on": she said yes, now the link is read. */
@@ -138,7 +141,7 @@ onMounted(open)
         {{ target.state === 'invited' ? t('together.link.invitedBy', { name: host }) : t('together.link.hostedBy', { name: host }) }}
       </p>
       <div class="flex flex-col items-center gap-xs">
-        <UiAvatarStack :faces="faces" :max="5" :label="names.join(', ')">
+        <UiAvatarStack :faces="faces" :max="5" :label="names.join(t('common.listSeparator'))">
           <template #face="{ index }"><FriendsAvatar :card="target.members[index]!" /></template>
         </UiAvatarStack>
         <p class="text-caption text-ink-muted" data-testid="buddyLink.meta">

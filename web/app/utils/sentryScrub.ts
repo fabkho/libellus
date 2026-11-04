@@ -15,6 +15,9 @@ const EMAIL = /[^\s@<>"'()[\],;:]+@[^\s@<>"'()[\],;:]+\.[a-z]{2,}/gi
 const UUID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi
 // `https://host/path?x=1#y` inside a longer string („GET https://…?select=…“): keep up to the path.
 const URL_WITH_QUERY = /\b((?:https?|wss?):\/\/[^\s?#"'<>]+)[?#][^\s"'<>]*/gi
+// An invite link's token (`/t/<22 characters>`, a buddy read; `/f/<22 characters>`, a follow link): whoever holds it may join or ask, so it
+// never leaves the phone, in a URL, a route, a breadcrumb or a transaction name.
+const LINK_TOKEN = /\/([tf])\/[A-Za-z0-9_-]{22}(?![A-Za-z0-9_-])/g
 // A bare path (`/members/…?tab=x`), only where the whole string is one.
 const PATH_WITH_QUERY = /^(\/[^\s?#]*)[?#]\S*$/
 
@@ -123,6 +126,7 @@ export function scrubString(value: string): string {
   return value
     .replace(URL_WITH_QUERY, '$1')
     .replace(PATH_WITH_QUERY, '$1')
+    .replace(LINK_TOKEN, '/$1/:token')
     .replace(EMAIL, '[email]')
     .replace(UUID, ':id')
 }
