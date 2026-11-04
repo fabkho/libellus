@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.33.1](https://github.com/fabkho/libellus/compare/v1.33.0...v1.33.1) (2026-11-04)
+
+
+### Fixes
+
+* **web:** buddy reads after review ([#494](https://github.com/fabkho/libellus/issues/494)) ([37ffaf8](https://github.com/fabkho/libellus/commit/37ffaf8dd292b68e3aa829010f8bd73c7f540fb3))
+* **web:** buddy reads, the rehearsal's findings ([#496](https://github.com/fabkho/libellus/issues/496)) ([91d4f84](https://github.com/fabkho/libellus/commit/91d4f842ba6600cb80b5b9e5660e6a8135966c63))
+
 ## [1.33.0](https://github.com/fabkho/libellus/compare/v1.32.0...v1.33.0) (2026-11-04)
 
 
