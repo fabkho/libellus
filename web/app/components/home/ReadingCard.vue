@@ -26,9 +26,8 @@ const props = defineProps<{ entry: LibraryEntry; eager?: boolean; friends?: Frie
 const emit = defineEmits<{ together: [entry: LibraryEntry] }>()
 
 const { t, n } = useI18n()
-// Buddy reads (docs/plans/buddy-read-shared.md W5): the "..." appears only with the build's flag and her switch on, for a Catalogue Book.
-const togetherOn = useBuddyReadsOn()
-const together = computed(() => togetherOn.value && canReadTogether(props.entry.book))
+// Buddy reads: the "..." (Read together) is on a card of a Catalogue Book; a Manual book cannot be read together.
+const together = computed(() => canReadTogether(props.entry.book))
 const { formatDay, dayOfRead } = useDays()
 const books = useBookStore()
 const reading = useReadingStore()

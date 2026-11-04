@@ -29,7 +29,7 @@ onMounted(() => void avatar.load())
 
 const social = useSocialStore()
 const online = useOnline()
-// A buddy read invitation lights the same lamp (only in a build with buddy reads, and only while she has them on: the store asks nothing else).
+// A buddy read invitation lights the same lamp (stores/buddyInvites.ts).
 const invites = useBuddyInvitesStore()
 const requestWaits = computed(() => social.requests > 0)
 const inviteWaits = computed(() => invites.count > 0)

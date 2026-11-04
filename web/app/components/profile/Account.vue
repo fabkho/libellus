@@ -19,15 +19,11 @@
 // the ebook folder is chosen and scanned. The reader's Classic style is set in the
 // reader's own Aa sheet only. Under the rows: Version x.y.z · What's new, which opens
 // the release's notes (composables/useWhatsNew.ts).
-// Buddy reads (a switch, only in a build that carries the feature): off is a question while she is in a room or has an invitation waiting
-// (components/profile/BuddyReadsOff.vue, stores/buddyTurnOff.ts); one line under the row says how many she is in.
 // Glass (the owner's account only, stores/glass.ts), under Dark mode: how glassy the floating
 // chrome is on this device — Strong, Medium, Off (no transparency at all), a segmented choice in
 // the row — to compare on a phone.
 import { useAppUpdateStore, type UpdateResult } from '~/stores/appUpdate'
 import { useAvatarStore } from '~/stores/avatar'
-import { useBuddyReadsSwitchStore } from '~/stores/buddyReadsSwitch'
-import type { useBuddyTurnOffStore } from '~/stores/buddyTurnOff'
 import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useGlassStore } from '~/stores/glass'
 import { useEbooksStore } from '~/stores/ebooks'
@@ -68,47 +64,6 @@ onMounted(() => void waitlist.load())
 // Friends tab: the feed in the tab bar, on until she turns it off (stores/friendsTab.ts).
 const friendsTab = useFriendsTabStore()
 const showFriendsTab = computed({ get: () => friendsTab.enabled, set: (on: boolean) => friendsTab.set(on) })
-// Buddy reads: the switch the whole feature sits behind, off until she turns it on, and drawn only in a build
-// that carries the feature (`NUXT_PUBLIC_BUDDY_READS`: stores/buddyReadsSwitch.ts, composables/useBuddyReadsFlag.ts).
-const buddyReads = useBuddyReadsSwitchStore()
-// Only a build that carries the feature builds the store that asks (and so touches the buddy read store at all), and only once the page is up:
-// the store, the chat layer under it and the confirm are a chunk of their own, imported here and never with the flag off (tests/buddy-read-entry.test.ts).
-const turnOff = shallowRef<ReturnType<typeof useBuddyTurnOffStore> | null>(null)
-async function turnOffStore() {
-  if (!turnOff.value && buddyReads.available) turnOff.value = (await import('~/stores/buddyTurnOff')).useBuddyTurnOffStore()
-  return turnOff.value
-}
-const showBuddyReads = computed({
-  get: () => buddyReads.enabled,
-  // Off is a question while she is in a room or invited (stores/buddyTurnOff.ts: it reads her list fresh, then turns it off at once or opens the
-  // confirm "Leave your buddy reads and turn off?"); the switch reads on until she answered it. On needs no question.
-  set: (on: boolean) => {
-    if (on) buddyReads.set(true)
-    else void turnOffStore().then((store) => store?.request())
-  },
-})
-/** "You're in 2 buddy reads", under the row; only while the switch is on (with it off nothing of buddy reads is asked). */
-const inRooms = computed(() => (buddyReads.enabled ? (turnOff.value?.hint ?? null) : null))
-const checkFailed = computed(() => buddyReads.enabled && !!turnOff.value?.checkError)
-// Her rooms are read when the Profile opens, when it comes back to the front and when the app does (the shell's reading of her invitations
-// feeds the switch too): a room she joined on another device shows here and stops the switch from going off unasked.
-function readRooms() {
-  if (buddyReads.available && buddyReads.enabled) void turnOffStore().then((store) => store?.refresh())
-}
-onMounted(() => {
-  readRooms()
-  document.addEventListener('visibilitychange', onVisible)
-})
-onActivated(readRooms)
-onBeforeUnmount(() => document.removeEventListener('visibilitychange', onVisible))
-function onVisible() {
-  if (document.visibilityState === 'visible') readRooms()
-}
-watch(
-  () => buddyReads.enabled,
-  (on) => on && readRooms(),
-)
-const buddyReadsHintId = useId()
 
 // Glass: the owner's, like Errors.
 const glass = useGlassStore()
@@ -282,31 +237,6 @@ const whatsNew = useWhatsNew()
         <span v-else-if="whatsNew.notes.version" class="figures text-ink-muted" data-testid="profile.updateValue">{{ whatsNew.notes.version }}</span>
       </UiRow>
       <UiSwitchRow v-model="showFriendsTab" icon="people" :label="t('profile.account.friendsTab')" testid="profile.friendsTab" />
-      <UiSwitchRow
-        v-if="buddyReads.available"
-        v-model="showBuddyReads"
-        icon="chat"
-        :label="t('profile.account.buddyReads')"
-        :aria-describedby="buddyReadsHintId"
-        testid="profile.buddyReads"
-      />
-      <p
-        v-if="buddyReads.available"
-        :id="buddyReadsHintId"
-        class="buddyReadsHint px-inset pb-sm -mt-xs text-footnote text-ink-faint"
-        data-testid="profile.buddyReadsHint"
-      >
-        {{ t('profile.account.buddyReadsHint') }}
-        <span v-if="inRooms" class="mt-xxs block text-ink-muted" data-testid="profile.buddyReadsIn">{{ t(inRooms.key, { count: inRooms.count }, inRooms.count) }}</span>
-      </p>
-      <p
-        v-if="checkFailed"
-        class="buddyReadsHint px-inset pb-sm -mt-xs text-footnote text-error"
-        role="alert"
-        data-testid="profile.buddyReadsCheckFailed"
-      >
-        {{ t('profile.account.buddyReadsCheckFailed') }}
-      </p>
       <UiRow as="button" icon="signOut" :label="t('profile.account.signOut')" data-testid="profile.signOut" @click="askSignOut" />
       <UiRow
         as="button"
@@ -352,7 +282,6 @@ const whatsNew = useWhatsNew()
     >
       {{ t('profile.account.version', { version: whatsNew.notes.version }) }} · <span class="text-accent-ink">{{ t('profile.account.whatsNew') }}</span>
     </button>
-    <LazyProfileBuddyReadsOff v-if="turnOff" />
     <ProfileLinksSheet v-model:open="linking" />
     <ProfileSocialLinksSheet v-model:open="socialLinking" />
     <UiConfirm
@@ -380,17 +309,3 @@ const whatsNew = useWhatsNew()
     />
   </section>
 </template>
-
-<style scoped>
-/* UiRow draws the hairline above every row that follows another row (Row.vue). The Buddy reads hint is
-   no row, so the row after it would lose its line: the hint draws the same line above it. */
-.buddyReadsHint + .ui-row::before {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: var(--spacing-inset);
-  height: var(--stroke-hairline);
-  content: '';
-  background: var(--color-hairline-strong);
-}
-</style>

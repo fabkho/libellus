@@ -7,8 +7,7 @@
 // first ("Show it anyway?", the answer is kept on this device as a peek, her Section does not move). The ⋯ has "Where are you?" and,
 // for the host, Finish and Archive; Invite, Readers (Remove, Leave) are the setup work's sheets (components/together/{InviteSheet,MembersSheet}.vue, in the menu's slot).
 //
-// Behind the build's flag and her switch (utils/buddyRoute.ts, middleware/buddy-reads.ts): a build without buddy reads draws the app's 404
-// and asks nothing. The screen `retain`s the store's live channel while it is open and lets it go when it closes; a change of a Section,
+// The screen `retain`s the store's live channel while it is open and lets it go when it closes; a change of a Section,
 // a member or the status arrives live and the read is read again. Offline: what was read stays, writes say Offline.
 import type { BuddyErrorCode } from '~/data/buddyReads'
 import { isReadId, threadPath } from '~/utils/buddyRoute'
@@ -23,9 +22,8 @@ definePageMeta({
   layout: 'tabs',
   screen: 'together',
   pushed: true,
-  // Runs in the app's entry, before this page's chunk loads: the build's flag and the address only.
-  validate: (route) => useBuddyReadsFlag() && isReadId(route.params.id),
-  middleware: 'buddy-reads',
+  // Runs in the app's entry, before this page's chunk loads: the address only.
+  validate: (route) => isReadId(route.params.id),
 })
 
 const { t, locale } = useI18n()

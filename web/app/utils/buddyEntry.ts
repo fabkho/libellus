@@ -1,10 +1,9 @@
 import type { BuddyCard, BuddyWhere } from '~/data/buddyReads'
 
 /**
- * The entry points of a buddy read (docs/plans/buddy-read-shared.md W5): what the Book page's *Read together* row and Home's *Reading together*
- * card say, as plain data (Vitest drives them in Node). They read what `my_buddy_reads()` answered (`BuddyCard`, stores/buddyRead.ts `mine`)
- * and nothing else; the words are the components'. A count here is a number, never a message's words (part 5.5: the server counts only what
- * her Section has opened, and no screen outside a thread draws more than numbers and names).
+ * The entry points of a buddy read: what the Book page's action and Home's *Reading together* card say, as plain data (Vitest drives them in Node). They read what
+ * `my_buddy_reads()` answered (`BuddyCard`, held by stores/buddyInvites.ts) and nothing else; the words are the components'. A count here is a number, never a
+ * message's words (part 5.5: the server counts only what her Section has opened, and no screen outside a thread draws more than numbers and names).
  */
 
 /** Unread counts above this are drawn "99+": the badge stays a small pill. */
@@ -20,12 +19,22 @@ export const activeReads = (reads: readonly BuddyCard[] | null | undefined): Bud
 export const readOfBook = (reads: readonly BuddyCard[] | null | undefined, bookId: string | null | undefined): BuddyCard | null =>
   bookId ? (activeReads(reads).find((read) => read.book.id === bookId) ?? null) : null
 
-/** What a Book's row does: opens the read she is in, or starts one. */
-export type BookEntryAction = { kind: 'open'; read: BuddyCard } | { kind: 'start' }
+/**
+ * What the Book page's action says, for any Book (docs/parity.md, *Buddy read, the Book page action*): **open** the read she is in, **start** one (`adds`: the Book is
+ * not in her Library, so the setup sheet adds it as Currently reading when she creates the read), or **unavailable** (a Manual book: it has no work to read together).
+ */
+export type BookEntryAction = { kind: 'open'; read: BuddyCard } | { kind: 'start'; adds: boolean } | { kind: 'unavailable' }
 
-export function bookEntryAction(reads: readonly BuddyCard[] | null | undefined, bookId: string | null | undefined): BookEntryAction {
-  const read = readOfBook(reads, bookId)
-  return read ? { kind: 'open', read } : { kind: 'start' }
+/** `book`: the page's Book (null while it is unknown: nothing to offer); `held`: the Book is in her Library; `reads`: her list, or null before it was read. */
+export function bookEntryAction(
+  book: { id?: string; source: string } | null | undefined,
+  held: boolean,
+  reads: readonly BuddyCard[] | null | undefined,
+): BookEntryAction | null {
+  if (!book) return null
+  if (!canReadTogether(book)) return { kind: 'unavailable' }
+  const read = readOfBook(reads, book.id)
+  return read ? { kind: 'open', read } : { kind: 'start', adds: !held }
 }
 
 /** The rows of Home's card: her active reads, those with news first; the server's order within each group. */

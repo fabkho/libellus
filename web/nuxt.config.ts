@@ -293,11 +293,6 @@ export default defineNuxtConfig({
       // (NUXT_PUBLIC_IMPORT_ZIP). Unset: off, the picker takes a CSV only and says so (today's copy). A zip's progress, cover
       // addresses and list order are mapped but not uploaded yet (plan, PR 2 and 3).
       importZip: process.env.NUXT_PUBLIC_IMPORT_ZIP ?? 'off',
-      // Buddy reads (utils/buddyReadsSwitch.ts, stores/buddyReadsSwitch.ts, composables/useBuddyReadsFlag.ts,
-      // docs/plans/buddy-read-shared.md): 'on' / 'off' (NUXT_PUBLIC_BUDDY_READS). Unset: off, in every build, Pages or not:
-      // the database and the data layer may be live while the screens are not, so the feature's own switch in Profile →
-      // Account, its entry points and its routes wait for the release that carries them (the owner turns the flag on then).
-      buddyReads: process.env.NUXT_PUBLIC_BUDDY_READS ?? 'off',
     },
   },
 

@@ -5438,26 +5438,6 @@
           "de"
         ]
       },
-      "profile.account.buddyReads": {
-        "6480515e33a9b0e5": [
-          "de"
-        ]
-      },
-      "profile.account.buddyReadsCheckFailed": {
-        "9d9f537ae8515797": [
-          "de"
-        ]
-      },
-      "profile.account.buddyReadsHint": {
-        "4456d6d5d2e9a4d5": [
-          "de"
-        ]
-      },
-      "profile.account.buddyReadsIn": {
-        "7ea6573c5afd95dc": [
-          "de"
-        ]
-      },
       "profile.account.delete": {
         "a2e20a33570001ae": [
           "de"
@@ -5590,51 +5570,6 @@
       },
       "profile.back": {
         "76900f1bfd16c8d4": [
-          "de"
-        ]
-      },
-      "profile.buddyReadsOff.action": {
-        "53d2942cf67ace5f": [
-          "de"
-        ]
-      },
-      "profile.buddyReadsOff.actionInvitations": {
-        "72a3566f9f921b04": [
-          "de"
-        ]
-      },
-      "profile.buddyReadsOff.deleteHint": {
-        "bb6c63dbd6479826": [
-          "de"
-        ]
-      },
-      "profile.buddyReadsOff.deleteMine": {
-        "5e28ff307a496bc8": [
-          "de"
-        ]
-      },
-      "profile.buddyReadsOff.invitations": {
-        "2b17fe5f8080ee69": [
-          "de"
-        ]
-      },
-      "profile.buddyReadsOff.keep": {
-        "cab1d216aa4365c7": [
-          "de"
-        ]
-      },
-      "profile.buddyReadsOff.rooms": {
-        "7e65da480515d82b": [
-          "de"
-        ]
-      },
-      "profile.buddyReadsOff.title": {
-        "14736ec703b30e58": [
-          "de"
-        ]
-      },
-      "profile.buddyReadsOff.titleInvitations": {
-        "8ba46bf6c3a885ef": [
           "de"
         ]
       },
@@ -8338,18 +8273,18 @@
           "de"
         ]
       },
+      "together.entry.adds": {
+        "c91148ab879763a7": [
+          "de"
+        ]
+      },
       "together.entry.hint": {
-        "1c02e6d2f9f20122": [
+        "fd37701c7738208c": [
           "de"
         ]
       },
       "together.entry.moreLabel": {
         "04634077097ee8dd": [
-          "de"
-        ]
-      },
-      "together.entry.open": {
-        "9546e16bf119e2be": [
           "de"
         ]
       },
@@ -8360,6 +8295,11 @@
       },
       "together.entry.start": {
         "50805a0fc2e9da51": [
+          "de"
+        ]
+      },
+      "together.entry.unavailable": {
+        "c7eec48c4c1de24a": [
           "de"
         ]
       },
@@ -8903,6 +8843,11 @@
           "de"
         ]
       },
+      "together.setup.adds": {
+        "298271572e776849": [
+          "de"
+        ]
+      },
       "together.setup.back": {
         "76900f1bfd16c8d4": [
           "de"
@@ -9290,21 +9235,6 @@
       },
       "together.track.youNotSet": {
         "ec8ea62bc32fdd91": [
-          "de"
-        ]
-      },
-      "together.turnOn.action": {
-        "5a1f096a0d8d7674": [
-          "de"
-        ]
-      },
-      "together.turnOn.text": {
-        "b3856cd14082ae28": [
-          "de"
-        ]
-      },
-      "together.turnOn.title": {
-        "12f86811f7431a17": [
           "de"
         ]
       },

@@ -52,7 +52,9 @@ test('a member starts a book, finishes it with 3.75 stars and a review, and find
   await expect(page.getByTestId('book.since')).toContainText('day 1')
   await expect(page.getByTestId('book.start')).toBeHidden()
   await expect(page.getByTestId('book.updateProgress')).toHaveText(en.book.progress.update)
-  await expect(page.getByTestId('book.actions').getByRole('button')).toHaveCount(1)
+  // The one action of the Book's state, then the buddy read action under it (every Book page has it) and nothing else: no Finish, no DNF.
+  await expect(page.getByTestId('book.actions').getByRole('button')).toHaveCount(2)
+  await expect(page.getByTestId('book.actions').getByTestId('book.together.start')).toBeVisible()
   await expect(page.getByTestId('book.readAs')).toHaveCount(0)
   await page.getByTestId('book.updateProgress').click()
   await expect(page.getByTestId('progress.finish')).toHaveText(en.book.finish)

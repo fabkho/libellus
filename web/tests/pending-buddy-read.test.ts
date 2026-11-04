@@ -110,28 +110,23 @@ describe('where a signed-in member is sent for a kept link', () => {
 describe('a signed-out visitor on a buddy read link', () => {
   const at = (path: string) => ({ path, query: {} })
 
-  it('is sent to sign-in and the link is kept, in a build with buddy reads', () => {
+  it('is sent to sign-in and the link is kept', () => {
     const storage = memoryStorage()
-    expect(signedOutDestination(at(`/t/${TOKEN}/`), { pending: false, storage, buddyReads: true })).toBe('/sign-in')
+    expect(signedOutDestination(at(`/t/${TOKEN}/`), { pending: false, storage })).toBe('/sign-in')
     expect(peekBuddyRead(storage)).toBe(TOKEN)
   })
 
-  it('keeps nothing in a build without them, nor a malformed token, nor without a storage', () => {
-    const off = memoryStorage()
-    expect(signedOutDestination(at(`/t/${TOKEN}`), { pending: false, storage: off })).toBe('/sign-in')
-    expect(signedOutDestination(at(`/t/${TOKEN}`), { pending: false, storage: off, buddyReads: false })).toBe('/sign-in')
-    expect(peekBuddyRead(off)).toBeNull()
-
+  it('keeps nothing for a malformed token, nor without a storage', () => {
     const bad = memoryStorage()
-    expect(signedOutDestination(at('/t/not-a-token'), { pending: false, storage: bad, buddyReads: true })).toBe('/sign-in')
+    expect(signedOutDestination(at('/t/not-a-token'), { pending: false, storage: bad })).toBe('/sign-in')
     expect(peekBuddyRead(bad)).toBeNull()
 
-    expect(signedOutDestination(at(`/t/${TOKEN}`), { pending: false, storage: null, buddyReads: true })).toBe('/sign-in')
+    expect(signedOutDestination(at(`/t/${TOKEN}`), { pending: false, storage: null })).toBe('/sign-in')
   })
 
   it('is not a public path: the link needs the sign-in', () => {
-    expect(signedOutDestination(at(`/t/${TOKEN}`), { pending: false, storage: memoryStorage(), buddyReads: true })).toBe('/sign-in')
-    expect(signedOutDestination(at(`/t/${TOKEN}`), { pending: true, storage: memoryStorage(), buddyReads: true })).toBe('/verify')
+    expect(signedOutDestination(at(`/t/${TOKEN}`), { pending: false, storage: memoryStorage() })).toBe('/sign-in')
+    expect(signedOutDestination(at(`/t/${TOKEN}`), { pending: true, storage: memoryStorage() })).toBe('/verify')
   })
 })
 

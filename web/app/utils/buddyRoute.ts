@@ -2,8 +2,7 @@ import { ROOM_SEGMENT } from '~/utils/buddyRoom'
 
 /**
  * The addresses of a buddy read (`/together/<id>` the room, `/together/<id>/<section>` a thread: the Section's id, or `room` for the
- * thread of the room itself). A page whose address is not one is the app's normal 404 (`validate`), and so is every one of them
- * in a build without buddy reads (composables/useBuddyReadsFlag.ts): the route exists, draws nothing and asks the server nothing.
+ * thread of the room itself). A page whose address is not one is the app's normal 404 (`validate`).
  */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 

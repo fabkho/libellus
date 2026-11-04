@@ -1,10 +1,11 @@
-import type { BrowserContextOptions, Page } from '@playwright/test'
+import type { BrowserContextOptions } from '@playwright/test'
 import { expect, test } from './fixtures'
 import en from '../i18n/locales/en.json' with { type: 'json' }
-import { BUDDY_READS_KEY } from '../app/utils/buddyReadsSwitch'
-import { buddyOf, follows, joinRead, sectionsOf, shelve, startRead } from '../tests/support/buddy'
+import { createLibrary } from '../app/data/library'
+import { createManualBooks } from '../app/data/manualBooks'
+import { buddyOf, catalogueEdition, follows, joinRead, sectionsOf, shelve, startRead } from '../tests/support/buddy'
 import { signUpMember } from '../tests/support/member'
-import { sql } from '../tests/support/stack'
+import { runTitle, sql } from '../tests/support/stack'
 import { expectAccessible, goto, signedIn, untilStill } from './support'
 
 /**
@@ -23,19 +24,12 @@ import { expectAccessible, goto, signedIn, untilStill } from './support'
 
 test.use({ colorScheme: 'dark' })
 
-/** Buddy reads are her own switch (Profile → Account), off until she turns it on: a member who did writes it on the device. */
-async function switchedOn(page: Page) {
-  await page.addInitScript((key) => localStorage.setItem(key, 'on'), BUDDY_READS_KEY)
-}
-
 test('Ida starts a buddy read, Anna joins, a message arrives live, a Section stays veiled until Show anyway, a deleted comment is removed @full', { tag: '@full' }, async ({ page: ida, browser }) => {
   // Two members, a live channel, a veil and a scan: longer than a usual flow.
   test.slow()
   const context = await browser.newContext(test.info().project.use as BrowserContextOptions)
   try {
     const anna = await context.newPage()
-    await switchedOn(ida)
-    await switchedOn(anna)
     const idaMember = await signedIn(ida)
     const annaMember = await signedIn(anna)
     for (const [member, name] of [[idaMember, 'Ida'], [annaMember, 'Anna']] as const) {
@@ -151,78 +145,128 @@ test('Ida starts a buddy read, Anna joins, a message arrives live, a Section sta
 })
 
 /**
- * The entry points (W5): with her switch off (the default) the Book page has no *Read together* row, Home has no card and no "..." on a Currently
- * reading card, and nothing asks the server for her buddy reads; with it on the row, the "..." and the setup sheet they open appear, and once she is in
- * a read the Book page's row opens its room and Home's card lists it with what is new, an invitation above it.
+ * The entry points: buddy reads are for every member, so a Book page offers *Read together* in its action area whatever state the Book is in. A Book that is not in her
+ * Library: the action, the setup sheet that says plainly that starting adds it to Currently reading, and nothing added when she cancels; started, the room exists, the
+ * Book is Currently reading and the Book page now says "Open the buddy read". Then Home: the ⋯ of a Currently reading card, the card "Reading together" with what is
+ * new, and an invitation above it.
  */
-test('the Book page row and the Home card appear with the switch on and not before @full', { tag: '@full' }, async ({ page }) => {
+test('Read together on a Book that is not in her Library adds it as Currently reading when the read is made; Home lists the read and its invitation @full', { tag: '@full' }, async ({ page }) => {
   test.slow()
   const ida = await signedIn(page)
   const anna = await signUpMember()
   await sql(`update auth.users set raw_user_meta_data = raw_user_meta_data || jsonb_build_object('name', 'Anna') where id = $1`, [anna.id])
-  const entry = await shelve(ida, 'The Entry Book')
-  const asked: string[] = []
-  page.on('request', (request) => {
-    if (/rpc\/my_buddy_reads/.test(request.url())) asked.push(request.url())
-  })
+  // A Catalogue Book in Anna's Library, not in Ida's.
+  const theirs = await shelve(anna, 'The Entry Book')
+  const bookId = theirs.book.id
 
-  // Off: no row, no card, no "...", no call.
-  await goto(page, `/book/${entry.book.id}`)
-  await expect(page.getByTestId('book.actions')).toBeVisible()
-  await untilStill(page)
-  await expect(page.getByTestId('book.together')).toHaveCount(0)
-  await goto(page, '/')
-  await expect(page.getByTestId('home.readingCard')).toBeVisible()
-  await untilStill(page)
-  await expect(page.getByTestId('home.together.more')).toHaveCount(0)
-  await expect(page.getByTestId('home.together')).toHaveCount(0)
-  expect(asked, 'buddy RPCs with the switch off').toEqual([])
-
-  // On: the "..." on the card opens its menu, and Read together opens the setup sheet.
-  await page.evaluate((key) => localStorage.setItem(key, 'on'), BUDDY_READS_KEY)
-  await goto(page, '/')
-  await expect(page.getByTestId('home.together.more')).toBeVisible()
-  await expect(page.getByTestId('home.together')).toHaveCount(0)
-  await page.getByTestId('home.together.more').click()
-  await expect(page.getByTestId('homeTogetherMenu.start')).toBeVisible()
-  await page.getByTestId('homeTogetherMenu.start').click()
-  await expect(page.getByTestId('buddySetup')).toBeVisible()
-  await page.getByTestId('buddySetup.cancel').click()
-  await expect(page.getByTestId('buddySetup')).toBeHidden()
-
-  // The Book page: the row under the actions opens the same sheet.
-  await goto(page, `/book/${entry.book.id}`)
-  await expect(page.getByTestId('book.together.start')).toBeVisible()
+  // The Book page of a Book she does not hold: the action is there, in the action area, not behind a menu.
+  await goto(page, `/book/${bookId}`)
+  await expect(page.getByTestId('book.add')).toBeVisible()
+  await expect(page.getByTestId('book.actions').getByTestId('book.together.start')).toBeVisible()
   await expect(page.getByTestId('book.together.start')).toContainText(en.together.entry.start)
+  await expect(page.getByTestId('book.together.adds')).toHaveText(en.together.entry.adds)
+  await expectAccessible(page, 'a Book that is not in her Library, with Read together')
+
+  // The sheet says so plainly; Cancel adds nothing.
   await page.getByTestId('book.together.start').click()
   await expect(page.getByTestId('buddySetup')).toBeVisible()
+  await expect(page.getByTestId('buddySetup.adds')).toHaveText(en.together.setup.adds)
+  await expectAccessible(page, 'the setup sheet, which adds the Book')
   await page.getByTestId('buddySetup.cancel').click()
+  await expect(page.getByTestId('buddySetup')).toBeHidden()
+  await expect(page.getByTestId('book.notInLibrary')).toBeVisible()
+  await goto(page, '/')
+  await expect(page.getByTestId('home.readingCard')).toHaveCount(0)
 
-  // A read of this Book, and Anna writes in its room: the row opens the room, Home's card says one is new.
+  // Start: Book, Sections, Invite, Start. The read is made and the Book is Currently reading.
+  await goto(page, `/book/${bookId}`)
+  await page.getByTestId('book.together.start').click()
+  await expect(page.getByTestId('buddySetup.adds')).toBeVisible()
+  await page.getByTestId('buddySetup.next').click()
+  await page.getByTestId('buddySetup.next').click()
+  await expect(page.getByTestId('buddySetup.addsAgain')).toBeVisible()
+  await page.getByTestId('buddySetup.start').click()
+  await expect(page.getByTestId('buddySetup.result')).toBeVisible()
+  await page.getByTestId('buddySetup.open').click()
+  await expect(page).toHaveURL(/\/together\/[0-9a-f-]{36}$/)
+  await expect(page.getByTestId('together.title')).toContainText('The Entry Book')
+  const roomUrl = page.url()
+
+  // The Book is Currently reading (Home), and its page says "Open the buddy read" where the action was.
+  await goto(page, '/')
+  await expect(page.getByTestId('home.readingCard')).toContainText('The Entry Book')
+  await goto(page, `/book/${bookId}`)
+  await expect(page.getByTestId('book.status')).toHaveText(en.status.reading)
+  await expect(page.getByTestId('book.together.open')).toContainText(en.together.entry.openRoom)
+  await expect(page.getByTestId('book.together.start')).toHaveCount(0)
+  await page.getByTestId('book.together.open').click()
+  await expect(page).toHaveURL(roomUrl)
+
+  // Anna writes in the room: Home's card says one is new, and the ⋯ of the card offers the room, not a second read.
+  const readId = roomUrl.split('/').pop()!
   await follows(ida, anna)
-  const made = await buddyOf(ida).create({ bookId: entry.book.id, clientId: crypto.randomUUID(), sections: sectionsOf(3), invite: [], link: true })
-  if (made.error) throw new Error(`Fixture failed: ${made.error}`)
-  await joinRead(anna, made.data.linkToken!)
-  const posted = await buddyOf(anna).post({ readId: made.data.id, sectionId: null, clientId: crypto.randomUUID(), body: 'Hello from the room' })
+  await joinRead(anna, (await buddyOf(ida).read(readId)).data!.linkToken!)
+  const posted = await buddyOf(anna).post({ readId, sectionId: null, clientId: crypto.randomUUID(), body: 'Hello from the room' })
   if (posted.error) throw new Error(`Fixture failed: ${posted.error}`)
   await goto(page, '/')
   await expect(page.getByTestId('home.togetherRow')).toHaveCount(1)
   await expect(page.getByTestId('home.togetherRow')).toContainText('The Entry Book')
   await expect(page.getByTestId('home.togetherRow').getByTestId('together.unread')).toContainText('1')
-  // Its "..." offers the room, not a second read.
   await page.getByTestId('home.together.more').click()
   await expect(page.getByTestId('homeTogetherMenu.open')).toBeVisible()
   await expect(page.getByTestId('homeTogetherMenu.start')).toHaveCount(0)
   await page.keyboard.press('Escape')
+
   // An invitation of Anna's waits above the rows.
   await follows(anna, ida)
   await startRead(anna, { title: 'Anna Picks', invite: [ida.id] })
   await goto(page, '/')
   await expect(page.getByTestId('buddyInvite.row')).toHaveCount(1)
   await expect(page.getByTestId('buddyInvite.row')).toContainText('Anna Picks')
-  await goto(page, `/book/${entry.book.id}`)
+})
+
+/** The action in every state of the Book page: not in the Library, Want to read, Currently reading, Finished, given up (DNF), already in a read, and a Manual book. */
+test('the Book page offers Read together in every state of the Book, and says why when it cannot @full', { tag: '@full' }, async ({ page }) => {
+  test.slow()
+  const ida = await signedIn(page)
+  const library = createLibrary(ida.client)
+  const today = new Date().toISOString().slice(0, 10)
+  const add = async (title: string, options: Parameters<typeof library.addToLibrary>[1]) => {
+    const added = await library.addToLibrary(catalogueEdition(title), options)
+    if (added.error || !added.data) throw new Error(`Fixture failed: ${String(added.error)}`)
+    return added.data
+  }
+  const want = await add('Want Book', { status: 'want_to_read' })
+  const reading = await add('Reading Book', { status: 'reading', startedOn: today })
+  const finished = await add('Finished Book', { status: 'finished', startedOn: today, endedOn: today })
+  const dnf = await add('Given Up Book', { status: 'reading', startedOn: today })
+  const gaveUp = await library.abandon(dnf.id, { endedOn: today })
+  if (gaveUp.error) throw new Error(`Fixture failed: ${String(gaveUp.error)}`)
+  const manual = await createManualBooks(ida.client).addManualBook({ title: runTitle('My Own Book'), author: 'Ida Beispiel' }, { status: 'reading', startedOn: today })
+  if (manual.error || !manual.data) throw new Error(`Fixture failed: ${String(manual.error)}`)
+
+  // Not in her Library, Want to read, Currently reading, Finished, given up: the action is in the action area every time.
+  const other = await signUpMember()
+  const foreign = await shelve(other, 'Not In Her Library')
+  await goto(page, `/book/${foreign.book.id}`)
+  await expect(page.getByTestId('book.actions').getByTestId('book.together.start')).toBeVisible()
+  await expect(page.getByTestId('book.together.adds')).toBeVisible()
+  for (const [name, entry] of [['want', want], ['reading', reading], ['finished', finished], ['given up', dnf]] as const) {
+    await goto(page, `/book/${entry.book.id}`)
+    await expect(page.getByTestId('book.actions').getByTestId('book.together.start'), name).toBeVisible()
+    await expect(page.getByTestId('book.together.adds'), name).toHaveCount(0)
+  }
+
+  // A Manual book cannot be read together: the action is there, disabled, with the one line why.
+  await goto(page, `/book/${manual.data.book.id}`)
+  await expect(page.getByTestId('book.together.start')).toBeDisabled()
+  await expect(page.getByTestId('book.together.unavailable')).toHaveText(en.together.entry.unavailable)
+
+  // Already in a read: the same place says "Open the buddy read".
+  const made = await buddyOf(ida).create({ bookId: reading.book.id, clientId: crypto.randomUUID(), sections: sectionsOf(3), invite: [], link: false })
+  if (made.error) throw new Error(`Fixture failed: ${made.error}`)
+  await goto(page, `/book/${reading.book.id}`)
   await expect(page.getByTestId('book.together.open')).toBeVisible()
+  await expect(page.getByTestId('book.together.summary')).toContainText(en.together.where.section.replace('{n}', '1'))
   await expect(page.getByTestId('book.together.start')).toHaveCount(0)
-  await page.getByTestId('book.together.open').click()
-  await expect(page).toHaveURL(new RegExp(`/together/${made.data.id}$`))
 })

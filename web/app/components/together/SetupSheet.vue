@@ -1,8 +1,10 @@
 <script setup lang="ts">
 // Starting a buddy read (docs/plans/buddy-read-shared.md, W3): one sheet of three steps, Book → Sections → Invite, then the
-// result. Opened from a Book of her Library (the entry points are the Book page's row, components/together/BookRow.vue, and the Currently reading card's menu on Home, components/home/TogetherMenu.vue; nothing opens it with buddy reads off).
+// result. Opened from the Book page's action (components/together/BookRow.vue: any Catalogue Book, in her Library or not) and from the Currently reading card's
+// menu on Home (components/home/TogetherMenu.vue).
 //
-// 1. Book: the Book (her Library entry's: a read is of a Catalogue Book she holds), the day it starts, and what a buddy read is.
+// 1. Book: the Book (a read is of a Catalogue Book she holds; one she does not hold yet is added as Currently reading when she presses Start, and the sheet
+//    says so), the day it starts, and what a buddy read is.
 // 2. Sections: how the Book is divided: by a number of parts (grouped 2 or 3 at a time above 30) or by pages, the arithmetic of the
 //    chat layer's `chapters.ts` (utils/buddySetup.ts), with a preview of the rows (`UiThreadRow`) the room will show. The Sections
 //    are stored text: they are worded here, in the host's language, and "The whole book" is always the last.
@@ -14,14 +16,16 @@
 // (`offline`), a refusal stays in the sheet worded under `buddyRead.error.<code>`, and the same click tries again with the same
 // client id (the database answers the read it made). A read she already has for the Book is offered to open (`buddy_read_exists`).
 //
-// Props: `entry` (her Library entry, null while none is chosen). v-model:open. Emits `open(id)` once she chooses the room, and goes there.
+// Props: `entry` (her Library entry; null for a Book that is not in her Library yet), `book` (that Book, used while there is no entry). v-model:open. Emits `open(id)` once she chooses the room, and goes there.
 // Test ids: `buddySetup` (+ `.cancel`, `.back`), `buddySetup.next`, `.start`, `.starts`, `.mode.*`, `.count`, `.per.*`, `.pages`,
 // `.perPart`, `.preview`, `.summary`, `.picker`, `.linkOn`, `.error`, `.open`, and the result's `.result`, `.link.*`.
+import type { Book, BookSnapshot } from '~/data/books'
 import type { LibraryEntry } from '~/data/library'
 import { pageCountOf } from '~/data/progress'
 import { buddyErrorKey } from '~/utils/buddyRead'
 import { roomPath } from '~/utils/buddyRoute'
 import { useBuddyReadStore } from '~/stores/buddyRead'
+import { useLibraryStore } from '~/stores/library'
 import type { BuddyErrorCode, CreatedBuddyRead } from '~/data/buddyReads'
 import {
   buddyLink,
@@ -41,14 +45,14 @@ import {
 import { DEFAULT_PAGES_PER_PART, type ChapterRange } from '#layers/chat/app/utils/chapters'
 
 const open = defineModel<boolean>('open', { required: true })
-const props = defineProps<{ entry: LibraryEntry | null }>()
+const props = defineProps<{ entry: LibraryEntry | null; book?: Book | BookSnapshot | null }>()
 const emit = defineEmits<{ open: [id: string] }>()
 
 const { t } = useI18n()
 const { relativeDay } = useDays()
 const store = useBuddyReadStore()
+const library = useLibraryStore()
 const online = useOnline()
-const allowed = useBuddyReadsOn()
 const coverHosts = { ...useCoverHosts(), proxy: false }
 
 /** Kept while the sheet slides away, so it does not empty mid-exit. */
@@ -59,6 +63,17 @@ watch(
     if (value) entry.value = value
   },
 )
+const lastBook = ref<Book | BookSnapshot | null>(props.book ?? null)
+watch(
+  () => props.book,
+  (value) => {
+    if (value) lastBook.value = value
+  },
+)
+/** The Book the sheet is about: her entry's, or the page's while it is not in her Library. */
+const shown = computed<Book | BookSnapshot | null>(() => entry.value?.book ?? lastBook.value)
+/** Starting adds the Book to her Library, as Currently reading: she is told so, and nothing is added before she presses Start. */
+const adds = computed(() => !entry.value && !!shown.value)
 
 // ------------------------------------------------------------------ the draft
 
@@ -83,14 +98,17 @@ let clientId = ''
 
 const wholeNumber = (text: string): number | null => (/^\d{1,5}$/.test(text.trim()) ? Number(text.trim()) : null)
 
-watch(open, (isOpen) => {
+// Immediate: a menu or a page that builds the sheet when she asks for it builds it open.
+watch(
+  open,
+  (isOpen) => {
   if (!isOpen) return
   step.value = 'book'
   startsOn.value = isoDay()
   mode.value = 'count'
   countText.value = String(DEFAULT_SECTION_COUNT)
   per.value = 1
-  pagesText.value = String((entry.value && pageCountOf(entry.value)) ?? '')
+  pagesText.value = String((shown.value && pageCountOf({ book: shown.value, pageCountOverride: entry.value?.pageCountOverride })) ?? '')
   perPartText.value = String(DEFAULT_PAGES_PER_PART)
   invite.value = []
   link.value = true
@@ -99,7 +117,9 @@ watch(open, (isOpen) => {
   error.value = null
   existing.value = null
   clientId = globalThis.crypto.randomUUID()
-})
+  },
+  { immediate: true },
+)
 
 const count = computed(() => wholeNumber(countText.value))
 const plan = computed<SetupPlan>(() =>
@@ -107,7 +127,7 @@ const plan = computed<SetupPlan>(() =>
     ? { from: 'count', count: count.value, per: groupingsOf(count.value).includes(per.value) ? per.value : 1 }
     : { from: 'pages', pageCount: wholeNumber(pagesText.value), perPart: wholeNumber(perPartText.value) },
 )
-const draft = computed(() => ({ bookId: entry.value?.book.id ?? null, plan: plan.value, invite: invite.value, startsOn: startsOn.value || null }))
+const draft = computed(() => ({ bookId: shown.value ? (entry.value?.book.id ?? 'new') : null, plan: plan.value, invite: invite.value, startsOn: startsOn.value || null }))
 const ready = computed(() => stepReady(step.value, draft.value, today.value || isoDay()))
 const groupings = computed(() => groupingsOf(count.value))
 
@@ -160,14 +180,26 @@ const stepLine = computed(() => t('together.setup.stepOf', { step: stepAt.value 
 // ------------------------------------------------------------------ starting
 
 async function start() {
-  const book = entry.value
+  const book = shown.value
   const made = built.value
-  if (!book || !made || busy.value || !allowed.value || setupProblem(draft.value, isoDay())) return
+  if (!book || !made || busy.value || setupProblem(draft.value, isoDay())) return
   busy.value = true
   error.value = null
   existing.value = null
+  // A Book that is not in her Library is added now, as Currently reading, and only now: the first thing Start does.
+  let held = entry.value
+  if (!held) {
+    const added = await library.addReading(book)
+    if ('error' in added) {
+      busy.value = false
+      error.value = added.error === 'offline' ? 'offline' : added.error === 'book_invalid' ? 'buddy_book_invalid' : 'unknown'
+      return
+    }
+    held = added.entry
+    entry.value = held
+  }
   const answer = await store.create({
-    bookId: book.book.id,
+    bookId: held.book.id,
     clientId,
     sections: made.sections,
     from: made.from,
@@ -196,13 +228,17 @@ function openRoom(id: string) {
   void navigateTo(roomPath(id))
 }
 
+// Built open when she asks for it: the sheet is shown one tick after mounting, so it rises, takes focus and listens for Escape as it does when it is
+// opened later (UiSheet reacts to a change of `open`, not to its first value).
+const shownYet = ref(false)
+onMounted(() => void nextTick(() => (shownYet.value = true)))
+
 const actionLabel = computed(() => (busy.value ? t('together.setup.starting') : error.value ? t('together.setup.retry') : t('together.setup.start')))
 </script>
 
 <template>
   <UiSheet
-    v-if="allowed"
-    v-model:open="open"
+    :open="shownYet && open"
     :title="t('together.title')"
     :back="!created && stepAt > 0 ? t('together.setup.back') : undefined"
     :cancel="!(created || stepAt > 0)"
@@ -210,12 +246,13 @@ const actionLabel = computed(() => (busy.value ? t('together.setup.starting') : 
     testid="buddySetup"
     @back="back"
     @action="open = false"
+    @update:open="open = $event"
   >
-    <div v-if="entry" class="flex flex-col gap-md pt-xs pb-lg">
+    <div v-if="shown" class="flex flex-col gap-md pt-xs pb-lg">
       <!-- The result: it exists. -->
       <template v-if="created">
         <h2 ref="resultHeading" tabindex="-1" class="book-title text-title outline-none" data-testid="buddySetup.result">{{ t('together.setup.startedTitle') }}</h2>
-        <p class="text-body text-ink-muted">{{ t('together.setup.startedText', { title: entry.book.title }) }}</p>
+        <p class="text-body text-ink-muted">{{ t('together.setup.startedText', { title: shown.title }) }}</p>
         <p v-if="created.invited.length" class="text-subhead text-ink-muted" role="status" data-testid="buddySetup.invited">
           {{ t('together.setup.invitedCount', { count: created.invited.length }, created.invited.length) }}
         </p>
@@ -224,18 +261,18 @@ const actionLabel = computed(() => (busy.value ? t('together.setup.starting') : 
         </p>
         <template v-if="url">
           <p class="text-subhead text-ink-muted">{{ t('together.setup.linkText') }}</p>
-          <TogetherLink :url="url" :text="t('together.link.shareText', { title: entry.book.title })" testid="buddySetup.link" />
+          <TogetherLink :url="url" :text="t('together.link.shareText', { title: shown.title })" testid="buddySetup.link" />
         </template>
         <UiButton block data-testid="buddySetup.open" @click="openRoom(created.id)">{{ t('together.setup.openRoom') }}</UiButton>
       </template>
 
       <template v-else>
         <UiBookLine
-          :title="entry.book.title"
-          :authors="entry.book.authors"
-          v-bind="coverImage(entry.book, 'xs', coverHosts)"
-          :thumbhash="entry.book.coverThumbhash"
-          :colors="entry.book.coverColors"
+          :title="shown.title"
+          :authors="shown.authors"
+          v-bind="coverImage(shown, 'xs', coverHosts)"
+          :thumbhash="shown.coverThumbhash"
+          :colors="shown.coverColors"
         />
 
         <p class="eyebrow" aria-hidden="true" data-testid="buddySetup.step">{{ stepLine }}</p>
@@ -258,6 +295,7 @@ const actionLabel = computed(() => (busy.value ? t('together.setup.starting') : 
           <p v-if="startsInvalid" class="px-xs text-caption text-error" role="alert" data-testid="buddySetup.startsError">{{ t('buddyRead.error.buddy_starts_invalid') }}</p>
           <p v-else class="px-xs text-footnote text-ink-faint">{{ t('together.setup.book.startsHint') }}</p>
           <p class="px-xs text-footnote text-ink-faint">{{ t('together.hint') }}</p>
+          <p v-if="adds" class="rounded-md bg-fill px-ms py-sm text-subhead text-ink" data-testid="buddySetup.adds">{{ t('together.setup.adds') }}</p>
         </template>
 
         <!-- 2 · Sections -->
@@ -325,6 +363,7 @@ const actionLabel = computed(() => (busy.value ? t('together.setup.starting') : 
           <p class="px-xs text-footnote text-ink-faint">{{ link ? t('together.setup.invite.linkOn') : t('together.setup.invite.linkOff') }}</p>
         </template>
 
+        <p v-if="adds && step === 'invite'" class="px-xs text-footnote text-ink-muted" data-testid="buddySetup.addsAgain">{{ t('together.setup.adds') }}</p>
         <p v-if="error" class="text-caption text-error" role="alert" data-testid="buddySetup.error">{{ t(buddyErrorKey(error)) }}</p>
         <UiButton v-if="existing" tone="secondary" block data-testid="buddySetup.existing" @click="openRoom(existing)">{{ t('together.setup.openExisting') }}</UiButton>
 

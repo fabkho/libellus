@@ -1,7 +1,6 @@
 import type { BrowserContextOptions, Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 import en from '../i18n/locales/en.json' with { type: 'json' }
-import { BUDDY_READS_KEY } from '../app/utils/buddyReadsSwitch'
 import { buddyOf, follows, joinRead, shelve } from '../tests/support/buddy'
 import { sql } from '../tests/support/stack'
 import { goto, signedIn } from './support'
@@ -16,10 +15,6 @@ import { goto, signedIn } from './support'
  */
 
 test.use({ colorScheme: 'dark' })
-
-async function switchedOn(page: Page) {
-  await page.addInitScript((key) => localStorage.setItem(key, 'on'), BUDDY_READS_KEY)
-}
 
 /** What a hostile member would write: markup that runs if it is ever drawn as markup, and a link that runs if it is ever an address. */
 const IMG = '<img src=x onerror=window.__xss=1>'
@@ -37,8 +32,6 @@ test('a refused message can be deleted and does not come back after a reload; ho
   const context = await browser.newContext(test.info().project.use as BrowserContextOptions)
   try {
     const anna = await context.newPage()
-    await switchedOn(ida)
-    await switchedOn(anna)
     const idaMember = await signedIn(ida)
     const annaMember = await signedIn(anna)
     // The names are the members' own words: Ida's is markup.
@@ -116,8 +109,6 @@ test('a message that arrives live into a Section she has not opened shows nothin
   const context = await browser.newContext(test.info().project.use as BrowserContextOptions)
   try {
     const anna = await context.newPage()
-    await switchedOn(ida)
-    await switchedOn(anna)
     const idaMember = await signedIn(ida)
     const annaMember = await signedIn(anna)
     await follows(idaMember, annaMember)

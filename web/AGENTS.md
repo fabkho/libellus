@@ -55,11 +55,11 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
     a release of fabkho/chat and a bump here (`docs/DEVELOPMENT.md`, "The package bumps"), not an edit under `node_modules`.
   - Its first user is the buddy read (`data/buddyReads.ts`, `data/buddyLive.ts`, `stores/buddyRead.ts`): the store is imported only by
     buddy read screens, which `retain()` the live channel (the real client loads lazily through the store's
-    `import('#realtime-client')`; Home reads `my_buddy_reads()` on focus instead), and `tests/buddy-read-entry.test.ts` keeps both
-    out of the entry. A refusal code is worded under `buddyRead.error.<code>`.
+    `import('#realtime-client')`; Home and the Book page read `my_buddy_reads()` through the small store `stores/buddyInvites.ts` instead), and
+    `tests/buddy-read-entry.test.ts` keeps the big store, the live module and the chat layer out of the entry, Home and the Book page. A refusal code is worded under `buddyRead.error.<code>`.
     The screens: `pages/together/[id]/index.vue` (the room) and `[section].vue` (a thread: the base's chat screen over the store; the room's own
     thread is the segment `room`), `components/together/*`, `utils/buddyRoom.ts`, `utils/buddyThread.ts` (the veil, in the view model) and
-    `utils/buddyRoute.ts`. A page's `validate` is the build's flag (the app's 404) and `middleware/buddy-reads.ts` leads Home while her switch is off.
+    `utils/buddyRoute.ts`. A page's `validate` is the address only (an address that is not a read id is the app's 404).
   - `entry-guard.config.ts` fails a production build if any chunk the entry loads statically holds
     `@supabase/realtime-js` (the stub is fine; `tests/entry-guard.test.ts`).
 - **Portable by default** (rules: the base README): a component that could ever be generic is written so it moves to
@@ -78,20 +78,19 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   precached (`globIgnores`): `data/reader/prefetch.ts` says when they are fetched ahead (a member with an
   ebook on this device, online, no Save-Data), a CacheFirst rule keeps them. Keep the group's modules apart
   from the two files imported dynamically (nuxt.config.ts says why), and a prefetch trigger behind `prefetchReader`.
-- **Buddy reads sit behind a build flag** (`NUXT_PUBLIC_BUDDY_READS`, `runtimeConfig.public.buddyReads`, read through
-  `composables/useBuddyReadsFlag.ts`; unset = off, and off in every build until the release that carries the screens): the
-  Profile's switch row, `stores/buddyReadsSwitch.ts` (`available`) and every entry point W3–W5 add check it first, so a build
-  without the feature draws nothing of it and calls no buddy RPC.
-  - W3 built on it: `composables/useBuddyReadsOn.ts` (the flag *and* her switch, for a row, a card or a sheet), the room's routes (`validate` for the flag,
-    `middleware/buddy-reads.ts` for the switch: Home while it is off) — the link page `/t/<token>` takes the flag by `validate` only and asks the switch itself
-    ("Turn on Buddy reads?") — and `stores/buddyInvites.ts`, the small store the shell may import (the lamp dot: the invitations waiting for
-    her, the repository loaded by a dynamic `import()`); the big store stays out of the entry. W6: the switch cannot go off while she is in a room or invited: flipping it off is a question (`stores/buddyTurnOff.ts`, `utils/buddyTurnOff.ts`, `components/profile/BuddyReadsOff.vue`; it reads `my_buddy_reads()` fresh, then leaves the rooms with `leave_buddy_read` and declines the invitations, and only then `set(false)`); `canTurnOff` follows every reading of her list (`noteRooms`). The link `/t/<token>` needs the sign-in
-    (`utils/publicPath.ts` is untouched) and is kept through it by `utils/pendingBuddyRead.ts`, only in a build with the flag.
-  - W5's entry points: the Book page's row (`components/together/BookRow.vue`), Home's *Reading together* card and a Currently reading card's ⋯ menu
-    (`components/home/{Together,TogetherMenu}.vue`) are **lazy components** the pages draw only behind `useBuddyReadsOn()` (`tests/buddy-entry.test.ts` pins it),
-    so with the flag or her switch off nothing of them is loaded, drawn or asked; the pages and `ReadingCard` never import the buddy read store. Home reads
-    `my_buddy_reads()` on focus (`onMounted` and `onActivated`, no Realtime) and hands the invitations to `stores/buddyInvites.ts` (`take`). Their view models
-    are `utils/buddyEntry.ts`.
+- **Buddy reads are for every member**: no build flag, no Profile switch, no route middleware (they had both for the first release; 1.34 removed them,
+  with the turn-off confirm, `docs/parity.md`). What protects a member is in the rooms: leave (with the choice to delete her messages), a Host removing a
+  member, block, report, delete account, and the rule that a co-member sees a Section only. Keep the entry lean: the chat layer, the big store
+  (`stores/buddyRead.ts`) and the Realtime client are lazy chunks loaded by a room, never by Home, a Book page or Friends.
+  - `stores/buddyInvites.ts` is the small door the shell, Home, a Book page and Friends use: her `my_buddy_reads()` list (invitations and reads), the repository
+    loaded by a dynamic `import()`, nothing asked while signed out. The lamp dot, *Reading together* on Home and the Book page's action read it; a room's screen
+    uses the big store.
+  - The entry points: **the Book page's action** (`components/together/BookRow.vue`, in the action area of `pages/book/[key].vue` on every Book, in her Library or
+    not: Read together, Open the buddy read, or disabled for a Manual book), Home's *Reading together* card and a Currently reading card's ⋯ menu
+    (`components/home/{Together,TogetherMenu}.vue`). The setup sheet (`components/together/SetupSheet.vue`) is built when she presses an action, not with the page,
+    and adds a Book that is not in her Library as Currently reading when she presses Start (`stores/library.ts` `addReading`). View models: `utils/buddyEntry.ts`;
+    `tests/buddy-entry.test.ts` pins where they sit. Home reads the list on focus (`onMounted` and `onActivated`, no Realtime).
+  - The link `/t/<token>` needs the sign-in (`utils/publicPath.ts` is untouched) and is kept through it by `utils/pendingBuddyRead.ts`; an open link shows the join card.
 - **Mobile first: VoiceOver, touch and gestures before desktop/keyboard** (every swipe, drag and long press has a single-tap alternative; text at 200 % reflows).
 - No full typechecks (`nuxi typecheck`, `tsc --noEmit`) unless asked. Run the targeted test instead.
 - Never read `.env`. Pass `NUXT_PUBLIC_*` as exported env vars when a command needs them.

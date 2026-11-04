@@ -31,8 +31,7 @@ definePageMeta({
   immersive: true,
   // One page per thread: going from one Section to another starts its own state (what she tapped, what she was writing).
   key: (route) => route.fullPath,
-  validate: (route) => useBuddyReadsFlag() && isReadId(route.params.id) && isSectionSegment(route.params.section),
-  middleware: 'buddy-reads',
+  validate: (route) => isReadId(route.params.id) && isSectionSegment(route.params.section),
 })
 
 const { t } = useI18n()

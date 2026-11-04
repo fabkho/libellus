@@ -1,30 +1,25 @@
 <script setup lang="ts">
 // A buddy read link (W3): `/t/<token>`, the address the Host sends her link as, the twin of `/f/<token>` (pages/f/[token].vue). Behind the sign-in:
-// signed out, the token is kept through it (utils/pendingBuddyRead.ts, middleware/auth.global.ts) and she comes back here. The route exists only in a
-// build that has buddy reads (`validate`: anything else is the app's not-found); her switch is asked here, not by middleware/buddy-reads.ts, which would lead her Home.
+// signed out, the token is kept through it (utils/pendingBuddyRead.ts, middleware/auth.global.ts) and she comes back here.
 //
-// What it shows, in order: with buddy reads off for her, "Turn on Buddy reads?" (the join is a deliberate act: Turn on, then the link is read; Not now
-// goes Home and nothing is asked); then the join card (`buddy_read_target`): the Book, who hosts it, who is in, how many Sections and the day it
+// What it shows, in order: the join card (`buddy_read_target`): the Book, who hosts it, who is in, how many Sections and the day it
 // starts, with Join and Not now. Join → `join_buddy_read`, then "Which copy are you reading?" (components/together/EntryPicker.vue: which of her entries
 // her Section follows), then the room. A member who is in already is told so and offered the room. A link that does not work, whatever the reason (a
 // bad token, renewed, off, the read ended or full, she is blocked with someone in it or was removed) is one answer: "This link doesn't work anymore".
 // Offline nothing is asked: the offline line and Try again. No tab bar: it is a moment, like the follow link.
 import type { BuddyErrorCode, BuddyTarget } from '~/data/buddyReads'
-import { useBuddyReadsSwitchStore } from '~/stores/buddyReadsSwitch'
 import { useBuddyReadStore } from '~/stores/buddyRead'
 import { buddyErrorKey } from '~/utils/buddyRead'
 import { roomPath } from '~/utils/buddyRoute'
 import { isBuddyReadToken, PENDING_BUDDY_READ_KEY } from '~/utils/pendingBuddyRead'
 
-// The flag only (a build without buddy reads: the app's 404, before the chunk loads); her switch is this page's own question, below.
-definePageMeta({ layout: false, screen: 'buddyLink', validate: () => useBuddyReadsFlag() })
+definePageMeta({ layout: false, screen: 'buddyLink' })
 
-type Outcome = 'loading' | 'off' | 'card' | 'member' | 'copy' | 'missing' | 'offline' | 'error'
+type Outcome = 'loading' | 'card' | 'member' | 'copy' | 'missing' | 'offline' | 'error'
 
 const { t } = useI18n()
 const route = useRoute()
 const store = useBuddyReadStore()
-const switchStore = useBuddyReadsSwitchStore()
 const online = useOnline()
 const coverHosts = { ...useCoverHosts(), proxy: false }
 
@@ -43,8 +38,6 @@ async function open() {
   // The link she is on is the one that counts: a kept one from before is spent.
   window.localStorage.removeItem(PENDING_BUDDY_READ_KEY)
   if (!isBuddyReadToken(token.value)) return void (outcome.value = 'missing')
-  // Off for her: nothing is asked until she says so (the join is a deliberate act).
-  if (!switchStore.enabled) return void (outcome.value = 'off')
   if (!online.value) return void (outcome.value = 'offline')
 
   const mine = token.value
@@ -58,11 +51,6 @@ async function open() {
   outcome.value = result.data.state === 'member' ? 'member' : 'card'
   // The token has done its work in the address: the history, a share sheet and a screenshot of the bar need not carry it (the join uses the one in memory).
   window.history.replaceState(window.history.state, '', '/t/')
-}
-
-/** "Turn on": she said yes, now the link is read. */
-function turnOn() {
-  if (switchStore.set(true)) void open()
 }
 
 async function join() {
@@ -103,15 +91,6 @@ onMounted(open)
 
     <div v-if="outcome === 'loading'" class="flex flex-1 items-center justify-center" role="status" data-testid="buddyLink.loading">
       <p class="text-subhead text-ink-muted">{{ t('together.link.loading') }}</p>
-    </div>
-
-    <!-- Off for her: the question. -->
-    <div v-else-if="outcome === 'off'" class="flex flex-1 flex-col justify-center gap-md py-xl" data-testid="buddyLink.off">
-      <h1 ref="heading" tabindex="-1" class="book-title text-center text-title outline-none">{{ t('together.turnOn.title') }}</h1>
-      <p class="text-center text-body text-ink-muted">{{ t('together.turnOn.text') }}</p>
-      <p class="text-center text-footnote text-ink-faint">{{ t('profile.account.buddyReadsHint') }}</p>
-      <UiButton block data-testid="buddyLink.turnOn" @click="turnOn">{{ t('together.turnOn.action') }}</UiButton>
-      <UiButton block tone="plain" data-testid="buddyLink.notNow" @click="goHome">{{ t('together.link.notNow') }}</UiButton>
     </div>
 
     <!-- A link that does not work, whatever the reason: one answer. -->

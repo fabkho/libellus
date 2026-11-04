@@ -17,8 +17,12 @@ const app = join(web, 'app')
 const filesIn = (dir: string): string[] =>
   existsSync(dir) ? readdirSync(dir).flatMap((name) => (statSync(join(dir, name)).isDirectory() ? filesIn(join(dir, name)) : [join(dir, name)])) : []
 
-/** The code of a file without its comments (a comment may name what it explains). */
-const codeOf = (file: string) => readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+/** The lines of a file that are not comments (a comment may name what it explains): whole comment lines are left out, nothing is rewritten. */
+const codeOf = (file: string) =>
+  readFileSync(file, 'utf8')
+    .split('\n')
+    .filter((line) => !/^\s*(\/\/|\/\*|\*)/.test(line))
+    .join('\n')
 
 /** What a file imports statically (`import … from 'x'`, `import 'x'`, `export … from 'x'`); `import type` is erased, `import('x')` is not static. */
 function staticImports(source: string): string[] {
@@ -82,12 +86,15 @@ describe('the buddy read store and the live module are not part of the entry', (
     expect(others.map((f) => f.slice(app.length + 1)).sort()).toEqual(['stores/buddyRead.ts', 'stores/import.ts'])
   })
 
-  it('keeps a buddy read’s storage keys in a file with no chat layer in it, and the profile’s turn-off lazy', () => {
+  it('keeps a buddy read’s storage keys in a file with no chat layer in it', () => {
     const storage = readFileSync(join(app, 'utils/buddyStorage.ts'), 'utf8')
     expect(staticImports(storage)).toEqual([])
-    // The turn-off store (and the big store under it) is imported when asked, never by the Profile's own import list.
-    const account = readFileSync(join(app, 'components/profile/Account.vue'), 'utf8')
-    expect(staticImports(account).filter((spec) => /buddyTurnOff|buddyRead(?!sSwitch)/.test(spec))).toEqual([])
-    expect(account).toMatch(/import\('~\/stores\/buddyTurnOff'\)/)
+  })
+
+  it('keeps Home, the Book page and their buddy read parts free of the big store: they read her list through the small one', () => {
+    for (const file of ['pages/index.vue', 'pages/book/[key].vue', 'pages/friends/index.vue', 'components/home/Together.vue', 'components/together/BookRow.vue', 'components/home/ReadingCard.vue']) {
+      const specs = staticImports(readFileSync(join(app, file), 'utf8'))
+      expect(specs.filter((spec) => /stores\/buddyRead(?![A-Za-z])|data\/buddyLive|realtime-client|@fabkho\/chat/.test(spec)), file).toEqual([])
+    }
   })
 })
