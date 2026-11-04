@@ -87,6 +87,11 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
     ("Turn on Buddy reads?") — and `stores/buddyInvites.ts`, the small store the shell may import (the lamp dot: the invitations waiting for
     her, the repository loaded by a dynamic `import()`); the big store stays out of the entry. The link `/t/<token>` needs the sign-in
     (`utils/publicPath.ts` is untouched) and is kept through it by `utils/pendingBuddyRead.ts`, only in a build with the flag.
+  - W5's entry points: the Book page's row (`components/together/BookRow.vue`), Home's *Reading together* card and a Currently reading card's ⋯ menu
+    (`components/home/{Together,TogetherMenu}.vue`) are **lazy components** the pages draw only behind `useBuddyReadsOn()` (`tests/buddy-entry.test.ts` pins it),
+    so with the flag or her switch off nothing of them is loaded, drawn or asked; the pages and `ReadingCard` never import the buddy read store. Home reads
+    `my_buddy_reads()` on focus (`onMounted` and `onActivated`, no Realtime) and hands the invitations to `stores/buddyInvites.ts` (`take`). Their view models
+    are `utils/buddyEntry.ts`.
 - **Mobile first: VoiceOver, touch and gestures before desktop/keyboard** (every swipe, drag and long press has a single-tap alternative; text at 200 % reflows).
 - No full typechecks (`nuxi typecheck`, `tsc --noEmit`) unless asked. Run the targeted test instead.
 - Never read `.env`. Pass `NUXT_PUBLIC_*` as exported env vars when a command needs them.

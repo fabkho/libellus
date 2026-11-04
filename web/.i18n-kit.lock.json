@@ -8053,6 +8053,11 @@
           "de"
         ]
       },
+      "together.card.title": {
+        "09d48559df7c8687": [
+          "de"
+        ]
+      },
       "together.copy.none": {
         "c4e52d001fa15fe8": [
           "de"
@@ -8110,6 +8115,36 @@
       },
       "together.done": {
         "11a6767d5674c7e4": [
+          "de"
+        ]
+      },
+      "together.entry.hint": {
+        "1c02e6d2f9f20122": [
+          "de"
+        ]
+      },
+      "together.entry.moreLabel": {
+        "04634077097ee8dd": [
+          "de"
+        ]
+      },
+      "together.entry.open": {
+        "9546e16bf119e2be": [
+          "de"
+        ]
+      },
+      "together.entry.openRoom": {
+        "0a22fffe36e6b091": [
+          "de"
+        ]
+      },
+      "together.entry.start": {
+        "50805a0fc2e9da51": [
+          "de"
+        ]
+      },
+      "together.entry.unread": {
+        "93578072b1e8b4aa": [
           "de"
         ]
       },
