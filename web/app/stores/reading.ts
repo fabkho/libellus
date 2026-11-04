@@ -17,10 +17,11 @@ import {
   type ProgressMode,
   type ProgressValue,
 } from '~/data/progress'
+import { dayBoundsOf, type DayBounds } from '~/data/progressDays'
 import type { ReadAs } from '~/data/readAs'
 import { isoDay } from '~/utils/dates'
 import { useLibraryStore } from '~/stores/library'
-import { useProgressDaysStore } from '~/stores/progressDays'
+import { useProgressDaysStore, type DayOp } from '~/stores/progressDays'
 import { useSessionStore } from '~/stores/session'
 
 /** How long Home's card offers Undo after a progress save, ms (issue #68). */
@@ -239,12 +240,42 @@ export const useReadingStore = defineStore('reading', () => {
   const progressTotalDraft = ref(TOTAL_GUESS)
   const progressBusy = ref(false)
   const progressError = ref<LibraryErrorCode | null>(null)
+  /**
+   * The day the sheet is about (`YYYY-MM-DD`, an earlier day: progress on a day she forgot to update); null is Today,
+   * the sheet as it has always been. An earlier day is bounded by its neighbours (`progressBounds`) and saved with
+   * `set_progress_day`; Today stays `update_progress`.
+   */
+  const progressDay = ref<string | null>(null)
+  /** The sheet was opened on an earlier day before its read's days were loaded: the wheel is seeded when they are. */
+  let progressSeedPending = false
 
   const progressEditionCount = computed(() => progressing.value?.book.pageCount ?? null)
   /** The page count that counts while the sheet is open: her total as set in it, else the edition's. */
   const progressPageCount = computed(() => progressTotal.value ?? progressEditionCount.value)
-  /** The most the wheel takes: the page count in pages, 100 in percent. */
-  const progressLimit = computed(() => progressMax(progressMode.value, progressPageCount.value))
+  /** The most a number in the wheel's mode takes: the page count in pages, 100 in percent. */
+  const progressCeiling = computed(() => progressMax(progressMode.value, progressPageCount.value))
+  /** The open read's days (with the writes that wait laid over them), null until they are loaded. */
+  const progressDaysOfRead = computed(() => {
+    const id = progressing.value?.latestSession?.id
+    return id ? (progressDays.shown[id] ?? null) : null
+  })
+  /**
+   * Where the wheel may stand on an earlier day, in the wheel's mode (`dayBoundsOf`: between the neighbouring days,
+   * the day's start and where it ends now). Null for Today (free), and while the read's days are not loaded: the
+   * bounds are unknown then, and the sheet does not offer a day.
+   */
+  const progressBounds = computed<DayBounds | null>(() => {
+    const entry = progressing.value
+    const days = progressDaysOfRead.value
+    if (!entry || !progressDay.value || !days) return null
+    return dayBoundsOf(days, progressDay.value, progressOf(entry.latestSession), pageCountOf(entry), progressMode.value)
+  })
+  /** The least the wheel takes: where the day before ended on an earlier day, 0 on Today. */
+  const progressFloor = computed(() => progressBounds.value?.lo ?? 0)
+  /** The most the wheel takes: the page count in pages, 100 in percent; on an earlier day, where the day after ended. */
+  const progressLimit = computed(() =>
+    progressBounds.value ? Math.min(progressCeiling.value, progressBounds.value.hi) : progressCeiling.value,
+  )
   /** What is stored for the open read, null while none is. */
   const progressStored = computed(() => progressOf(progressing.value?.latestSession))
   /** Where the read is, in the wheel's mode: what the save is measured against. */
@@ -256,8 +287,19 @@ export const useReadingStore = defineStore('reading', () => {
     progressReachedEnd(progressValueOf(progressValue.value, progressMode.value), progressPageCount.value),
   )
 
-  /** Opens the sheet on the entry's progress; `total` opens it on her total pages (the book page's "of 608"). */
-  function openProgress(entry: LibraryEntry, { total = false }: { total?: boolean } = {}) {
+  /** The wheel on the day: where it ended when it has a row, else where the day before ended (nothing yet). */
+  function seedProgressDay() {
+    const bounds = progressBounds.value
+    if (!bounds) return
+    progressValue.value = bounds.end ?? bounds.lo
+  }
+
+  /**
+   * Opens the sheet on the entry's progress; `total` opens it on her total pages (the book page's "of 608"); `day`
+   * opens it on that earlier day (the log's rows and its Add day), the wheel on where it ended, else where the day
+   * before did. Without the read's days (not loaded yet) the wheel is seeded when they arrive.
+   */
+  function openProgress(entry: LibraryEntry, { day, total = false }: { day?: string; total?: boolean } = {}) {
     const current = progressOf(entry.latestSession)
     progressing.value = entry
     progressTotal.value = entry.pageCountOverride ?? null
@@ -265,11 +307,49 @@ export const useReadingStore = defineStore('reading', () => {
     progressValue.value = progressIn(current, progressMode.value, pageCountOf(entry))
     progressEditing.value = 'progress'
     progressError.value = null
+    progressDay.value = day ?? null
+    progressSeedPending = false
+    if (day) {
+      progressDays.want(entry.latestSession?.id)
+      if (progressBounds.value) seedProgressDay()
+      else progressSeedPending = true
+      return
+    }
     if (total) editProgressTotal()
   }
 
+  /**
+   * Switches the sheet between Today (null) and an earlier day: the wheel goes to where that day ended, else where
+   * the day before did (the day's "nothing yet"); back to Today, to the read's value. The refusal of a day before goes.
+   */
+  function chooseProgressDay(day: string | null) {
+    const entry = progressing.value
+    if (!entry || day === progressDay.value) return
+    progressDay.value = day
+    progressError.value = null
+    progressEditing.value = 'progress'
+    progressSeedPending = false
+    if (!day) {
+      progressValue.value = progressIn(progressStored.value, progressMode.value, progressPageCount.value)
+      return
+    }
+    if (progressBounds.value) seedProgressDay()
+    else {
+      progressDays.want(entry.latestSession?.id)
+      progressSeedPending = true
+    }
+  }
+
+  // An earlier day opened before the days were there: the wheel goes to its place once they are.
+  watch(progressBounds, (bounds) => {
+    if (!bounds || !progressSeedPending) return
+    progressSeedPending = false
+    seedProgressDay()
+  })
+
   function closeProgress() {
     if (!progressBusy.value) progressing.value = null
+    progressSeedPending = false
   }
 
   /** Switches between pages and percent, carrying the place in the book over. */
@@ -278,6 +358,8 @@ export const useReadingStore = defineStore('reading', () => {
     progressValue.value = convertProgress(progressValue.value, mode, progressPageCount.value)
     progressMode.value = mode
     progressError.value = null
+    // An earlier day stays inside its neighbours: the number converted may sit a unit outside them (rounding).
+    if (progressBounds.value) progressValue.value = Math.min(Math.max(progressValue.value, progressFloor.value), progressLimit.value)
   }
 
   /** "of 608 ✎" (or "Count in pages" without a page count): the wheel sets the total pages instead. */
@@ -347,6 +429,7 @@ export const useReadingStore = defineStore('reading', () => {
       confirmProgressTotal()
       return null
     }
+    if (progressDay.value) return confirmProgressDay(entry, repo)
     const value = progressValueOf(progressValue.value, progressMode.value)
     const before = progressStored.value
     const beforeTotal = entry.pageCountOverride ?? null
@@ -370,6 +453,70 @@ export const useReadingStore = defineStore('reading', () => {
       forgetUndo()
       progressUndo.value = { entryId: entry.id, before, beforeTotal, totalChanged, after: value, gain: progressGain(before, value, progressPageCount.value) }
       undoTimer = setTimeout(forgetUndo, UNDO_MS)
+      return result.data
+    } finally {
+      progressBusy.value = false
+    }
+  }
+
+  /**
+   * What an earlier day's save or Remove leaves behind, once the database (or the outbox) has taken it: the entry
+   * shown as it came back, always (Profile's record and the figures read again on `entryChanged`, even when the entry
+   * is unchanged: a day in the middle moves no value), the read's days asked for again, the write that waits laid
+   * over them, and Home's Undo forgotten (it would put back a value from before this day).
+   */
+  function dayWritten(entry: LibraryEntry, op: DayOp, result: LibraryEntry) {
+    progressDays.hold(entry, op)
+    library.entryChanged(result)
+    progressDays.refresh(result.latestSession?.id ?? entry.latestSession?.id)
+    progressing.value = null
+    forgetUndo()
+  }
+
+  /** Save on an earlier day: where she ended it, through `set_progress_day`; nothing new just closes the sheet. */
+  async function confirmProgressDay(entry: LibraryEntry, repo: NonNullable<ReturnType<typeof library.library>>): Promise<LibraryEntry | null> {
+    const day = progressDay.value!
+    const bounds = progressBounds.value
+    // Nothing new: the day ends where it does, or (no row) where it began (a day that reads nothing has no row).
+    if (bounds && progressValue.value === (bounds.end ?? bounds.lo)) {
+      progressing.value = null
+      return entry
+    }
+    const value = progressValueOf(progressValue.value, progressMode.value)
+    progressBusy.value = true
+    progressError.value = null
+    try {
+      const result = await repo.setProgressDay(entry.id, day, value)
+      if (result.error) {
+        progressError.value = result.error
+        return null
+      }
+      dayWritten(entry, { day, value }, result.data)
+      return result.data
+    } finally {
+      progressBusy.value = false
+    }
+  }
+
+  /**
+   * Remove this day (after the confirm): its row goes and the next day absorbs its pages; when it was the latest day
+   * her progress goes back to where it began (the confirm says so). Same failure and waiting as a save. Returns the
+   * entry, or null with `progressError` set.
+   */
+  async function removeProgressDay(): Promise<LibraryEntry | null> {
+    const entry = progressing.value
+    const day = progressDay.value
+    const repo = library.library()
+    if (!entry || !day || !repo || progressBusy.value) return null
+    progressBusy.value = true
+    progressError.value = null
+    try {
+      const result = await repo.deleteProgressDay(entry.id, day)
+      if (result.error) {
+        progressError.value = result.error
+        return null
+      }
+      dayWritten(entry, { day, value: null }, result.data)
       return result.data
     } finally {
       progressBusy.value = false
@@ -405,6 +552,8 @@ export const useReadingStore = defineStore('reading', () => {
    * the Finish sheet takes over from this one.
    */
   async function finishFromProgress(): Promise<LibraryEntry | null> {
+    // Finish ends the read today: an earlier day's sheet does not offer it.
+    if (progressDay.value) return null
     if (progressEditing.value === 'total') confirmProgressTotal()
     const entry = await confirmProgress()
     if (entry) openFinish(entry)
@@ -417,6 +566,7 @@ export const useReadingStore = defineStore('reading', () => {
    * read ends there exactly as it always has (`confirmAbandon`).
    */
   async function abandonFromProgress(): Promise<LibraryEntry | null> {
+    if (progressDay.value) return null
     if (progressEditing.value === 'total') confirmProgressTotal()
     const entry = await confirmProgress()
     if (entry) openAbandon(entry)
@@ -425,6 +575,8 @@ export const useReadingStore = defineStore('reading', () => {
 
   function reset() {
     progressing.value = null
+    progressDay.value = null
+    progressSeedPending = false
     progressError.value = null
     forgetUndo()
     starting.value = null
@@ -483,17 +635,22 @@ export const useReadingStore = defineStore('reading', () => {
     progressError,
     progressEditionCount,
     progressPageCount,
+    progressDay,
+    progressBounds,
+    progressFloor,
     progressLimit,
     progressFrom,
     progressDelta,
     progressAtEnd,
     openProgress,
+    chooseProgressDay,
     closeProgress,
     chooseProgressMode,
     editProgressTotal,
     confirmProgressTotal,
     dropProgressTotal,
     confirmProgress,
+    removeProgressDay,
     progressUndo,
     undoBusy,
     undoProgress,
