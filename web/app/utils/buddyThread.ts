@@ -1,0 +1,111 @@
+import type { BubbleMessage, BubbleQuote } from '#layers/ui/app/utils/chat/message'
+import { messageVeiled } from '#layers/chat/app/utils/veil'
+import { REPORT_REASONS, type BuddyErrorCode, type ReportReason } from '~/data/buddyReads'
+import type { BuddyBubble } from '~/utils/buddyRead'
+
+/**
+ * A buddy read's thread as its screen draws it (pages/together/[id]/[section].vue): the stored bubbles of the store
+ * (stores/buddyRead.ts) turned into what the base's `UiChatThread` and `UiBubble` take (`BubbleMessage`), plus what only a buddy
+ * read adds: who wrote it, the message it answers, the spoiler mark and the tombstone. Pure functions on plain data, so Vitest
+ * drives them in Node.
+ *
+ * **The veil lives here**: a Section that is not open to her (her marker has not reached it and she has not opened it anyway:
+ * the layer's `chapterView`) has no items at all, whatever the store holds, so nothing of what was said in it can be drawn,
+ * measured or read by a screen reader; a message marked **Spoiler** is veiled for her until she taps it. The database gives
+ * every member every message of the read (the veil is the app's, plan part 5.4): this is the one place the rule is applied.
+ */
+
+/** One message of a thread: the base's message and what the screen needs besides. */
+export type ThreadItem = BubbleMessage & {
+  /** The member who wrote it; null for one who has gone. */
+  authorId: string | null
+  /** Her name as the others know her; null from a live event the members do not name yet, or a member who has gone. */
+  author: string | null
+  /** The message it answers. */
+  replyTo: string | null
+  spoiler: boolean
+  /** It was deleted: a tombstone (`kind: 'system'`, no words, no reactions), drawn as a quiet line, never as a bubble. */
+  removed: boolean
+  /** A spoiler she has not tapped: the bubble keeps its size but shows no word (`UiBubble` `veiled`). */
+  veiled: boolean
+}
+
+/** What the thread needs of the screen: who she is, whether the Section is open to her, the spoilers she tapped, the words. */
+export type ThreadContext = {
+  me: string | null
+  /** The Section is open to her (the store's `view(...).open`; the room always is). */
+  open: boolean
+  /** The ids of the spoilers she tapped on this screen (not kept: a reload veils them again). */
+  revealed: ReadonlySet<string>
+  /** A member's name among the read's members, or null. */
+  nameOf: (memberId: string | null) => string | null
+  /** The sentence a refusal is worded with (`buddyRead.error.<code>`). */
+  errorWord: (code: BuddyErrorCode) => string
+}
+
+/** The key a message keeps from its bubble to its stored row: the client id (the same send), else the stored id. */
+export const bubbleKey = (bubble: Pick<BuddyBubble, 'clientId' | 'id'>): string => bubble.clientId ?? bubble.id
+
+/**
+ * The messages the screen draws, oldest first. A Section that is not open has none. A tombstone becomes a system line (the base
+ * breaks a run at it and the screen draws "Message removed"); her own spoiler is never veiled from her (she knows what she wrote).
+ */
+export function threadItems(bubbles: readonly BuddyBubble[], ctx: ThreadContext): ThreadItem[] {
+  if (!ctx.open) return []
+  return bubbles.map((bubble) => {
+    const removed = bubble.deletedAt !== null
+    const mine = ctx.me !== null && bubble.senderId === ctx.me
+    const reaction = bubble.reactions.find((r) => r.mine)
+    return {
+      key: bubbleKey(bubble),
+      // Null while it is on its way or refused: it cannot be reacted to or answered yet.
+      id: bubble.state === 'sent' ? bubble.id : null,
+      mine,
+      kind: removed ? 'system' : 'text',
+      body: removed ? '' : bubble.body,
+      createdAt: bubble.createdAt,
+      delivery: bubble.state,
+      error: bubble.state === 'failed' && bubble.error ? ctx.errorWord(bubble.error) : null,
+      media: null,
+      reactions: removed ? [] : bubble.reactions.map((r) => ({ emoji: r.emoji, count: r.count, mine: r.mine })),
+      myReaction: removed ? null : (reaction?.emoji ?? null),
+      authorId: bubble.senderId,
+      author: bubble.authorName ?? ctx.nameOf(bubble.senderId),
+      replyTo: bubble.replyTo,
+      spoiler: bubble.spoiler,
+      removed,
+      veiled: !removed && !mine && messageVeiled(bubble, ctx.revealed.has(bubbleKey(bubble))),
+    }
+  })
+}
+
+/** The words a quote needs that are the app's. */
+export type QuoteWords = { deleted: string; spoiler: string; someone: string; you: string }
+
+/**
+ * The message `replyTo` names, as a quote over a bubble or the composer: who wrote it and its first words. A tombstone says it is
+ * gone and a spoiler she has not tapped gives none of its words away. null when it answers nothing.
+ */
+export function quoteOf(items: readonly ThreadItem[], replyTo: string | null, words: QuoteWords): BubbleQuote | null {
+  if (!replyTo) return null
+  const original = items.find((item) => item.id === replyTo)
+  if (!original) return { id: null, mine: false, name: words.someone, preview: words.deleted }
+  const preview = original.removed ? words.deleted : original.veiled ? words.spoiler : original.body.replace(/\s+/g, ' ').trim().slice(0, 120)
+  return { id: original.removed ? null : original.id, mine: original.mine, name: original.mine ? words.you : (original.author ?? words.someone), preview }
+}
+
+// ------------------------------------------------------------------ report
+
+/** The most of a note the database keeps (`report_note_too_long`). */
+export const REPORT_NOTE_MAX = 1000
+
+/**
+ * What a report sends: the reason, and the note she added trimmed, cut to what the database takes and null when there is none.
+ * The reason is the one she picked; null for anything the database would refuse (nothing is sent then). The message's words are
+ * never part of it: the database copies a short excerpt itself (`feedback.context`, kind `report`), which is what the owner reads.
+ */
+export function reportInput(reason: string | null, note: string): { reason: ReportReason; note: string | null } | null {
+  if (!reason || !(REPORT_REASONS as readonly string[]).includes(reason)) return null
+  const cleaned = [...note.replace(/\r\n?/g, '\n').trim()].slice(0, REPORT_NOTE_MAX).join('')
+  return { reason: reason as ReportReason, note: cleaned || null }
+}

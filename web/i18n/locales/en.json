@@ -1269,7 +1269,8 @@
     "kind": {
       "bug": "Bug",
       "feature": "Feature request",
-      "other": "Something else"
+      "other": "Something else",
+      "report": "Report"
     },
     "label": "Your message",
     "hint": "At least {min} characters",
@@ -2127,6 +2128,119 @@
       "offline": "You’re offline.",
       "busy": "Busy right now. Try again in a moment.",
       "unknown": "That didn’t go through. Try again."
+    }
+  },
+  "together": {
+    "title": "Buddy read",
+    "back": "Back",
+    "home": "Go Home",
+    "retry": "Try again",
+    "offline": "You’re offline. The buddy read shows once you’re back.",
+    "done": "Done",
+    "missingTitle": "This buddy read isn’t available",
+    "missingText": "It may have been deleted, or you may have left it.",
+    "you": "You",
+    "with": "with {names}",
+    "room": "Before we start",
+    "wholeBook": "The whole book",
+    "sectionLabel": "Section {n}",
+    "sectionsTitle": "Sections",
+    "hereNow": "In this Section: {names}",
+    "veilHint": "A Section you haven’t reached stays hidden, comments and all, until you read on or choose to show it. Looking never moves your own Section.",
+    "alone": "You’re the only one here for now.",
+    "pages": "p. {from}–{to}",
+    "where": {
+      "section": "Section {n}",
+      "end": "Read it all",
+      "notSet": "Not set yet"
+    },
+    "track": {
+      "label": "Where everyone is",
+      "you": "You: Section {n} of {total}",
+      "youEnd": "You: you’ve read it all",
+      "youNotSet": "You: not set yet"
+    },
+    "marker": {
+      "open": "Where are you?",
+      "title": "Where are you?",
+      "hint": "The others see which Section you are in, never a page. “Automatic” follows your reading in your Library. What you set here can only open more: your reading opens the rest.",
+      "noAuto": "Your reading can’t be followed yet, so the others see you as not set. Set it by hand.",
+      "auto": "Automatic",
+      "autoHint": "Follows your reading",
+      "section": "Section {n}",
+      "end": "I’ve read it",
+      "saved": "Saved: {where}"
+    },
+    "showAnyway": {
+      "title": "Show Section {n} anyway?",
+      "titleEnd": "Show the whole book anyway?",
+      "text": "It may spoil the book for you. Your own Section stays where it is, and this stays open on this device.",
+      "action": "Show anyway",
+      "cancel": "Not yet"
+    },
+    "menu": {
+      "title": "Buddy read",
+      "label": "Buddy read options",
+      "finish": "Finish this buddy read",
+      "archive": "Archive",
+      "hint": "Finishing keeps every thread open for everyone. Archiving makes them read-only."
+    },
+    "finish": {
+      "title": "Finish this buddy read?",
+      "text": "The invite link stops working and no one new can join. Everyone can keep talking in the threads.",
+      "action": "Finish",
+      "busy": "Finishing…",
+      "done": "The buddy read is finished."
+    },
+    "archive": {
+      "title": "Archive this buddy read?",
+      "text": "Every thread becomes read-only for everyone. This can’t be undone.",
+      "action": "Archive",
+      "busy": "Archiving…",
+      "done": "The buddy read is archived."
+    },
+    "status": {
+      "finished": "Finished on {date}",
+      "archived": "Archived on {date}"
+    },
+    "report": {
+      "title": "Report a message",
+      "intro": "Tell me what’s wrong. Your report goes only to the person who runs this app, with a short excerpt of the message.",
+      "reasonLabel": "Why are you reporting it?",
+      "reason": {
+        "harassment": "Harassment or bullying",
+        "spam": "Spam",
+        "inappropriate": "Not appropriate here",
+        "other": "Something else"
+      },
+      "noteLabel": "Anything to add?",
+      "optional": "Optional",
+      "send": "Send",
+      "sending": "Sending…",
+      "doneTitle": "Thanks, got it.",
+      "doneText": "I’ll take a look."
+    },
+    "thread": {
+      "label": "{title}, messages",
+      "back": "Back to the buddy read",
+      "archived": "This buddy read is archived. It can only be read now.",
+      "removed": "Message removed",
+      "report": "Report",
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "deleteTitle": "Delete this message?",
+      "deleteText": "It will read “Message removed” for everyone. This can’t be undone.",
+      "deleteTextHost": "You’re the host, so you can remove it for everyone. It will read “Message removed”. This can’t be undone.",
+      "ahead": "You’re reading ahead: this is past where you are.",
+      "empty": "No one has said anything about this part yet. Start?",
+      "emptyRoom": "Say hello before you start.",
+      "placeholder": "Say something about this part",
+      "placeholderRoom": "Say hello",
+      "composerLabel": "Your message",
+      "spoiler": "Spoiler",
+      "veiledTitle": "Section {n} is hidden",
+      "veiledEnd": "The whole book is hidden",
+      "veiledText": "It may spoil what you haven’t read yet, so it stays closed until you choose to show it."
     }
   },
   "uiText": {

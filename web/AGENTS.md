@@ -32,7 +32,8 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   - `ui.config.ts` says which of the base's plugins run (`touch-active`, `stranded-viewport`) and why `no-focus-zoom`
     is held.
   - App-set values live in `app/app.config.ts`: `ui.text` (words set from the messages by `plugins/ui-text.ts`; a word
-    the base adds needs a line in `utils/uiText.ts`, `tests/ui-text.test.ts`; a variable it reads needs a token,
+    the base adds needs a line in `utils/uiText.ts` (and its blank, `{count}` or `{name}`, a name in `UI_TEXT_BLANKS`: vue-i18n turns a blank it is
+    given no value for into nothing), `tests/ui-text.test.ts`; a variable it reads needs a token,
     `tests/ui-layer.test.ts`), `ui.icons` (BetterReads' own drawings of `people`, `heart`, `external`), `ui.cover`
     (sources and artwork) and `ui.ambient.grain: 'inline'` (the grain as an inline SVG, not a `background-image`, which
     Chrome counts as the LCP element: `../docs/perf/client-1-startup.md` F-12).
@@ -56,6 +57,9 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
     buddy read screens, which `retain()` the live channel (the real client loads lazily through the store's
     `import('#realtime-client')`; Home reads `my_buddy_reads()` on focus instead), and `tests/buddy-read-entry.test.ts` keeps both
     out of the entry. A refusal code is worded under `buddyRead.error.<code>`.
+    The screens: `pages/together/[id]/index.vue` (the room) and `[section].vue` (a thread: the base's chat screen over the store; the room's own
+    thread is the segment `room`), `components/together/*`, `utils/buddyRoom.ts`, `utils/buddyThread.ts` (the veil, in the view model) and
+    `utils/buddyRoute.ts`. A page's `validate` is the build's flag (the app's 404) and `middleware/buddy-reads.ts` leads Home while her switch is off.
   - `entry-guard.config.ts` fails a production build if any chunk the entry loads statically holds
     `@supabase/realtime-js` (the stub is fine; `tests/entry-guard.test.ts`).
 - **Portable by default** (rules: the base README): a component that could ever be generic is written so it moves to

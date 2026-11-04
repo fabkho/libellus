@@ -23,6 +23,9 @@ const env = {
   ...STACK_STAND_INS,
   NUXT_PUBLIC_SHELF_OWNER_ID: SHELF_OWNER_ID,
   NUXT_PUBLIC_REGAL_LIBRARY_SRC: SHELF_LIBRARY_SRC,
+  // Buddy reads are behind the build's flag (composables/useBuddyReadsFlag.ts): the flows' build carries them, so
+  // e2e/buddy-read.spec.ts can open a room; every other flow finds them switched off (her own switch, off until she turns it on).
+  NUXT_PUBLIC_BUDDY_READS: 'on',
   // The import's Web Push ("Notify me when it's done", e2e/import-push.spec.ts): a build without the key
   // hides the button (stores/importPush.ts), and the key is the build's to bake, not the stack's.
   NUXT_PUBLIC_VAPID_PUBLIC_KEY: E2E_VAPID_PUBLIC_KEY,

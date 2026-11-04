@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
-import { UI_TEXT_KEYS, uiTextOf } from '../app/utils/uiText'
+import { UI_TEXT_BLANKS, UI_TEXT_KEYS, uiTextOf } from '../app/utils/uiText'
 
 /**
  * The words the shared UI base says itself come from this app's messages (`ui.text`, filled by
@@ -50,6 +50,23 @@ describe('the base’s words', () => {
     expect(de.cancel).not.toBe(en.cancel)
     expect(de.chat.reply).not.toEqual(en.chat.reply)
   })
+
+  // vue-i18n answers a blank it is given no value for with nothing (" comments"); the base fills its blanks itself, so they
+  // have to reach it as they are. Found when the first buddy read screen drew a thread row ("Section 1,  comments, hidden").
+  for (const locale of ['en', 'de']) {
+    it(`reach the base with their blanks in ${locale}`, () => {
+      const messages = read(locale)
+      // vue-i18n's rule: a named blank is its value, or nothing.
+      const asI18n = (key: string, named: Record<string, string> = {}) => String(lookup(messages, key)).replace(/\{(\w+)\}/g, (_, name: string) => named[name] ?? '')
+      const words = leavesOf(uiTextOf(asI18n))
+      for (const [path, key] of Object.entries(UI_TEXT_KEYS)) {
+        const written = String(lookup(messages, key)).match(/\{(\w+)\}/g) ?? []
+        // Every blank of the message is a blank of the word, and one the app does not list would have been blanked.
+        expect(words.find(([at]) => at === path)?.[1], path).toBe(String(lookup(messages, key)))
+        for (const blank of written) expect(UI_TEXT_BLANKS, `${key} has ${blank}`).toContain(blank.slice(1, -1))
+      }
+    })
+  }
 
   // The base's `app.config.ts` is the list (the installed package, or the checkout `UI_LAYER` names). Every word
   // it declares has a line here. The chat's words are checked the same way once the base declares them (`chat.*`
