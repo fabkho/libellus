@@ -106,6 +106,8 @@
       "finish_reading": "Gelesen",
       "abandon_reading": "Abgebrochen",
       "update_progress": "Fortschritt",
+      "set_progress_day": "Fortschritt an einem früheren Tag",
+      "delete_progress_day": "Einen Tag aus dem Leselog entfernt",
       "update_session": "Lektüre bearbeitet",
       "remove_from_library": "Aus Bibliothek entfernt",
       "add_to_collection": "Zu einer Sammlung hinzugefügt",

@@ -106,6 +106,8 @@
       "finish_reading": "Finished",
       "abandon_reading": "Did not finish",
       "update_progress": "Progress",
+      "set_progress_day": "Progress on an earlier day",
+      "delete_progress_day": "Removed a day from the reading log",
       "update_session": "Edited a read",
       "remove_from_library": "Removed from Library",
       "add_to_collection": "Put on a collection",

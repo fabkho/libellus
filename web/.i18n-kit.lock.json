@@ -8093,6 +8093,11 @@
           "de"
         ]
       },
+      "sync.action.delete_progress_day": {
+        "9705467231539e7d": [
+          "de"
+        ]
+      },
       "sync.action.finish_reading": {
         "7804f7a79a9eee32": [
           "de"
@@ -8130,6 +8135,11 @@
       },
       "sync.action.set_entry_hidden": {
         "6a9686dcdc965ae1": [
+          "de"
+        ]
+      },
+      "sync.action.set_progress_day": {
+        "982b7c50f45ae4c8": [
           "de"
         ]
       },
