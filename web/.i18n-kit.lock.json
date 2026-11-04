@@ -7508,6 +7508,16 @@
           "de"
         ]
       },
+      "shell.avatarBoth": {
+        "dd57de4f396a642d": [
+          "de"
+        ]
+      },
+      "shell.avatarInvite": {
+        "57963c2a2245380c": [
+          "de"
+        ]
+      },
       "shell.avatarLabel": {
         "26a593da8d90d5fd": [
           "de"
@@ -8043,6 +8053,61 @@
           "de"
         ]
       },
+      "together.copy.none": {
+        "c4e52d001fa15fe8": [
+          "de"
+        ]
+      },
+      "together.copy.noneInLibrary": {
+        "ee3d3b683202a4ad": [
+          "de"
+        ]
+      },
+      "together.copy.noneText": {
+        "dbb5872e7c8671aa": [
+          "de"
+        ]
+      },
+      "together.copy.openBook": {
+        "4af54797abb89944": [
+          "de"
+        ]
+      },
+      "together.copy.pages": {
+        "b78cbc38798eddc3": [
+          "de"
+        ]
+      },
+      "together.copy.save": {
+        "1509f561f2416598": [
+          "de"
+        ]
+      },
+      "together.copy.skip": {
+        "a0e63d7c7125d29a": [
+          "de"
+        ]
+      },
+      "together.copy.text": {
+        "d1edd61a740c6290": [
+          "de"
+        ]
+      },
+      "together.copy.title": {
+        "ab1a9d3f05512b81": [
+          "de"
+        ]
+      },
+      "together.count.readers": {
+        "d4d6dbe8dea02454": [
+          "de"
+        ]
+      },
+      "together.count.sections": {
+        "3ee366c6196693d8": [
+          "de"
+        ]
+      },
       "together.done": {
         "11a6767d5674c7e4": [
           "de"
@@ -8078,8 +8143,193 @@
           "de"
         ]
       },
+      "together.hint": {
+        "ce3f232d8824ee61": [
+          "de"
+        ]
+      },
       "together.home": {
         "82bc39f68192c34a": [
+          "de"
+        ]
+      },
+      "together.invitation.accept": {
+        "fd30fe681b4b2d9e": [
+          "de"
+        ]
+      },
+      "together.invitation.acceptLabel": {
+        "4a9080ecab7ef5c1": [
+          "de"
+        ]
+      },
+      "together.invitation.decline": {
+        "a0e63d7c7125d29a": [
+          "de"
+        ]
+      },
+      "together.invitation.declineLabel": {
+        "08d9bf56bcb18316": [
+          "de"
+        ]
+      },
+      "together.invitation.line": {
+        "3ad90cc0e9b6d123": [
+          "de"
+        ]
+      },
+      "together.invitation.section": {
+        "5004dddaeea833aa": [
+          "de"
+        ]
+      },
+      "together.invite.friendsSection": {
+        "bd104d1b98d03227": [
+          "de"
+        ]
+      },
+      "together.invite.linkOff": {
+        "113e93ccb838dea2": [
+          "de"
+        ]
+      },
+      "together.invite.linkOn": {
+        "0e85c7247b5989d6": [
+          "de"
+        ]
+      },
+      "together.invite.linkSection": {
+        "a6a32dbc5618ea39": [
+          "de"
+        ]
+      },
+      "together.invite.linkSwitch": {
+        "88c3be35063553d5": [
+          "de"
+        ]
+      },
+      "together.invite.renew": {
+        "98ee0dfb338d5bfc": [
+          "de"
+        ]
+      },
+      "together.invite.renewText": {
+        "b2928ff1d37c6cb5": [
+          "de"
+        ]
+      },
+      "together.invite.renewTitle": {
+        "e1bf95200dc717cf": [
+          "de"
+        ]
+      },
+      "together.invite.send": {
+        "eb180f871e6fe587": [
+          "de"
+        ]
+      },
+      "together.invite.sendNone": {
+        "1fd9ae1607aa3d80": [
+          "de"
+        ]
+      },
+      "together.invite.title": {
+        "1fd9ae1607aa3d80": [
+          "de"
+        ]
+      },
+      "together.link.copied": {
+        "d249818eccabb507": [
+          "de"
+        ]
+      },
+      "together.link.copy": {
+        "e21f935f11d7e966": [
+          "de"
+        ]
+      },
+      "together.link.eyebrow": {
+        "9546e16bf119e2be": [
+          "de"
+        ]
+      },
+      "together.link.failed": {
+        "eb67bddf203ee1cc": [
+          "de"
+        ]
+      },
+      "together.link.hostedBy": {
+        "a8e0cc5116c72d97": [
+          "de"
+        ]
+      },
+      "together.link.invitedBy": {
+        "0f68b0f7ee075b74": [
+          "de"
+        ]
+      },
+      "together.link.join": {
+        "fd30fe681b4b2d9e": [
+          "de"
+        ]
+      },
+      "together.link.joinedTitle": {
+        "98b697f89b0e7a16": [
+          "de"
+        ]
+      },
+      "together.link.joining": {
+        "29664d6bcf165697": [
+          "de"
+        ]
+      },
+      "together.link.loading": {
+        "b68cd39a915285e5": [
+          "de"
+        ]
+      },
+      "together.link.memberText": {
+        "7d3d88a81f268428": [
+          "de"
+        ]
+      },
+      "together.link.memberTitle": {
+        "46c95e255a11311a": [
+          "de"
+        ]
+      },
+      "together.link.missing": {
+        "27f143ef4662db33": [
+          "de"
+        ]
+      },
+      "together.link.missingTitle": {
+        "ca3f7c99f3f13d46": [
+          "de"
+        ]
+      },
+      "together.link.notNow": {
+        "a0e63d7c7125d29a": [
+          "de"
+        ]
+      },
+      "together.link.openRoom": {
+        "833c4356ca7cd602": [
+          "de"
+        ]
+      },
+      "together.link.pageTitle": {
+        "9546e16bf119e2be": [
+          "de"
+        ]
+      },
+      "together.link.share": {
+        "712a4823ccb996b0": [
+          "de"
+        ]
+      },
+      "together.link.shareText": {
+        "7a187d3cdad1dd5e": [
           "de"
         ]
       },
@@ -8128,6 +8378,111 @@
           "de"
         ]
       },
+      "together.members.deleteMine": {
+        "513cca8c640a5824": [
+          "de"
+        ]
+      },
+      "together.members.host": {
+        "4a823118b9ba8baa": [
+          "de"
+        ]
+      },
+      "together.members.inSection": {
+        "5a12504c90c57939": [
+          "de"
+        ]
+      },
+      "together.members.invited": {
+        "63b17becd812dfd3": [
+          "de"
+        ]
+      },
+      "together.members.leave": {
+        "7e91d5a1e90609cf": [
+          "de"
+        ]
+      },
+      "together.members.leaveHostText": {
+        "6a53daff40ca0b49": [
+          "de"
+        ]
+      },
+      "together.members.leaveLastText": {
+        "8d8110c91f57cafb": [
+          "de"
+        ]
+      },
+      "together.members.leaveText": {
+        "ee4465103a7cdb17": [
+          "de"
+        ]
+      },
+      "together.members.leaveTitle": {
+        "032ad68ece7e3946": [
+          "de"
+        ]
+      },
+      "together.members.moreLabel": {
+        "79baf5743cefaf47": [
+          "de"
+        ]
+      },
+      "together.members.notSet": {
+        "4895f73177ab5d67": [
+          "de"
+        ]
+      },
+      "together.members.privacy": {
+        "6fd6b738254697c8": [
+          "de"
+        ]
+      },
+      "together.members.remove": {
+        "c3812fc4acb861d5": [
+          "de"
+        ]
+      },
+      "together.members.removeText": {
+        "973853eef03f0e40": [
+          "de"
+        ]
+      },
+      "together.members.removeTitle": {
+        "01c1f0250884f593": [
+          "de"
+        ]
+      },
+      "together.members.title": {
+        "adad7d44ee060a97": [
+          "de"
+        ]
+      },
+      "together.members.wholeBook": {
+        "97e5a620201906ad": [
+          "de"
+        ]
+      },
+      "together.members.withdraw": {
+        "164546a9c5481480": [
+          "de"
+        ]
+      },
+      "together.members.withdrawText": {
+        "dba675511a7c232e": [
+          "de"
+        ]
+      },
+      "together.members.withdrawTitle": {
+        "556fa5cca6d98adf": [
+          "de"
+        ]
+      },
+      "together.members.you": {
+        "bb0347a468d97e98": [
+          "de"
+        ]
+      },
       "together.menu.archive": {
         "66f4804ee23ddc09": [
           "de"
@@ -8143,8 +8498,18 @@
           "de"
         ]
       },
+      "together.menu.invite": {
+        "f21254bf82bf7524": [
+          "de"
+        ]
+      },
       "together.menu.label": {
         "559fa978b3b33f9c": [
+          "de"
+        ]
+      },
+      "together.menu.members": {
+        "adad7d44ee060a97": [
           "de"
         ]
       },
@@ -8170,6 +8535,26 @@
       },
       "together.pages": {
         "7fc7ad15a15ff93c": [
+          "de"
+        ]
+      },
+      "together.picker.allIn": {
+        "586611a3788ac6cc": [
+          "de"
+        ]
+      },
+      "together.picker.empty": {
+        "14c1e64df778a795": [
+          "de"
+        ]
+      },
+      "together.picker.more": {
+        "f5c9bd131486e793": [
+          "de"
+        ]
+      },
+      "together.picker.offline": {
+        "0ca6898b03021493": [
           "de"
         ]
       },
@@ -8253,7 +8638,222 @@
           "de"
         ]
       },
+      "together.sections.whole": {
+        "97e5a620201906ad": [
+          "de"
+        ]
+      },
       "together.sectionsTitle": {
+        "9bae918add9affa5": [
+          "de"
+        ]
+      },
+      "together.setup.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "together.setup.book.intro": {
+        "4c2c42aed9503454": [
+          "de"
+        ]
+      },
+      "together.setup.book.starts": {
+        "96dbedeca7dfb7fa": [
+          "de"
+        ]
+      },
+      "together.setup.book.startsHint": {
+        "595aabe418c1c177": [
+          "de"
+        ]
+      },
+      "together.setup.done": {
+        "11a6767d5674c7e4": [
+          "de"
+        ]
+      },
+      "together.setup.invite.intro": {
+        "7dc5c9bbb456f8ed": [
+          "de"
+        ]
+      },
+      "together.setup.invite.label": {
+        "4f1ae428c8144f16": [
+          "de"
+        ]
+      },
+      "together.setup.invite.link": {
+        "88c3be35063553d5": [
+          "de"
+        ]
+      },
+      "together.setup.invite.linkOff": {
+        "a9558fef04c1260e": [
+          "de"
+        ]
+      },
+      "together.setup.invite.linkOn": {
+        "6e509aaeb3c0743b": [
+          "de"
+        ]
+      },
+      "together.setup.invitedCount": {
+        "9ba4fbb8d074ad7e": [
+          "de"
+        ]
+      },
+      "together.setup.linkText": {
+        "a2899737bf9f5a27": [
+          "de"
+        ]
+      },
+      "together.setup.next": {
+        "1ff57a29d7c9d11b": [
+          "de"
+        ]
+      },
+      "together.setup.openExisting": {
+        "bd7d3e88296cdea5": [
+          "de"
+        ]
+      },
+      "together.setup.openRoom": {
+        "833c4356ca7cd602": [
+          "de"
+        ]
+      },
+      "together.setup.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "together.setup.sections.byCount": {
+        "efbcd674b4f43dcc": [
+          "de"
+        ]
+      },
+      "together.setup.sections.byPages": {
+        "9046da16aea909ba": [
+          "de"
+        ]
+      },
+      "together.setup.sections.from": {
+        "da7a57b004e3bd5c": [
+          "de"
+        ]
+      },
+      "together.setup.sections.grouping": {
+        "cda246fb0c1c3216": [
+          "de"
+        ]
+      },
+      "together.setup.sections.howMany": {
+        "a6ef4a41f45c6fa4": [
+          "de"
+        ]
+      },
+      "together.setup.sections.howManyHint": {
+        "a7821dcccbd18a63": [
+          "de"
+        ]
+      },
+      "together.setup.sections.intro": {
+        "16dead108f305a75": [
+          "de"
+        ]
+      },
+      "together.setup.sections.label": {
+        "5a12504c90c57939": [
+          "de"
+        ]
+      },
+      "together.setup.sections.more": {
+        "cac3ea362cbc4f80": [
+          "de"
+        ]
+      },
+      "together.setup.sections.pageRange": {
+        "84827643cb90a38a": [
+          "de"
+        ]
+      },
+      "together.setup.sections.pagesInBook": {
+        "9d8243c26c8e56b1": [
+          "de"
+        ]
+      },
+      "together.setup.sections.per": {
+        "20f85ccc87f2453e": [
+          "de"
+        ]
+      },
+      "together.setup.sections.perPart": {
+        "04c3da4c041f3cab": [
+          "de"
+        ]
+      },
+      "together.setup.sections.problemCount": {
+        "6f2b2ace9ec53ea2": [
+          "de"
+        ]
+      },
+      "together.setup.sections.problemNoPages": {
+        "26880f95fcd3d774": [
+          "de"
+        ]
+      },
+      "together.setup.sections.problemPages": {
+        "0397aa60580f1977": [
+          "de"
+        ]
+      },
+      "together.setup.sections.summary": {
+        "f0667372cabc2499": [
+          "de"
+        ]
+      },
+      "together.setup.skippedCount": {
+        "0a987fd328fa7063": [
+          "de"
+        ]
+      },
+      "together.setup.start": {
+        "ad7fc0224d2d6a4f": [
+          "de"
+        ]
+      },
+      "together.setup.startedText": {
+        "0d1b73c619da0a49": [
+          "de"
+        ]
+      },
+      "together.setup.startedTitle": {
+        "13a2dcedd50b2d1d": [
+          "de"
+        ]
+      },
+      "together.setup.starting": {
+        "5a2d33c45a968839": [
+          "de"
+        ]
+      },
+      "together.setup.stepOf": {
+        "0560ca6c73f14f20": [
+          "de"
+        ]
+      },
+      "together.setup.steps.book": {
+        "909cb81127c5e194": [
+          "de"
+        ]
+      },
+      "together.setup.steps.invite": {
+        "1fd9ae1607aa3d80": [
+          "de"
+        ]
+      },
+      "together.setup.steps.sections": {
         "9bae918add9affa5": [
           "de"
         ]
@@ -8415,6 +9015,21 @@
       },
       "together.track.youNotSet": {
         "ec8ea62bc32fdd91": [
+          "de"
+        ]
+      },
+      "together.turnOn.action": {
+        "5a1f096a0d8d7674": [
+          "de"
+        ]
+      },
+      "together.turnOn.text": {
+        "b3856cd14082ae28": [
+          "de"
+        ]
+      },
+      "together.turnOn.title": {
+        "12f86811f7431a17": [
           "de"
         ]
       },

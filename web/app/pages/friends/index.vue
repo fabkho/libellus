@@ -32,6 +32,8 @@ const router = useRouter()
 const pushed = computed(() => Boolean(useRoute().meta.pushed))
 const feed = useFeedStore()
 const online = useOnline()
+// Only with buddy reads on: the component, its store and its chunk are not even loaded otherwise.
+const buddyReadsOn = useBuddyReadsOn()
 const { label } = useFeedDay()
 
 useHead({ title: () => `${t('feed.title')} · ${t('app.name')}` })
@@ -125,6 +127,9 @@ watch(
     <div role="status">
       <p v-if="offline" class="eyebrow px-screen pt-sm" data-testid="friends.offline">{{ offline }}</p>
     </div>
+
+    <!-- Buddy read invitations (W3): nothing here unless this build has buddy reads and she turned them on. -->
+    <LazyTogetherInvitations v-if="buddyReadsOn" />
 
     <div v-if="feed.days.length" class="px-screen pt-sm" data-testid="friends.list">
       <section v-for="(day, dayIndex) in feed.days" :key="day.day" class="pt-md">

@@ -82,6 +82,11 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   `composables/useBuddyReadsFlag.ts`; unset = off, and off in every build until the release that carries the screens): the
   Profile's switch row, `stores/buddyReadsSwitch.ts` (`available`) and every entry point W3–W5 add check it first, so a build
   without the feature draws nothing of it and calls no buddy RPC.
+  - W3 built on it: `composables/useBuddyReadsOn.ts` (the flag *and* her switch, for a row, a card or a sheet), the room's routes (`validate` for the flag,
+    `middleware/buddy-reads.ts` for the switch: Home while it is off) — the link page `/t/<token>` takes the flag by `validate` only and asks the switch itself
+    ("Turn on Buddy reads?") — and `stores/buddyInvites.ts`, the small store the shell may import (the lamp dot: the invitations waiting for
+    her, the repository loaded by a dynamic `import()`); the big store stays out of the entry. The link `/t/<token>` needs the sign-in
+    (`utils/publicPath.ts` is untouched) and is kept through it by `utils/pendingBuddyRead.ts`, only in a build with the flag.
 - **Mobile first: VoiceOver, touch and gestures before desktop/keyboard** (every swipe, drag and long press has a single-tap alternative; text at 200 % reflows).
 - No full typechecks (`nuxi typecheck`, `tsc --noEmit`) unless asked. Run the targeted test instead.
 - Never read `.env`. Pass `NUXT_PUBLIC_*` as exported env vars when a command needs them.

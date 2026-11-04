@@ -82,7 +82,9 @@
   "shell": {
     "tabsLabel": "Hauptnavigation",
     "avatarLabel": "Profil: {initials}",
-    "avatarRequest": "Dein Profil: {initials}, eine Folgeanfrage wartet"
+    "avatarRequest": "Dein Profil: {initials}, eine Folgeanfrage wartet",
+    "avatarInvite": "Dein Profil: {initials}, eine Einladung zum Buddy-Read wartet",
+    "avatarBoth": "Dein Profil: {initials}, eine Folgeanfrage und eine Einladung zum Buddy-Read warten"
   },
   "sync": {
     "chip": "Wartet auf Sync ({count})",
@@ -2183,7 +2185,9 @@
       "label": "Optionen für den Buddy-Read",
       "finish": "Buddy-Read beenden",
       "archive": "Archivieren",
-      "hint": "Beenden lässt alle Gespräche für alle offen. Archivieren macht sie schreibgeschützt."
+      "hint": "Beenden lässt alle Gespräche für alle offen. Archivieren macht sie schreibgeschützt.",
+      "invite": "Lesende einladen",
+      "members": "Lesende"
     },
     "finish": {
       "title": "Diesen Buddy-Read beenden?",
@@ -2241,6 +2245,153 @@
       "veiledTitle": "Abschnitt {n} ist verborgen",
       "veiledEnd": "Das ganze Buch ist verborgen",
       "veiledText": "Es könnte verraten, was du noch nicht gelesen hast. Es bleibt zu, bis du es öffnest."
+    },
+    "hint": "Alle lesen im eigenen Tempo. Kommentare gehören zu Abschnitten, und ein Abschnitt bleibt verborgen, bis du ihn gelesen hast. Die anderen sehen, in welchem Abschnitt du bist, nie deine Seite.",
+    "count": {
+      "readers": "{count} Lesende | {count} Lesende",
+      "sections": "{count} Abschnitt | {count} Abschnitte"
+    },
+    "sections": {
+      "whole": "Das ganze Buch"
+    },
+    "setup": {
+      "steps": {
+        "book": "Buch",
+        "sections": "Abschnitte",
+        "invite": "Einladen"
+      },
+      "stepOf": "Schritt {step} von {total}",
+      "back": "Zurück",
+      "next": "Weiter",
+      "start": "Buddy-Read starten",
+      "starting": "Wird gestartet …",
+      "retry": "Nochmal versuchen",
+      "done": "Fertig",
+      "book": {
+        "intro": "Ein Buch, ein Raum: du und bis zu 11 Freunde, alle im eigenen Tempo.",
+        "starts": "Startet am",
+        "startsHint": "Ein Richtwert. Alle können anfangen, wann sie möchten."
+      },
+      "sections": {
+        "intro": "Jeder Abschnitt hat seinen eigenen Thread. Ein Thread bleibt verborgen, bis der Abschnitt gelesen wurde, damit nichts verraten wird.",
+        "from": "Aufteilen nach",
+        "byCount": "Teile",
+        "byPages": "Seiten",
+        "howMany": "Teile im Buch",
+        "howManyHint": "Kapitel oder gleiche Teile: 1 bis 100. Ab 31 kannst du sie zusammenfassen.",
+        "grouping": "Teile pro Abschnitt",
+        "per": "Einzeln | je {count} zusammen",
+        "pagesInBook": "Seiten im Buch",
+        "perPart": "Seiten pro Abschnitt",
+        "problemCount": "Gib eine Zahl von 1 bis 100 ein.",
+        "problemNoPages": "Gib an, wie viele Seiten das Buch hat.",
+        "problemPages": "Das ergibt mehr als 100 Abschnitte. Wähle mehr Seiten pro Abschnitt.",
+        "label": "Abschnitt {n}",
+        "pageRange": "Seiten {from}–{to}",
+        "summary": "{count} Abschnitt, dann das ganze Buch | {count} Abschnitte, dann das ganze Buch",
+        "more": "{count} weiterer Abschnitt | {count} weitere Abschnitte"
+      },
+      "invite": {
+        "intro": "Lade Personen ein, denen du folgst – jetzt oder später aus dem Raum heraus. Du kannst auch einen Link teilen.",
+        "label": "Freunde einladen",
+        "link": "Einladungslink",
+        "linkOn": "Alle bei BetterReads mit diesem Link können beitreten, bis zu 12 Personen. Du kannst den Link jederzeit deaktivieren.",
+        "linkOff": "Kein Link. Nur eingeladene Personen können beitreten."
+      },
+      "startedTitle": "Dein Buddy-Read hat begonnen",
+      "startedText": "{title} liegt bereit. Die Eingeladenen sehen es als Einladung.",
+      "invitedCount": "{count} Person eingeladen. | {count} Personen eingeladen.",
+      "skippedCount": "{count} Person konnte nicht eingeladen werden. | {count} Personen konnten nicht eingeladen werden.",
+      "linkText": "Schicke den Link an Freunde, die BetterReads nutzen:",
+      "openRoom": "Raum öffnen",
+      "openExisting": "Deinen Buddy-Read zu diesem Buch öffnen"
+    },
+    "link": {
+      "pageTitle": "Buddy-Read",
+      "loading": "Link wird geöffnet …",
+      "eyebrow": "Buddy-Read",
+      "hostedBy": "{name} leitet diesen Buddy-Read.",
+      "invitedBy": "{name} hat dich zu diesem Buddy-Read eingeladen.",
+      "join": "Beitreten",
+      "joining": "Beitreten …",
+      "notNow": "Nicht jetzt",
+      "missingTitle": "Dieser Link funktioniert nicht mehr",
+      "missing": "Frag nach einem neuen Link oder nach einer Einladung.",
+      "memberTitle": "Du bist schon dabei",
+      "memberText": "Du bist {title} bereits beigetreten.",
+      "openRoom": "Raum öffnen",
+      "joinedTitle": "Du bist {title} beigetreten",
+      "share": "Link teilen",
+      "copy": "Kopieren",
+      "copied": "Kopiert.",
+      "failed": "Link konnte nicht kopiert werden. Bitte manuell kopieren.",
+      "shareText": "Lies {title} mit mir auf BetterReads"
+    },
+    "turnOn": {
+      "title": "Buddy-Reads aktivieren?",
+      "text": "Buddy-Reads sind auf diesem Gerät aus. Aktiviere sie, um diesen Buddy-Read zu sehen und beizutreten.",
+      "action": "Aktivieren"
+    },
+    "invitation": {
+      "section": "Einladungen zum Buddy-Read",
+      "line": "{name} hat dich eingeladen, {title} zusammen zu lesen",
+      "accept": "Beitreten",
+      "decline": "Nicht jetzt",
+      "acceptLabel": "{title} beitreten",
+      "declineLabel": "Nicht jetzt: {title}"
+    },
+    "invite": {
+      "title": "Einladen",
+      "linkSection": "Link",
+      "linkSwitch": "Einladungs-Link",
+      "linkOn": "Alle bei BetterReads mit diesem Link können beitreten, bis zu 12 Personen.",
+      "linkOff": "Der Link ist aus. Nur Eingeladene können beitreten.",
+      "renew": "Neuer Link",
+      "renewTitle": "Neuen Link erstellen?",
+      "renewText": "Der bisherige Link funktioniert ab sofort nicht mehr. Wer schon dabei ist, bleibt dabei.",
+      "friendsSection": "Freunde",
+      "send": "{count} Person einladen | {count} Personen einladen",
+      "sendNone": "Einladen"
+    },
+    "picker": {
+      "empty": "Du folgst noch niemandem. Folge zuerst Freunden oder teile den Link, sobald der Buddy-Read begonnen hat.",
+      "more": "Mehr anzeigen",
+      "offline": "Du bist offline. Deine Freunde werden angezeigt, sobald du wieder da bist.",
+      "allIn": "Alle, denen du folgst, sind schon dabei oder eingeladen."
+    },
+    "members": {
+      "title": "Lesende",
+      "you": "du",
+      "host": "Host",
+      "inSection": "Abschnitt {n}",
+      "wholeBook": "Das ganze Buch",
+      "notSet": "Nicht festgelegt",
+      "invited": "Eingeladen",
+      "moreLabel": "Optionen für {name}",
+      "remove": "Entfernen",
+      "removeTitle": "{name} entfernen?",
+      "removeText": "Die Person kann nicht wieder beitreten, auch nicht mit dem Link, bis du sie erneut einlädst.",
+      "withdraw": "Zurückziehen",
+      "withdrawTitle": "Einladung an {name} zurückziehen?",
+      "withdrawText": "Die Person bleibt draußen, auch mit dem Link, bis du sie erneut einlädst.",
+      "leave": "Buddy-Read verlassen",
+      "leaveTitle": "Diesen Buddy-Read verlassen?",
+      "leaveText": "Du siehst den Raum nicht mehr und die anderen sehen deinen Abschnitt nicht mehr. Du kannst über den Link oder eine neue Einladung wieder beitreten.",
+      "leaveHostText": "Du bist der Host. Der Buddy-Read geht an die Person über, die als Erste beigetreten ist.",
+      "leaveLastText": "Niemand außer dir ist noch dabei. Der Buddy-Read endet und wird samt seinen Nachrichten gelöscht.",
+      "deleteMine": "Auch die von mir verfassten Nachrichten löschen",
+      "privacy": "Die anderen sehen, in welchem Abschnitt du bist, nie deine Seite."
+    },
+    "copy": {
+      "title": "Welches Exemplar liest du?",
+      "text": "Dein Abschnitt folgt deiner Lektüre des gewählten Exemplars. Die anderen sehen nur den Abschnitt, nie deine Seite.",
+      "noneInLibrary": "Dieses Buch ist noch nicht in deiner Bibliothek. Füge es hinzu, damit dein Abschnitt deiner Lektüre folgt, oder trage im Raum von Hand ein, wo du bist.",
+      "openBook": "Buch öffnen",
+      "none": "Ich erfasse es hier nicht",
+      "noneText": "Trage im Raum von Hand ein, wo du bist.",
+      "save": "Speichern",
+      "skip": "Nicht jetzt",
+      "pages": "{count} Seite | {count} Seiten"
     }
   },
   "uiText": {

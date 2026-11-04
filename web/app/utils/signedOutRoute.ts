@@ -1,5 +1,6 @@
 import { DEVICE_LIBRARY_KEY } from '../data/deviceLibrary'
 import type { DeviceStorage } from '../data/localData'
+import { buddyReadTokenIn, keepBuddyRead } from './pendingBuddyRead'
 import { followTokenIn, keepFollow } from './pendingFollow'
 import { keepShare } from './pendingShare'
 import { isPublicPath } from './publicPath'
@@ -25,12 +26,13 @@ const first = (value: unknown): string | null => (Array.isArray(value) ? first(v
 /**
  * The address a signed-out visitor is sent to from `to`, or undefined to let her stay (the access screens,
  * a public page). Keeps what she came for through the sign-in as the middleware always did: a share
- * (issue #91, pages/share.vue) and a follow link (social v1, pages/f/[token].vue). `pending`: a code is in the
+ * (issue #91, pages/share.vue), a follow link (social v1, pages/f/[token].vue) and, in a build that has buddy reads
+ * (`buddyReads`, composables/useBuddyReadsFlag.ts), a buddy read link (pages/t/[token].vue). `pending`: a code is in the
  * air, so a screen other than sign-in goes back to the verify screen. `storage` is null on a server.
  */
 export function signedOutDestination(
   to: { path: string; query: Record<string, unknown> },
-  { pending, storage }: { pending: boolean; storage: DeviceStorage | null },
+  { pending, storage, buddyReads = false }: { pending: boolean; storage: DeviceStorage | null; buddyReads?: boolean },
 ): string | undefined {
   const path = withoutSlash(to.path)
   // A member's reading page and its Book cards (#171) are for anyone with the link, signed in or not.
@@ -45,6 +47,10 @@ export function signedOutDestination(
 
   const followed = followTokenIn(path)
   if (followed && storage) keepFollow(storage, followed)
+
+  // Nothing of buddy reads is kept in a build without them.
+  const joining = buddyReads ? buddyReadTokenIn(path) : null
+  if (joining && storage) keepBuddyRead(storage, joining)
 
   if (!isAuthRoute) return pending ? '/verify' : '/sign-in'
   if (path === '/verify' && !pending) return '/sign-in'

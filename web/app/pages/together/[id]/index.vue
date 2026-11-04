@@ -5,7 +5,7 @@
 // start" (the room, always open), the Sections and "The whole book" last. A Section her marker has not reached is **veiled**: the row
 // shows its number, the count and that it is hidden, never its title, the people in it or a new-message dot, and opening it asks
 // first ("Show it anyway?", the answer is kept on this device as a peek, her Section does not move). The ⋯ has "Where are you?" and,
-// for the host, Finish and Archive; Invite, Members and Leave are the setup work's (components/together/RoomMenu.vue, its slot).
+// for the host, Finish and Archive; Invite, Readers (Remove, Leave) are the setup work's sheets (components/together/{InviteSheet,MembersSheet}.vue, in the menu's slot).
 //
 // Behind the build's flag and her switch (utils/buddyRoute.ts, middleware/buddy-reads.ts): a build without buddy reads draws the app's 404
 // and asks nothing. The screen `retain`s the store's live channel while it is open and lets it go when it closes; a change of a Section,
@@ -123,9 +123,16 @@ function showAnyway() {
 
 const menuOpen = ref(false)
 const markerOpen = ref(false)
+const inviteOpen = ref(false)
+const membersOpen = ref(false)
 const said = ref('')
 function done(what: 'finished' | 'archived') {
   said.value = t(`together.${what === 'finished' ? 'finish' : 'archive'}.done`)
+}
+
+/** She left the read (the members sheet): the room is gone for her, so Home. */
+function leftTheRead() {
+  void navigateTo('/', { replace: true })
 }
 
 function back() {
@@ -220,8 +227,28 @@ const alone = computed(() => read.value?.status === 'active' && (read.value.memb
       </div>
 
       <TogetherMarkerSheet v-model:open="markerOpen" :read="read" />
-      <TogetherRoomMenu v-model:open="menuOpen" :read="read" @marker="markerOpen = true" @done="done" />
+      <TogetherRoomMenu v-model:open="menuOpen" :read="read" @marker="markerOpen = true" @done="done">
+        <!-- Who is in, who may be invited, and the way out (W3: the members, invite and leave sheets). -->
+        <template #members>
+          <UiRowGroup>
+            <UiRow
+              v-if="read.canManage && read.status === 'active'"
+              as="button"
+              icon="link"
+              :label="t('together.menu.invite')"
+              data-testid="together.menu.invite"
+              @click="(menuOpen = false), (inviteOpen = true)"
+            />
+            <UiRow as="button" icon="people" :label="t('together.menu.members')" data-testid="together.menu.members" @click="(menuOpen = false), (membersOpen = true)" />
+          </UiRowGroup>
+        </template>
+      </TogetherRoomMenu>
+
     </template>
+
+    <!-- Outside the read's own branch: leaving forgets the read, and the sheet must still be there to tell the page (`left`). -->
+    <TogetherInviteSheet v-model:open="inviteOpen" :read-id="id" />
+    <TogetherMembersSheet v-model:open="membersOpen" :read-id="id" @left="leftTheRead" />
 
     <TogetherShowAnyway v-model:open="confirmOpen" :number="asking?.number ?? ''" :end="asking?.kind === 'end'" @show="showAnyway" />
   </div>
