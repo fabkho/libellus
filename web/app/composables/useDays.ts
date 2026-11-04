@@ -32,10 +32,16 @@ export function useDays() {
     return formatDay(day)
   }
 
+  /** "Fri 30 Oct" (the weekday first; the year only in another year): a day the progress sheet is about, kept whole on one line. */
+  function weekdayDay(day: string): string {
+    const p = { ...parts(day), weekday: dateFormat(locale.value, { weekday: 'short' }).format(parseDay(day)) }
+    return (day.slice(0, 4) === isoDay().slice(0, 4) ? t('book.progress.dayLong', p) : t('book.progress.dayLongYear', p)).replaceAll(' ', '\u00a0')
+  }
+
   /** Which day of a read today is: the start day is day 1. */
   function dayOfRead(startedOn: string): number {
     return daysSpanned(startedOn, isoDay())
   }
 
-  return { formatDay, relativeDay, dayOfRead }
+  return { formatDay, relativeDay, weekdayDay, dayOfRead }
 }
