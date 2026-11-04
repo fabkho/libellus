@@ -52,9 +52,10 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
     `@supabase/realtime-js`**: the app provides the adapter (`ChatAdapter`, `RealtimeLike`) in `app/data/`, and the
     Realtime client it gives is the lazy `import('#realtime-client')` door below, never the stub. A fix to the layer is
     a release of fabkho/chat and a bump here (`docs/DEVELOPMENT.md`, "The package bumps"), not an edit under `node_modules`.
-  - Nothing imports it yet: the buddy read's data layer and store (in `app/data/` and `app/stores/`) are the first user. Its
-    auto-imports (`useThread`, `createSaveQueue` …) are tree-shaken from what no file calls; check the entry with
-    `pnpm perf:bundle` when a first file does, and put anything that pulls a Realtime client behind the lazy door.
+  - Its first user is the buddy read (`data/buddyReads.ts`, `data/buddyLive.ts`, `stores/buddyRead.ts`): the store is imported only by
+    buddy read screens, which `retain()` the live channel (the real client loads lazily through the store's
+    `import('#realtime-client')`; Home reads `my_buddy_reads()` on focus instead), and `tests/buddy-read-entry.test.ts` keeps both
+    out of the entry. A refusal code is worded under `buddyRead.error.<code>`.
   - `entry-guard.config.ts` fails a production build if any chunk the entry loads statically holds
     `@supabase/realtime-js` (the stub is fine; `tests/entry-guard.test.ts`).
 - **Portable by default** (rules: the base README): a component that could ever be generic is written so it moves to

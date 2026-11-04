@@ -1223,6 +1223,186 @@
           "de"
         ]
       },
+      "buddyRead.error.buddy_answer_invalid": {
+        "e77df5b59169014c": [
+          "de"
+        ]
+      },
+      "buddyRead.error.buddy_book_invalid": {
+        "877c93a78811cbaa": [
+          "de"
+        ]
+      },
+      "buddyRead.error.buddy_entry_invalid": {
+        "e7daa391aacbefc1": [
+          "de"
+        ]
+      },
+      "buddyRead.error.buddy_position_invalid": {
+        "638c213cbee32f1f": [
+          "de"
+        ]
+      },
+      "buddyRead.error.buddy_read_archived": {
+        "639a2bbc9f96e68b": [
+          "de"
+        ]
+      },
+      "buddyRead.error.buddy_read_ended": {
+        "e5736d2a5a9c8c70": [
+          "de"
+        ]
+      },
+      "buddyRead.error.buddy_read_exists": {
+        "3da4af0355dbc38f": [
+          "de"
+        ]
+      },
+      "buddyRead.error.buddy_read_full": {
+        "ec2eb98b9629c0b1": [
+          "de"
+        ]
+      },
+      "buddyRead.error.buddy_read_limit": {
+        "08a2cf931a0cb0fe": [
+          "de"
+        ]
+      },
+      "buddyRead.error.buddy_remove_self": {
+        "a6c4e665110aba5f": [
+          "de"
+        ]
+      },
+      "buddyRead.error.buddy_section_invalid": {
+        "4f111193bafaddcb": [
+          "de"
+        ]
+      },
+      "buddyRead.error.buddy_sections_invalid": {
+        "a682b697baae87a7": [
+          "de"
+        ]
+      },
+      "buddyRead.error.buddy_sections_locked": {
+        "c824660ddacc39cf": [
+          "de"
+        ]
+      },
+      "buddyRead.error.buddy_starts_invalid": {
+        "7613b3ad2821af6e": [
+          "de"
+        ]
+      },
+      "buddyRead.error.busy": {
+        "689032ce56cc25ab": [
+          "de"
+        ]
+      },
+      "buddyRead.error.client_id_required": {
+        "e77df5b59169014c": [
+          "de"
+        ]
+      },
+      "buddyRead.error.message_body_invalid": {
+        "d053eb87f1647271": [
+          "de"
+        ]
+      },
+      "buddyRead.error.message_client_id_required": {
+        "5a532aec532fa281": [
+          "de"
+        ]
+      },
+      "buddyRead.error.message_client_id_reused": {
+        "5a532aec532fa281": [
+          "de"
+        ]
+      },
+      "buddyRead.error.message_emoji_invalid": {
+        "4a58369c9c7cd87b": [
+          "de"
+        ]
+      },
+      "buddyRead.error.message_gif_invalid": {
+        "7e431b588f1e51ce": [
+          "de"
+        ]
+      },
+      "buddyRead.error.message_kind_invalid": {
+        "a1d636d6391d2812": [
+          "de"
+        ]
+      },
+      "buddyRead.error.message_not_yours": {
+        "3ff3e47e84cc85ab": [
+          "de"
+        ]
+      },
+      "buddyRead.error.message_rate_limited": {
+        "57657864730aee2e": [
+          "de"
+        ]
+      },
+      "buddyRead.error.message_reply_unavailable": {
+        "c8e93629bb861a1c": [
+          "de"
+        ]
+      },
+      "buddyRead.error.message_spoiler_unavailable": {
+        "568b9c89b6802164": [
+          "de"
+        ]
+      },
+      "buddyRead.error.message_unavailable": {
+        "89192d69e99e5ad2": [
+          "de"
+        ]
+      },
+      "buddyRead.error.not_found": {
+        "5d72083bef3baed6": [
+          "de"
+        ]
+      },
+      "buddyRead.error.not_host": {
+        "3e29476a27d77f2c": [
+          "de"
+        ]
+      },
+      "buddyRead.error.not_signed_in": {
+        "2e1d18330b893e9d": [
+          "de"
+        ]
+      },
+      "buddyRead.error.offline": {
+        "0c228b572dd1f0f7": [
+          "de"
+        ]
+      },
+      "buddyRead.error.rate_limited": {
+        "8bde13b348633ec8": [
+          "de"
+        ]
+      },
+      "buddyRead.error.report_note_too_long": {
+        "1264141e9fe56944": [
+          "de"
+        ]
+      },
+      "buddyRead.error.report_reason_invalid": {
+        "8c391e01baec07d5": [
+          "de"
+        ]
+      },
+      "buddyRead.error.report_self": {
+        "aa8e66df73bd0613": [
+          "de"
+        ]
+      },
+      "buddyRead.error.unknown": {
+        "e77df5b59169014c": [
+          "de"
+        ]
+      },
       "collection.add": {
         "2e62be59e5707c94": [
           "de"
