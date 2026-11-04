@@ -1987,6 +1987,15 @@
     "wantAll": "Alle {count} ansehen",
     "finishedAll": "Alle {count} ansehen",
     "seeAllLabel": "Alle {count} ansehen, {section}",
+    "buddy": {
+      "title": "Mögliche Buddy-Reads",
+      "label": "{title}. {reason}",
+      "bothWant": "Steht bei euch beiden auf „Möchte ich lesen“",
+      "youReading": "Du liest es gerade, {name} möchte es lesen",
+      "theyReading": "{name} liest es gerade, bei dir steht es auf „Möchte ich lesen“",
+      "authorYours": "Du hast schon etwas von {author} gelesen",
+      "authorTheirs": "{name} hat schon etwas von {author} gelesen"
+    },
     "finished": "Kürzlich gelesen",
     "yearEyebrow": "{name} · Jahresrückblick",
     "someone": "Ein Mitglied",

@@ -174,6 +174,8 @@ and ported as the design system (#5, docs/DESIGN.md); this spec fixes structure 
   (never a page, a percent, a date, how it was set, or her notes), only while she is a member: leaving or
   being removed stops it at once, and turning the Profile switch off first makes her leave her buddy reads.
   Anyone signed in who holds the link sees the names of the members before joining. The design is `docs/plans/buddy-read-shared.md`.
+  A friend's profile suggests Books to read together (*Potential buddy reads*): worked out on her phone from her own Library and
+  what that profile already shows her, so it never reveals more of the friend than the page; no function of its own.
 - Sharing (#171) is off until she turns it on, and only what she chose leaves the database: her
   first name, the sections she switched on (the Books she is reading, this year's counts, her
   favourites, what she finished with its Ratings, her shelf) and the reviews she shared one by one.
