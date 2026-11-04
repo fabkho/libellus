@@ -73,6 +73,10 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   precached (`globIgnores`): `data/reader/prefetch.ts` says when they are fetched ahead (a member with an
   ebook on this device, online, no Save-Data), a CacheFirst rule keeps them. Keep the group's modules apart
   from the two files imported dynamically (nuxt.config.ts says why), and a prefetch trigger behind `prefetchReader`.
+- **Buddy reads sit behind a build flag** (`NUXT_PUBLIC_BUDDY_READS`, `runtimeConfig.public.buddyReads`, read through
+  `composables/useBuddyReadsFlag.ts`; unset = off, and off in every build until the release that carries the screens): the
+  Profile's switch row, `stores/buddyReadsSwitch.ts` (`available`) and every entry point W3–W5 add check it first, so a build
+  without the feature draws nothing of it and calls no buddy RPC.
 - **Mobile first: VoiceOver, touch and gestures before desktop/keyboard** (every swipe, drag and long press has a single-tap alternative; text at 200 % reflows).
 - No full typechecks (`nuxi typecheck`, `tsc --noEmit`) unless asked. Run the targeted test instead.
 - Never read `.env`. Pass `NUXT_PUBLIC_*` as exported env vars when a command needs them.

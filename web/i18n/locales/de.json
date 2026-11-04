@@ -247,6 +247,8 @@
       "theme": "Dunkelmodus",
       "glass": "Glas",
       "friendsTab": "Freunde-Tab",
+      "buddyReads": "Buddy-Reads",
+      "buddyReadsHint": "Ein Buch mit Freunden lesen. Die anderen Mitglieder sehen, in welchem Abschnitt du bist, nie deine Seite.",
       "glassLevel": {
         "strong": "Stark",
         "medium": "Mittel",
