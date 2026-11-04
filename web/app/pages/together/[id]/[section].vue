@@ -19,7 +19,7 @@ import type { BuddyErrorCode } from '~/data/buddyReads'
 import { isReadId, isSectionSegment, roomPath, sectionOfSegment } from '~/utils/buddyRoute'
 import { buddyErrorKey } from '~/utils/buddyRead'
 import { sectionTitle } from '~/utils/buddySectionTitle'
-import { quoteOf, threadItems, type ThreadItem } from '~/utils/buddyThread'
+import { quoteOf, sameAuthorRun, threadItems, type ThreadItem } from '~/utils/buddyThread'
 import { useBuddyReadStore } from '~/stores/buddyRead'
 import { useSessionStore } from '~/stores/session'
 
@@ -103,12 +103,16 @@ watch(online, (now) => {
 })
 
 const thread = computed(() => store.threads[threadKey(readId.value, sectionId.value)] ?? null)
-const missing = computed(() => (!read.value && error.value === 'not_found') || (!!read.value && !view.value))
+// As the room's: the store forgetting the read (a live refresh, or the thread's own read) is as good as this page's own `not_found`.
+const missing = computed(() => (!read.value && (error.value === 'not_found' || store.forgotten[readId.value] === true)) || (!!read.value && !view.value))
 const status = computed(() => {
   if (error.value && !thread.value?.loaded) return 'error'
   if (!read.value) return 'loading'
   return thread.value?.loaded ? 'ready' : 'loading'
 })
+
+// Entered with the keyboard (Enter on a row of the room), the focus would stay on <body>: it goes to the heading once the thread is drawn.
+useFocusHeading(() => missing.value || status.value === 'ready' || view.value?.veiled === true)
 
 // ------------------------------------------------------------------ the messages
 
@@ -326,6 +330,7 @@ function back() {
     :load-older="loadOlder"
     :conversation-key="`${readId}:${sectionId ?? 'room'}`"
     :head-shown="items.length === 0"
+    :same-run="sameAuthorRun"
     class="together-thread"
     testid="buddyThread"
     landmark

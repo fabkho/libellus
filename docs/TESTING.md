@@ -624,7 +624,8 @@ unconditional, so its failure skips `Wait for Supabase` instead of leaving the w
 - **They run on the static build**, as members get it: `web/e2e/build.ts` (`nuxt generate` with the flows'
   configuration, into `.output-e2e`), served by `web/e2e/serve.mjs` the way Cloudflare Pages serves it
   (`_headers`, `_redirects`, a folder's page with the trailing slash, the nearest `404.html`, else the SPA
-  fallback, and the Pages Functions in `web/functions`). The build needs nothing of the stack, so CI makes
+  fallback, and the Pages Functions in `web/functions`; the `! Name` form of `_headers`, which takes a header off first, is read too: `/t/*` sends no
+  referrer, and without it every `/t/*` request was a 500 here while Pages was fine, so no flow could open a link page). The build needs nothing of the stack, so CI makes
   it while Supabase starts. `LIBELLUS_E2E_DEV=1` runs the flows on `nuxt dev` instead. The build bakes
   the flows' own VAPID public key (`web/e2e/pushKey.ts`): a build without one hides the import's "Notify me
   when it's done" (`stores/importPush.ts`), and `import-push.spec.ts` drives that button.

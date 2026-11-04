@@ -73,8 +73,12 @@ watch(id, load)
 // Back online with nothing to show, or the room may have changed while the device was away.
 watch(online, (now) => now && void load())
 
-const missing = computed(() => !read.value && error.value === 'not_found')
+// Gone for good: this screen's own answer was `not_found`, or the store forgot the read (a live refresh answers inside the store, not to
+// the page, so the page's own `error` stays null: it was removed, or left on another device, while the room was open).
+const missing = computed(() => !read.value && (error.value === 'not_found' || store.forgotten[id.value] === true))
 const failed = computed(() => !read.value && !!error.value && error.value !== 'not_found')
+// Entered with the keyboard, the focus would stay on <body>: it goes to the Book's title (or to what stands in its place).
+useFocusHeading(() => !!read.value || missing.value || failed.value)
 
 // ------------------------------------------------------------------ the rows
 
