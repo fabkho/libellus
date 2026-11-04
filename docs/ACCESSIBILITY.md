@@ -93,6 +93,39 @@ A sheet whose body is only text (What's new) makes that text one Tab stop (`tabi
 (sheets, `UiReveal`, the Profile's page under its hero), so a flow waits for it (`untilStill`) and a
 scan never reads half-faded colours.
 
+**Progress on an earlier day** (the Update progress sheet's day switch and the Reading log; docs/parity.md,
+*Progress on an earlier day*; `DayPills.vue`, `ProgressLog.vue`, `ProgressSheet.vue`). The patterns, for the next
+control of the kind:
+- **A group of choices that is not a radio set is a `role="group"` of buttons with `aria-pressed`** (the Pages | Percent
+  pattern): the day pills Today · Yesterday · Pick a day…, the group named "Day". Drawn 32 pt, each pill has a 44 pt box
+  from an invisible `::after` (`--size-touch`); the row wraps at 200 % text, it never shrinks or scrolls. The lit pill
+  is `bg-ink text-on-ink`: the state is also in `aria-pressed`, never colour alone.
+- **A native control laid over a drawn one**: the third pill is an `<input type="date">` stretched over the pill's whole
+  44 pt box and invisible (`opacity: 0`, so it stays focusable and the platform's picker opens from a tap), with its own
+  name: "Pick a day", and once a day is picked "Pick a day, Fri 30 Oct", so the drawn words are inside it (WCAG 2.5.3).
+  The input is invisible, so the **pill draws the focus ring** (`:has(:focus-visible)`, 2 px `accentInk`). `min` and
+  `max` are the read's start and today: the platform's picker enforces them, the app puts a day outside back, and the
+  database checks again. Desktop browsers open their picker only from their icon, so a click calls `showPicker()`.
+- **A changed state of a dialog is announced by a polite status, not by the title**: a dialog's title is read once, when it
+  opens, so choosing a day (the title becomes "Progress on Fri 30 Oct") is said by a visually hidden
+  `role="status"` / `aria-live="polite"` line ("Progress on Fri 30 Oct, between p. 170 and p. 188."), and the wheel's own
+  value text follows. **The effect line** ("Adds Fri 30 Oct. Sat then reads +10, not +18.") is a polite live region that
+  is always in the DOM and whose text comes and goes (`UiReveal` opens its room); a region added with its text is not
+  announced. Focus stays on the pill she chose.
+- **A log row is one button**, a plain `UiRow as="button"` with the chevron, 48 px tall. Its name is **what the row shows, word for word, then the action**: "Sat +18 p. 188. Edit"
+  (the plan's "Sat, +18 pages, ends at page 188. Edit" failed axe's `label-content-name-mismatch`); the pieces drawn
+  side by side have a real space between them (see "A name starts with what is drawn"). A day that went back reads
+  "−6" with its minus (not colour alone, not "+-6"). **Add day** and **See all N** follow the same rule ("Add day to
+  the reading log", "See all 20 days of the reading log"; the pill is drawn 32 pt with a 44 pt box and `aria-haspopup="dialog"`
+  where it opens one).
+- **Focus returns to what opened the sheet**: the tapped **row** or **Add day** (a pointer's tap does not focus a button in
+  every browser, so the log focuses it on tap, otherwise the sheet has nothing to give focus back to). When a Remove has
+  taken the row away, focus goes to **Add day**, else to the first row, never to the page. **See all** opens the older
+  rows in place (no second dialog over the sheet a row opens) and gives focus to the first new row, since the pill that
+  was pressed is gone.
+- **A destructive confirm says what it does to the number she cares about** (`UiConfirm`, `removeDay`: "Your progress goes
+  back to p. 188.") and offers **Keep it** in Cancel's place; an error stays inside it (`role="alert"`) and the same button tries again.
+
 **Contrast.** Every text token reaches 4.5:1 on every surface (`surface`, `surfaceRaised`,
 `surfaceSheet`) and on a `fill` over it, in light, dark and the reader's sepia room:
 
@@ -144,6 +177,10 @@ shimmer stops, the tab bar stays.
 
 ## Known gaps
 
+- **The native date input of the day pills** (*Progress on an earlier day*): axe reads the input and its name in every
+  state (`e2e/progress-earlier-day.spec.ts`, `@full`); the platform's own picker (iOS's wheel, Android's calendar) and
+  VoiceOver or TalkBack on it were not tried in this change. A day that already has an entry cannot be marked in the picker
+  (the platform has no way to); the range line and the effect line say what a day does instead.
 - **The icon column on a friend's Book row** (social v2a: *Want to read* and the heart, `icon-action` in `main.css`,
   `RowActions`): the owner chose a narrow column at the row's right edge, centred on the cover, over text-sized
   controls on the line (which could not have a 44 px box without covering the title or the stars). Each icon is drawn at

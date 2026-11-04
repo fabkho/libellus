@@ -509,12 +509,14 @@ End-to-end tests are worth their cost only for **critical paths**, and a flow ex
 5. deleting the account;
 6. (when it lands) the social loop;
 7. a buddy read, the one flow `web/e2e/buddy-read.spec.ts` (`@full`): two members in two browsers, a message that arrives live, a Section that stays veiled until "Show anyway", a removed message. The flows' build carries the feature (`NUXT_PUBLIC_BUDDY_READS=on` in `web/e2e/build.ts` and `appEnv.ts`); each member turns her own switch on on the device. It sets the read up through the RPCs, so it does not wait for the setup screens.
+8. progress on an earlier day, the two specs `web/e2e/progress-earlier-day.spec.ts` (the sheet) and `web/e2e/reading-log-edit.spec.ts` (the Reading log): a write path through four screens (the sheet, the log, Home's card, the Profile) and the outbox, whose result is read back from the database. They are flows because what they prove is the chain, not a rule (*Progress on an earlier day*, below).
 
 Everything else is tested where it is cheapest: rules in pgTAP (`supabase/tests/`), logic in Vitest
 (`web/tests/`: pure functions, and repositories against the local stack). Motion and visual polish are not tested
 end to end. A new screen therefore does not get a flow of its own; it gets one only if it is on a path above.
-Accessibility scans (`expectAccessible`) run in **one theme, dark**, for the screens on the critical paths;
-colours come from tokens that docs/ACCESSIBILITY.md already checks in both themes.
+Accessibility scans (`expectAccessible`) run for the screens on the critical paths in the dark room and then the light one (the
+`describe`s are named "accessibility, dark" for the colour scheme the page starts in, at 412 × 915); colours come from tokens
+that docs/ACCESSIBILITY.md already checks in both themes.
 
 | Event | What runs |
 | --- | --- |
@@ -637,7 +639,7 @@ unconditional, so its failure skips `Wait for Supabase` instead of leaving the w
 ### The `@full` flows
 
 Tagged `@full` (`{ tag: '@full' }` on the test or its `describe`), about 30 % of the flows' time (7 of the 29
-flows, about 91 s of 308): the axe scans (`a11y`). The motion and visual specs and the long
+flows, about 91 s of 308): the axe scans (`a11y`; the two scans of progress on an earlier day are `@full` too, below). The motion and visual specs and the long
 permutation lists whose rules Vitest holds are gone (see "Which flows"). A new flow is core unless it is a scan.
 Nothing in CI runs the core suite alone any more (the flows left pull requests, above): the tag is what to
 exclude for a quick local pass.
@@ -649,6 +651,50 @@ pnpm e2e --grep-invert @full      # without the @full flows, for a quick local p
 pnpm e2e --grep @full             # only the @full flows
 gh pr edit <n> --add-label full-e2e   # every flow on that pull request's CI
 ```
+
+### Progress on an earlier day: flows and the random comparison
+
+The feature (docs/parity.md, *Progress on an earlier day*) is tested where each part is cheapest, and two flow files close
+the chain. Both run in WebKit at iPhone size like every flow (the default project), against the static build, with the
+member and the read seeded through the RPCs.
+
+| File | What it holds | `@full` |
+|---|---|---|
+| `web/e2e/progress-earlier-day.spec.ts` | **The sheet**: yesterday by the pill; an older day by the native date input (`fill`, the wheel's range and its bounds clamped at the top); the range line and the effect line; Save, and the rows in the database, Home and the Profile after; a day in the middle removed (the next day absorbs it, her progress stays); the latest day removed, the confirm and the lowered card; a refusal staying in the sheet and in the confirm; the read's days not loaded (no pills); a read begun today (no pills). | the axe scan of the pills, a day with and without an entry and the confirm (`describe` "accessibility, dark", 412 × 915, both rooms) |
+| `web/e2e/reading-log-edit.spec.ts` | **The log**: a row is a button named "Sat +18 p. 188. Edit" and opens its day; no-op Save and Cancel give focus back to the row; edit a middle and the latest day (the log, the page and Home follow); **Add day** on the newest day without an entry, again after adding, with every day recorded (yesterday), and not for a read begun today; **Remove** from a row (middle day: the next absorbs it and focus goes to Add day; latest day: the confirm and the lower card); a day that went back ("−6" in the quiet ink); **See all** (14 rows, then the rest, focus on the first new row); **offline** Remove waits (the log drops the day at once, the chip says so, the database and the card keep their value) and syncs. | the axe scan of the log and of See all (dark and light at 412 × 915) |
+
+Both also run the **narrow-phone pass**: 360 px, English in the dark room and German in the light one, the states fitting
+their lines and nothing running out of the screen sideways (`expectFits`, `expectNoSideScroll`), at 200 % text too. `PROGRESS_DAY_SHOTS=<folder>` widens that to the whole matrix (390 and
+360 px, light and dark, English and German) and writes a screenshot of every state, the way to see them:
+
+```sh
+cd web
+PROGRESS_DAY_SHOTS=/tmp/progress-day-shots pnpm exec playwright test e2e/progress-earlier-day.spec.ts e2e/reading-log-edit.spec.ts
+```
+
+The non-`@full` flows run on the release and on a pull request with the **`full-e2e`** label (like all flows, above); the
+`@full` ones are the scans. A change to the sheet, the log, `data/progressDays.ts` or the migration should carry the label.
+
+Where the rest lives (Vitest files in `web/tests/`; the ones that name the stack run against it, no mocks):
+
+- **`progress-day-edit.test.ts` — the random pure-vs-database comparison.** The repository (`setProgressDay`,
+  `deleteProgressDay`) through the real RPCs as a signed-in member, and then **random sequences of edits** (set, remove, a
+  page-count change; counted and uncounted reads, page and percent rows, mixed units, a value that leads or lags its days, a read
+  begun late) applied twice: by the database, and by the pure functions in `data/progressDays.ts` (`dayEdit`), the ones the sheet and
+  the offline overlay use. **After every edit the days and the read's value must be equal.** That is the guard that keeps the
+  browser's port of the rules (R1–R12 in the migration's header) the same as the database's, and the one a native client
+  copies. 240 sequences by default (about 1,300 edits, ~26 s); `PROGRESS_DAY_SEQUENCES=<n>` sets how many and
+  `PROGRESS_DAY_SEED=<n>` replays one run (the seed is printed on a failure; `PROGRESS_DAY_SEED=<n> PROGRESS_DAY_SEQUENCES=1`
+  replays one sequence). A mutated pure rule fails it at once. Run it after any change to `data/progressDays.ts` or to
+  `private.progress_day_write`.
+- `progress-day-rules.test.ts` the pure rules (the plan's chain, the edge cases, R12, the effect line, Add day); `progress-day-view.test.ts`
+  the sheet's and the log's view model (`data/progressDayView.ts`; the repo has no component tests, so the logic sits there);
+  `progress-day-store.test.ts` the sheet's store (bounds, seed, mode, the Today switch, save, no-op close, refusal, Remove,
+  Finish and DNF guarded, the overlay); `progress-day-outbox.test.ts` offline writes (in order, equal to the same writes online,
+  replayed once, refusals, a read begun offline).
+- `supabase/tests/progress_day_edit_test.sql` (pgTAP): the database's rules R1–R11 — grants, input and day checks, the worked examples,
+  clamps, several edits in a row with the chain invariant checked after each, who leads, removes, idempotence, finished and abandoned
+  reads, `sync_write`, the interplay with `update_progress`, buddy reads (the Section is refreshed only when the read's value moves).
 
 ### Disk
 
