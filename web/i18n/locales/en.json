@@ -244,6 +244,17 @@
       "signOut": "Sign out anyway",
       "failed": "Not everything could be synced. Try again, or sign out anyway."
     },
+    "buddyReadsOff": {
+      "title": "Leave your buddy reads and turn off?",
+      "titleInvitations": "Decline your invitations and turn off?",
+      "rooms": "You're in {count} buddy read. Turning Buddy reads off would only hide it: its members would still see your Section. Leaving it stops that, and you can only come back by a link or a new invitation. | You're in {count} buddy reads. Turning Buddy reads off would only hide them: their members would still see your Section. Leaving them stops that, and you can only come back by a link or a new invitation.",
+      "invitations": "{count} invitation will be declined. | {count} invitations will be declined.",
+      "action": "Leave and turn off",
+      "actionInvitations": "Decline and turn off",
+      "keep": "Keep on",
+      "deleteMine": "Also delete my messages",
+      "deleteHint": "Unticked, your messages stay in the room. Ticked, they are deleted from every buddy read you leave. You can't change this afterwards."
+    },
     "account": {
       "title": "Account",
       "theme": "Dark mode",
@@ -251,6 +262,8 @@
       "friendsTab": "Friends tab",
       "buddyReads": "Buddy reads",
       "buddyReadsHint": "Read one Book with friends. Its other members see which Section you are in, never your page.",
+      "buddyReadsIn": "You're in {count} buddy read | You're in {count} buddy reads",
+      "buddyReadsCheckFailed": "Couldn't check your buddy reads, so the switch stays on. Check your connection and try again.",
       "glassLevel": {
         "strong": "Strong",
         "medium": "Medium",

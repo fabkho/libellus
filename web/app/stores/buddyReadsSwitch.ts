@@ -12,9 +12,11 @@ import { BUDDY_READS_DEFAULT_ON, readBuddyReads, writeBuddyReads } from '~/utils
  * is off, off in every build until the feature launches, there is no switch, so the store is off whatever
  * the device remembers and `set` refuses to turn it on — nothing of buddy reads is drawn or asked for.
  *
- * `canTurnOff` is a hook for the room screens (W2): while she is in an active buddy read the screens set
- * it to false, so the switch cannot claim that sharing stopped when it did not — leaving the room is what
- * stops it. The store only holds the flag; `set(false)` answers false and changes nothing while it is.
+ * `canTurnOff` is false while she is in a buddy read or has an invitation waiting (`noteRooms`, fed by every
+ * read of `my_buddy_reads()`: the shell's, the Profile's), so the switch cannot claim that sharing stopped when
+ * it did not — leaving the room is what stops it. `set(false)` answers false and changes nothing while it is.
+ * Turning it off is asked through stores/buddyTurnOff.ts (it reads the list fresh, leaves the rooms and only then
+ * turns it off); nothing else calls `set(false)`.
  */
 export const useBuddyReadsSwitchStore = defineStore('buddyReadsSwitch', () => {
   /** Whether this build carries buddy reads at all (a build-time flag: it never changes while the app runs). */
@@ -22,8 +24,13 @@ export const useBuddyReadsSwitchStore = defineStore('buddyReadsSwitch', () => {
 
   const enabled = ref(available && import.meta.client ? readBuddyReads(window.localStorage) : BUDDY_READS_DEFAULT_ON)
 
-  /** Whether the switch may be turned off right now (set by the room screens once they exist). */
+  /** Whether the switch may be turned off right now: true until a reading of her reads says she is in one. */
   const canTurnOff = ref<boolean>(true)
+
+  /** Her reads and invitations were read (or changed): how many rooms she is in and invitations wait, together. */
+  function noteRooms(count: number) {
+    canTurnOff.value = count === 0
+  }
 
   /** Turns it on or off; answers false, changing nothing, when the build has no buddy reads or turning it off is refused. */
   function set(on: boolean): boolean {
@@ -39,5 +46,5 @@ export const useBuddyReadsSwitchStore = defineStore('buddyReadsSwitch', () => {
     canTurnOff.value = true
   }
 
-  return { available, enabled, canTurnOff, set, reload }
+  return { available, enabled, canTurnOff, set, noteRooms, reload }
 })

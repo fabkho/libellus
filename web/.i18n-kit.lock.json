@@ -5288,8 +5288,18 @@
           "de"
         ]
       },
+      "profile.account.buddyReadsCheckFailed": {
+        "9d9f537ae8515797": [
+          "de"
+        ]
+      },
       "profile.account.buddyReadsHint": {
         "4456d6d5d2e9a4d5": [
+          "de"
+        ]
+      },
+      "profile.account.buddyReadsIn": {
+        "7ea6573c5afd95dc": [
           "de"
         ]
       },
@@ -5425,6 +5435,51 @@
       },
       "profile.back": {
         "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.action": {
+        "53d2942cf67ace5f": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.actionInvitations": {
+        "72a3566f9f921b04": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.deleteHint": {
+        "bb6c63dbd6479826": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.deleteMine": {
+        "5e28ff307a496bc8": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.invitations": {
+        "2b17fe5f8080ee69": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.keep": {
+        "cab1d216aa4365c7": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.rooms": {
+        "7e65da480515d82b": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.title": {
+        "14736ec703b30e58": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.titleInvitations": {
+        "8ba46bf6c3a885ef": [
           "de"
         ]
       },
