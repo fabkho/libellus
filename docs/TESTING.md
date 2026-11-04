@@ -507,7 +507,8 @@ End-to-end tests are worth their cost only for **critical paths**, and a flow ex
 3. offline: the app opens offline on its kept Library, and changes made offline sync later;
 4. what leaves the app: the public reading page, a Book card and the waitlist form;
 5. deleting the account;
-6. (when it lands) the social loop.
+6. (when it lands) the social loop;
+7. a buddy read, the one flow `web/e2e/buddy-read.spec.ts` (`@full`): two members in two browsers, a message that arrives live, a Section that stays veiled until "Show anyway", a removed message. The flows' build carries the feature (`NUXT_PUBLIC_BUDDY_READS=on` in `web/e2e/build.ts` and `appEnv.ts`); each member turns her own switch on on the device. It sets the read up through the RPCs, so it does not wait for the setup screens.
 
 Everything else is tested where it is cheapest: rules in pgTAP (`supabase/tests/`), logic in Vitest
 (`web/tests/`: pure functions, and repositories against the local stack). Motion and visual polish are not tested

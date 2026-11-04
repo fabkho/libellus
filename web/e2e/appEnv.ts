@@ -20,6 +20,8 @@ export function appEnv(): Record<string, string> {
     NUXT_PUBLIC_SHELF_OWNER_ID: SHELF_OWNER_ID,
     // The library file Regal shows, in a build with it (LIBELLUS_REGAL=1): the address SHELF_LIBRARY_SRC names (e2e/shelfOwner.ts).
     NUXT_PUBLIC_REGAL_LIBRARY_SRC: SHELF_LIBRARY_SRC,
+    // Buddy reads: the build's flag (e2e/build.ts says why).
+    NUXT_PUBLIC_BUDDY_READS: 'on',
     // The import's Web Push button (e2e/import-push.spec.ts).
     NUXT_PUBLIC_VAPID_PUBLIC_KEY: E2E_VAPID_PUBLIC_KEY,
   }

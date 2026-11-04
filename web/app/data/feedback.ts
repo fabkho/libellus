@@ -19,8 +19,17 @@ import { scrubRoute, scrubText } from '~/data/errorLog'
  * native port copies 1:1.
  */
 
-export const FEEDBACK_KINDS = ['bug', 'feature', 'other'] as const
+/** Every kind a message in the owner's inbox can be (`feedback_kind`): a member's three, and a buddy read's `report`. */
+export const FEEDBACK_KINDS = ['bug', 'feature', 'other', 'report'] as const
 export type FeedbackKind = (typeof FEEDBACK_KINDS)[number]
+
+/**
+ * What a member chooses in Profile → Contact. `report` is not one of them: the database makes it itself, when she reports a buddy
+ * read's message (`report_buddy_message`, plan D3), and refuses her own insert of that kind (`feedback_insert_own`); the owner's
+ * screen shows it with its own label (`contact.kind.report`).
+ */
+export const CONTACT_KINDS = ['bug', 'feature', 'other'] as const
+export type ContactKind = (typeof CONTACT_KINDS)[number]
 
 /** What the database keeps (feedback_body_length). */
 export const FEEDBACK_MIN = 10
@@ -175,7 +184,7 @@ function ownerError(failure: Failure): FeedbackOwnerError {
 
 export type Feedback = {
   /** Sends one message with the context the device attached. */
-  send: (kind: FeedbackKind, text: string, context: FeedbackContext) => Promise<{ error: FeedbackSendError | null }>
+  send: (kind: ContactKind, text: string, context: FeedbackContext) => Promise<{ error: FeedbackSendError | null }>
   /** The owner's inbox, newest first, a page of `limit` older than `before` (an item's `cursor`). */
   list: (options?: { limit?: number; before?: string | null }) => Promise<FeedbackResult<FeedbackItem[]>>
   /** Marks one message handled, or open again (false); whether it was found. */

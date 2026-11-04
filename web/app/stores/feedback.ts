@@ -6,7 +6,7 @@ import {
   type Feedback,
   type FeedbackContext,
   type FeedbackItem,
-  type FeedbackKind,
+  type ContactKind,
   type FeedbackOwnerError,
   type FeedbackSendError,
 } from '~/data/feedback'
@@ -44,7 +44,7 @@ export const useFeedbackStore = defineStore('feedback', () => {
 
   // ------------------------------------------------------------------ her side
 
-  const kind = ref<FeedbackKind>('bug')
+  const kind = ref<ContactKind>('bug')
   const text = ref('')
   const sending = ref(false)
   const sendError = ref<FeedbackSendError | null>(null)

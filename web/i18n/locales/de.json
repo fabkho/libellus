@@ -1269,7 +1269,8 @@
     "kind": {
       "bug": "Fehler",
       "feature": "Funktionswunsch",
-      "other": "Etwas anderes"
+      "other": "Etwas anderes",
+      "report": "Melden"
     },
     "label": "Deine Nachricht",
     "hint": "Mindestens {min} Zeichen",
@@ -2127,6 +2128,119 @@
       "offline": "Du bist offline.",
       "busy": "Gerade viel zu tun. Versuch es gleich nochmal.",
       "unknown": "Das hat nicht geklappt. Versuch es nochmal."
+    }
+  },
+  "together": {
+    "title": "Buddy-Read",
+    "back": "Zurück",
+    "home": "Zur Startseite",
+    "retry": "Nochmal versuchen",
+    "offline": "Du bist offline. Der Buddy-Read wird geladen, sobald du wieder online bist.",
+    "done": "Fertig",
+    "missingTitle": "Dieser Buddy-Read ist nicht verfügbar",
+    "missingText": "Vielleicht wurde es gelöscht oder du hast es verlassen.",
+    "you": "Du",
+    "with": "mit {names}",
+    "room": "Vor dem Start",
+    "wholeBook": "Das ganze Buch",
+    "sectionLabel": "Abschnitt {n}",
+    "sectionsTitle": "Abschnitte",
+    "hereNow": "In diesem Abschnitt: {names}",
+    "veilHint": "Abschnitte, die du noch nicht erreicht hast, bleiben samt Kommentaren verborgen, bis du weiterliest oder sie aufdeckst. Reinschauen ändert deinen eigenen Abschnitt nicht.",
+    "alone": "Du bist hier gerade allein.",
+    "pages": "S. {from}–{to}",
+    "where": {
+      "section": "Abschnitt {n}",
+      "end": "Zu Ende gelesen",
+      "notSet": "Noch nicht festgelegt"
+    },
+    "track": {
+      "label": "Wo alle gerade sind",
+      "you": "Du: Abschnitt {n} von {total}",
+      "youEnd": "Du: ganz gelesen",
+      "youNotSet": "Du: noch nicht festgelegt"
+    },
+    "marker": {
+      "open": "Wo bist du?",
+      "title": "Wo bist du?",
+      "hint": "Die anderen sehen, in welchem Abschnitt du bist, nie eine Seite. „Automatisch“ folgt deinem Lesefortschritt in deiner Bibliothek. Was du hier wählst, kann nur weiter aufdecken: Dein Lesefortschritt öffnet den Rest.",
+      "noAuto": "Dein Lesefortschritt kann noch nicht übernommen werden, daher sehen die anderen dich als nicht festgelegt. Wähle ihn von Hand.",
+      "auto": "Automatisch",
+      "autoHint": "Folgt deinem Lesefortschritt",
+      "section": "Abschnitt {n}",
+      "end": "Ich habe es gelesen",
+      "saved": "Gespeichert: {where}"
+    },
+    "showAnyway": {
+      "title": "Abschnitt {n} trotzdem öffnen?",
+      "titleEnd": "Das ganze Buch trotzdem öffnen?",
+      "text": "Das könnte dir etwas verraten. Dein eigener Abschnitt bleibt, wo er ist, und dieser bleibt auf diesem Gerät geöffnet.",
+      "action": "Trotzdem öffnen",
+      "cancel": "Noch nicht"
+    },
+    "menu": {
+      "title": "Buddy-Read",
+      "label": "Optionen für den Buddy-Read",
+      "finish": "Buddy-Read beenden",
+      "archive": "Archivieren",
+      "hint": "Beenden lässt alle Gespräche für alle offen. Archivieren macht sie schreibgeschützt."
+    },
+    "finish": {
+      "title": "Diesen Buddy-Read beenden?",
+      "text": "Der Einladungslink funktioniert dann nicht mehr und niemand Neues kann beitreten. Alle können in den Gesprächen weiterschreiben.",
+      "action": "Beenden",
+      "busy": "Beende …",
+      "done": "Der Buddy-Read ist beendet."
+    },
+    "archive": {
+      "title": "Diesen Buddy-Read archivieren?",
+      "text": "Alle Gespräche werden für alle schreibgeschützt. Das lässt sich nicht rückgängig machen.",
+      "action": "Archivieren",
+      "busy": "Archiviere …",
+      "done": "Der Buddy-Read ist archiviert."
+    },
+    "status": {
+      "finished": "Beendet am {date}",
+      "archived": "Archiviert am {date}"
+    },
+    "report": {
+      "title": "Nachricht melden",
+      "intro": "Sag mir, was los ist. Deine Meldung geht nur an die Person, die diese App betreibt – zusammen mit einem kurzen Auszug der Nachricht.",
+      "reasonLabel": "Warum meldest du das?",
+      "reason": {
+        "harassment": "Belästigung oder Mobbing",
+        "spam": "Spam",
+        "inappropriate": "Hier unpassend",
+        "other": "Etwas anderes"
+      },
+      "noteLabel": "Möchtest du noch etwas hinzufügen?",
+      "optional": "Optional",
+      "send": "Senden",
+      "sending": "Sende …",
+      "doneTitle": "Danke, angekommen.",
+      "doneText": "Ich sehe es mir an."
+    },
+    "thread": {
+      "label": "{title}, Nachrichten",
+      "back": "Zurück zum Buddy-Read",
+      "archived": "Dieser Buddy-Read ist archiviert. Er kann nur noch gelesen werden.",
+      "removed": "Nachricht entfernt",
+      "report": "Melden",
+      "delete": "Löschen",
+      "deleting": "Lösche …",
+      "deleteTitle": "Diese Nachricht löschen?",
+      "deleteText": "Für alle steht dort dann „Nachricht entfernt“. Das lässt sich nicht rückgängig machen.",
+      "deleteTextHost": "Du bist der Host und kannst sie für alle entfernen. Dort steht dann „Nachricht entfernt“. Das lässt sich nicht rückgängig machen.",
+      "ahead": "Du liest voraus: Das liegt hinter deinem aktuellen Stand.",
+      "empty": "Noch hat niemand etwas zu diesem Abschnitt geschrieben. Machst du den Anfang?",
+      "emptyRoom": "Sag kurz Hallo, bevor ihr loslegt.",
+      "placeholder": "Schreib etwas zu diesem Teil",
+      "placeholderRoom": "Sag kurz Hallo",
+      "composerLabel": "Deine Nachricht",
+      "spoiler": "Spoiler",
+      "veiledTitle": "Abschnitt {n} ist verborgen",
+      "veiledEnd": "Das ganze Buch ist verborgen",
+      "veiledText": "Es könnte verraten, was du noch nicht gelesen hast. Es bleibt zu, bis du es öffnest."
     }
   },
   "uiText": {
