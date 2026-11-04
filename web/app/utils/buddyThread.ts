@@ -1,6 +1,6 @@
 import type { BubbleMessage, BubbleQuote } from '#layers/ui/app/utils/chat/message'
 import { messageVeiled } from '#layers/chat/app/utils/veil'
-import { REPORT_REASONS, type BuddyErrorCode, type ReportReason } from '~/data/buddyReads'
+import { isRetryableBuddyError, REPORT_REASONS, type BuddyErrorCode, type ReportReason } from '~/data/buddyReads'
 import type { BuddyBubble } from '~/utils/buddyRead'
 
 /**
@@ -28,6 +28,8 @@ export type ThreadItem = BubbleMessage & {
   removed: boolean
   /** A spoiler she has not tapped: the bubble keeps its size but shows no word (`UiBubble` `veiled`). */
   veiled: boolean
+  /** It was refused for a reason a second try cannot change (removed, blocked, archived, invalid): no "Try again", only "Delete". */
+  permanent: boolean
 }
 
 /** What the thread needs of the screen: who she is, whether the Section is open to her, the spoilers she tapped, the words. */
@@ -75,6 +77,7 @@ export function threadItems(bubbles: readonly BuddyBubble[], ctx: ThreadContext)
       spoiler: bubble.spoiler,
       removed,
       veiled: !removed && !mine && messageVeiled(bubble, ctx.revealed.has(bubbleKey(bubble))),
+      permanent: bubble.state === 'failed' && !!bubble.error && !isRetryableBuddyError(bubble.error),
     }
   })
 }

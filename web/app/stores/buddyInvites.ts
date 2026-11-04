@@ -33,10 +33,16 @@ export const useBuddyInvitesStore = defineStore('buddyInvites', () => {
   const count = computed(() => waiting.value.length)
 
   let reading: Promise<void> | null = null
+  /** When the list was last read or handed over (ms): a reading inside `FRESH_MS` is not asked again (the shell asks on every start and every return to the foreground). */
+  let loadedAt = 0
 
-  /** Reads her invitations (one query); keeps what it had when it cannot. */
-  function load(): Promise<void> {
+  /** How long a list is fresh: the header asks on every mount and every return to the foreground, the server need not hear it each time. */
+  const FRESH_MS = 45_000
+
+  /** Reads her invitations (one query); keeps what it had when it cannot. `force`: not even a fresh list will do. */
+  function load({ force = false }: { force?: boolean } = {}): Promise<void> {
     if (!active.value || !backend || !online.value) return Promise.resolve()
+    if (!force && loadedAt && Date.now() - loadedAt < FRESH_MS) return Promise.resolve()
     const member = me.value
     reading ??= (async () => {
       const { createBuddyReads } = await import('~/data/buddyReads')
@@ -45,9 +51,12 @@ export const useBuddyInvitesStore = defineStore('buddyInvites', () => {
       if (answer.error || me.value !== member) return
       invitations.value = answer.data.invitations
       loaded.value = true
+      loadedAt = Date.now()
       // The same reading tells the switch whether she may turn it off: a room she joined on another device counts.
       switchStore.noteRooms(answer.data.reads.length + answer.data.invitations.length)
-    })().finally(() => (reading = null))
+    })().finally(() => {
+      reading = null
+    })
     return reading
   }
 
@@ -55,6 +64,7 @@ export const useBuddyInvitesStore = defineStore('buddyInvites', () => {
   function take(list: BuddyInvitation[]) {
     invitations.value = list
     loaded.value = true
+    loadedAt = Date.now()
   }
 
   /** An invitation was answered: it leaves the list at once, before the next reading. */
@@ -65,6 +75,7 @@ export const useBuddyInvitesStore = defineStore('buddyInvites', () => {
   function reset() {
     invitations.value = []
     loaded.value = false
+    loadedAt = 0
   }
   watch(me, (now, before) => {
     if (now !== before) reset()

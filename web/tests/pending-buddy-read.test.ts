@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { DeviceStorage } from '@/data/localData'
 import {
@@ -131,5 +132,14 @@ describe('a signed-out visitor on a buddy read link', () => {
   it('is not a public path: the link needs the sign-in', () => {
     expect(signedOutDestination(at(`/t/${TOKEN}`), { pending: false, storage: memoryStorage(), buddyReads: true })).toBe('/sign-in')
     expect(signedOutDestination(at(`/t/${TOKEN}`), { pending: true, storage: memoryStorage(), buddyReads: true })).toBe('/verify')
+  })
+})
+
+describe('the session store keeps the link a visitor opened (device data)', () => {
+  const session = readFileSync(new URL('../app/stores/session.ts', import.meta.url), 'utf8')
+
+  it('names the waiting link in the keep list of a session that ended, and keeps it when another member’s data is cleared away from a new sign-in', () => {
+    expect(session).toMatch(/keep: accountDeleted \? \[\] : \[PENDING_SIGN_IN_KEY, PENDING_SHARE_KEY, PENDING_FOLLOW_KEY, PENDING_BUDDY_READ_KEY\]/)
+    expect(session).toMatch(/await forgetDevice\(\{ keepForNext: \[PENDING_BUDDY_READ_KEY\] \}\)/)
   })
 })

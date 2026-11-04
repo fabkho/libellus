@@ -2290,7 +2290,11 @@
       "spoiler": "Spoiler",
       "veiledTitle": "Section {n} is hidden",
       "veiledEnd": "The whole book is hidden",
-      "veiledText": "It may spoil what you haven’t read yet, so it stays closed until you choose to show it."
+      "veiledText": "It may spoil what you haven’t read yet, so it stays closed until you choose to show it.",
+      "paused": "Live updates are paused. We keep checking for new messages.",
+      "notSentFinal": "It can’t be sent.",
+      "discard": "Delete",
+      "discardLabel": "Delete this unsent message"
     },
     "hint": "Everyone reads at their own pace. Comments sit in Sections, and a Section stays hidden until you have read it. The others see which Section you are in, never your page.",
     "count": {

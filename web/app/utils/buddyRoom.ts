@@ -41,7 +41,7 @@ const cardOf = (member: BuddyMember): MemberCard => ({ id: member.id, name: memb
  * The rows, in the order of the screen: "Before we start" (the room, always open), the Sections, "The whole book" last. `viewOf`
  * is the store's `view(read, section)`; a Section it does not know is drawn veiled (nothing leaks on a doubt).
  */
-export function roomRows(read: BuddyRead, viewOf: (sectionId: string) => SectionView | null): RoomRow[] {
+export function roomRows(read: BuddyRead, viewOf: (sectionId: string) => SectionView | null, titleOf: (chapter: BuddyRead['chapters'][number]) => string = (chapter) => chapter.title): RoomRow[] {
   const rows: RoomRow[] = [
     { segment: ROOM_SEGMENT, id: null, kind: 'room', number: '', position: 0, title: '', count: read.room.count, unread: read.room.unread, veiled: false, faces: [] },
   ]
@@ -57,7 +57,7 @@ export function roomRows(read: BuddyRead, viewOf: (sectionId: string) => Section
       kind,
       number: String(chapter.position),
       position,
-      title: veiled ? '' : chapter.title,
+      title: veiled ? '' : titleOf(chapter),
       count: chapter.count,
       unread: !veiled && view?.showUnread ? chapter.unread : 0,
       veiled,
@@ -65,6 +65,18 @@ export function roomRows(read: BuddyRead, viewOf: (sectionId: string) => Section
     })
   }
   return rows
+}
+
+/**
+ * Whether a title already says its number aloud ("Section 9", "Abschnitt 9"): it ends with the number on its own, not as the tail of a longer one
+ * ("Chapter 19" does not say 9) or of a range ("Section 1–2" does not say 2). An open row whose title says it is named by the title alone.
+ */
+export function titleSaysNumber(title: string, number: string): boolean {
+  if (!number) return false
+  const text = title.trim()
+  if (!text.endsWith(number)) return false
+  const before = text.slice(0, text.length - number.length).slice(-1)
+  return before === '' || !/[\p{N}–-]/u.test(before)
 }
 
 /** Whether a member stands in the Section at `position` (1…N), or at the end (N + 1). */

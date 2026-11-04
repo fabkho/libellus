@@ -290,6 +290,13 @@ describe('the Cloudflare Pages headers (public/_headers)', () => {
     }
   })
 
+  it('sends no Referer from a buddy read link’s page (the token is in the path), and takes the platform’s default off first', () => {
+    expect(rules['/t/*']?.['Referrer-Policy']).toBe('no-referrer')
+    expect(Object.keys(rules['/t/*'] ?? {})).toContain('! Referrer-Policy')
+    // The catch-all keeps what it says; a second value for the same header on /t/* is the platform's merge, which `!` avoids.
+    expect(rules['/*']?.['Referrer-Policy']).toBeUndefined()
+  })
+
   it('leaves every /_nuxt/ answer, and with it the cache, to Nitro’s Cloudflare preset', () => {
     // The preset appends its own rules for the hashed chunks and for `builds/*`; Pages merges the values
     // of rules that match one URL, so a `Cache-Control` of ours on the catch-all would fight them.

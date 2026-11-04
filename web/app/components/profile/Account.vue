@@ -27,7 +27,7 @@
 import { useAppUpdateStore, type UpdateResult } from '~/stores/appUpdate'
 import { useAvatarStore } from '~/stores/avatar'
 import { useBuddyReadsSwitchStore } from '~/stores/buddyReadsSwitch'
-import { useBuddyTurnOffStore } from '~/stores/buddyTurnOff'
+import type { useBuddyTurnOffStore } from '~/stores/buddyTurnOff'
 import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useGlassStore } from '~/stores/glass'
 import { useEbooksStore } from '~/stores/ebooks'
@@ -71,24 +71,29 @@ const showFriendsTab = computed({ get: () => friendsTab.enabled, set: (on: boole
 // Buddy reads: the switch the whole feature sits behind, off until she turns it on, and drawn only in a build
 // that carries the feature (`NUXT_PUBLIC_BUDDY_READS`: stores/buddyReadsSwitch.ts, composables/useBuddyReadsFlag.ts).
 const buddyReads = useBuddyReadsSwitchStore()
-// Only a build that carries the feature builds the store that asks (and so touches the buddy read store at all).
-const turnOff = buddyReads.available ? useBuddyTurnOffStore() : null
+// Only a build that carries the feature builds the store that asks (and so touches the buddy read store at all), and only once the page is up:
+// the store, the chat layer under it and the confirm are a chunk of their own, imported here and never with the flag off (tests/buddy-read-entry.test.ts).
+const turnOff = shallowRef<ReturnType<typeof useBuddyTurnOffStore> | null>(null)
+async function turnOffStore() {
+  if (!turnOff.value && buddyReads.available) turnOff.value = (await import('~/stores/buddyTurnOff')).useBuddyTurnOffStore()
+  return turnOff.value
+}
 const showBuddyReads = computed({
   get: () => buddyReads.enabled,
   // Off is a question while she is in a room or invited (stores/buddyTurnOff.ts: it reads her list fresh, then turns it off at once or opens the
   // confirm "Leave your buddy reads and turn off?"); the switch reads on until she answered it. On needs no question.
   set: (on: boolean) => {
     if (on) buddyReads.set(true)
-    else if (turnOff) void turnOff.request()
+    else void turnOffStore().then((store) => store?.request())
   },
 })
 /** "You're in 2 buddy reads", under the row; only while the switch is on (with it off nothing of buddy reads is asked). */
-const inRooms = computed(() => (buddyReads.enabled ? (turnOff?.hint ?? null) : null))
-const checkFailed = computed(() => buddyReads.enabled && !!turnOff?.checkError)
+const inRooms = computed(() => (buddyReads.enabled ? (turnOff.value?.hint ?? null) : null))
+const checkFailed = computed(() => buddyReads.enabled && !!turnOff.value?.checkError)
 // Her rooms are read when the Profile opens, when it comes back to the front and when the app does (the shell's reading of her invitations
 // feeds the switch too): a room she joined on another device shows here and stops the switch from going off unasked.
 function readRooms() {
-  if (buddyReads.available && buddyReads.enabled) void turnOff?.refresh()
+  if (buddyReads.available && buddyReads.enabled) void turnOffStore().then((store) => store?.refresh())
 }
 onMounted(() => {
   readRooms()
@@ -347,7 +352,7 @@ const whatsNew = useWhatsNew()
     >
       {{ t('profile.account.version', { version: whatsNew.notes.version }) }} · <span class="text-accent-ink">{{ t('profile.account.whatsNew') }}</span>
     </button>
-    <ProfileBuddyReadsOff v-if="turnOff" />
+    <LazyProfileBuddyReadsOff v-if="turnOff" />
     <ProfileLinksSheet v-model:open="linking" />
     <ProfileSocialLinksSheet v-model:open="socialLinking" />
     <UiConfirm

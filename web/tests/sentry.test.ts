@@ -44,6 +44,18 @@ describe('scrubString', () => {
     expect(scrubString(`/members/${ID}/books`)).toBe('/members/:id/books')
     expect(scrubString(`id=eq.${ID.toUpperCase()}`)).toBe('id=eq.:id')
   })
+  it('replaces the token of an invite link, a buddy read’s and a follow link’s, in a path or a URL', () => {
+    const token = 'AbCdEfGhIjKlMnOpQrStUv'
+    expect(token).toHaveLength(22)
+    expect(scrubString(`/t/${token}`)).toBe('/t/:token')
+    expect(scrubString(`/f/${token}?x=1`)).toBe('/f/:token')
+    expect(scrubString(`https://libellus.fabkho.dev/t/${token}/`)).toBe('https://libellus.fabkho.dev/t/:token/')
+    expect(scrubString(`GET https://libellus.fabkho.dev/f/${token}#join failed`)).toBe('GET https://libellus.fabkho.dev/f/:token failed')
+    expect(scrubString(`navigated from /f/${token} to /t/${token}`)).toBe('navigated from /f/:token to /t/:token')
+    // Not a token: a shorter segment, other routes.
+    expect(scrubString('/t/short')).toBe('/t/short')
+    expect(scrubString(`/together/${token}`)).toBe(`/together/${token}`)
+  })
   it('leaves an ordinary message alone', () => {
     expect(scrubString("Cannot read properties of undefined (reading 'name')")).toBe("Cannot read properties of undefined (reading 'name')")
   })
@@ -122,6 +134,20 @@ describe('scrubEvent', () => {
     expect(out.exception.values[0].stacktrace.frames[0]).toEqual({ filename: 'app:///_nuxt/a.js', lineno: 3 })
     expect(out.exception.values[0].value).toBe('insert failed for [email]')
     expect(out.breadcrumbs[1].data.status_code).toBe(500)
+  })
+  it('keeps an invite token out of the request, the breadcrumbs and the transaction', () => {
+    const token = 'AbCdEfGhIjKlMnOpQrStUv'
+    const out = scrubEvent({
+      ...(event() as object),
+      transaction: `/t/${token}`,
+      request: { url: `https://libellus.fabkho.dev/t/${token}?utm=x` },
+      breadcrumbs: [{ category: 'navigation', data: { from: `/f/${token}`, to: `/t/${token}` } }, { category: 'fetch', data: { url: `https://libellus.fabkho.dev/f/${token}` } }],
+      tags: { route: '/t/[token]' },
+    }) as Record<string, any>
+    expect(JSON.stringify(out)).not.toContain(token)
+    expect(out.transaction).toBe('/t/:token')
+    expect(out.request).toEqual({ url: 'https://libellus.fabkho.dev/t/:token' })
+    expect(out.breadcrumbs.map((b: any) => b.data)).toEqual([{ from: '/f/:token', to: '/t/:token' }, { url: 'https://libellus.fabkho.dev/f/:token' }])
   })
   it('cleans a transaction: route, spans, no component props', () => {
     const out = scrubEvent(event()) as Record<string, any>

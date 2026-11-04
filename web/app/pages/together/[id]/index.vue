@@ -12,7 +12,8 @@
 // a member or the status arrives live and the read is read again. Offline: what was read stays, writes say Offline.
 import type { BuddyErrorCode } from '~/data/buddyReads'
 import { isReadId, threadPath } from '~/utils/buddyRoute'
-import { roomRows, type RoomRow } from '~/utils/buddyRoom'
+import { roomRows, titleSaysNumber, type RoomRow } from '~/utils/buddyRoom'
+import { sectionTitle } from '~/utils/buddySectionTitle'
 import { friendsNameParts } from '~/utils/friendsNames'
 import { buddyErrorKey } from '~/utils/buddyRead'
 import { useBuddyReadStore } from '~/stores/buddyRead'
@@ -57,7 +58,8 @@ async function load() {
 }
 
 onMounted(async () => {
-  const stop = await store.retain()
+  // Never throws: a channel that cannot be had is `store.liveStuck`, and the store reads on its own meanwhile.
+  const stop = await store.retain(id.value)
   // The screen closed while the channel was being asked for: let it go at once.
   if (gone) stop()
   else release = stop
@@ -76,7 +78,9 @@ const failed = computed(() => !read.value && !!error.value && error.value !== 'n
 
 // ------------------------------------------------------------------ the rows
 
-const rows = computed(() => (read.value ? roomRows(read.value, (sectionId) => store.view(id.value, sectionId)) : []))
+// A Section's name is the viewer's own words for what the host's setup wrote ("Section 3", "The whole book"): the host's language is not hers.
+const sectionWords = { whole: () => t('together.wholeBook'), label: (n: string) => t('together.sectionLabel', { n }) }
+const rows = computed(() => (read.value ? roomRows(read.value, (sectionId) => store.view(id.value, sectionId), (chapter) => sectionTitle(chapter, sectionWords)) : []))
 
 /** The "with …" line: the others, by name. */
 const withNames = computed(() => {
@@ -95,7 +99,7 @@ const withNames = computed(() => {
 function rowLabel(row: RoomRow): string | undefined {
   if (row.kind === 'room') return ''
   if (row.veiled) return t('together.sectionLabel', { n: row.number })
-  return row.title.trim().endsWith(row.number) ? undefined : t('together.sectionLabel', { n: row.number })
+  return titleSaysNumber(row.title, row.number) ? undefined : t('together.sectionLabel', { n: row.number })
 }
 const rowTitle = (row: RoomRow) => (row.kind === 'room' ? t('together.room') : row.title)
 const facesLabel = (row: RoomRow) =>

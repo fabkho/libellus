@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { reactive, readonly, ref } from 'vue'
+import { nextTick, reactive, readonly, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BuddyLiveEvent } from '@/data/buddyLive'
 
@@ -33,6 +33,8 @@ const server = {
   during: null as null | (() => void),
   /** While set, a post waits for it: the database has not answered yet. */
   gate: null as null | Promise<void>,
+  /** While set, a read of a read, of the list or of a thread waits for it. */
+  readGate: null as null | Promise<void>,
 }
 
 const at = (n: number) => new Date(Date.UTC(2026, 10, 13, 10, 0, 0, n)).toISOString().replace('Z', '000+00:00')
@@ -72,6 +74,7 @@ const backend = {
         return { data: made, error: null, status: 200 }
       }
       case 'buddy_read_messages': {
+        await server.readGate
         const rows = server.messages
           .filter((m) => m.section_id === (args.p_section ?? null))
           .filter((m) => !args.p_before || String(m.created_at) < String(args.p_before))
@@ -81,8 +84,10 @@ const backend = {
         return { data: rows, error: null, status: 200 }
       }
       case 'buddy_read':
+        await server.readGate
         return { data: readJson(), error: null, status: 200 }
       case 'my_buddy_reads':
+        await server.readGate
         return { data: { reads: [], invitations: [] }, error: null, status: 200 }
       case 'set_buddy_hand':
       case 'link_buddy_entry': {
@@ -101,18 +106,27 @@ const backend = {
 // The live module, stood in for: it records how it was made and lets a test play the server's events.
 const live = {
   made: 0,
+  fail: 0,
+  deps: {} as Record<string, (...args: never[]) => unknown>,
   retained: [] as string[],
   stopped: 0,
   handlers: {} as Record<string, (event: never) => void>,
 }
 vi.mock('~/data/buddyLive', () => ({
   browserLiveEnv: () => ({ isOnline: () => true, listen: () => {} }),
-  createBuddyLive: () => {
+  createBuddyLive: (deps: Record<string, (...args: never[]) => unknown>) => {
+    // A module that fails to come (offline: the chunk is not precached): the store must not keep the failure.
+    if (live.fail > 0) {
+      live.fail--
+      throw new Error('The chunk is not there')
+    }
+    live.deps = deps
     live.made++
     return {
       on: (type: string, fn: (event: never) => void) => ((live.handlers[type] = fn), () => delete live.handlers[type]),
       retain: (member: string) => (live.retained.push(member), () => {}),
       stop: async () => void live.stopped++,
+      dispose: async () => void live.stopped++,
     }
   },
 }))
@@ -167,9 +181,11 @@ beforeEach(() => {
   server.readThrough = 1
   server.during = null
   server.gate = null
+  server.readGate = null
   online.value = true
   session.member = { id: ME }
   live.made = 0
+  live.fail = 0
   live.retained = []
   live.stopped = 0
   live.handlers = {}
@@ -312,22 +328,79 @@ describe('a refusal is handed back', () => {
     expect(posts()).toHaveLength(1)
     expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ state: 'failed', error: 'buddy_read_archived', body: 'Too late' })
 
+    // Archived is for good: there is no "Try again" for it, only Delete.
     server.refuse = null
-    const open = hold()
     await buddy.retry(READ, S1, sent.clientId)
-    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ state: 'sending', error: null })
-    open()
-    await settle()
-    expect(buddy.messagesOf(READ, S1)).toHaveLength(1)
-    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ state: 'sent' })
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ state: 'failed', error: 'buddy_read_archived' })
+    buddy.discard(READ, S1, sent.clientId)
+    expect(buddy.messagesOf(READ, S1)).toEqual([])
+    expect(device.size).toBe(0)
 
     server.refuse = 'message_reply_unavailable'
     const second = (await buddy.send(READ, S1, 'Answer', { replyTo: 'gone' })) as { ok: true; clientId: string }
     await settle()
     expect(buddy.messagesOf(READ, S1).at(-1)).toMatchObject({ state: 'failed', error: 'message_reply_unavailable' })
     buddy.discard(READ, S1, second.clientId)
-    expect(buddy.messagesOf(READ, S1).map((m) => m.body)).toEqual(['Too late'])
+    expect(buddy.messagesOf(READ, S1)).toEqual([])
     expect(device.size).toBe(0)
+  })
+
+  it('offers a retry for what a second try may cure (a failure nobody explained), and the retry goes out', async () => {
+    const buddy = await store()
+    server.refuse = 'something nobody explained'
+    const sent = (await buddy.send(READ, null, 'Once more')) as { ok: true; clientId: string }
+    for (let i = 0; i < 8; i++) {
+      await settle()
+      buddy.kick()
+    }
+    await settle()
+    expect(buddy.messagesOf(READ, null)[0]).toMatchObject({ state: 'failed', error: 'unknown' })
+    server.refuse = null
+    const open = hold()
+    await buddy.retry(READ, null, sent.clientId)
+    expect(buddy.messagesOf(READ, null)[0]).toMatchObject({ state: 'sending', error: null })
+    open()
+    await settle()
+    expect(buddy.messagesOf(READ, null)).toHaveLength(1)
+    expect(buddy.messagesOf(READ, null)[0]).toMatchObject({ state: 'sent' })
+  })
+
+  it('does not bring a refusal back after a reload: it is gone from the device when it is discarded', async () => {
+    const buddy = await store()
+    server.refuse = 'message_body_invalid'
+    const sent = (await buddy.send(READ, S1, 'Nope')) as { ok: true; clientId: string }
+    await settle()
+    expect([...device.values()].some((v) => v.includes('Nope'))).toBe(true)
+    // A reload with the refusal still on the device shows it again, failed …
+    await buddy.reset()
+    vi.resetModules()
+    const reloaded = await store()
+    await reloaded.openThread(READ, S1)
+    await settle()
+    expect(reloaded.messagesOf(READ, S1)[0]).toMatchObject({ state: 'failed', error: 'message_body_invalid' })
+    // … until she deletes it: then it is gone from the thread and from the device.
+    reloaded.discard(READ, S1, sent.clientId)
+    expect(reloaded.messagesOf(READ, S1)).toEqual([])
+    await reloaded.reset()
+    vi.resetModules()
+    const again = await store()
+    await again.openThread(READ, S1)
+    await settle()
+    expect(again.messagesOf(READ, S1)).toEqual([])
+    expect([...device.values()].some((v) => v.includes('Nope'))).toBe(false)
+  })
+
+  it('drops the refusals and the waiting messages of a read she leaves', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    server.refuse = 'not_found'
+    await buddy.send(READ, S1, 'Left behind')
+    await settle()
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ state: 'failed' })
+    server.refuse = null
+    await buddy.leave(READ)
+    expect(buddy.messagesOf(READ, S1)).toEqual([])
+    expect([...device.values()].some((v) => v.includes('Left behind'))).toBe(false)
   })
 
   it('tries a failure nobody explained a few times, then hands it back instead of for ever', async () => {
@@ -553,5 +626,215 @@ describe('what she does to a read', () => {
     expect(await buddy.react(READ, S1, 'm1', '🔥')).toBe('offline')
     expect((await buddy.finish(READ)).error).toBe('offline')
     expect(server.calls).toEqual([])
+  })
+})
+
+// ------------------------------------------------------------------ review: the epoch, the lock, the poll
+
+/** Waits for what a timer-less chain of promises comes to. */
+const flush = () => vi.advanceTimersByTimeAsync(0)
+
+describe('an answer that comes after she is gone (A, nobody, B)', () => {
+  const switchAway = async () => {
+    session.member = null
+    await nextTick()
+    session.member = { id: BEN }
+    await nextTick()
+  }
+
+  it('drops what a read, her list and a thread answer after she signed out: the store stays empty for the next member', async () => {
+    const buddy = await store()
+    // A queue exists already, so only the answers are in flight.
+    await buddy.send(READ, S2, 'warm')
+    await settle()
+    let open!: () => void
+    server.readGate = new Promise<void>((resolve) => (open = resolve))
+    const asked = [buddy.load(READ), buddy.loadMine(), buddy.openThread(READ, S1)]
+    await switchAway()
+    server.readGate = null
+    open()
+    expect(await Promise.all(asked)).toEqual(['not_signed_in', 'not_signed_in', 'not_signed_in'])
+    expect(buddy.reads).toEqual({})
+    expect(buddy.mine).toBeNull()
+    expect(buddy.messagesOf(READ, S1)).toEqual([])
+    expect(buddy.messagesOf(READ, S2)).toEqual([])
+  })
+
+  it('lets go of the tab’s lock and makes no line when she is gone while it is claimed; the next member’s line is her own', async () => {
+    let openLock!: () => void
+    const gate = new Promise<void>((resolve) => (openLock = resolve))
+    vi.stubGlobal('navigator', { locks: { request: async (_name: string, _options: unknown, run: (lock: unknown) => unknown) => (await gate, run({})) } })
+    const buddy = await store()
+    const sending = buddy.send(READ, S1, 'for Ada')
+    await switchAway()
+    openLock()
+    expect(await sending).toEqual({ ok: false, error: 'not_signed_in' })
+    await settle()
+    expect(posts()).toHaveLength(0)
+    // Ben's line is Ben's: his message goes out as his, and nothing of Ada's is on the device.
+    const mine = await buddy.send(READ, S1, 'for Ben')
+    expect(mine.ok).toBe(true)
+    await settle()
+    expect(posts().map((c) => c.args.p_body)).toEqual(['for Ben'])
+    expect([...device.values()].some((v) => v.includes('for Ada'))).toBe(false)
+  })
+
+  it('never sends what was in flight for her under the next member, and shows nothing of it to him', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    const open = hold()
+    await buddy.send(READ, S1, 'Ada’s, on its way')
+    await settle()
+    expect(posts()).toHaveLength(1)
+    await switchAway()
+    open()
+    await settle()
+    expect(buddy.messagesOf(READ, S1)).toEqual([])
+    expect(buddy.reads).toEqual({})
+    // The line was stopped with her: a kick under Ben sends nothing of hers.
+    buddy.kick()
+    await settle()
+    expect(posts()).toHaveLength(1)
+  })
+
+  it('starts a line for the member who has one on the device without a screen opening a thread (the store is made)', async () => {
+    const line = { v: 1, jobs: [{ id: 'j1', key: 'send:left', attempts: 0, payload: { conversationId: READ, threadId: S1, clientId: 'left', kind: 'text', body: 'Left over', replyTo: null, spoiler: false, createdAt: '2026-11-13T09:00:00.000Z' } }], refusals: [] }
+    device.set('libellus.buddyRead.queue.ada', JSON.stringify(line))
+    await store()
+    await settle()
+    expect(posts().map((c) => c.args.p_body)).toEqual(['Left over'])
+    expect(device.has('libellus.buddyRead.queue.ada')).toBe(false)
+  })
+
+  it('does nothing for a member without a line, and for another member’s', async () => {
+    const line = { v: 1, jobs: [{ id: 'j1', key: 'send:left', attempts: 0, payload: { conversationId: READ, threadId: S1, clientId: 'left', kind: 'text', body: 'Not yours', replyTo: null, spoiler: false, createdAt: '2026-11-13T09:00:00.000Z' } }], refusals: [] }
+    device.set('libellus.buddyRead.queue.ben', JSON.stringify(line))
+    await store()
+    await settle()
+    expect(posts()).toHaveLength(0)
+  })
+})
+
+describe('the live channel that cannot be had', () => {
+  it('says so when the chunk is not there, asks again every 25 s, reads what was missed, and is quiet again once it is live', async () => {
+    vi.useFakeTimers()
+    try {
+      live.fail = 1
+      const buddy = await store()
+      await buddy.load(READ)
+      const release = await buddy.retain(READ)
+      // Offline start: no channel, no throw, and the screen has a word for it.
+      expect(live.made).toBe(0)
+      expect(buddy.liveStuck).toBe(true)
+      server.calls = []
+      await vi.advanceTimersByTimeAsync(25_000)
+      // The chunk came this time: the channel is retained, and what may have been missed is read.
+      expect(live.made).toBe(1)
+      expect(live.retained).toEqual([ME])
+      expect(server.calls.some((c) => c.fn === 'buddy_read')).toBe(true)
+      // Until the channel says it is live the screen still says paused.
+      expect(buddy.liveStuck).toBe(true)
+      ;(live.deps.onChange as (state: unknown) => void)({ status: 'live', online: true, memberId: ME })
+      expect(buddy.liveStuck).toBe(false)
+      server.calls = []
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(server.calls).toEqual([])
+      release()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('follows the connection’s own word: stuck (a join that never comes) polls, live again stops it, and a screen that goes ends it', async () => {
+    vi.useFakeTimers()
+    try {
+      const buddy = await store()
+      await buddy.load(READ)
+      const release = await buddy.retain(READ)
+      expect(buddy.liveStuck).toBe(false)
+      ;(live.deps.onStuck as (stuck: boolean) => void)(true)
+      expect(buddy.liveStuck).toBe(true)
+      server.calls = []
+      await vi.advanceTimersByTimeAsync(25_000)
+      expect(server.calls.filter((c) => c.fn === 'buddy_read')).toHaveLength(1)
+      release()
+      server.calls = []
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(server.calls).toEqual([])
+      expect(buddy.liveStuck).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not throw from retain whatever the module does', async () => {
+    live.fail = 2
+    const buddy = await store()
+    await expect(buddy.retain(READ)).resolves.toBeTypeOf('function')
+    await expect(buddy.retain(READ)).resolves.toBeTypeOf('function')
+    expect(buddy.liveStuck).toBe(true)
+  })
+})
+
+describe('a resync is not a reload of everything', () => {
+  it('runs once in ten seconds however often it is asked, and reads only what a screen has open', async () => {
+    vi.useFakeTimers()
+    try {
+      const buddy = await store()
+      await buddy.load(READ)
+      const release = await buddy.retain(READ)
+      server.calls = []
+      live.handlers.resync!(undefined as never)
+      live.handlers.resync!(undefined as never)
+      live.handlers.resync!(undefined as never)
+      await flush()
+      expect(server.calls.filter((c) => c.fn === 'buddy_read')).toHaveLength(1)
+      await vi.advanceTimersByTimeAsync(10_000)
+      // The three that came inside the gap are one run after it.
+      expect(server.calls.filter((c) => c.fn === 'buddy_read')).toHaveLength(2)
+
+      // Nobody has it open any more: it is dropped (and read afresh when a screen opens it), not reloaded.
+      release()
+      server.calls = []
+      await vi.advanceTimersByTimeAsync(10_000)
+      live.handlers.resync!(undefined as never)
+      await flush()
+      expect(server.calls.filter((c) => c.fn === 'buddy_read')).toEqual([])
+      expect(buddy.reads[READ]).toBeUndefined()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe('the peeks and the counts', () => {
+  it('asks the device once for the Sections it knows, until a peek is added', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    const read = vi.spyOn(localStorageStub, 'getItem')
+    for (let i = 0; i < 10; i++) {
+      buddy.view(READ, S1)
+      buddy.view(READ, S2)
+      buddy.view(READ, S3)
+    }
+    expect(read.mock.calls.filter(([key]) => String(key).includes('peeks'))).toHaveLength(3)
+    buddy.peek(S2)
+    read.mockClear()
+    for (let i = 0; i < 10; i++) buddy.view(READ, S2)
+    expect(buddy.view(READ, S2)).toMatchObject({ open: true, peeked: true })
+    expect(read.mock.calls.filter(([key]) => String(key).includes('peeks'))).toHaveLength(1)
+    read.mockRestore()
+  })
+
+  it('reads the numbers again for a message deleted in a thread it has not read, and does not touch the count itself', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    await buddy.retain(READ)
+    server.calls = []
+    emit({ type: 'deleted', messageId: 'never-seen', readId: READ, sectionId: S1 } as BuddyLiveEvent)
+    // The thread was not read: the deleted message was never counted here, so the count is not touched, and the read's numbers are asked again.
+    await settle()
+    expect(buddy.countsOf(READ, S1)).toMatchObject({ count: 3 })
+    expect(server.calls.filter((c) => c.fn === 'buddy_read')).toHaveLength(1)
   })
 })

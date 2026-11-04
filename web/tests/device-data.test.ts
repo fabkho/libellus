@@ -18,6 +18,7 @@ import { DEVICE_LINK_TEMPLATES_KEY } from '@/data/linkTemplates'
 import { LIBRARY_VIEW_KEY, newLibraryViews, readLibraryViews, saveLibraryViews } from '@/data/libraryView'
 import {
   clearLocalDatabase,
+  BUDDY_QUEUE_PREFIX,
   clearLocalFiles,
   forgetMemberData,
   LOCAL_DATABASE,
@@ -29,7 +30,9 @@ import {
   type DeviceEnvironment,
   type DeviceStorage,
 } from '@/data/localData'
+import { BUDDY_QUEUE_PREFIX as QUEUE_PREFIX_OF_STORAGE, buddyPeekKey, buddyQueueKey } from '@/utils/buddyStorage'
 import { IMPORT_HINT_KEY, readImportHint, writeImportHint } from '@/utils/importHint'
+import { PENDING_BUDDY_READ_KEY } from '@/utils/pendingBuddyRead'
 import { PENDING_FOLLOW_KEY } from '@/utils/pendingFollow'
 import { PENDING_SHARE_KEY } from '@/utils/pendingShare'
 import { CODE_SENT_KEY, keepCodeSent, whoIs } from '@/utils/codeCooldown'
@@ -138,6 +141,10 @@ function memberAUsedTheDevice() {
   local.setItem(PENDING_SIGN_IN_KEY, '{"email":"someone@libellus.test"}')
   local.setItem(PENDING_SHARE_KEY, '{"title":"x"}')
   local.setItem(PENDING_FOLLOW_KEY, '{"code":"x"}')
+  // A buddy read: her unsent messages (the send queue, one key a tab), the Sections she opened anyway, and a link opened signed out that waits for a sign-in.
+  local.setItem(`${buddyQueueKey(A.id)}.tab1`, JSON.stringify({ v: 1, jobs: [{ id: 'j1', key: 'send:c1', attempts: 0, payload: { conversationId: 'r', threadId: null, clientId: 'c1', body: 'Unsent hello' } }], refusals: [] }))
+  local.setItem(buddyPeekKey(A.id), JSON.stringify(['section-9']))
+  local.setItem(PENDING_BUDDY_READ_KEY, JSON.stringify({ token: 'AbCdEfGhIjKlMnOpQrStUv', at: 1 }))
 
   const databases = indexedDb()
   const stores = new Map(Object.keys(LOCAL_STORES).map((name) => [name, new Map<unknown, unknown>([[A.id, `PRIVATE ${name} OF ADA`]])]))
@@ -152,7 +159,9 @@ function memberAUsedTheDevice() {
 }
 
 const DEVICE_SETTINGS = ['libellus-glass', 'libellus-install-hint', 'libellus-reader', 'libellus-theme']
-const WAITING = [PENDING_FOLLOW_KEY, PENDING_SHARE_KEY, PENDING_SIGN_IN_KEY]
+const WAITING = [PENDING_BUDDY_READ_KEY, PENDING_FOLLOW_KEY, PENDING_SHARE_KEY, PENDING_SIGN_IN_KEY]
+/** What a dead session leaves of her buddy reads: the line of unsent messages, never the peeks. */
+const LINE = `${buddyQueueKey(A.id)}.tab1`
 
 describe('signing out (F10)', () => {
   it('leaves nothing of the member: every key, the database, the files, the browsed covers and their expiry list', async () => {
@@ -227,7 +236,7 @@ describe('a session that ended by itself (F11)', () => {
 
     await forgetMemberData(device.env, { sessionEnded: true, memberId: A.id, keep: WAITING })
 
-    expect(device.local.keys()).toEqual([...DEVICE_SETTINGS, OUTBOX_OWNER_KEY, ...WAITING].sort())
+    expect(device.local.keys()).toEqual([...DEVICE_SETTINGS, OUTBOX_OWNER_KEY, LINE, ...WAITING].sort())
     // Her Library, her descriptions, her ebook records: gone. Her outbox: kept.
     expect(readSavedMember(device.local)).toBeNull()
     expect(readDescriptions(device.local, A.id)).toBeNull()
@@ -291,6 +300,59 @@ describe('another member signing in on the same device (F11)', () => {
     expect(otherMemberHere(device.local, A.id, readSavedMember(device.local)?.id ?? null)).toBe(false)
     await forgetMemberData(device.env)
     expect(device.local.all()).not.toMatch(/ada|PRIVATE/i)
+  })
+})
+
+describe('what a buddy read keeps on the device', () => {
+  const kept = (device: ReturnType<typeof memberAUsedTheDevice>) => device.local.keys().filter((key) => key.startsWith('libellus.buddyRead.') || key === PENDING_BUDDY_READ_KEY)
+
+  it('is what the storage layer says it is: one prefix for the queue, one key for the peeks', () => {
+    expect(buddyQueueKey(A.id).startsWith(BUDDY_QUEUE_PREFIX)).toBe(true)
+    // The shell's sign-out writes the prefix itself (it does not carry the storage file): the two are one.
+    expect(BUDDY_QUEUE_PREFIX).toBe(QUEUE_PREFIX_OF_STORAGE)
+    expect(buddyPeekKey(A.id)).toBe(`libellus.buddyRead.peeks.${A.id}`)
+  })
+
+  it('is forgotten when she signs out: the unsent messages, the peeks, and not even a waiting link', async () => {
+    const device = memberAUsedTheDevice()
+    expect(kept(device)).toHaveLength(3)
+    await forgetMemberData(device.env)
+    expect(kept(device)).toEqual([])
+    expect(device.local.all()).not.toMatch(/Unsent hello|section-9/)
+  })
+
+  it('is forgotten when another member signs in over it, but the link she opened to get here stays', async () => {
+    const device = memberAUsedTheDevice()
+    // A's session died: her line stays, for her.
+    await forgetMemberData(device.env, { sessionEnded: true, memberId: A.id, keep: WAITING })
+    expect(kept(device).sort()).toEqual([LINE, PENDING_BUDDY_READ_KEY].sort())
+    // B signs in: the device holds A's, so it is cleared first (stores/session.ts `signedInAs`), keeping B's link.
+    expect(otherMemberHere(device.local, B.id, readSavedMember(device.local)?.id ?? null)).toBe(true)
+    await forgetMemberData(device.env, { keepForNext: [PENDING_BUDDY_READ_KEY] })
+    expect(kept(device)).toEqual([PENDING_BUDDY_READ_KEY])
+    expect(device.local.all()).not.toMatch(/Unsent hello|section-9/)
+  })
+
+  it('does not take the waiting link with it into a sign-out or another member’s clearing unless told to', async () => {
+    const device = memberAUsedTheDevice()
+    await forgetMemberData(device.env, { keepForNext: [] })
+    expect(device.local.getItem(PENDING_BUDDY_READ_KEY)).toBeNull()
+  })
+
+  it('keeps her unsent messages through a session that died, and sends them for her only: the line is keyed by her id and the outbox owner is hers', async () => {
+    const device = memberAUsedTheDevice()
+    await forgetMemberData(device.env, { sessionEnded: true, memberId: A.id, keep: WAITING })
+    // The line, not the peeks: a peek is a choice of a session, a message is words she wrote.
+    expect(device.local.getItem(LINE)).toContain('Unsent hello')
+    expect(device.local.getItem(buddyPeekKey(A.id))).toBeNull()
+    expect(device.local.getItem(OUTBOX_OWNER_KEY)).toBe(A.id)
+    expect(otherMemberHere(device.local, A.id, readSavedMember(device.local)?.id ?? null)).toBe(false)
+  })
+
+  it('deleting the account takes the line too: nothing of hers outlives it', async () => {
+    const device = memberAUsedTheDevice()
+    await forgetMemberData(device.env, { accountDeleted: true })
+    expect(kept(device)).toEqual([])
   })
 })
 

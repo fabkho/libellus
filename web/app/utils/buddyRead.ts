@@ -8,13 +8,6 @@ import type { BuddyErrorCode, BuddyMessage, BuddyRead, BuddyReaction } from '~/d
  * (where a message goes, how a bubble and its stored row become one, what a count does) are here.
  */
 
-/** Where this device keeps what is hers: under `libellus.`, so signing out forgets it (data/localData.ts). */
-export const BUDDY_STORAGE_PREFIX = 'libellus.buddyRead'
-/** The send queue of one member (the queue adds `.<tab>` to it when it owns a tab: the layer's `claimQueue`). */
-export const buddyQueueKey = (member: string): string => `${BUDDY_STORAGE_PREFIX}.queue.${member}`
-/** The Sections she opened anyway on this device (the layer's `createPeeks`). */
-export const buddyPeekKey = (member: string): string => `${BUDDY_STORAGE_PREFIX}.peeks.${member}`
-
 /** The message-file key a refusal is worded under (en.json, `buddyRead.error.<code>`): every code has one (tests/buddy-read-errors.test.ts). */
 export const buddyErrorKey = (code: BuddyErrorCode): string => `buddyRead.error.${code}`
 

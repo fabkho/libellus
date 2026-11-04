@@ -23,6 +23,13 @@
   X-Frame-Options: DENY
   Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' blob:; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.ingest.de.sentry.io https://*.supabase.co wss://*.supabase.co https://books.fabkho.dev https://itunes.apple.com https://openlibrary.org https://covers.openlibrary.org https://*.mzstatic.com https://i.gr-assets.com https://assets.hardcover.app https://cloudflareinsights.com https://api.mymemory.translated.net https://en.wiktionary.org; frame-src 'self' blob:; media-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
 
+# A buddy read's invite link carries its token in the path (`/t/<token>`): whoever holds it may join. Nothing that page loads (covers from any
+# https host, the API) is told where it was opened from, whatever the platform's default is. `!` takes the default off first: Pages
+# merges the values of rules that match one URL.
+/t/*
+  ! Referrer-Policy
+  Referrer-Policy: no-referrer
+
 # The service worker, the script it imports and the manifest have fixed names: always asked
 # again, so a new deploy reaches installed apps on their next start.
 /sw.js

@@ -139,11 +139,18 @@ export function createLazyRealtime(deps: LazyRealtimeDeps) {
   let building: Promise<LiveClient> | null = null
 
   function build(): Promise<LiveClient> {
-    building ??= deps.load().then((module) => {
-      // Realtime's address is the API's, at /realtime/v1 (the client adds /websocket and the scheme).
-      client = new module.RealtimeClient(`${deps.url.replace(/\/$/, '')}/realtime/v1`, { params: { apikey: deps.anonKey }, accessToken: deps.token })
-      return client
-    })
+    building ??= deps
+      .load()
+      .then((module) => {
+        // Realtime's address is the API's, at /realtime/v1 (the client adds /websocket and the scheme).
+        client = new module.RealtimeClient(`${deps.url.replace(/\/$/, '')}/realtime/v1`, { params: { apikey: deps.anonKey }, accessToken: deps.token })
+        return client
+      })
+      // The chunk is not precached: a start while offline rejects, and a rejected promise kept here would fail every later start too.
+      .catch((error) => {
+        building = null
+        throw error
+      })
     return building
   }
 
@@ -180,14 +187,21 @@ export function createLazyRealtime(deps: LazyRealtimeDeps) {
 
 // ------------------------------------------------------------------ the connection
 
+/** The layer's `LiveEnv`, and the way to take its page listeners off again (the layer never does). */
+export type LiveEnvWithDispose = LiveEnv & { dispose?: () => void }
+
 export type BuddyLiveDeps = LazyRealtimeDeps & {
   /** The page's network word and lifecycle events (`browserLiveEnv`). */
-  env: LiveEnv
+  env: LiveEnvWithDispose
   now?: () => number
   /** How long the last release waits before the channel closes (a screen change in between keeps it). Default 5 s. */
   graceMs?: number
   /** Called when the connection's status, member or network word changes. */
   onChange?: (state: LiveState) => void
+  /** How long a channel may be joining before it counts as stuck (the Free plan's 200 connections give no other signal). Default 30 s. */
+  stuckMs?: number
+  /** The channel has not been live for `stuckMs` (true: the screens say live updates are paused, and the app reads what it missed on its own), or is live again (false). */
+  onStuck?: (stuck: boolean) => void
   timers?: { setTimeout: (fn: () => void, ms: number) => unknown; clearTimeout: (handle: unknown) => void }
 }
 
@@ -201,6 +215,8 @@ export type BuddyLive = {
   on: LiveConnection<BuddyLiveEvent>['on']
   /** Closes the channel and the socket now (sign-out, another member). */
   stop: () => Promise<void>
+  /** `stop`, and the page's listeners come off: this connection is not used again. */
+  dispose: () => Promise<void>
   readonly status: LiveConnection<BuddyLiveEvent>['status']
   readonly memberId: string | null
   readonly retained: number
@@ -215,24 +231,64 @@ export function createBuddyLive(deps: BuddyLiveDeps): BuddyLive {
   const lazy = createLazyRealtime(deps)
   const timers = deps.timers ?? { setTimeout: (fn, ms) => globalThis.setTimeout(fn, ms), clearTimeout: (h) => globalThis.clearTimeout(h as ReturnType<typeof setTimeout>) }
   const grace = deps.graceMs ?? 5_000
+  const stuckMs = deps.stuckMs ?? 30_000
+
+  let holders = 0
+  let timer: unknown = null
+  /** A stop and a start may overlap: each waits for the one before, and one failing does not stop the next. */
+  let chain: Promise<void> = Promise.resolve()
+  const queued = (step: () => Promise<void> | void): Promise<void> => (chain = chain.then(step).catch(() => {}))
+
+  // The join gives no word when the server will not take it (the Free plan's 200 connections): it just never goes live. A channel that has not
+  // been live for `stuckMs` is called stuck, once, and joined again from the start every `stuckMs` until it is live (this also frees the layer's
+  // revival, which waits for a join that never comes).
+  let stuckTimer: unknown = null
+  let stuck = false
+  const setStuck = (next: boolean) => {
+    if (stuck === next) return
+    stuck = next
+    deps.onStuck?.(next)
+  }
+  const disarm = () => {
+    if (stuckTimer) timers.clearTimeout(stuckTimer)
+    stuckTimer = null
+  }
+  const arm = () => {
+    if (stuckTimer || holders === 0) return
+    stuckTimer = timers.setTimeout(() => {
+      stuckTimer = null
+      const id = connection.memberId
+      if (holders === 0 || !id) return
+      setStuck(true)
+      void queued(async () => {
+        await connection.stop()
+        await lazy.close()
+        if (holders > 0) await connection.start(id)
+      })
+      arm()
+    }, stuckMs)
+  }
+
   const connection = createLiveConnection<BuddyLiveEvent>({
     open: (id: string, handlers: TopicHandlers<BuddyLiveEvent>): TopicChannel => subscribeTopic(lazy.realtime, memberTopic(id), parseBuddyEvent, handlers),
     now: deps.now ?? (() => Date.now()),
     env: deps.env,
-    onChange: deps.onChange,
+    onChange: (state) => {
+      deps.onChange?.(state)
+      if (state.status === 'live') {
+        disarm()
+        setStuck(false)
+      } else if (state.status !== 'idle') arm()
+    },
   })
 
-  let holders = 0
-  let timer: unknown = null
-  /** A stop and a start may overlap: each waits for the one before. */
-  let chain: Promise<void> = Promise.resolve()
-
   function closeNow(): Promise<void> {
-    chain = chain.then(async () => {
+    disarm()
+    setStuck(false)
+    return queued(async () => {
       await connection.stop()
       await lazy.close()
     })
-    return chain
   }
 
   return {
@@ -244,7 +300,7 @@ export function createBuddyLive(deps: BuddyLiveDeps): BuddyLive {
       holders++
       // Another member than the channel's: that one's is closed first.
       if (connection.memberId && connection.memberId !== memberId) void closeNow()
-      chain = chain.then(() => (holders > 0 ? connection.start(memberId) : undefined))
+      void queued(() => (holders > 0 ? connection.start(memberId) : undefined))
       let released = false
       return () => {
         if (released) return
@@ -263,6 +319,13 @@ export function createBuddyLive(deps: BuddyLiveDeps): BuddyLive {
       timer = null
       holders = 0
       await closeNow()
+    },
+    async dispose() {
+      if (timer) timers.clearTimeout(timer)
+      timer = null
+      holders = 0
+      await closeNow()
+      deps.env.dispose?.()
     },
     get status() {
       return connection.status
@@ -284,18 +347,27 @@ export function createBuddyLive(deps: BuddyLiveDeps): BuddyLive {
 /** What of the page the environment needs (`window` and `document` fit). */
 export type LivePage = {
   navigator: { onLine: boolean }
-  document: { visibilityState: string; addEventListener: (type: string, fn: () => void) => void }
+  document: { visibilityState: string; addEventListener: (type: string, fn: () => void) => void; removeEventListener?: (type: string, fn: () => void) => void }
   addEventListener: (type: string, fn: () => void) => void
+  removeEventListener?: (type: string, fn: () => void) => void
 }
 
 /** The layer's `LiveEnv` over the page: the device's network word, the page going hidden and coming back. */
-export function browserLiveEnv(page: LivePage): LiveEnv {
+export function browserLiveEnv(page: LivePage): LiveEnvWithDispose {
+  const attached: Array<[string, () => void, 'page' | 'document']> = []
+  const on = (target: 'page' | 'document', type: string, fn: () => void) => {
+    ;(target === 'page' ? page : page.document).addEventListener(type, fn)
+    attached.push([type, fn, target])
+  }
   return {
     isOnline: () => page.navigator.onLine,
     listen(handlers) {
-      page.addEventListener('online', handlers.online)
-      page.addEventListener('offline', handlers.offline)
-      page.document.addEventListener('visibilitychange', () => (page.document.visibilityState === 'hidden' ? handlers.hidden() : handlers.visible()))
+      on('page', 'online', handlers.online)
+      on('page', 'offline', handlers.offline)
+      on('document', 'visibilitychange', () => (page.document.visibilityState === 'hidden' ? handlers.hidden() : handlers.visible()))
+    },
+    dispose() {
+      for (const [type, fn, target] of attached.splice(0)) (target === 'page' ? page : page.document).removeEventListener?.(type, fn)
     },
   }
 }

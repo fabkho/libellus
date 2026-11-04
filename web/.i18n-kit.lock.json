@@ -9183,6 +9183,16 @@
           "de"
         ]
       },
+      "together.thread.discard": {
+        "e2d0a54968ead24e": [
+          "de"
+        ]
+      },
+      "together.thread.discardLabel": {
+        "cfc92b6e337f5d59": [
+          "de"
+        ]
+      },
       "together.thread.empty": {
         "f7deb876208400c4": [
           "de"
@@ -9195,6 +9205,16 @@
       },
       "together.thread.label": {
         "f7d5baf64b6d88b8": [
+          "de"
+        ]
+      },
+      "together.thread.notSentFinal": {
+        "32fea169fe1aa6bf": [
+          "de"
+        ]
+      },
+      "together.thread.paused": {
+        "1c87f37f92a34ba1": [
           "de"
         ]
       },
