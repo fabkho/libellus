@@ -1,5 +1,5 @@
 import { addDays } from '../utils/dates.ts'
-import { type DayBounds, type ProgressDay } from './progressDays.ts'
+import { newestEmptyDay, type DayBounds, type ProgressDay } from './progressDays.ts'
 
 /**
  * What the Update progress sheet shows when it is on an earlier day (plan docs/plans/backdated-progress.md §3):
@@ -63,4 +63,36 @@ export function dayRangeOf(days: readonly ProgressDay[], day: string, bounds: Da
   if (after) return { from, to: { kind: 'day', day: after.day, value: Math.min(bounds.hi, limit) } }
   if (bounds.leads) return { from, to: { kind: 'open' } }
   return { from, to: { kind: 'now', value: Math.min(bounds.hi, limit) } }
+}
+
+// ------------------------------------------------------------------ the reading log
+
+/** The reading log shows this many days (newest first) until she asks for all of them. */
+export const LOG_ROWS = 14
+
+/** A day of the log as `readingLogOf` hands it over. */
+export type LogDay = { day: string; amount: number; end: number | null }
+
+/**
+ * A log row as the screen draws it: a day that went back (a negative amount: the member re-read, or a later day
+ * was set lower) says "−6", not "+-6", in the quiet ink; `size` is the amount without its sign.
+ */
+export type LogRow = LogDay & { back: boolean; size: number }
+
+export const logRowOf = (row: LogDay): LogRow => ({ ...row, back: row.amount < 0, size: Math.abs(row.amount) })
+
+/** The rows to draw: the first `LOG_ROWS` unless `all`, and how many days wait behind *See all*. */
+export function logRowsOf(log: readonly LogDay[], all = false): { rows: LogRow[]; more: number } {
+  const shown = all ? log : log.slice(0, LOG_ROWS)
+  return { rows: shown.map(logRowOf), more: log.length - shown.length }
+}
+
+/**
+ * The day *Add day* opens the sheet on: the newest day before today without an entry (not before the read began);
+ * with none left, yesterday, which has one (the sheet then edits it). Null where there is no earlier day to add (a
+ * read that began today), as for the sheet's day pills (`offersDays`).
+ */
+export function addDayOf(days: readonly ProgressDay[], startedOn: string | null | undefined, today: string): string | null {
+  if (!offersDays(startedOn, today)) return null
+  return (startedOn ? newestEmptyDay(days, startedOn, today) : null) ?? addDays(today, -1)
 }
