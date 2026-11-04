@@ -45,6 +45,8 @@ export const useBuddyInvitesStore = defineStore('buddyInvites', () => {
       if (answer.error || me.value !== member) return
       invitations.value = answer.data.invitations
       loaded.value = true
+      // The same reading tells the switch whether she may turn it off: a room she joined on another device counts.
+      switchStore.noteRooms(answer.data.reads.length + answer.data.invitations.length)
     })().finally(() => (reading = null))
     return reading
   }
