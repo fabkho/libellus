@@ -172,8 +172,8 @@ and ported as the design system (#5, docs/DESIGN.md); this spec fixes structure 
   per Section that stays veiled until she has read it. Her position is a Section, worked out from her
   progress or set by her hand; the other members see that Section and nothing else about her reading
   (never a page, a percent, a date, how it was set, or her notes), only while she is a member: leaving or
-  being removed stops it at once, the Profile switch only hides the entry points. Anyone with the link sees
-  who is in the read (names and photos) before joining. The design is `docs/plans/buddy-read-shared.md`.
+  being removed stops it at once, and turning the Profile switch off first makes her leave her buddy reads.
+  Anyone signed in who holds the link sees the names of the members before joining. The design is `docs/plans/buddy-read-shared.md`.
 - Sharing (#171) is off until she turns it on, and only what she chose leaves the database: her
   first name, the sections she switched on (the Books she is reading, this year's counts, her
   favourites, what she finished with its Ratings, her shelf) and the reviews she shared one by one.
