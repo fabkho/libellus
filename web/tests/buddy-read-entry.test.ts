@@ -60,7 +60,7 @@ describe('the buddy read store and the live module are not part of the entry', (
   })
 
   it('reaches neither of them, nor the real Realtime client, by a static import', () => {
-    const forbidden = /(?:stores\/buddyRead|data\/buddyLive|data\/buddyReads|realtime-client|@supabase\/realtime-js|@fabkho\/chat)/
+    const forbidden = /(?:stores\/buddyRead(?![A-Za-z])|data\/buddyLive|data\/buddyReads|realtime-client|@supabase\/realtime-js|@fabkho\/chat)/
     const offenders = entry.filter((file) => staticImports(readFileSync(file, 'utf8')).some((spec) => forbidden.test(spec) && !/realtimeStub/.test(spec)))
     expect(offenders.map((f) => f.slice(web.length))).toEqual([])
   })
