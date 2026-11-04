@@ -85,7 +85,7 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   - W3 built on it: `composables/useBuddyReadsOn.ts` (the flag *and* her switch, for a row, a card or a sheet), the room's routes (`validate` for the flag,
     `middleware/buddy-reads.ts` for the switch: Home while it is off) — the link page `/t/<token>` takes the flag by `validate` only and asks the switch itself
     ("Turn on Buddy reads?") — and `stores/buddyInvites.ts`, the small store the shell may import (the lamp dot: the invitations waiting for
-    her, the repository loaded by a dynamic `import()`); the big store stays out of the entry. The link `/t/<token>` needs the sign-in
+    her, the repository loaded by a dynamic `import()`); the big store stays out of the entry. W6: the switch cannot go off while she is in a room or invited: flipping it off is a question (`stores/buddyTurnOff.ts`, `utils/buddyTurnOff.ts`, `components/profile/BuddyReadsOff.vue`; it reads `my_buddy_reads()` fresh, then leaves the rooms with `leave_buddy_read` and declines the invitations, and only then `set(false)`); `canTurnOff` follows every reading of her list (`noteRooms`). The link `/t/<token>` needs the sign-in
     (`utils/publicPath.ts` is untouched) and is kept through it by `utils/pendingBuddyRead.ts`, only in a build with the flag.
   - W5's entry points: the Book page's row (`components/together/BookRow.vue`), Home's *Reading together* card and a Currently reading card's ⋯ menu
     (`components/home/{Together,TogetherMenu}.vue`) are **lazy components** the pages draw only behind `useBuddyReadsOn()` (`tests/buddy-entry.test.ts` pins it),

@@ -11,7 +11,18 @@
 // book ends, and DNF under it, for the one she puts it down (the book page no
 // longer carries either). Each saves the progress first, then its own sheet takes
 // over. A refusal stays in the sheet and Save tries again.
-import { PAGE_CEILING, type ProgressMode } from '~/data/progress'
+//
+// Progress on an earlier day (plan docs/plans/backdated-progress.md §3): "Today · Yesterday · Pick a day…" under the
+// Book switch the sheet to a day she forgot to update (`reading.progressDay`). The title names the day, "Between
+// Fri · p. 170 and Sun · p. 188" takes the place of Last time (the range the wheel may move in), the wheel opens on
+// where the day ended (or where the day before did) and runs only inside that range, "+8" counts from the day's
+// start, and a quiet line says what else changes. The total and Finish / DNF are Today's: they end the read today.
+// A day that has an entry can be removed here, behind a confirm. A polite status says the day and its range, because
+// a changed dialog title is not read again.
+import { PAGE_CEILING, pageCountOf, progressOf, progressValueOf, type ProgressMode } from '~/data/progress'
+import { amountOf, effectOf, unitOf, valueIn, type DayContext } from '~/data/progressDays'
+import { dayRangeOf, offersDays } from '~/data/progressDayView'
+import { isoDay } from '~/utils/dates'
 import { useReadingStore } from '~/stores/reading'
 import { stepTick } from '#layers/ui/app/utils/haptics'
 
@@ -40,7 +51,8 @@ watch(
 )
 
 // "Last time · Yesterday · 24 pages" (issue #68): the read's last day of reading before today.
-const { lastTime, dayWords, amountWords } = useReadingDays(() => entry.value)
+const { days, loaded, lastTime, dayWords, dayWordsInline, amountWords } = useReadingDays(() => entry.value)
+const { weekdayDay } = useDays()
 
 const editingTotal = computed(() => reading.progressEditing === 'total')
 const inPercent = computed(() => reading.progressMode === 'percent')
@@ -55,12 +67,116 @@ const action = computed(() => {
 })
 const actionDisabled = computed(() => reading.progressBusy)
 
+// ---------------------------------------------------------------- An earlier day
+
+const today = computed(() => isoDay())
+/** The day the sheet is about: null is Today. */
+const earlier = computed(() => reading.progressDay)
+const bounds = computed(() => reading.progressBounds)
+const startedOn = computed(() => entry.value?.latestSession?.startedOn ?? null)
+/** Her own total was changed in this sheet (it goes with a Today save, so the day switch waits until it is saved). */
+const totalChanged = computed(() => reading.progressTotal !== (entry.value?.pageCountOverride ?? null))
+/** The pill row: needs the read's days (the bounds are unknown without them) and a day before today to record. */
+const offersDay = computed(
+  () => !editingTotal.value && !totalChanged.value && (earlier.value !== null || (loaded.value && offersDays(startedOn.value, today.value))),
+)
+const dayContext = computed<DayContext | null>(() => {
+  const now = entry.value
+  return now ? { current: progressOf(now.latestSession), pageCount: pageCountOf(now), startedOn: startedOn.value } : null
+})
+/** The wheel's number as the value the database takes. */
+const wheelValue = computed(() => progressValueOf(reading.progressValue, reading.progressMode))
+/** The day has an entry: its wheel opens on where it ended, and it can be removed. */
+const hasEntry = computed(() => bounds.value?.end != null)
+
+/** "p. 170", "45 %": a place in the book, short, for the lines about a day. */
+function place(value: number, mode: ProgressMode = reading.progressMode): string {
+  return mode === 'percent' ? t('book.progress.percent', { percent: value }) : t('book.progress.pageOnly', { page: value })
+}
+/** "+8", "−6 %": how far a day went, in the read's own unit. */
+function signed(amount: number): string {
+  const percent = unitOf(dayContext.value?.pageCount ?? null) === 'percent'
+  const key = amount < 0 ? (percent ? 'lossPercent' : 'lossPages') : percent ? 'gainPercent' : 'gainPages'
+  return t(`book.progress.${key}`, { count: n(Math.abs(amount)) })
+}
+
+const range = computed(() => {
+  const day = earlier.value
+  const b = bounds.value
+  if (!day || !b || !days.value) return null
+  const { from, to } = dayRangeOf(days.value, day, b, reading.progressLimit)
+  const start = t('book.progress.rangePoint', { day: from.day ? dayWords(from.day) : t('book.progress.rangeStart'), value: place(from.value) })
+  const open = to.kind === 'open'
+  const end =
+    to.kind === 'day'
+      ? t('book.progress.rangePoint', { day: dayWordsInline(to.day), value: place(to.value) })
+      : to.kind === 'now'
+        ? t('book.progress.rangePoint', { day: t('book.progress.rangeNow'), value: place(to.value) })
+        : ''
+  return {
+    label: t(open ? 'book.progress.rangeLabelOpen' : 'book.progress.rangeLabel'),
+    line: open ? start : t('book.progress.rangeLine', { from: start, to: end }),
+    status: open
+      ? t('book.progress.statusDayOpen', { day: weekdayDay(day), from: place(from.value) })
+      : t('book.progress.statusDay', { day: weekdayDay(day), from: place(from.value), to: place(to.kind === 'open' ? 0 : to.value) }),
+  }
+})
+
+/** What saving does beyond the day itself: the day after re-chains, or her progress moves (`effectOf`); nothing when only this day changes. */
+const effect = computed(() => {
+  const day = earlier.value
+  const ctx = dayContext.value
+  if (!day || !bounds.value || !days.value || !ctx) return ''
+  const e = effectOf(days.value, day, wheelValue.value, ctx)
+  if (e.kind === 'now') return t('book.progress.effectNow', { value: place(e.value ?? 0) })
+  if (!e.next) return ''
+  const gone = e.next.now === 0
+  const day_ = weekdayDay(day)
+  if (e.kind === 'add') {
+    return gone
+      ? t('book.progress.effectAddGone', { day: day_, next: dayWords(e.next.day) })
+      : t('book.progress.effectAdd', { day: day_, next: dayWords(e.next.day), amount: signed(e.next.now), was: signed(e.next.was) })
+  }
+  const amount = signed(reading.progressValue - bounds.value.start)
+  return gone
+    ? t('book.progress.effectEditGone', { day: day_, amount, next: dayWordsInline(e.next.day) })
+    : t('book.progress.effectEdit', { day: day_, amount, next: dayWordsInline(e.next.day), now: signed(e.next.now) })
+})
+
+/** The title: the day, in full, or the sheet's own. */
+const title = computed(() => (earlier.value ? t('book.progress.titleDay', { day: weekdayDay(earlier.value) }) : t('book.progress.title')))
+
+// Remove this day: the confirm says where the day's pages go, worded when it is asked (not while it slides away).
+const confirming = ref(false)
+const removeCopy = ref({ title: '', text: '' })
+function askRemove() {
+  const day = earlier.value
+  const ctx = dayContext.value
+  const row = days.value?.find((d) => d.day === day)
+  if (!day || !ctx || !days.value || !row) return
+  const e = effectOf(days.value, day, null, ctx)
+  const amount = amountWords(Math.abs(amountOf(row, ctx.pageCount)))
+  const unit = unitOf(ctx.pageCount)
+  const stays = place(valueIn(ctx.current, unit, ctx.pageCount) ?? 0, unit)
+  let text: string
+  if (e.kind === 'now') text = e.value ? t('book.progress.removeDay.textLatest', { value: place(e.value, unit) }) : t('book.progress.removeDay.textStart')
+  else if (e.next) text = t('book.progress.removeDay.text', { amount, next: dayWordsInline(e.next.day), value: stays })
+  else text = t('book.progress.removeDay.textOnly', { amount, value: stays })
+  removeCopy.value = { title: t('book.progress.removeDay.title', { day: weekdayDay(day) }), text }
+  confirming.value = true
+}
+async function remove() {
+  if (await reading.removeProgressDay()) confirming.value = false
+}
+
 // What assistive tech reads for the wheel: the value in words ("p. 212 of 608", "45 %").
 const valueText = computed(() =>
   text(inPercent.value ? { percent: reading.progressValue } : { page: reading.progressValue }, pageCount.value).value,
 )
+// On an earlier day the wheel is measured against where the day began, not against where the read is.
+const deltaBy = computed(() => (earlier.value ? (bounds.value ? reading.progressValue - bounds.value.start : 0) : reading.progressDelta))
 const delta = computed(() => {
-  const by = reading.progressDelta
+  const by = deltaBy.value
   if (!by) return null
   const key = by > 0 ? (inPercent.value ? 'gainPercent' : 'gainPages') : inPercent.value ? 'lossPercent' : 'lossPages'
   return t(`book.progress.${key}`, { count: n(Math.abs(by)) })
@@ -72,7 +188,7 @@ function step(by: number) {
   if (editingTotal.value) {
     reading.progressTotalDraft = Math.min(Math.max(reading.progressTotalDraft + by, 1), PAGE_CEILING)
   } else {
-    reading.progressValue = Math.min(Math.max(reading.progressValue + by, 0), reading.progressLimit)
+    reading.progressValue = Math.min(Math.max(reading.progressValue + by, reading.progressFloor), reading.progressLimit)
   }
   stepTick(performance.now())
 }
@@ -89,7 +205,7 @@ watch(
 <template>
   <UiSheet
     v-model:open="open"
-    :title="t('book.progress.title')"
+    :title="title"
     testid="progress"
     :action="action"
     :action-disabled="actionDisabled"
@@ -104,8 +220,22 @@ watch(
         :colors="entry.book.coverColors"
       />
 
-      <!-- What she read last time, over the wheel. -->
-      <p v-if="!editingTotal && lastTime" class="figures flex min-h-(--size-touch) items-center truncate text-meta text-ink-faint" data-testid="progress.lastTime">
+      <!-- The day: Today, Yesterday, or one picked (the sheet then speaks of that day). -->
+      <ProgressDayPills
+        v-if="offersDay"
+        :day="earlier"
+        :today="today"
+        :min="startedOn ?? undefined"
+        :disabled="reading.progressBusy"
+        class="mb-xs"
+        @choose="reading.chooseProgressDay($event)"
+      />
+
+      <!-- What she read last time, over the wheel; on an earlier day, the range the wheel may move in. -->
+      <p v-if="range" class="figures grid min-h-(--size-touch) content-center py-xs text-meta text-ink-faint" data-testid="progress.range">
+        <span><span class="eyebrow mr-sm">{{ range.label }}</span>{{ range.line }}</span>
+      </p>
+      <p v-else-if="!editingTotal && !earlier && lastTime" class="figures flex min-h-(--size-touch) items-center truncate text-meta text-ink-faint" data-testid="progress.lastTime">
         <span class="eyebrow mr-sm">{{ t('book.progress.lastTime') }}</span>{{ t('book.progress.lastTimeLine', { day: dayWords(lastTime.day), amount: amountWords(lastTime.amount) }) }}
       </p>
 
@@ -143,6 +273,7 @@ watch(
           <ProgressWheel
             v-if="!editingTotal"
             v-model="reading.progressValue"
+            :min="reading.progressFloor"
             :max="reading.progressLimit"
             :suffix="inPercent ? '%' : ''"
             :label="inPercent ? t('book.progress.percentLabel') : t('book.progress.pageLabel')"
@@ -179,7 +310,7 @@ watch(
       <div v-if="!editingTotal" class="mt-xs flex min-h-(--size-touch) items-center justify-between gap-sm">
         <span class="flex min-w-0 items-center gap-sm">
           <button
-            v-if="!inPercent"
+            v-if="!earlier && !inPercent"
             type="button"
             class="total figures text-caption text-ink-muted enabled:hover:text-ink"
             :aria-label="t('book.progress.totalEdit', { count: n(pageCount ?? 0) })"
@@ -190,7 +321,7 @@ watch(
             {{ t('book.progress.totalOf', { count: n(pageCount ?? 0) }) }}<UiIcon name="pencil" :size="12" class="ml-xs inline text-ink-faint" />
           </button>
           <button
-            v-else-if="!pageCount"
+            v-else-if="!earlier && !pageCount"
             type="button"
             class="total text-caption text-ink-muted enabled:hover:text-ink"
             :disabled="reading.progressBusy"
@@ -202,7 +333,7 @@ watch(
           <span
             v-if="delta"
             class="figures truncate text-caption"
-            :class="reading.progressDelta > 0 ? 'text-accent-ink' : 'text-ink-faint'"
+            :class="deltaBy > 0 ? 'text-accent-ink' : 'text-ink-faint'"
             data-testid="progress.delta"
           >
             {{ delta }}
@@ -230,7 +361,7 @@ watch(
 
       <!-- How the read ends, both behind a save of where she is: Finish (the Finish sheet), and
            under it DNF (the DNF sheet). One group of two rows, their buttons one width. -->
-      <div v-if="!editingTotal" class="mt-sm grid grid-cols-[1fr_auto] overflow-hidden rounded-md bg-fill edge-faint">
+      <div v-if="!editingTotal && !earlier" class="mt-sm grid grid-cols-[1fr_auto] overflow-hidden rounded-md bg-fill edge-faint">
         <div class="end col-span-2 grid grid-cols-subgrid items-center gap-ms px-inset py-ms" data-testid="progress.finishRow">
           <span class="flex min-w-0 flex-col gap-xxs">
             <span class="text-body">{{ t('book.progress.finishedIt') }}</span>
@@ -259,12 +390,39 @@ watch(
         </div>
       </div>
 
-      <p v-if="reading.progressError" class="mt-ms px-xs text-caption text-error" role="alert" data-testid="progress.failure">
+      <!-- What saving does beyond the day: the polite live region stays, its line comes and goes. -->
+      <div role="status" aria-live="polite" data-testid="progress.effect">
+        <UiReveal :show="Boolean(effect)">
+          <p class="px-xs pt-xs text-caption text-ink-faint">{{ effect }}</p>
+        </UiReveal>
+      </div>
+      <!-- The day's own words and range, said once when it changes: a changed dialog title is not read again. -->
+      <p class="sr-only" role="status" aria-live="polite" data-testid="progress.announce">{{ range?.status }}</p>
+
+      <div v-if="earlier && hasEntry" class="mt-md">
+        <UiButton block tone="danger" :disabled="reading.progressBusy" data-testid="progress.remove" @click="askRemove">
+          {{ t('book.progress.dayRemove') }}
+        </UiButton>
+      </div>
+
+      <p v-if="reading.progressError && !confirming" class="mt-ms px-xs text-caption text-error" role="alert" data-testid="progress.failure">
         {{ t(`library.error.${reading.progressError}`) }}
       </p>
       <div class="h-sm" />
     </template>
   </UiSheet>
+
+  <UiConfirm
+    v-model:open="confirming"
+    :title="removeCopy.title"
+    :text="removeCopy.text"
+    :action="reading.progressBusy ? t('book.progress.removeDay.busy') : t('book.progress.removeDay.action')"
+    :cancel-label="t('book.progress.removeDay.keep')"
+    :busy="reading.progressBusy"
+    :error="reading.progressError ? t(`library.error.${reading.progressError}`) : null"
+    testid="removeDay"
+    @confirm="remove"
+  />
 </template>
 
 <style scoped>

@@ -708,13 +708,58 @@
           "de"
         ]
       },
+      "book.progress.dayLabel": {
+        "8f2364e11b8be3ff": [
+          "de"
+        ]
+      },
+      "book.progress.dayLong": {
+        "fc9b1192c3e02bad": [
+          "de"
+        ]
+      },
+      "book.progress.dayLongYear": {
+        "674a1be00ce17ec6": [
+          "de"
+        ]
+      },
+      "book.progress.dayPick": {
+        "1925a2dc968be45b": [
+          "de"
+        ]
+      },
+      "book.progress.dayPickLabel": {
+        "ad99c92449ae8127": [
+          "de"
+        ]
+      },
+      "book.progress.dayPickNamed": {
+        "d869dd2ccafbfaff": [
+          "de"
+        ]
+      },
+      "book.progress.dayRemove": {
+        "f0a29130468a25be": [
+          "de"
+        ]
+      },
       "book.progress.dayToday": {
         "2b065c7c9ce466e5": [
           "de"
         ]
       },
+      "book.progress.dayTodayInline": {
+        "e0f4f767ac88a930": [
+          "de"
+        ]
+      },
       "book.progress.dayYesterday": {
         "566181254b293aa6": [
+          "de"
+        ]
+      },
+      "book.progress.dayYesterdayInline": {
+        "9523d9fbe79bcf3e": [
           "de"
         ]
       },
@@ -725,6 +770,31 @@
       },
       "book.progress.done": {
         "11a6767d5674c7e4": [
+          "de"
+        ]
+      },
+      "book.progress.effectAdd": {
+        "d724deabfab2af86": [
+          "de"
+        ]
+      },
+      "book.progress.effectAddGone": {
+        "46a66e3181372def": [
+          "de"
+        ]
+      },
+      "book.progress.effectEdit": {
+        "08b526108b16a4ca": [
+          "de"
+        ]
+      },
+      "book.progress.effectEditGone": {
+        "68d1eca550255ce1": [
+          "de"
+        ]
+      },
+      "book.progress.effectNow": {
+        "c8f7e8da63a765e8": [
           "de"
         ]
       },
@@ -933,6 +1003,36 @@
           "de"
         ]
       },
+      "book.progress.rangeLabel": {
+        "c1ea3f5e7aa47303": [
+          "de"
+        ]
+      },
+      "book.progress.rangeLabelOpen": {
+        "7b68fe5510851da3": [
+          "de"
+        ]
+      },
+      "book.progress.rangeLine": {
+        "9c50d3af1d745a2e": [
+          "de"
+        ]
+      },
+      "book.progress.rangeNow": {
+        "ed5eb9a37e2d8231": [
+          "de"
+        ]
+      },
+      "book.progress.rangePoint": {
+        "71a328cc97a1ad0b": [
+          "de"
+        ]
+      },
+      "book.progress.rangeStart": {
+        "e4bb9f1ece9af926": [
+          "de"
+        ]
+      },
       "book.progress.reached": {
         "042718ee98e00481": [
           "de"
@@ -945,6 +1045,46 @@
       },
       "book.progress.readPerDayPages": {
         "2f80ecc50a553ab6": [
+          "de"
+        ]
+      },
+      "book.progress.removeDay.action": {
+        "c3812fc4acb861d5": [
+          "de"
+        ]
+      },
+      "book.progress.removeDay.busy": {
+        "d4b09919ec929f15": [
+          "de"
+        ]
+      },
+      "book.progress.removeDay.keep": {
+        "fdce5da2cec2ff02": [
+          "de"
+        ]
+      },
+      "book.progress.removeDay.text": {
+        "0b4c4d13241820f3": [
+          "de"
+        ]
+      },
+      "book.progress.removeDay.textLatest": {
+        "d1d3771ad3520f38": [
+          "de"
+        ]
+      },
+      "book.progress.removeDay.textOnly": {
+        "e1255d8151260451": [
+          "de"
+        ]
+      },
+      "book.progress.removeDay.textStart": {
+        "65c54caacdf604a7": [
+          "de"
+        ]
+      },
+      "book.progress.removeDay.title": {
+        "3f9a49046f34ab46": [
           "de"
         ]
       },
@@ -963,6 +1103,16 @@
           "de"
         ]
       },
+      "book.progress.statusDay": {
+        "ef218d01efe688b4": [
+          "de"
+        ]
+      },
+      "book.progress.statusDayOpen": {
+        "7bcce1e179eb5a79": [
+          "de"
+        ]
+      },
       "book.progress.theEnd": {
         "e0a1d6943ae22b1e": [
           "de"
@@ -970,6 +1120,11 @@
       },
       "book.progress.title": {
         "e08dc19e0c25bc2a": [
+          "de"
+        ]
+      },
+      "book.progress.titleDay": {
+        "e9afaa70012ae909": [
           "de"
         ]
       },
@@ -5288,8 +5443,18 @@
           "de"
         ]
       },
+      "profile.account.buddyReadsCheckFailed": {
+        "9d9f537ae8515797": [
+          "de"
+        ]
+      },
       "profile.account.buddyReadsHint": {
         "4456d6d5d2e9a4d5": [
+          "de"
+        ]
+      },
+      "profile.account.buddyReadsIn": {
+        "7ea6573c5afd95dc": [
           "de"
         ]
       },
@@ -5425,6 +5590,51 @@
       },
       "profile.back": {
         "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.action": {
+        "53d2942cf67ace5f": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.actionInvitations": {
+        "72a3566f9f921b04": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.deleteHint": {
+        "bb6c63dbd6479826": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.deleteMine": {
+        "5e28ff307a496bc8": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.invitations": {
+        "2b17fe5f8080ee69": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.keep": {
+        "cab1d216aa4365c7": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.rooms": {
+        "7e65da480515d82b": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.title": {
+        "14736ec703b30e58": [
+          "de"
+        ]
+      },
+      "profile.buddyReadsOff.titleInvitations": {
+        "8ba46bf6c3a885ef": [
           "de"
         ]
       },

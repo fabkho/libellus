@@ -244,6 +244,17 @@
       "signOut": "Trotzdem abmelden",
       "failed": "Nicht alles konnte synchronisiert werden. Versuch es nochmal oder melde dich trotzdem ab."
     },
+    "buddyReadsOff": {
+      "title": "Buddy-Reads verlassen und ausschalten?",
+      "titleInvitations": "Deine Einladungen ablehnen und ausschalten?",
+      "rooms": "Du bist in {count} Buddy-Read. Ausschalten würde ihn nur ausblenden: Seine Mitglieder sähen weiter deinen Abschnitt. Wenn du ihn verlässt, hört das auf, und du kommst nur über einen Link oder eine neue Einladung zurück. | Du bist in {count} Buddy-Reads. Ausschalten würde sie nur ausblenden: Ihre Mitglieder sähen weiter deinen Abschnitt. Wenn du sie verlässt, hört das auf, und du kommst nur über einen Link oder eine neue Einladung zurück.",
+      "invitations": "{count} Einladung wird abgelehnt. | {count} Einladungen werden abgelehnt.",
+      "action": "Verlassen und ausschalten",
+      "actionInvitations": "Ablehnen und ausschalten",
+      "keep": "Eingeschaltet lassen",
+      "deleteMine": "Auch meine Nachrichten löschen",
+      "deleteHint": "Ohne Haken bleiben deine Nachrichten im Raum. Mit Haken werden sie in jedem Buddy-Read gelöscht, den du verlässt. Das lässt sich danach nicht mehr ändern."
+    },
     "account": {
       "title": "Konto",
       "theme": "Dunkelmodus",
@@ -251,6 +262,8 @@
       "friendsTab": "Freunde-Tab",
       "buddyReads": "Buddy-Reads",
       "buddyReadsHint": "Ein Buch mit Freunden lesen. Die anderen Mitglieder sehen, in welchem Abschnitt du bist, nie deine Seite.",
+      "buddyReadsIn": "Du bist in {count} Buddy-Read | Du bist in {count} Buddy-Reads",
+      "buddyReadsCheckFailed": "Deine Buddy-Reads konnten nicht geprüft werden, der Schalter bleibt eingeschaltet. Prüfe deine Verbindung und versuch es nochmal.",
       "glassLevel": {
         "strong": "Stark",
         "medium": "Mittel",
@@ -675,7 +688,40 @@
       "logTitle": "Leselog",
       "logEnd": "S. {page}",
       "readIn": "Lesedauer: {days} · {perDay}",
-      "readPerDayPages": "1 Seite pro Tag | {count} Seiten pro Tag"
+      "readPerDayPages": "1 Seite pro Tag | {count} Seiten pro Tag",
+      "dayLabel": "Tag",
+      "dayPick": "Tag wählen …",
+      "dayPickLabel": "Tag wählen",
+      "dayPickNamed": "Tag wählen, {day}",
+      "dayLong": "{weekday}, {day}. {month}",
+      "dayLongYear": "{weekday}, {day}. {month} {year}",
+      "dayTodayInline": "heute",
+      "dayYesterdayInline": "gestern",
+      "dayRemove": "Diesen Tag entfernen",
+      "titleDay": "Fortschritt am {day}",
+      "rangeLabel": "Zwischen",
+      "rangeLabelOpen": "Nach",
+      "rangeLine": "{from} und {to}",
+      "rangePoint": "{day} · {value}",
+      "rangeStart": "Anfang",
+      "rangeNow": "jetzt",
+      "statusDay": "Fortschritt am {day}, zwischen {from} und {to}.",
+      "statusDayOpen": "Fortschritt am {day}, nach {from}.",
+      "effectAdd": "Fügt {day} hinzu. {next} zählt dann {amount}, nicht {was}.",
+      "effectAddGone": "Fügt {day} hinzu. {next} fällt dann weg.",
+      "effectEdit": "{day} wird zu {amount}; {next} zählt dann {now}.",
+      "effectEditGone": "{day} wird zu {amount}; {next} fällt dann weg.",
+      "effectNow": "Dein Fortschritt wird auf {value} gesetzt.",
+      "removeDay": {
+        "title": "{day} entfernen?",
+        "text": "Was du an dem Tag gelesen hast ({amount}), geht an {next}. Dein Fortschritt bleibt bei {value}.",
+        "textLatest": "Dein Fortschritt wird auf {value} zurückgesetzt.",
+        "textStart": "Dein Fortschritt wird auf den Anfang zurückgesetzt.",
+        "textOnly": "Was du an dem Tag gelesen hast ({amount}), verschwindet aus dem Leselog. Dein Fortschritt bleibt bei {value}.",
+        "action": "Entfernen",
+        "busy": "Entferne …",
+        "keep": "Behalten"
+      }
     },
     "edition": {
       "open": "Ausgabe ändern",

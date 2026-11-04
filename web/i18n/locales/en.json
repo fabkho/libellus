@@ -244,6 +244,17 @@
       "signOut": "Sign out anyway",
       "failed": "Not everything could be synced. Try again, or sign out anyway."
     },
+    "buddyReadsOff": {
+      "title": "Leave your buddy reads and turn off?",
+      "titleInvitations": "Decline your invitations and turn off?",
+      "rooms": "You're in {count} buddy read. Turning Buddy reads off would only hide it: its members would still see your Section. Leaving it stops that, and you can only come back by a link or a new invitation. | You're in {count} buddy reads. Turning Buddy reads off would only hide them: their members would still see your Section. Leaving them stops that, and you can only come back by a link or a new invitation.",
+      "invitations": "{count} invitation will be declined. | {count} invitations will be declined.",
+      "action": "Leave and turn off",
+      "actionInvitations": "Decline and turn off",
+      "keep": "Keep on",
+      "deleteMine": "Also delete my messages",
+      "deleteHint": "Unticked, your messages stay in the room. Ticked, they are deleted from every buddy read you leave. You can't change this afterwards."
+    },
     "account": {
       "title": "Account",
       "theme": "Dark mode",
@@ -251,6 +262,8 @@
       "friendsTab": "Friends tab",
       "buddyReads": "Buddy reads",
       "buddyReadsHint": "Read one Book with friends. Its other members see which Section you are in, never your page.",
+      "buddyReadsIn": "You're in {count} buddy read | You're in {count} buddy reads",
+      "buddyReadsCheckFailed": "Couldn't check your buddy reads, so the switch stays on. Check your connection and try again.",
       "glassLevel": {
         "strong": "Strong",
         "medium": "Medium",
@@ -675,7 +688,40 @@
       "logTitle": "Reading log",
       "logEnd": "p. {page}",
       "readIn": "Read in {days} · {perDay}",
-      "readPerDayPages": "1 page a day | {count} pages a day"
+      "readPerDayPages": "1 page a day | {count} pages a day",
+      "dayLabel": "Day",
+      "dayPick": "Pick a day…",
+      "dayPickLabel": "Pick a day",
+      "dayPickNamed": "Pick a day, {day}",
+      "dayLong": "{weekday} {day} {month}",
+      "dayLongYear": "{weekday} {day} {month} {year}",
+      "dayTodayInline": "today",
+      "dayYesterdayInline": "yesterday",
+      "dayRemove": "Remove this day",
+      "titleDay": "Progress on {day}",
+      "rangeLabel": "Between",
+      "rangeLabelOpen": "After",
+      "rangeLine": "{from} and {to}",
+      "rangePoint": "{day} · {value}",
+      "rangeStart": "Start",
+      "rangeNow": "now",
+      "statusDay": "Progress on {day}, between {from} and {to}.",
+      "statusDayOpen": "Progress on {day}, after {from}.",
+      "effectAdd": "Adds {day}. {next} then reads {amount}, not {was}.",
+      "effectAddGone": "Adds {day}. {next} then drops out.",
+      "effectEdit": "{day} becomes {amount}; {next} then reads {now}.",
+      "effectEditGone": "{day} becomes {amount}; {next} then drops out.",
+      "effectNow": "Your progress becomes {value}.",
+      "removeDay": {
+        "title": "Remove {day}?",
+        "text": "What it read ({amount}) moves to {next}. Your progress stays at {value}.",
+        "textLatest": "Your progress goes back to {value}.",
+        "textStart": "Your progress goes back to the start.",
+        "textOnly": "What it read ({amount}) leaves the reading log. Your progress stays at {value}.",
+        "action": "Remove",
+        "busy": "Removing…",
+        "keep": "Keep it"
+      }
     },
     "edition": {
       "open": "Change edition",
