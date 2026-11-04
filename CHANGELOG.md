@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.34.0](https://github.com/fabkho/libellus/compare/v1.33.1...v1.34.0) (2026-11-04)
+
+
+### Features
+
+* **web:** buddy reads for everyone, a clear start on every Book ([#498](https://github.com/fabkho/libellus/issues/498)) ([3615c22](https://github.com/fabkho/libellus/commit/3615c22b5b7e0df3c74e389ef4da172d36897492))
+* **web:** potential buddy reads on a friend's profile ([#497](https://github.com/fabkho/libellus/issues/497)) ([d9f6f06](https://github.com/fabkho/libellus/commit/d9f6f06959ff59e0392208a9917a59cdfb0189d7))
+
 ## [1.33.1](https://github.com/fabkho/libellus/compare/v1.33.0...v1.33.1) (2026-11-04)
 
 
