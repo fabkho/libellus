@@ -73,6 +73,10 @@ The notice says these; confirm each, or change the text (and the version date) w
 - **Social (V1 and V2a)**: the notice covers following, blocking, the follow link and its visitors, the activity followers
   see and the reading page. When V2a adds data (anything new that is stored or shown to others), add it to "What data I
   process" and bump the version date.
+- **Buddy reads**: the notice has a *Buddy reads* paragraph (and lines in the legal basis, "what you show to others", *Other members* and
+  retention) saying the one thing about her reading a co-member sees is her Section, never a page, a percent or a date, only
+  while she is a member of that read. Its date is the release that carries the feature; check it against the plan
+  (`docs/plans/buddy-read-shared.md`, part 5.5) when the feature changes what a co-member sees or what is kept.
 
 ## Whenever the app changes what it does with data
 
