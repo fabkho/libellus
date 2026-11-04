@@ -1,0 +1,80 @@
+<script setup lang="ts">
+// The buddy read invitations waiting for her, as rows at the top of Friends (W3; the twin of Home's follow request): Join or Not now on each.
+// Join answers `answer_buddy_invite` and goes on to "Which copy are you reading?" in a sheet, then to the room; Not now leaves the invitation
+// (nobody is told). Draws nothing, and asks nothing, unless this build has buddy reads and she turned them on (`useBuddyReadsOn`): the list is
+// the light store's (stores/buddyInvites.ts), read when the page opens and whenever the app comes back to the foreground.
+import type { BuddyInvitation } from '~/data/buddyReads'
+import { buddyErrorKey } from '~/utils/buddyRead'
+import { roomPath } from '~/utils/buddyRoute'
+import { useBuddyInvitesStore } from '~/stores/buddyInvites'
+import { useBuddyReadStore } from '~/stores/buddyRead'
+
+const { t } = useI18n()
+const allowed = useBuddyReadsOn()
+const invites = useBuddyInvitesStore()
+const store = useBuddyReadStore()
+const online = useOnline()
+
+onMounted(() => void invites.load())
+
+const busy = ref<string | null>(null)
+const error = ref<string | null>(null)
+/** The invitation she accepted: its copy question is open. */
+const joined = ref<BuddyInvitation | null>(null)
+const copyOpen = ref(false)
+
+async function accept(invitation: BuddyInvitation) {
+  if (busy.value || !allowed.value) return
+  busy.value = invitation.id
+  error.value = null
+  const answer = await store.answerInvite(invitation.id, true)
+  busy.value = null
+  if (answer.error) {
+    error.value = t(buddyErrorKey(answer.error))
+    // It is not there any more (the host removed it, the read ended): the row goes.
+    if (answer.error === 'not_found') invites.drop(invitation.id)
+    return
+  }
+  invites.drop(invitation.id)
+  joined.value = invitation
+  copyOpen.value = true
+}
+async function decline(invitation: BuddyInvitation) {
+  if (busy.value || !allowed.value) return
+  busy.value = invitation.id
+  error.value = null
+  const answer = await store.answerInvite(invitation.id, false)
+  busy.value = null
+  if (answer.error && answer.error !== 'not_found') return void (error.value = t(buddyErrorKey(answer.error)))
+  invites.drop(invitation.id)
+}
+
+function done() {
+  copyOpen.value = false
+  if (joined.value) void navigateTo(roomPath(joined.value.id))
+}
+</script>
+
+<template>
+  <section v-if="allowed && invites.count" class="flex flex-col gap-xs px-screen pt-sm" :aria-label="t('together.invitation.section')" data-testid="buddyInvites">
+    <h2 class="eyebrow">{{ t('together.invitation.section') }}</h2>
+    <ul class="flex flex-col gap-sm">
+      <TogetherInvitationRow
+        v-for="invitation in invites.waiting"
+        :key="invitation.id"
+        :invitation="invitation"
+        :offline="!online"
+        :busy="busy !== null"
+        @accept="accept(invitation)"
+        @decline="decline(invitation)"
+      />
+    </ul>
+    <p v-if="error" class="text-caption text-error" role="alert" data-testid="buddyInvites.error">{{ error }}</p>
+  </section>
+
+  <UiSheet v-if="allowed" v-model:open="copyOpen" :title="t('together.title')" testid="buddyInvitesCopy">
+    <div v-if="joined" class="pt-xs pb-lg">
+      <TogetherEntryPicker :read-id="joined.id" :book="joined.book" @done="done" />
+    </div>
+  </UiSheet>
+</template>

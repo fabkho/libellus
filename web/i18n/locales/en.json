@@ -82,7 +82,9 @@
   "shell": {
     "tabsLabel": "Main navigation",
     "avatarLabel": "Profile: {initials}",
-    "avatarRequest": "Your profile: {initials}, a follow request is waiting"
+    "avatarRequest": "Your profile: {initials}, a follow request is waiting",
+    "avatarInvite": "Your profile: {initials}, a buddy read invitation is waiting",
+    "avatarBoth": "Your profile: {initials}, a follow request and a buddy read invitation are waiting"
   },
   "sync": {
     "chip": "Waiting to sync ({count})",
@@ -2183,7 +2185,9 @@
       "label": "Buddy read options",
       "finish": "Finish this buddy read",
       "archive": "Archive",
-      "hint": "Finishing keeps every thread open for everyone. Archiving makes them read-only."
+      "hint": "Finishing keeps every thread open for everyone. Archiving makes them read-only.",
+      "invite": "Invite readers",
+      "members": "Readers"
     },
     "finish": {
       "title": "Finish this buddy read?",
@@ -2241,6 +2245,153 @@
       "veiledTitle": "Section {n} is hidden",
       "veiledEnd": "The whole book is hidden",
       "veiledText": "It may spoil what you haven’t read yet, so it stays closed until you choose to show it."
+    },
+    "hint": "Everyone reads at their own pace. Comments sit in Sections, and a Section stays hidden until you have read it. The others see which Section you are in, never your page.",
+    "count": {
+      "readers": "{count} reader | {count} readers",
+      "sections": "{count} Section | {count} Sections"
+    },
+    "sections": {
+      "whole": "The whole book"
+    },
+    "setup": {
+      "steps": {
+        "book": "Book",
+        "sections": "Sections",
+        "invite": "Invite"
+      },
+      "stepOf": "Step {step} of {total}",
+      "back": "Back",
+      "next": "Next",
+      "start": "Start buddy read",
+      "starting": "Starting …",
+      "retry": "Try again",
+      "done": "Done",
+      "book": {
+        "intro": "One Book, one room: you and up to 11 friends, each reading at your own pace.",
+        "starts": "Starts",
+        "startsHint": "A day to aim for. Everyone can begin whenever they like."
+      },
+      "sections": {
+        "intro": "Each Section has a thread of its own. A thread stays hidden from a reader until she has read the Section, so nothing gets spoiled.",
+        "from": "Divide by",
+        "byCount": "Parts",
+        "byPages": "Pages",
+        "howMany": "Parts in the book",
+        "howManyHint": "Chapters, or equal parts: 1 to 100. Above 30 you can group them.",
+        "grouping": "Parts in a Section",
+        "per": "1 each | {count} together",
+        "pagesInBook": "Pages in the book",
+        "perPart": "Pages per Section",
+        "problemCount": "Enter a number from 1 to 100.",
+        "problemNoPages": "Enter how many pages the book has.",
+        "problemPages": "That makes more than 100 Sections. Use more pages per Section.",
+        "label": "Section {n}",
+        "pageRange": "Pages {from}–{to}",
+        "summary": "{count} Section, then the whole book | {count} Sections, then the whole book",
+        "more": "{count} more Section | {count} more Sections"
+      },
+      "invite": {
+        "intro": "Invite people you follow now, or later from the room. You can also hand out a link.",
+        "label": "Friends to invite",
+        "link": "Invitation link",
+        "linkOn": "Anyone in BetterReads who has the link can join, up to 12 readers. You can turn it off any time.",
+        "linkOff": "No link. Only the people you invite can join."
+      },
+      "startedTitle": "Your buddy read has started",
+      "startedText": "{title} is ready. The people you invited see it as an invitation.",
+      "invitedCount": "{count} person invited. | {count} people invited.",
+      "skippedCount": "{count} person couldn't be invited. | {count} people couldn't be invited.",
+      "linkText": "Send the link to friends who use BetterReads:",
+      "openRoom": "Open the room",
+      "openExisting": "Open your buddy read of this book"
+    },
+    "link": {
+      "pageTitle": "Buddy read",
+      "loading": "Opening the link …",
+      "eyebrow": "Buddy read",
+      "hostedBy": "{name} is hosting this buddy read.",
+      "invitedBy": "{name} invited you to this buddy read.",
+      "join": "Join",
+      "joining": "Joining …",
+      "notNow": "Not now",
+      "missingTitle": "This link doesn't work anymore",
+      "missing": "Ask the person who sent it for a new link, or for an invitation.",
+      "memberTitle": "You're in this buddy read",
+      "memberText": "You already joined {title}.",
+      "openRoom": "Open the room",
+      "joinedTitle": "You joined {title}",
+      "share": "Share link",
+      "copy": "Copy",
+      "copied": "Copied.",
+      "failed": "Couldn't copy the link. Select it and copy by hand.",
+      "shareText": "Read {title} with me on BetterReads"
+    },
+    "turnOn": {
+      "title": "Turn on Buddy reads?",
+      "text": "Buddy reads are off on this device. Turn them on to see this buddy read and join it.",
+      "action": "Turn on"
+    },
+    "invitation": {
+      "section": "Buddy read invitations",
+      "line": "{name} invited you to read {title} together",
+      "accept": "Join",
+      "decline": "Not now",
+      "acceptLabel": "Join {title}",
+      "declineLabel": "Not now: {title}"
+    },
+    "invite": {
+      "title": "Invite",
+      "linkSection": "Link",
+      "linkSwitch": "Invitation link",
+      "linkOn": "Anyone in BetterReads who has the link can join, up to 12 readers.",
+      "linkOff": "The link is off. Only the people you invite can join.",
+      "renew": "New link",
+      "renewTitle": "Make a new link?",
+      "renewText": "The link you sent before stops working at once. People who joined stay.",
+      "friendsSection": "Friends",
+      "send": "Invite {count} person | Invite {count} people",
+      "sendNone": "Invite"
+    },
+    "picker": {
+      "empty": "You don't follow anyone yet. Follow friends first, or share the link once the read has started.",
+      "more": "Show more",
+      "offline": "You're offline. Your friends show once you're back.",
+      "allIn": "Everyone you follow is in this buddy read already, or invited."
+    },
+    "members": {
+      "title": "Readers",
+      "you": "you",
+      "host": "Host",
+      "inSection": "Section {n}",
+      "wholeBook": "The whole book",
+      "notSet": "Not set",
+      "invited": "Invited",
+      "moreLabel": "Options for {name}",
+      "remove": "Remove",
+      "removeTitle": "Remove {name}?",
+      "removeText": "They can't join again, not even with the link, until you invite them again.",
+      "withdraw": "Withdraw",
+      "withdrawTitle": "Withdraw the invitation to {name}?",
+      "withdrawText": "They stay out, even with the link, until you invite them again.",
+      "leave": "Leave buddy read",
+      "leaveTitle": "Leave this buddy read?",
+      "leaveText": "You stop seeing the room and the others stop seeing your Section. You can join again by the link or a new invitation.",
+      "leaveHostText": "You are the host. The buddy read passes to the reader who joined first.",
+      "leaveLastText": "You are the last one. The buddy read ends and is deleted with its messages.",
+      "deleteMine": "Also delete the messages I wrote",
+      "privacy": "The others see which Section you are in, never your page."
+    },
+    "copy": {
+      "title": "Which copy are you reading?",
+      "text": "Your Section follows your reading of the copy you pick. The others see the Section only, never your page.",
+      "noneInLibrary": "This Book isn't in your Library yet. Add it and your Section follows your reading, or set where you are by hand in the room.",
+      "openBook": "Open the book",
+      "none": "I'm not tracking it here",
+      "noneText": "Set where you are by hand in the room.",
+      "save": "Save",
+      "skip": "Not now",
+      "pages": "{count} page | {count} pages"
     }
   },
   "uiText": {

@@ -9,9 +9,10 @@
 // same row under their UiTopBar. The title's test ID is `<screen>.title`. The
 // avatar shows her photo (the small copy, #156) where she has one. While a follow request waits
 // (social v1, U3) a small lamp-coloured dot sits on the avatar and its name says so: no number, no
-// badge. Her settings (which carry the count) are read once when the shell starts and again whenever
+// badge; a buddy read invitation (W3, stores/buddyInvites.ts) lights the same dot. Her settings (which carry the count) are read once when the shell starts and again whenever
 // the app comes back to the foreground, online only (stores/social.ts).
 import { useAvatarStore } from '~/stores/avatar'
+import { useBuddyInvitesStore } from '~/stores/buddyInvites'
 import { useSessionStore } from '~/stores/session'
 import { useSocialStore } from '~/stores/social'
 
@@ -28,12 +29,29 @@ onMounted(() => void avatar.load())
 
 const social = useSocialStore()
 const online = useOnline()
+// A buddy read invitation lights the same lamp (only in a build with buddy reads, and only while she has them on: the store asks nothing else).
+const invites = useBuddyInvitesStore()
 const requestWaits = computed(() => social.requests > 0)
+const inviteWaits = computed(() => invites.count > 0)
+const avatarLabel = computed(() =>
+  requestWaits.value && inviteWaits.value
+    ? t('shell.avatarBoth', { initials: initials.value })
+    : requestWaits.value
+      ? t('shell.avatarRequest', { initials: initials.value })
+      : inviteWaits.value
+        ? t('shell.avatarInvite', { initials: initials.value })
+        : t('shell.avatarLabel', { initials: initials.value }),
+)
 function refreshRequests() {
-  if (document.visibilityState === 'visible' && online.value) void social.load(true)
+  if (document.visibilityState !== 'visible' || !online.value) return
+  void social.load(true)
+  void invites.load()
 }
 onMounted(() => {
-  if (online.value) void social.load()
+  if (online.value) {
+    void social.load()
+    void invites.load()
+  }
   document.addEventListener('visibilitychange', refreshRequests)
 })
 onUnmounted(() => document.removeEventListener('visibilitychange', refreshRequests))
@@ -50,14 +68,14 @@ onUnmounted(() => document.removeEventListener('visibilitychange', refreshReques
              what she sees (WCAG 2.5.3, label in name). -->
         <NuxtLink
           to="/profile"
-          :aria-label="requestWaits ? t('shell.avatarRequest', { initials }) : t('shell.avatarLabel', { initials })"
+          :aria-label="avatarLabel"
           class="-mr-sm flex shrink-0 size-(--size-touch) items-center justify-center"
           data-testid="shell.avatar"
         >
           <span class="relative flex">
             <UiAvatar :initials="initials" :photo="avatar.small" data-profile-avatar />
             <Transition name="dot">
-              <span v-if="requestWaits" class="request-dot pointer-events-none absolute rounded-pill bg-accent" aria-hidden="true" data-testid="shell.avatarDot" />
+              <span v-if="requestWaits || inviteWaits" class="request-dot pointer-events-none absolute rounded-pill bg-accent" aria-hidden="true" data-testid="shell.avatarDot" />
             </Transition>
           </span>
         </NuxtLink>
