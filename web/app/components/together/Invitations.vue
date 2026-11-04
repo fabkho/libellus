@@ -9,19 +9,25 @@ import { roomPath } from '~/utils/buddyRoute'
 import { useBuddyInvitesStore } from '~/stores/buddyInvites'
 import { useBuddyReadStore } from '~/stores/buddyRead'
 
+// Props: `bare` (inside Home's "Reading together" card, which has its own heading and spacing: no padding of its own, the heading is spoken only),
+// `load` (default true: read the list on mounting; Home reads `my_buddy_reads()` itself and hands the answer over, so it passes false),
+// v-model:copying (the copy question's sheet is open).
+const props = withDefaults(defineProps<{ bare?: boolean; load?: boolean }>(), { bare: false, load: true })
+
 const { t } = useI18n()
 const allowed = useBuddyReadsOn()
 const invites = useBuddyInvitesStore()
 const store = useBuddyReadStore()
 const online = useOnline()
 
-onMounted(() => void invites.load())
+onMounted(() => props.load && void invites.load())
 
 const busy = ref<string | null>(null)
 const error = ref<string | null>(null)
 /** The invitation she accepted: its copy question is open. */
 const joined = ref<BuddyInvitation | null>(null)
-const copyOpen = ref(false)
+/** The "Which copy are you reading?" sheet is open. v-model:copying lets a card that holds this component stay while it is (Home's hides itself with nothing to show). */
+const copyOpen = defineModel<boolean>('copying', { default: false })
 
 async function accept(invitation: BuddyInvitation) {
   if (busy.value || !allowed.value) return
@@ -56,8 +62,8 @@ function done() {
 </script>
 
 <template>
-  <section v-if="allowed && invites.count" class="flex flex-col gap-xs px-screen pt-sm" :aria-label="t('together.invitation.section')" data-testid="buddyInvites">
-    <h2 class="eyebrow">{{ t('together.invitation.section') }}</h2>
+  <section v-if="allowed && invites.count" class="flex flex-col gap-xs" :class="!bare && 'px-screen pt-sm'" :aria-label="t('together.invitation.section')" data-testid="buddyInvites">
+    <h2 :class="bare ? 'sr-only' : 'eyebrow'">{{ t('together.invitation.section') }}</h2>
     <ul class="flex flex-col gap-sm">
       <TogetherInvitationRow
         v-for="invitation in invites.waiting"

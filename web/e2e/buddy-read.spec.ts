@@ -2,7 +2,8 @@ import type { BrowserContextOptions, Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { BUDDY_READS_KEY } from '../app/utils/buddyReadsSwitch'
-import { buddyOf, follows, joinRead, startRead } from '../tests/support/buddy'
+import { buddyOf, follows, joinRead, sectionsOf, shelve, startRead } from '../tests/support/buddy'
+import { signUpMember } from '../tests/support/member'
 import { sql } from '../tests/support/stack'
 import { expectAccessible, goto, signedIn, untilStill } from './support'
 
@@ -147,4 +148,81 @@ test('Ida starts a buddy read, Anna joins, a message arrives live, a Section sta
   } finally {
     await context.close()
   }
+})
+
+/**
+ * The entry points (W5): with her switch off (the default) the Book page has no *Read together* row, Home has no card and no "..." on a Currently
+ * reading card, and nothing asks the server for her buddy reads; with it on the row, the "..." and the setup sheet they open appear, and once she is in
+ * a read the Book page's row opens its room and Home's card lists it with what is new, an invitation above it.
+ */
+test('the Book page row and the Home card appear with the switch on and not before @full', { tag: '@full' }, async ({ page }) => {
+  test.slow()
+  const ida = await signedIn(page)
+  const anna = await signUpMember()
+  await sql(`update auth.users set raw_user_meta_data = raw_user_meta_data || jsonb_build_object('name', 'Anna') where id = $1`, [anna.id])
+  const entry = await shelve(ida, 'The Entry Book')
+  const asked: string[] = []
+  page.on('request', (request) => {
+    if (/rpc\/my_buddy_reads/.test(request.url())) asked.push(request.url())
+  })
+
+  // Off: no row, no card, no "...", no call.
+  await goto(page, `/book/${entry.book.id}`)
+  await expect(page.getByTestId('book.actions')).toBeVisible()
+  await untilStill(page)
+  await expect(page.getByTestId('book.together')).toHaveCount(0)
+  await goto(page, '/')
+  await expect(page.getByTestId('home.readingCard')).toBeVisible()
+  await untilStill(page)
+  await expect(page.getByTestId('home.together.more')).toHaveCount(0)
+  await expect(page.getByTestId('home.together')).toHaveCount(0)
+  expect(asked, 'buddy RPCs with the switch off').toEqual([])
+
+  // On: the "..." on the card opens its menu, and Read together opens the setup sheet.
+  await page.evaluate((key) => localStorage.setItem(key, 'on'), BUDDY_READS_KEY)
+  await goto(page, '/')
+  await expect(page.getByTestId('home.together.more')).toBeVisible()
+  await expect(page.getByTestId('home.together')).toHaveCount(0)
+  await page.getByTestId('home.together.more').click()
+  await expect(page.getByTestId('homeTogetherMenu.start')).toBeVisible()
+  await page.getByTestId('homeTogetherMenu.start').click()
+  await expect(page.getByTestId('buddySetup')).toBeVisible()
+  await page.getByTestId('buddySetup.cancel').click()
+  await expect(page.getByTestId('buddySetup')).toBeHidden()
+
+  // The Book page: the row under the actions opens the same sheet.
+  await goto(page, `/book/${entry.book.id}`)
+  await expect(page.getByTestId('book.together.start')).toBeVisible()
+  await expect(page.getByTestId('book.together.start')).toContainText(en.together.entry.start)
+  await page.getByTestId('book.together.start').click()
+  await expect(page.getByTestId('buddySetup')).toBeVisible()
+  await page.getByTestId('buddySetup.cancel').click()
+
+  // A read of this Book, and Anna writes in its room: the row opens the room, Home's card says one is new.
+  await follows(ida, anna)
+  const made = await buddyOf(ida).create({ bookId: entry.book.id, clientId: crypto.randomUUID(), sections: sectionsOf(3), invite: [], link: true })
+  if (made.error) throw new Error(`Fixture failed: ${made.error}`)
+  await joinRead(anna, made.data.linkToken!)
+  const posted = await buddyOf(anna).post({ readId: made.data.id, sectionId: null, clientId: crypto.randomUUID(), body: 'Hello from the room' })
+  if (posted.error) throw new Error(`Fixture failed: ${posted.error}`)
+  await goto(page, '/')
+  await expect(page.getByTestId('home.togetherRow')).toHaveCount(1)
+  await expect(page.getByTestId('home.togetherRow')).toContainText('The Entry Book')
+  await expect(page.getByTestId('home.togetherRow').getByTestId('together.unread')).toContainText('1')
+  // Its "..." offers the room, not a second read.
+  await page.getByTestId('home.together.more').click()
+  await expect(page.getByTestId('homeTogetherMenu.open')).toBeVisible()
+  await expect(page.getByTestId('homeTogetherMenu.start')).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  // An invitation of Anna's waits above the rows.
+  await follows(anna, ida)
+  await startRead(anna, { title: 'Anna Picks', invite: [ida.id] })
+  await goto(page, '/')
+  await expect(page.getByTestId('buddyInvite.row')).toHaveCount(1)
+  await expect(page.getByTestId('buddyInvite.row')).toContainText('Anna Picks')
+  await goto(page, `/book/${entry.book.id}`)
+  await expect(page.getByTestId('book.together.open')).toBeVisible()
+  await expect(page.getByTestId('book.together.start')).toHaveCount(0)
+  await page.getByTestId('book.together.open').click()
+  await expect(page).toHaveURL(new RegExp(`/together/${made.data.id}$`))
 })

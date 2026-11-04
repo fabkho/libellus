@@ -9,12 +9,23 @@
 import { useLibraryStore } from '~/stores/library'
 import { useFriendsBooksStore } from '~/stores/friendsBooks'
 import { useSessionStore } from '~/stores/session'
+import type { LibraryEntry } from '~/data/library'
 
 definePageMeta({ layout: 'tabs', screen: 'home', titleSize: 'title', dated: true, greeting: true, keepalive: true })
 
 const { t } = useI18n()
 const library = useLibraryStore()
 const session = useSessionStore()
+
+// Buddy reads (docs/plans/buddy-read-shared.md W5): the "Reading together" card and a Currently reading card's "..." exist only in a build that has
+// them and while her switch is on; otherwise nothing of them is drawn or loaded and nothing asks the server (both are lazy components).
+const togetherOn = useBuddyReadsOn()
+const togetherEntry = ref<LibraryEntry | null>(null)
+const togetherMenu = ref(false)
+function togetherFor(entry: LibraryEntry) {
+  togetherEntry.value = entry
+  togetherMenu.value = true
+}
 
 // What the cards, the tally and Want to read show: held while a sheet is on screen
 // (a Finish's card stays while the sheet falls away, then collapses) and while
@@ -65,6 +76,8 @@ watch(
 <template>
   <div v-if="empty" class="flex flex-col gap-xl">
     <HomeEmpty />
+    <!-- Buddy read invitations wait for a new member too (a read starts from her Library, but she may be asked to join one). -->
+    <LazyHomeTogether v-if="togetherOn" />
     <!-- A new member who follows someone, or has a request, sees her friends here too; it shows nothing otherwise, and arrives last (UiReveal). -->
     <HomeFriends />
   </div>
@@ -80,12 +93,22 @@ watch(
         <span v-if="reading.length" class="eyebrow text-ink-faint" data-testid="home.readingCount">{{ reading.length }}</span>
       </div>
       <UiListMotion class="flex flex-col gap-ms">
-        <HomeReadingCard v-for="(entry, index) in reading" :key="entry.id" :entry="entry" :eager="index < 3" :friends="friendsReading[entry.book.id]" />
+        <HomeReadingCard
+          v-for="(entry, index) in reading"
+          :key="entry.id"
+          :entry="entry"
+          :eager="index < 3"
+          :friends="friendsReading[entry.book.id]"
+          @together="togetherFor"
+        />
       </UiListMotion>
       <Transition name="after-leave">
         <p v-if="!reading.length" class="text-subhead text-ink-muted" data-testid="home.readingEmpty">{{ t('home.readingEmpty') }}</p>
       </Transition>
     </section>
+
+    <!-- Buddy reads (W5): her active reads and the invitations that wait, read when Home is on screen; nothing with the switch off. -->
+    <LazyHomeTogether v-if="togetherOn" />
 
     <HomeTally :year="library.readInYearOf" :count="readInYear" @open="tallyOpen = true" />
 
@@ -95,6 +118,7 @@ watch(
     <!-- Last of all, for the same reason: it arrives after the lists and moves nothing above it. -->
     <HomeFriends />
     <HomeTallySheet v-model:open="tallyOpen" :year="library.readInYearOf" :restore="tallyRestore" />
+    <LazyHomeTogetherMenu v-if="togetherOn" v-model:open="togetherMenu" :entry="togetherEntry" />
   </div>
 
   <div v-else-if="library.loadError" class="px-lg pt-xxl text-center" data-testid="home.loadError">
