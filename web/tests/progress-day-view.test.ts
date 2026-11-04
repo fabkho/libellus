@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { dayFromPicker, dayPillsOf, dayRangeOf, offersDays } from '@/data/progressDayView'
-import { dayBoundsOf, type ProgressDay } from '@/data/progressDays'
+import { addDayOf, dayFromPicker, dayPillsOf, dayRangeOf, LOG_ROWS, logRowOf, logRowsOf, offersDays } from '@/data/progressDayView'
+import { dayBoundsOf, readingLogOf, type ProgressDay } from '@/data/progressDays'
 import { addDays } from '@/utils/dates'
 
 /**
@@ -108,5 +108,49 @@ describe('the range line', () => {
   it('never reaches above the wheel\'s own ceiling', () => {
     const bounds = dayBoundsOf(chain, ago(2), page(140), 480, 'page')
     expect(dayRangeOf(chain, ago(2), bounds, 120).to).toEqual({ kind: 'day', day: ago(1), value: 120 })
+  })
+})
+
+describe('the reading log\'s rows', () => {
+  it('draw a day that went back as a negative size, not "+-6": the sign is the row\'s, the size is not', () => {
+    expect(logRowOf({ day: ago(2), amount: -6, end: 94 })).toEqual({ day: ago(2), amount: -6, end: 94, back: true, size: 6 })
+    expect(logRowOf({ day: ago(1), amount: 18, end: 112 })).toMatchObject({ back: false, size: 18 })
+  })
+
+  it('list a day that went back (R12) and keep a day that read nothing out, newest first', () => {
+    // 6 days ago 0 → 40, 4 days ago 40 → 34 (went back), 2 days ago 34 → 34 (nothing: no row), yesterday 34 → 60.
+    const days = [row(6, null, 40), row(4, 40, 34), row(2, 34, 34), row(1, 34, 60)]
+    const log = readingLogOf(days, 480)
+    expect(log.map((d) => d.day)).toEqual([ago(1), ago(4), ago(6)])
+    expect(logRowsOf(log).rows.map((r) => [r.back, r.size])).toEqual([[false, 26], [true, 6], [false, 40]])
+  })
+
+  it('show the newest fourteen and count the rest; all of them once asked for', () => {
+    const log = Array.from({ length: 31 }, (_, i) => ({ day: ago(i + 1), amount: 5, end: 100 - i }))
+    const view = logRowsOf(log)
+    expect(view.rows).toHaveLength(LOG_ROWS)
+    expect(view.rows[0]!.day).toBe(ago(1))
+    expect(view.more).toBe(31 - LOG_ROWS)
+    expect(logRowsOf(log, true)).toMatchObject({ more: 0 })
+    expect(logRowsOf(log, true).rows).toHaveLength(31)
+    expect(logRowsOf(log.slice(0, 14))).toMatchObject({ more: 0 })
+  })
+})
+
+describe('Add day', () => {
+  it('opens on the newest day before today without an entry, not before the read began', () => {
+    // Days 6, 4 and 1 ago have an entry: 2 ago is the newest empty one.
+    expect(addDayOf(chain, ago(20), today)).toBe(ago(2))
+    const full = [row(3, null, 10), row(2, 10, 20), row(1, 20, 30)]
+    expect(addDayOf(full, ago(5), today)).toBe(ago(4))
+    expect(addDayOf([...full, row(4, 5, 10), row(5, null, 5)], ago(5), today)).toBe(ago(1))
+  })
+
+  it('falls back to yesterday when every day since the start has one (its sheet then edits it)', () => {
+    expect(addDayOf([row(2, null, 10), row(1, 10, 20)], ago(2), today)).toBe(ago(1))
+  })
+
+  it('is not offered for a read that began today', () => {
+    expect(addDayOf([], today, today)).toBeNull()
   })
 })
