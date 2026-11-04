@@ -22,7 +22,6 @@ const { t } = useI18n()
 const store = useBuddyReadStore()
 const session = useSessionStore()
 const online = useOnline()
-const allowed = useBuddyReadsOn()
 
 const read = computed(() => store.reads[props.readId] ?? null)
 const me = computed(() => session.member?.id ?? null)
@@ -40,7 +39,7 @@ const deleteMine = ref(false)
 watch(open, (isOpen) => {
   if (isOpen) {
     error.value = null
-    if (allowed.value) void store.load(props.readId)
+    void store.load(props.readId)
   } else {
     removing.value = null
     leaving.value = false
@@ -100,7 +99,7 @@ const leaveText = computed(() =>
 </script>
 
 <template>
-  <UiSheet v-if="allowed" v-model:open="open" :title="t('together.members.title')" :action="t('together.setup.done')" :cancel="false" testid="buddyMembers" @action="open = false">
+  <UiSheet v-model:open="open" :title="t('together.members.title')" :action="t('together.setup.done')" :cancel="false" testid="buddyMembers" @action="open = false">
     <div v-if="read" class="flex flex-col gap-md pt-xs pb-lg">
       <ul class="flex flex-col divide-y divide-hairline" :aria-label="t('together.members.title')">
         <li v-for="row in rows" :key="row.member.id" class="flex min-h-(--size-row) items-center gap-ms py-xs" data-testid="buddyMembers.row">

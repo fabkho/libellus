@@ -508,7 +508,7 @@ End-to-end tests are worth their cost only for **critical paths**, and a flow ex
 4. what leaves the app: the public reading page, a Book card and the waitlist form;
 5. deleting the account;
 6. (when it lands) the social loop;
-7. a buddy read, the one flow `web/e2e/buddy-read.spec.ts` (`@full`): two members in two browsers, a message that arrives live, a Section that stays veiled until "Show anyway", a removed message. The flows' build carries the feature (`NUXT_PUBLIC_BUDDY_READS=on` in `web/e2e/build.ts` and `appEnv.ts`); each member turns her own switch on on the device. It sets the read up through the RPCs, so it does not wait for the setup screens.
+7. a buddy read, the one flow `web/e2e/buddy-read.spec.ts` (`@full`): two members in two browsers, a message that arrives live, a Section that stays veiled until "Show anyway", a removed message. Buddy reads are for every member (no build flag, no switch), so the flows need nothing set up. It sets the read up through the RPCs; the entry points have their own flows in the same file, a Book that is not in her Library going through the setup sheet (the Book becomes Currently reading, the room exists) and the Book page's action in every state of the Book.
 8. progress on an earlier day, the two specs `web/e2e/progress-earlier-day.spec.ts` (the sheet) and `web/e2e/reading-log-edit.spec.ts` (the Reading log): a write path through four screens (the sheet, the log, Home's card, the Profile) and the outbox, whose result is read back from the database. They are flows because what they prove is the chain, not a rule (*Progress on an earlier day*, below).
 
 Everything else is tested where it is cheapest: rules in pgTAP (`supabase/tests/`), logic in Vitest

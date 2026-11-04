@@ -19,7 +19,6 @@ export default defineNuxtRouteMiddleware((to) => {
   if (isPublicPath(path)) return
 
   const session = useSessionStore()
-  const buddyReads = useBuddyReadsFlag()
 
   if (session.status === 'signedIn') {
     if (import.meta.client && path !== '/share' && peekShare(window.localStorage)) return navigateTo('/share', { replace: true })
@@ -27,8 +26,8 @@ export default defineNuxtRouteMiddleware((to) => {
     if (import.meta.client) {
       const follow = followToOpen(path, peekFollow(window.localStorage), !!peekShare(window.localStorage))
       if (follow) return navigateTo(follow, { replace: true })
-      // A buddy read link (W3, pages/t/[token].vue) kept the same way: after a share or a follow link that waits, and only in a build that has them.
-      const joining = buddyReads ? buddyReadToOpen(path, peekBuddyRead(window.localStorage), !!peekShare(window.localStorage) || !!peekFollow(window.localStorage)) : null
+      // A buddy read link (W3, pages/t/[token].vue) kept the same way: after a share or a follow link that waits.
+      const joining = buddyReadToOpen(path, peekBuddyRead(window.localStorage), !!peekShare(window.localStorage) || !!peekFollow(window.localStorage))
       if (joining) return navigateTo(joining, { replace: true })
     }
     return AUTH_ROUTES.includes(path) ? navigateTo('/') : undefined
@@ -36,6 +35,6 @@ export default defineNuxtRouteMiddleware((to) => {
 
   // A share (issue #91), a follow link or a buddy read link that came before the sign-in is kept on the device and
   // opened once the member is in, wherever the sign-in sends her first.
-  const destination = signedOutDestination(to, { pending: !!session.pending, storage: import.meta.client ? window.localStorage : null, buddyReads })
+  const destination = signedOutDestination(to, { pending: !!session.pending, storage: import.meta.client ? window.localStorage : null })
   if (destination) return navigateTo(destination)
 })

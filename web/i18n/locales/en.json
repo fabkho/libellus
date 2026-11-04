@@ -246,26 +246,11 @@
       "signOut": "Sign out anyway",
       "failed": "Not everything could be synced. Try again, or sign out anyway."
     },
-    "buddyReadsOff": {
-      "title": "Leave your buddy reads and turn off?",
-      "titleInvitations": "Decline your invitations and turn off?",
-      "rooms": "You're in {count} buddy read. Turning Buddy reads off would only hide it: its members would still see your Section. Leaving it stops that, and you can only come back by a link or a new invitation. | You're in {count} buddy reads. Turning Buddy reads off would only hide them: their members would still see your Section. Leaving them stops that, and you can only come back by a link or a new invitation.",
-      "invitations": "{count} invitation will be declined. | {count} invitations will be declined.",
-      "action": "Leave and turn off",
-      "actionInvitations": "Decline and turn off",
-      "keep": "Keep on",
-      "deleteMine": "Also delete my messages",
-      "deleteHint": "Unticked, your messages stay in the room. Ticked, they are deleted from every buddy read you leave. You can't change this afterwards."
-    },
     "account": {
       "title": "Account",
       "theme": "Dark mode",
       "glass": "Glass",
       "friendsTab": "Friends tab",
-      "buddyReads": "Buddy reads",
-      "buddyReadsHint": "Read one Book with friends. Its other members see which Section you are in, never your page.",
-      "buddyReadsIn": "You're in {count} buddy read | You're in {count} buddy reads",
-      "buddyReadsCheckFailed": "Couldn't check your buddy reads, so the switch stays on. Check your connection and try again.",
       "glassLevel": {
         "strong": "Strong",
         "medium": "Medium",
@@ -2371,7 +2356,8 @@
       "skippedCount": "{count} person couldn't be invited. | {count} people couldn't be invited.",
       "linkText": "Send the link to friends who use BetterReads:",
       "openRoom": "Open the room",
-      "openExisting": "Open your buddy read of this book"
+      "openExisting": "Open your buddy read of this book",
+      "adds": "Starting a buddy read adds this book to your Library as Currently reading. Nothing is added if you cancel."
     },
     "link": {
       "pageTitle": "Buddy read",
@@ -2394,15 +2380,11 @@
       "failed": "Couldn't copy the link. Select it and copy by hand.",
       "shareText": "Read {title} with me on BetterReads"
     },
-    "turnOn": {
-      "title": "Turn on Buddy reads?",
-      "text": "Buddy reads are off on this device. Turn them on to see this buddy read and join it.",
-      "action": "Turn on"
-    },
     "entry": {
       "start": "Read together",
-      "hint": "Read this book with people you follow, a Section at a time. They see which Section you are in, never your page.",
-      "open": "Buddy read",
+      "hint": "Read this book with friends, a Section at a time.",
+      "adds": "Starting a buddy read adds this book to Currently reading.",
+      "unavailable": "A book you added yourself can’t be read together.",
       "openRoom": "Open the buddy read",
       "moreLabel": "Buddy read options: {title}",
       "unread": "{count} new"

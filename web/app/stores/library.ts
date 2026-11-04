@@ -509,6 +509,27 @@ export const useLibraryStore = defineStore('library', () => {
     return { entry: result.data }
   }
 
+  /**
+   * Starting a buddy read of a Book that is not in her Library (docs/parity.md, *Buddy read, the Book page action*): the setup sheet adds it as
+   * Currently reading, starting today, when she presses Start, and only then. The Book she already holds is her entry as it is. Online only: a
+   * buddy read needs the entry's Catalogue Book at once, which an add waiting in the outbox does not give. Refused for a Manual book.
+   * Returns the entry, or the code.
+   */
+  async function addReading(book: BookSnapshot | Book): Promise<{ entry: LibraryEntry } | { error: LibraryErrorCode }> {
+    const repo = library()
+    if (!repo) return { error: 'unknown' }
+    if ('id' in book) {
+      const held = entryForBook(book.id)
+      if (held) return { entry: held }
+    }
+    if (book.source === 'manual') return { error: 'book_invalid' }
+    if (!isOnline()) return { error: 'offline' }
+    const result = await repo.addToLibrary(await withCover(book), { status: 'reading', startedOn: isoDay() })
+    if (result.error) return { error: result.error }
+    entryChanged(result.data, bookKey(book))
+    return { entry: result.data }
+  }
+
   // ----------------------------------------------------------- descriptions
 
   /**
@@ -763,6 +784,7 @@ export const useLibraryStore = defineStore('library', () => {
     addBusy,
     addError,
     openAdd,
+    addReading,
     closeAdd,
     confirmAdd,
     addWantToRead,

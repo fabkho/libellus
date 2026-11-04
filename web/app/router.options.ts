@@ -59,14 +59,7 @@ export default {
         return
       }
       if (!knownSignedOut(storage)) return
-      // The build's flag (composables/useBuddyReadsFlag.ts): a buddy read link is kept through the sign-in only where there are buddy reads.
-      let buddyReads = false
-      try {
-        buddyReads = useNuxtApp().$config.public.buddyReads === 'on'
-      } catch {
-        // No app to ask yet: the middleware keeps the link on its own run.
-      }
-      return signedOutDestination(to, { pending: false, storage, buddyReads })
+      return signedOutDestination(to, { pending: false, storage })
     }
     return routes.map((route) => ({ ...route, beforeEnter: [early, ...(route.beforeEnter ? [route.beforeEnter].flat() : [])] }))
   },

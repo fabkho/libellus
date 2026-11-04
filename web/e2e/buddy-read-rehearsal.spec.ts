@@ -1,7 +1,6 @@
-import type { Locator, Page } from '@playwright/test'
+import type { Locator } from '@playwright/test'
 import { expect, test } from './fixtures'
 import en from '../i18n/locales/en.json' with { type: 'json' }
-import { BUDDY_READS_KEY } from '../app/utils/buddyReadsSwitch'
 import { buddyOf, follows, joinRead, startRead } from '../tests/support/buddy'
 import { signUpMember } from '../tests/support/member'
 import { sql } from '../tests/support/stack'
@@ -17,10 +16,6 @@ import { goto, signedIn } from './support'
  */
 
 test.use({ colorScheme: 'dark' })
-
-async function switchedOn(page: Page) {
-  await page.addInitScript((key) => localStorage.setItem(key, 'on'), BUDDY_READS_KEY)
-}
 
 const named = async (member: { id: string }, name: string) =>
   sql(`update auth.users set raw_user_meta_data = raw_user_meta_data || jsonb_build_object('name', $2::text) where id = $1`, [member.id, name])
@@ -44,7 +39,6 @@ async function runsOf(messages: Locator) {
 
 test('a room of three: two other members writing one after the other are two runs, each with its own name and its own face @full', { tag: '@full' }, async ({ page: hanna }) => {
   test.slow()
-  await switchedOn(hanna)
   const h = await signedIn(hanna)
   const [m, b] = [await signUpMember(), await signUpMember()]
   await named(h, 'Hanna')
@@ -85,7 +79,6 @@ test('a room of three: two other members writing one after the other are two run
 
 test('removed while the room or a thread is open: "not available" at once, with no reload, and the way Home @full', { tag: '@full' }, async ({ page: mara }) => {
   test.slow()
-  await switchedOn(mara)
   const mm = await signedIn(mara)
   const h = await signUpMember()
   await named(mm, 'Mara')
@@ -109,7 +102,6 @@ test('removed while the room or a thread is open: "not available" at once, with 
 })
 
 test('entering a thread with the keyboard puts the focus in it; the link page loads on the static server, and does not send a referrer @full', { tag: '@full' }, async ({ page: mara }) => {
-  await switchedOn(mara)
   const mm = await signedIn(mara)
   const h = await signUpMember()
   await follows(h, mm)

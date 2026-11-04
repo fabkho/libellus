@@ -24,7 +24,6 @@ import { useSearchStore } from '~/stores/search'
 import { useReaderStore } from '~/stores/reader'
 import { useReadingStore } from '~/stores/reading'
 import { bookPageKey, followEdition } from '~/utils/bookPageKey'
-import { canReadTogether } from '~/utils/buddyEntry'
 import { onIdle } from '~/utils/idle'
 import { afterMotion } from '#layers/ui/app/utils/motion'
 import { loadReader, prefetchReader } from '~/utils/readerChunks'
@@ -197,8 +196,6 @@ const coverFallback = ref(false)
 const clothColor = computed(() => (book.value ? `var(--color-cloth${clothOf(book.value.title)})` : null))
 
 const optionsOpen = ref(false)
-// Buddy reads: only in a build that has them and while her switch is on (composables/useBuddyReadsOn.ts).
-const togetherOn = useBuddyReadsOn()
 
 // Read now (#131 phase 2): the linked copy, when it is on this device.
 const ebooks = useEbooksStore()
@@ -357,14 +354,13 @@ function back() {
       >
         <UiIcon name="repeat" :size="18" />{{ notFinished ? t('book.startAgain') : t('book.readAgain') }}
       </UiButton>
+      <!-- Read together (buddy reads): on every Book page, in her Library or not, in the action area, right under the Book's one action. -->
+      <TogetherBookRow :book="book" :entry="entry" />
       <!-- Its ebook on this device, when one is linked (#131); a finished or abandoned Book opens in the reader from here. -->
       <BookEbook v-if="entry" :entry="entry" :read="Boolean(ebook) && entry.status !== 'want_to_read' && entry.status !== 'reading'" @read="read(entry)" />
       <!-- The reader's code could not be brought in (docs/perf/bundle.md F6): say so, where a tap used to do nothing. -->
       <p v-if="readFailed" class="mt-sm text-center text-caption text-error" role="alert" data-testid="book.readFailed">{{ t('book.readFailed') }}</p>
     </div>
-
-    <!-- Read together (buddy reads, W5): under the actions, for a Catalogue Book in her Library, with the build's flag and her switch on; else not there. -->
-    <LazyTogetherBookRow v-if="entry && togetherOn && canReadTogether(entry.book)" :entry="entry" />
 
     <BookProgressLog v-if="entry?.status === 'reading'" :entry="entry" />
     <CollectionsBookRow v-if="book" :book="book" :entry="entry" :book-key="key" />

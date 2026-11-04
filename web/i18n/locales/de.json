@@ -246,26 +246,11 @@
       "signOut": "Trotzdem abmelden",
       "failed": "Nicht alles konnte synchronisiert werden. Versuch es nochmal oder melde dich trotzdem ab."
     },
-    "buddyReadsOff": {
-      "title": "Buddy-Reads verlassen und ausschalten?",
-      "titleInvitations": "Deine Einladungen ablehnen und ausschalten?",
-      "rooms": "Du bist in {count} Buddy-Read. Ausschalten würde ihn nur ausblenden: Seine Mitglieder sähen weiter deinen Abschnitt. Wenn du ihn verlässt, hört das auf, und du kommst nur über einen Link oder eine neue Einladung zurück. | Du bist in {count} Buddy-Reads. Ausschalten würde sie nur ausblenden: Ihre Mitglieder sähen weiter deinen Abschnitt. Wenn du sie verlässt, hört das auf, und du kommst nur über einen Link oder eine neue Einladung zurück.",
-      "invitations": "{count} Einladung wird abgelehnt. | {count} Einladungen werden abgelehnt.",
-      "action": "Verlassen und ausschalten",
-      "actionInvitations": "Ablehnen und ausschalten",
-      "keep": "Eingeschaltet lassen",
-      "deleteMine": "Auch meine Nachrichten löschen",
-      "deleteHint": "Ohne Haken bleiben deine Nachrichten im Raum. Mit Haken werden sie in jedem Buddy-Read gelöscht, den du verlässt. Das lässt sich danach nicht mehr ändern."
-    },
     "account": {
       "title": "Konto",
       "theme": "Dunkelmodus",
       "glass": "Glas",
       "friendsTab": "Freunde-Tab",
-      "buddyReads": "Buddy-Reads",
-      "buddyReadsHint": "Ein Buch mit Freunden lesen. Die anderen Mitglieder sehen, in welchem Abschnitt du bist, nie deine Seite.",
-      "buddyReadsIn": "Du bist in {count} Buddy-Read | Du bist in {count} Buddy-Reads",
-      "buddyReadsCheckFailed": "Deine Buddy-Reads konnten nicht geprüft werden, der Schalter bleibt eingeschaltet. Prüfe deine Verbindung und versuch es nochmal.",
       "glassLevel": {
         "strong": "Stark",
         "medium": "Mittel",
@@ -2371,7 +2356,8 @@
       "skippedCount": "{count} Person konnte nicht eingeladen werden. | {count} Personen konnten nicht eingeladen werden.",
       "linkText": "Schicke den Link an Freunde, die BetterReads nutzen:",
       "openRoom": "Raum öffnen",
-      "openExisting": "Deinen Buddy-Read zu diesem Buch öffnen"
+      "openExisting": "Deinen Buddy-Read zu diesem Buch öffnen",
+      "adds": "Mit dem Start des Buddy-Reads kommt dieses Buch als „Lese ich gerade“ in deine Bibliothek. Wenn du abbrichst, wird nichts hinzugefügt."
     },
     "link": {
       "pageTitle": "Buddy-Read",
@@ -2394,15 +2380,11 @@
       "failed": "Link konnte nicht kopiert werden. Bitte manuell kopieren.",
       "shareText": "Lies {title} mit mir auf BetterReads"
     },
-    "turnOn": {
-      "title": "Buddy-Reads aktivieren?",
-      "text": "Buddy-Reads sind auf diesem Gerät aus. Aktiviere sie, um diesen Buddy-Read zu sehen und beizutreten.",
-      "action": "Aktivieren"
-    },
     "entry": {
       "start": "Gemeinsam lesen",
-      "hint": "Lies dieses Buch mit Personen, denen du folgst, Abschnitt für Abschnitt. Sie sehen, in welchem Abschnitt du bist, nie deine Seite.",
-      "open": "Buddy-Read",
+      "hint": "Lies dieses Buch mit Freunden, Abschnitt für Abschnitt.",
+      "adds": "Mit dem Start des Buddy-Reads kommt dieses Buch zu „Lese ich gerade“.",
+      "unavailable": "Ein selbst hinzugefügtes Buch kann nicht gemeinsam gelesen werden.",
       "openRoom": "Buddy-Read öffnen",
       "moreLabel": "Optionen für Buddy-Read: {title}",
       "unread": "{count} neu"

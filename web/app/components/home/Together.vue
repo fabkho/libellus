@@ -1,16 +1,14 @@
 <script setup lang="ts">
 // "Reading together" on Home (docs/plans/buddy-read-shared.md W5): her active buddy reads, one raised row each, the Book's cover, its title, how many
 // readers and the Section she is in, and how many comments are new (a number, never words: part 5.5). A row opens the room. The invitations that wait
-// for her sit above them (the same rows as on Friends, `TogetherInvitations`; Home hands them what it read, so it asks once). Nothing here when she has
-// neither, and nothing at all unless this build has buddy reads and she turned them on: the page renders this component only then, as a lazy one, so
-// the store, the data layer and the chat layer are not even loaded otherwise.
+// for her sit above them (the same rows as on Friends, `TogetherInvitations`, a lazy component drawn only while one waits). Nothing here when she has neither.
 //
-// Read when Home opens and every time it is back on screen (`my_buddy_reads()`, one query): no Realtime on Home, so the unread counts are as old as the
-// last time she came here or left a room (a room's own screen keeps its counts live). Offline, what was last read stays.
+// Read when Home opens and every time it is back on screen (`my_buddy_reads()`, one query, through the small store stores/buddyInvites.ts: the list is the
+// header's lamp dot's too, so it asks once): no Realtime on Home and no chat layer either, the big store stays in the rooms, so the unread counts are as old
+// as the last time she came here or left a room (a room's own screen keeps its counts live). Offline, what was last read stays.
 //
 // Test ids: `home.together` (the card), `home.togetherCount`, `home.togetherRow`, `home.togetherRow.unread`; the invitations' own are `buddyInvites*`.
 import { useBuddyInvitesStore } from '~/stores/buddyInvites'
-import { useBuddyReadStore } from '~/stores/buddyRead'
 import type { BuddyCard } from '~/data/buddyReads'
 import { homeReads, whereWords } from '~/utils/buddyEntry'
 import { roomPath } from '~/utils/buddyRoute'
@@ -19,27 +17,19 @@ import { roomPath } from '~/utils/buddyRoute'
 const coverHosts = { ...useCoverHosts(), proxy: false }
 
 const { t } = useI18n()
-const allowed = useBuddyReadsOn()
-const store = useBuddyReadStore()
 const invites = useBuddyInvitesStore()
 const headingId = useId()
 
-const rows = computed(() => (allowed.value ? homeReads(store.mine?.reads) : []))
+const rows = computed(() => homeReads(invites.reads))
 /** The copy question after Join is a sheet of the invitations' component: the card stays while it is open, though the invitation has left. */
 const copying = ref(false)
-const show = computed(() => allowed.value && (rows.value.length > 0 || invites.count > 0 || copying.value))
+/** The invitations' component (and with it the big store) is loaded the first time one waits, and stays for the sheet it holds. */
+const inviteSeen = ref(false)
+watch(() => invites.count, (count) => count > 0 && (inviteSeen.value = true), { immediate: true })
+const show = computed(() => rows.value.length > 0 || invites.count > 0 || copying.value)
 
-let asking: Promise<void> | null = null
-/** One read at a time: the first showing and the page's activation come together. */
-function load(): Promise<void> {
-  if (!allowed.value) return Promise.resolve()
-  asking ??= (async () => {
-    const failed = await store.loadMine()
-    // What she was invited to arrives in the same answer: the Friends row and the lamp dot follow it.
-    if (!failed && store.mine) invites.take(store.mine.invitations)
-  })().finally(() => (asking = null))
-  return asking
-}
+/** Reads her list: the store keeps one reading in flight, and the first showing and the page's activation come together. */
+const load = () => invites.load({ force: true })
 onMounted(() => void load())
 // Home is kept alive: coming back asks again.
 onActivated(() => void load())
@@ -58,7 +48,7 @@ const where = (read: BuddyCard) => {
         <h2 :id="headingId" class="eyebrow">{{ t('together.card.title') }}</h2>
         <span v-if="rows.length" class="eyebrow text-ink-faint" data-testid="home.togetherCount">{{ rows.length }}</span>
       </div>
-      <TogetherInvitations v-model:copying="copying" bare :load="false" />
+      <LazyTogetherInvitations v-if="inviteSeen" v-model:copying="copying" bare :load="false" />
       <ul v-if="rows.length" class="flex flex-col gap-ms" :class="invites.count && 'mt-ms'">
         <li v-for="(read, index) in rows" :key="read.id">
           <UiPressLink

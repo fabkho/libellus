@@ -17,7 +17,6 @@ const props = defineProps<{ readId: string }>()
 const { t } = useI18n()
 const store = useBuddyReadStore()
 const online = useOnline()
-const allowed = useBuddyReadsOn()
 
 const read = computed(() => store.reads[props.readId] ?? null)
 const token = computed(() => read.value?.linkToken ?? null)
@@ -40,7 +39,7 @@ watch(open, (isOpen) => {
   error.value = null
   skipped.value = 0
   sent.value = 0
-  if (allowed.value) void store.load(props.readId)
+  void store.load(props.readId)
 })
 
 /** Someone already in, or already invited, is not offered again. */
@@ -53,7 +52,7 @@ const linkOn = computed({
   set: (on) => void setLink(on),
 })
 async function setLink(on: boolean, renew = false) {
-  if (busy.value || !allowed.value) return
+  if (busy.value) return
   busy.value = true
   error.value = null
   const answer = await store.setLink(props.readId, on, renew)
@@ -66,7 +65,7 @@ async function renew() {
 }
 
 async function send() {
-  if (busy.value || !picked.value.length || !allowed.value) return
+  if (busy.value || !picked.value.length) return
   busy.value = true
   error.value = null
   const answer = await store.invite(props.readId, picked.value)
@@ -82,7 +81,7 @@ async function send() {
 </script>
 
 <template>
-  <UiSheet v-if="allowed" v-model:open="open" :title="t('together.invite.title')" :action="t('together.setup.done')" :cancel="false" testid="buddyInvite" @action="open = false">
+  <UiSheet v-model:open="open" :title="t('together.invite.title')" :action="t('together.setup.done')" :cancel="false" testid="buddyInvite" @action="open = false">
     <div v-if="read" class="flex flex-col gap-md pt-xs pb-lg">
       <p v-if="ended" class="text-body text-ink-muted" data-testid="buddyInvite.ended">{{ t('buddyRead.error.buddy_read_ended') }}</p>
       <template v-else>

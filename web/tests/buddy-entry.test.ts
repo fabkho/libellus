@@ -5,9 +5,9 @@ import type { BuddyCard } from '@/data/buddyReads'
 import { activeReads, bookEntryAction, canReadTogether, homeReads, readOfBook, unreadBadge, unreadTotal, whereWords } from '@/utils/buddyEntry'
 
 /**
- * The entry points of a buddy read (W5): what the Book page's row and Home's card say, as view models (utils/buddyEntry.ts, plain Node), and the
- * rule that with buddy reads off neither entry exists: the pages draw them only behind `useBuddyReadsOn` and load them lazily, so a build or a
- * switch without the feature never loads the store or asks the server.
+ * The entry points of a buddy read: what the Book page's action and Home's card say, as view models (utils/buddyEntry.ts, plain Node), and where the screens put
+ * them (read from the sources as they are, no comment stripping). Buddy reads are for every member: the Book page offers the action on every Book, and neither
+ * it nor Home loads the big store, the chat layer or the Realtime client.
  */
 
 const book = (id: string) => ({ id, title: `Book ${id}`, authors: [], manual: false, unverified: false }) as unknown as BuddyCard['book']
@@ -25,7 +25,7 @@ const card = (id: string, bookId: string, over: Partial<BuddyCard> = {}): BuddyC
 })
 
 describe('which Books can be read together', () => {
-  it('takes a Catalogue Book of her Library, not a Manual book, nothing', () => {
+  it('takes a Catalogue Book, in her Library or not, never a Manual book or nothing', () => {
     expect(canReadTogether({ source: 'openlibrary' })).toBe(true)
     expect(canReadTogether({ source: 'apple' })).toBe(true)
     expect(canReadTogether({ source: 'manual' })).toBe(false)
@@ -65,11 +65,30 @@ describe('her reads of a Book', () => {
     expect(readOfBook(reads, undefined)).toBeNull()
   })
 
-  it('offers to open the read she is in, else to start one', () => {
-    expect(bookEntryAction(reads, 'a')).toEqual({ kind: 'open', read: reads[2] })
-    expect(bookEntryAction(reads, 'c')).toEqual({ kind: 'start' })
-    expect(bookEntryAction(null, 'a')).toEqual({ kind: 'start' })
-    expect(bookEntryAction([card('f', 'a', { status: 'finished' })], 'a')).toEqual({ kind: 'start' })
+  const mine = reads[2]!
+  const catalogue = (id: string) => ({ id, source: 'openlibrary' })
+
+  it('offers to open the read she is in, held or not', () => {
+    expect(bookEntryAction(catalogue('a'), true, reads)).toEqual({ kind: 'open', read: mine })
+    expect(bookEntryAction(catalogue('a'), false, reads)).toEqual({ kind: 'open', read: mine })
+  })
+
+  it('offers to start one otherwise, and says whether starting adds the Book to her Library', () => {
+    expect(bookEntryAction(catalogue('c'), true, reads)).toEqual({ kind: 'start', adds: false })
+    expect(bookEntryAction(catalogue('c'), false, reads)).toEqual({ kind: 'start', adds: true })
+    expect(bookEntryAction(catalogue('c'), false, null)).toEqual({ kind: 'start', adds: true })
+    expect(bookEntryAction(catalogue('a'), true, [card('f', 'a', { status: 'finished' })])).toEqual({ kind: 'start', adds: false })
+  })
+
+  it('offers to start one for a search result that is not in the Catalogue yet (no id), adding it', () => {
+    expect(bookEntryAction({ source: 'openlibrary' }, false, reads)).toEqual({ kind: 'start', adds: true })
+  })
+
+  it('is not available for a Manual book, whatever her reads say, and offers nothing for no Book', () => {
+    expect(bookEntryAction({ id: 'a', source: 'manual' }, true, reads)).toEqual({ kind: 'unavailable' })
+    expect(bookEntryAction({ source: 'manual' }, false, null)).toEqual({ kind: 'unavailable' })
+    expect(bookEntryAction(null, false, reads)).toBeNull()
+    expect(bookEntryAction(undefined, true, reads)).toBeNull()
   })
 })
 
@@ -109,54 +128,59 @@ describe('where she is, in words', () => {
   })
 })
 
-describe('with buddy reads off, neither entry exists', () => {
+
+describe('where the screens put the entry points (read from the sources)', () => {
   const app = join(process.cwd(), 'app')
-  /** The source without comments. Each pattern is applied until the text stops changing, so removing one comment can never leave a new one behind (`<!<!-- -->--`). */
-  const withoutAll = (source: string, patterns: RegExp[]): string => {
-    let text = source
-    for (let before = ''; before !== text; ) {
-      before = text
-      for (const pattern of patterns) text = text.replace(pattern, '')
-    }
-    return text
-  }
-  const read = (file: string) => withoutAll(readFileSync(join(app, file), 'utf8'), [/\/\*[\s\S]*?\*\//g, /<!--[\s\S]*?-->/g, /^\s*\/\/.*$/gm])
+  const read = (file: string) => readFileSync(join(app, file), 'utf8')
+  /** The module names a file imports as values: `import … from 'x'` on a line of its own, `import type` left out. */
+  const imports = (file: string) =>
+    read(file)
+      .split('\n')
+      .map((line) => /^\s*import\s+(?!type\b)[^'"]*from\s+['"]([^'"]+)['"]/.exec(line)?.[1])
+      .filter((spec): spec is string => Boolean(spec))
 
-  it('the Book page draws the row only behind the flag and the switch, lazily', () => {
+  it('the Book page puts the action in the action area, under the Book’s one action and above the ebook rows, for every Book', () => {
     const page = read('pages/book/[key].vue')
-    expect(page).toMatch(/<LazyTogetherBookRow[^>]*v-if="[^"]*togetherOn[^"]*"/)
-    expect(page).toMatch(/togetherOn = useBuddyReadsOn\(\)/)
-    expect(page).toMatch(/<LazyTogetherBookRow[^>]*canReadTogether\(entry\.book\)/)
+    const at = (needle: string) => page.indexOf(needle)
+    const row = '<TogetherBookRow :book="book" :entry="entry" />'
+    expect(at(row)).toBeGreaterThan(at('data-testid="book.actions"'))
+    expect(at(row)).toBeGreaterThan(at('data-testid="book.add"'))
+    expect(at(row)).toBeLessThan(at('<BookEbook'))
+    // Not behind a condition of its own, nor a menu: the line carries nothing but the component.
+    expect(page.split('\n').filter((line) => line.includes('TogetherBookRow')).every((line) => line.trim() === row || line.includes('<!--'))).toBe(true)
   })
 
-  it('Home draws the card and the menu only behind the flag and the switch, lazily', () => {
+  it('Home draws its card without a condition and builds the ⋯ menu (with the setup sheet) only when a ⋯ is pressed', () => {
     const page = read('pages/index.vue')
-    expect(page).toMatch(/togetherOn = useBuddyReadsOn\(\)/)
-    const uses = [...page.matchAll(/<LazyHomeTogether(?:Menu)?\b[^>]*>/g)].map((m) => m[0])
-    expect(uses.length).toBeGreaterThanOrEqual(3)
-    for (const use of uses) expect(use).toMatch(/v-if="togetherOn"/)
+    expect(page).toContain('<HomeTogether />')
+    expect(page).toContain('<LazyHomeTogetherMenu v-if="togetherAsked"')
+    expect(page).not.toMatch(/togetherOn|useBuddyReadsOn/)
   })
 
-  it("a Currently reading card's ... is drawn behind the same check", () => {
+  it('a Currently reading card has the ⋯ for a Catalogue Book, asked of nothing else', () => {
     const card = read('components/home/ReadingCard.vue')
-    expect(card).toMatch(/useBuddyReadsOn\(\)/)
-    expect(card).toMatch(/<button\s+v-if="together"/)
+    expect(card).toContain('canReadTogether(props.entry.book)')
+    expect(card).not.toMatch(/useBuddyReadsOn/)
   })
 
-  it('neither page imports the buddy read store or its data layer: they stay in the lazy components', () => {
-    for (const file of ['pages/book/[key].vue', 'pages/index.vue', 'components/home/ReadingCard.vue']) {
-      const imports = [...read(file).matchAll(/^\s*import\s+(?!type\b)[^'"]*['"]([^'"]+)['"]/gm)].map((m) => m[1]!)
-      expect(imports.filter((spec) => /stores\/buddyRead(?![A-Za-z])|data\/buddyReads|data\/buddyLive/.test(spec))).toEqual([])
+  it('the page, the card, Home’s parts and the row import no buddy read store but the small one, no data layer and no chat layer', () => {
+    for (const file of ['pages/book/[key].vue', 'pages/index.vue', 'components/home/ReadingCard.vue', 'components/home/Together.vue', 'components/together/BookRow.vue']) {
+      expect(imports(file).filter((spec) => /stores\/buddyRead(?![A-Za-z])|data\/buddyReads|data\/buddyLive|@fabkho\/chat|#layers\/chat/.test(spec)), file).toEqual([])
     }
+  })
+
+  it('the row builds the setup sheet only when she presses the action', () => {
+    const row = read('components/together/BookRow.vue')
+    expect(row).toContain('<LazyTogetherSetupSheet v-if="asked"')
   })
 
   it('the lazy components exist where the pages name them', () => {
     for (const file of ['components/together/BookRow.vue', 'components/home/Together.vue', 'components/home/TogetherMenu.vue']) expect(existsSync(join(app, file))).toBe(true)
   })
 
-  it('Home hands the invitations over and does not ask for them a second time', () => {
+  it('Home reads her list through the small store and asks again on every showing', () => {
     const home = read('components/home/Together.vue')
-    expect(home).toMatch(/invites\.take\(/)
-    expect(home).toMatch(/<TogetherInvitations[^>]*:load="false"/)
+    expect(home).toContain('invites.load({ force: true })')
+    expect(home).toContain('onActivated(')
   })
 })

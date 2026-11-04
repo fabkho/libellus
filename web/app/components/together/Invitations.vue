@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The buddy read invitations waiting for her, as rows at the top of Friends (W3; the twin of Home's follow request): Join or Not now on each.
 // Join answers `answer_buddy_invite` and goes on to "Which copy are you reading?" in a sheet, then to the room; Not now leaves the invitation
-// (nobody is told). Draws nothing, and asks nothing, unless this build has buddy reads and she turned them on (`useBuddyReadsOn`): the list is
+// (nobody is told). Draws nothing while no invitation waits: the list is
 // the light store's (stores/buddyInvites.ts), read when the page opens and whenever the app comes back to the foreground.
 import type { BuddyInvitation } from '~/data/buddyReads'
 import { buddyErrorKey } from '~/utils/buddyRead'
@@ -15,7 +15,6 @@ import { useBuddyReadStore } from '~/stores/buddyRead'
 const props = withDefaults(defineProps<{ bare?: boolean; load?: boolean }>(), { bare: false, load: true })
 
 const { t } = useI18n()
-const allowed = useBuddyReadsOn()
 const invites = useBuddyInvitesStore()
 const store = useBuddyReadStore()
 const online = useOnline()
@@ -30,7 +29,7 @@ const joined = ref<BuddyInvitation | null>(null)
 const copyOpen = defineModel<boolean>('copying', { default: false })
 
 async function accept(invitation: BuddyInvitation) {
-  if (busy.value || !allowed.value) return
+  if (busy.value) return
   busy.value = invitation.id
   error.value = null
   const answer = await store.answerInvite(invitation.id, true)
@@ -46,7 +45,7 @@ async function accept(invitation: BuddyInvitation) {
   copyOpen.value = true
 }
 async function decline(invitation: BuddyInvitation) {
-  if (busy.value || !allowed.value) return
+  if (busy.value) return
   busy.value = invitation.id
   error.value = null
   const answer = await store.answerInvite(invitation.id, false)
@@ -62,7 +61,7 @@ function done() {
 </script>
 
 <template>
-  <section v-if="allowed && invites.count" class="flex flex-col gap-xs" :class="!bare && 'px-screen pt-sm'" :aria-label="t('together.invitation.section')" data-testid="buddyInvites">
+  <section v-if="invites.count" class="flex flex-col gap-xs" :class="!bare && 'px-screen pt-sm'" :aria-label="t('together.invitation.section')" data-testid="buddyInvites">
     <h2 :class="bare ? 'sr-only' : 'eyebrow'">{{ t('together.invitation.section') }}</h2>
     <ul class="flex flex-col gap-sm">
       <TogetherInvitationRow
@@ -78,7 +77,7 @@ function done() {
     <p v-if="error" class="text-caption text-error" role="alert" data-testid="buddyInvites.error">{{ error }}</p>
   </section>
 
-  <UiSheet v-if="allowed" v-model:open="copyOpen" :title="t('together.title')" testid="buddyInvitesCopy">
+  <UiSheet v-model:open="copyOpen" :title="t('together.title')" testid="buddyInvitesCopy">
     <div v-if="joined" class="pt-xs pb-lg">
       <TogetherEntryPicker :read-id="joined.id" :book="joined.book" @done="done" />
     </div>
