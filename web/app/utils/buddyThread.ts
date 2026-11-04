@@ -1,4 +1,4 @@
-import type { BubbleMessage, BubbleQuote } from '#layers/ui/app/utils/chat/message'
+import { sameSide, type BubbleMessage, type BubbleQuote } from '#layers/ui/app/utils/chat/message'
 import { messageVeiled } from '#layers/chat/app/utils/veil'
 import { isRetryableBuddyError, REPORT_REASONS, type BuddyErrorCode, type ReportReason } from '~/data/buddyReads'
 import type { BuddyBubble } from '~/utils/buddyRead'
@@ -80,6 +80,17 @@ export function threadItems(bubbles: readonly BuddyBubble[], ctx: ThreadContext)
       permanent: bubble.state === 'failed' && !!bubble.error && !isRetryableBuddyError(bubble.error),
     }
   })
+}
+
+/**
+ * Whether two messages in a row are one run (they sit closer, the first of it carries the name, the last the avatar and the tail): the
+ * base's rule (`sameSide`: both hers or both somebody else's, neither a system line, so a tombstone breaks a run) **and the same author**.
+ * The base's default knows only mine and not mine, which is right for a 1:1 chat and wrong in a room of three: two other members
+ * posting one after the other would be one run under the first one's name with the last one's face. Day breaks are the base's own
+ * (a separator row between two messages ends the run before this is asked). Pass it as `UiChatThread`'s `sameRun`.
+ */
+export function sameAuthorRun(before: Pick<ThreadItem, 'mine' | 'kind' | 'authorId'>, item: Pick<ThreadItem, 'mine' | 'kind' | 'authorId'>): boolean {
+  return sameSide(before, item) && before.authorId === item.authorId
 }
 
 /** The words a quote needs that are the app's. */

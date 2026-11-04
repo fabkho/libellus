@@ -619,6 +619,56 @@ describe('what she does to a read', () => {
     spy.mockRestore()
   })
 
+  it('says a read is gone when a live refresh is answered with not_found inside the store: the screen has no answer of its own to read it from', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    await buddy.openThread(READ, null)
+    await buddy.retain()
+    expect(buddy.forgotten[READ]).toBeUndefined()
+    // She is removed on another device: the next refresh (`buddy_read.changed`) is refused.
+    const spy = vi.spyOn(backend, 'rpc').mockResolvedValueOnce({ data: null, error: { message: 'not_found', code: 'PT404' } as never, status: 404 } as never)
+    emit({ type: 'changed', readId: READ })
+    await settle()
+    expect(buddy.reads[READ]).toBeUndefined()
+    expect(buddy.forgotten[READ]).toBe(true)
+    expect(buddy.messagesOf(READ, null)).toEqual([])
+    // Nothing of it is asked for again by the channel (one refusal, not a stream of them).
+    spy.mockRestore()
+    server.calls = []
+    emit({ type: 'changed', readId: READ })
+    live.handlers.resync!(undefined as never)
+    await settle()
+    expect(server.calls.filter((c) => c.fn === 'buddy_read')).toEqual([])
+    // She is let back in and opens it again: it is not gone any more.
+    expect(await buddy.load(READ)).toBeNull()
+    expect(buddy.forgotten[READ]).toBeUndefined()
+  })
+
+  it('forgets a read when its thread is refused as not_found, too (removed while the thread is open), and forgets nothing for another refusal', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    const spy = vi.spyOn(backend, 'rpc').mockResolvedValueOnce({ data: null, error: { message: 'message_unavailable', code: 'PT409' } as never, status: 409 } as never)
+    expect(await buddy.openThread(READ, S1)).toBe('message_unavailable')
+    expect(buddy.reads[READ]).toBeDefined()
+    expect(buddy.forgotten[READ]).toBeUndefined()
+    spy.mockResolvedValueOnce({ data: null, error: { message: 'not_found', code: 'PT404' } as never, status: 404 } as never)
+    expect(await buddy.openThread(READ, S2)).toBe('not_found')
+    expect(buddy.reads[READ]).toBeUndefined()
+    expect(buddy.forgotten[READ]).toBe(true)
+    spy.mockRestore()
+  })
+
+  it('forgets what was gone with the member: the next one starts with nothing forgotten', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    const spy = vi.spyOn(backend, 'rpc').mockResolvedValueOnce({ data: null, error: { message: 'not_found', code: 'PT404' } as never, status: 404 } as never)
+    await buddy.load(READ)
+    expect(buddy.forgotten[READ]).toBe(true)
+    spy.mockRestore()
+    await buddy.reset()
+    expect(buddy.forgotten).toEqual({})
+  })
+
   it('refuses every call offline, with the code, before anything is sent', async () => {
     const buddy = await store()
     online.value = false

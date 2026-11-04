@@ -4,7 +4,7 @@ import { currentChoice, markerChoices, roomRows, titleSaysNumber, trackOf, track
 import { sectionTitle } from '@/utils/buddySectionTitle'
 import { isReadId, isSectionSegment, sectionOfSegment, threadPath } from '@/utils/buddyRoute'
 import { sentBubble, type BuddyBubble } from '@/utils/buddyRead'
-import { quoteOf, reportInput, threadItems, type ThreadContext } from '@/utils/buddyThread'
+import { quoteOf, reportInput, sameAuthorRun, threadItems, type ThreadContext } from '@/utils/buddyThread'
 
 /** What the room and a thread draw (utils/buddyRoom.ts, buddyThread.ts, buddyRoute.ts): the veil, the tombstone, the quote, the track, the report. No database, no store. */
 
@@ -236,5 +236,33 @@ describe('what a row says about its number, and a Section in the viewer’s word
     const open = { open: true, veiled: false, showTitle: true, showUnread: true }
     const rows = roomRows(read, (id) => (id === 's2' ? { ...open, open: false, veiled: true, showTitle: false, showUnread: false } : open), (c) => sectionTitle(c, words))
     expect(rows.map((r) => r.title)).toEqual(['', 'Section 1', '', 'The whole book'])
+  })
+})
+
+describe('the runs of a thread (UiChatThread `sameRun`)', () => {
+  // The base's `follows`: a row follows the one before it when it is an item and `sameRun(before, item)` holds (a day separator in between ends the run).
+  const run = (items: ReturnType<typeof threadItems>) => items.map((item, i) => (i > 0 && sameAuthorRun(items[i - 1]!, item) ? 'follows' : 'starts'))
+  const of = (...senders: string[]) =>
+    threadItems(senders.map((who, i) => bubble(String(i + 1), { senderId: who, authorName: who })), ctx({ me: 'ada' }))
+
+  it('starts a run when another person writes, even if both are somebody else’s: three members, interleaved', () => {
+    // Bram twice, Mara twice, Bram, Mara, Ada twice (hers), Mara.
+    expect(run(of('bram', 'bram', 'mara', 'mara', 'bram', 'mara', 'ada', 'ada', 'mara'))).toEqual(['starts', 'follows', 'starts', 'follows', 'starts', 'starts', 'starts', 'follows', 'starts'])
+  })
+
+  it('keeps one person’s messages in one run, and her own apart from everybody’s', () => {
+    expect(run(of('ben', 'ben', 'ben'))).toEqual(['starts', 'follows', 'follows'])
+    expect(run(of('ben', 'ada'))).toEqual(['starts', 'starts'])
+  })
+
+  it('breaks a run at a tombstone, before and after it, whoever wrote it', () => {
+    const items = threadItems([bubble('1'), bubble('2', { deletedAt: 'x' }), bubble('3'), bubble('4', { senderId: 'mara', authorName: 'Mara' })], ctx())
+    expect(items.map((i) => i.kind)).toEqual(['text', 'system', 'text', 'text'])
+    expect(run(items)).toEqual(['starts', 'starts', 'starts', 'starts'])
+  })
+
+  it('treats a member who has gone as one author among others: two of her messages are one run, not the next member’s', () => {
+    const items = threadItems([bubble('1', { senderId: null, authorName: null }), bubble('2', { senderId: null, authorName: null }), bubble('3', { senderId: 'mara', authorName: 'Mara' })], ctx())
+    expect(run(items)).toEqual(['starts', 'follows', 'starts'])
   })
 })

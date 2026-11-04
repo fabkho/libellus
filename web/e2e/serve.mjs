@@ -65,8 +65,14 @@ const headerRules = []
 for (const line of await lines('_headers')) {
   if (!/^\s/.test(line)) headerRules.push({ match: line.startsWith('/') ? pattern(line.trim()) : null, headers: [] })
   else if (headerRules.length) {
-    const [name, ...value] = line.trim().split(':')
-    headerRules.at(-1).headers.push([name.trim(), value.join(':').trim()])
+    const text = line.trim()
+    // `! Name` takes the header off first (Pages' own default, or what an earlier rule that matches the same URL set): `public/_headers` uses it for
+    // `Referrer-Policy` on `/t/*`. A line without a colon would make a header of nothing, so the `!` form is read before the split.
+    if (text.startsWith('!')) headerRules.at(-1).headers.push({ detach: text.slice(1).trim().toLowerCase() })
+    else {
+      const [name, ...value] = text.split(':')
+      headerRules.at(-1).headers.push([name.trim(), value.join(':').trim()])
+    }
   }
 }
 const redirectRules = (await lines('_redirects')).map((line) => {
@@ -88,7 +94,12 @@ function withHeaders(path, headers) {
   const set = new Map()
   for (const rule of headerRules) {
     if (!rule.match?.test(path)) continue
-    for (const [name, value] of rule.headers) {
+    for (const header of rule.headers) {
+      if (!Array.isArray(header)) {
+        set.delete(header.detach)
+        continue
+      }
+      const [name, value] = header
       const key = name.toLowerCase()
       set.set(key, set.has(key) ? `${set.get(key)}, ${value}` : value)
     }

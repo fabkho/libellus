@@ -76,6 +76,12 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
 
   /** The reads she opened, by id. */
   const reads = ref<Record<string, BuddyRead>>({})
+  /**
+   * The reads she was in that the database no longer lets her see (removed, left on another device, blocked, deleted): an answer of `not_found` forgot them
+   * (`forget`). A screen that has the read open cannot tell "not read yet" from "gone" by `reads` alone, and a live refresh answers inside the store, not to
+   * the screen: this is how it says so. Cleared when the read is read again.
+   */
+  const forgotten = ref<Record<string, true>>({})
   /** Her reads and invitations (Home, the invitation row); null until asked. */
   const mine = ref<MyBuddyReads | null>(null)
   const threads = ref<Record<string, Thread>>({})
@@ -161,7 +167,11 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     const answer = await r.messages(readId, sectionId, { limit: MESSAGES_PAGE })
     if (stale(since)) return 'not_signed_in'
     t.loading = false
-    if (answer.error) return answer.error
+    if (answer.error) {
+      // She is not in the read (any more): the same answer as `load` gets.
+      if (answer.error === 'not_found') forget(readId)
+      return answer.error
+    }
     takePage(readId, sectionId, answer.data.items)
     // Only the first load decides whether there is more to ask for: a reload of a thread that grew keeps the answer it had.
     if (!t.loaded) t.more = answer.data.more
@@ -411,6 +421,7 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
       return answer.error
     }
     reads.value[readId] = answer.data
+    delete forgotten.value[readId]
     return null
   }
 
@@ -423,6 +434,7 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
       for (const refusal of snapshot.refusals) if (refusal.payload.conversationId === readId) queue.dismissRefusal(refusal.key)
     }
     delete reads.value[readId]
+    forgotten.value[readId] = true
     for (const key of Object.keys(threads.value)) if (key === readId || key.startsWith(`${readId}#`)) delete threads.value[key]
     if (mine.value) mine.value = { ...mine.value, reads: mine.value.reads.filter((x) => x.id !== readId) }
   }
@@ -648,6 +660,9 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     const used = new Set<string>()
     for (const hold of holds) if (hold.read) used.add(hold.read)
     for (const [key, count] of Object.entries(viewing)) if (count > 0) used.add(key.split('#')[0]!)
+    // A read the database refused her (`forgotten`) is not asked for again by the channel: each resync would be one more 404 for a screen that already says
+    // "not available". The screen asks itself when she comes back to it (`load` clears it).
+    for (const id of used) if (forgotten.value[id]) used.delete(id)
     return used
   }
 
@@ -765,6 +780,7 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     opening = null
     openingFor = null
     reads.value = {}
+    forgotten.value = {}
     mine.value = null
     threads.value = {}
     waiting.value = 0
@@ -804,6 +820,7 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
 
   return {
     reads,
+    forgotten,
     mine,
     threads,
     waiting,
