@@ -52,9 +52,10 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
     `@supabase/realtime-js`**: the app provides the adapter (`ChatAdapter`, `RealtimeLike`) in `app/data/`, and the
     Realtime client it gives is the lazy `import('#realtime-client')` door below, never the stub. A fix to the layer is
     a release of fabkho/chat and a bump here (`docs/DEVELOPMENT.md`, "The package bumps"), not an edit under `node_modules`.
-  - Nothing imports it yet: the buddy read's data layer and store (in `app/data/` and `app/stores/`) are the first user. Its
-    auto-imports (`useThread`, `createSaveQueue` …) are tree-shaken from what no file calls; check the entry with
-    `pnpm perf:bundle` when a first file does, and put anything that pulls a Realtime client behind the lazy door.
+  - Its first user is the buddy read (`data/buddyReads.ts`, `data/buddyLive.ts`, `stores/buddyRead.ts`): the store is imported only by
+    buddy read screens, which `retain()` the live channel (the real client loads lazily through the store's
+    `import('#realtime-client')`; Home reads `my_buddy_reads()` on focus instead), and `tests/buddy-read-entry.test.ts` keeps both
+    out of the entry. A refusal code is worded under `buddyRead.error.<code>`.
   - `entry-guard.config.ts` fails a production build if any chunk the entry loads statically holds
     `@supabase/realtime-js` (the stub is fine; `tests/entry-guard.test.ts`).
 - **Portable by default** (rules: the base README): a component that could ever be generic is written so it moves to
@@ -73,6 +74,10 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   precached (`globIgnores`): `data/reader/prefetch.ts` says when they are fetched ahead (a member with an
   ebook on this device, online, no Save-Data), a CacheFirst rule keeps them. Keep the group's modules apart
   from the two files imported dynamically (nuxt.config.ts says why), and a prefetch trigger behind `prefetchReader`.
+- **Buddy reads sit behind a build flag** (`NUXT_PUBLIC_BUDDY_READS`, `runtimeConfig.public.buddyReads`, read through
+  `composables/useBuddyReadsFlag.ts`; unset = off, and off in every build until the release that carries the screens): the
+  Profile's switch row, `stores/buddyReadsSwitch.ts` (`available`) and every entry point W3–W5 add check it first, so a build
+  without the feature draws nothing of it and calls no buddy RPC.
 - **Mobile first: VoiceOver, touch and gestures before desktop/keyboard** (every swipe, drag and long press has a single-tap alternative; text at 200 % reflows).
 - No full typechecks (`nuxi typecheck`, `tsc --noEmit`) unless asked. Run the targeted test instead.
 - Never read `.env`. Pass `NUXT_PUBLIC_*` as exported env vars when a command needs them.
