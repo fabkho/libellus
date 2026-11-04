@@ -2378,6 +2378,17 @@
       "text": "Buddy reads are off on this device. Turn them on to see this buddy read and join it.",
       "action": "Turn on"
     },
+    "entry": {
+      "start": "Read together",
+      "hint": "Read this book with people you follow, a Section at a time. They see which Section you are in, never your page.",
+      "open": "Buddy read",
+      "openRoom": "Open the buddy read",
+      "moreLabel": "Buddy read options: {title}",
+      "unread": "{count} new"
+    },
+    "card": {
+      "title": "Reading together"
+    },
     "invitation": {
       "section": "Buddy read invitations",
       "line": "{name} invited you to read {title} together",

@@ -2378,6 +2378,17 @@
       "text": "Buddy-Reads sind auf diesem Gerät aus. Aktiviere sie, um diesen Buddy-Read zu sehen und beizutreten.",
       "action": "Aktivieren"
     },
+    "entry": {
+      "start": "Gemeinsam lesen",
+      "hint": "Lies dieses Buch mit Personen, denen du folgst, Abschnitt für Abschnitt. Sie sehen, in welchem Abschnitt du bist, nie deine Seite.",
+      "open": "Buddy-Read",
+      "openRoom": "Buddy-Read öffnen",
+      "moreLabel": "Optionen für Buddy-Read: {title}",
+      "unread": "{count} neu"
+    },
+    "card": {
+      "title": "Gemeinsam lesen"
+    },
     "invitation": {
       "section": "Einladungen zum Buddy-Read",
       "line": "{name} hat dich eingeladen, {title} zusammen zu lesen",

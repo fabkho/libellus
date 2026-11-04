@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Starting a buddy read (docs/plans/buddy-read-shared.md, W3): one sheet of three steps, Book → Sections → Invite, then the
-// result. Opened from a Book of her Library (W5 puts the entry points on the Book page and Home; nothing opens it with buddy reads off).
+// result. Opened from a Book of her Library (the entry points are the Book page's row, components/together/BookRow.vue, and the Currently reading card's menu on Home, components/home/TogetherMenu.vue; nothing opens it with buddy reads off).
 //
 // 1. Book: the Book (her Library entry's: a read is of a Catalogue Book she holds), the day it starts, and what a buddy read is.
 // 2. Sections: how the Book is divided: by a number of parts (grouped 2 or 3 at a time above 30) or by pages, the arithmetic of the
