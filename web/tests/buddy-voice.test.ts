@@ -215,6 +215,12 @@ describe('how the thread draws a voice message', () => {
     expect(item!.media!.url).not.toMatch(/^https?:/)
   })
 
+  it('has no URL for a recording still on its way that this device has no copy of (the line restored after a reload): the play button is off until it is stored', () => {
+    const job = voiceJob({ conversationId: READ, threadId: null, clientId: CLIENT, replyTo: null, spoiler: false, createdAt: '2026-11-14T10:00:00.000Z' }, { mime: 'audio/webm', durationMs: 2000, peaks: [9] })
+    const [item] = threadItems([pendingBubble(job, ADA, 'Ada')], ctx())
+    expect(item).toMatchObject({ kind: 'media', delivery: 'sending', media: { kind: 'voice', url: null, durationMs: 2000 } })
+  })
+
   it('plays her own recording from the device\'s copy, which is no URL of the server\'s either', () => {
     const [item] = threadItems([voice({ senderId: ADA })], ctx({ previewOf: (clientId) => (clientId === CLIENT ? 'blob:local' : null) }))
     expect(item).toMatchObject({ mine: true, media: { url: 'blob:local' } })

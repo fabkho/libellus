@@ -226,6 +226,17 @@ test('Ida records a voice message in a Section thread; Ben gets it live and play
     // Hers is still there, and still plays for Ben.
     expect(await objectInBucket(`${path}${(await sql<{ client_id: string }>(`select client_id from public.buddy_messages where id = $1`, [row!.id]))[0]!.client_id}.${row!.voice_mime === 'audio/mp4' ? 'm4a' : 'webm'}`)).toBe(true)
 
+    // A voice message marked Spoiler is a veiled bubble with no play button until Ben taps it: nothing of it is signed or fetched before.
+    const spoiled = await seedVoice(idaMember, made.id, first!.id, { spoiler: true })
+    await expect(ben!.getByTestId('buddyThread.veil')).toHaveCount(1, { timeout: 15_000 })
+    await expect(voices(ben!)).toHaveCount(1)
+    const askedBefore = benAsked.length
+    await ben!.getByTestId('buddyThread.veil').click()
+    await expect(voices(ben!)).toHaveCount(2)
+    await expect(ben!.getByTestId('buddyThread.veil')).toHaveCount(0)
+    expect(benAsked.length).toBe(askedBefore)
+    expect(await objectInBucket(spoiled.path)).toBe(true)
+
     // Bo, blocked with Ida, saw none of her voice messages and asked the bucket for nothing: Ben's answer is there for him, its quote says only that what it
     // answered is gone (it is hers, which he is not shown: not that it was a voice message) and there is no voice bubble anywhere.
     await expect(voices(bo!)).toHaveCount(0)

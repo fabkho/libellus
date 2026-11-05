@@ -88,7 +88,8 @@ export function threadItems(bubbles: readonly BuddyBubble[], ctx: ThreadContext)
       media: playable
         ? {
             kind: 'voice',
-            url: ctx.previewOf?.(bubble.clientId) ?? VOICE_UNSIGNED,
+            // Stored: the stand-in, until she presses play. On its way with no copy on this device (restored after a reload): no URL, the button is off.
+            url: ctx.previewOf?.(bubble.clientId) ?? (bubble.state === 'sent' ? VOICE_UNSIGNED : null),
             path: voice.path,
             width: 1,
             height: 1,

@@ -417,6 +417,8 @@ the same: a cron that stops leaves no red run behind, only a gap in Actions → 
 | `supabase_migrations.schema_migrations`: which migrations the data belongs to | Edge functions and their secrets (`supabase/functions/`, `supabase secrets set`) |
 | | `pg_cron` jobs and `pg_net`'s queue: the migrations schedule the jobs again |
 
+**Voice recordings are not in the backup** either (the private bucket `buddy-voice`: a restored database has the messages, with their lengths and waveforms, and no sound; docs/OPERATIONS.md, "Voice messages").
+
 **Profile photos are not in the backup.** They live in Supabase Storage (the private bucket `avatars`,
 created by `supabase/migrations/20261009120000_avatars.sql`), and a database dump holds only the rows
 that describe Storage's files, never the files themselves; the backup leaves the `storage` schema out
@@ -605,6 +607,44 @@ so private channels are the only way to listen; with it off, check that the impo
 `web/app/data/importJobFeed.ts`) still arrives. **Watch** (Usage page): Realtime messages a month (Free: 2 million; a
 post in a full read of 12 is 12 messages) and peak concurrent connections (Free: 200; one per device with a buddy read
 open). A missed event costs nothing: the app reads the state again after a reconnect.
+
+## Voice messages
+
+A member records up to two minutes in a buddy read's thread; the sound is an object in the **private** bucket `buddy-voice`
+(3 MB an object; `audio/mp4`, `audio/webm`, `audio/ogg`), named `<read id>/<author id>/<client id>.<m4a|webm|ogg>`. Who may
+hear it is the bucket's policy (`buddy_voice_select_members`: a member joined to that read, the author not blocked with her
+either way, a live message; no policy for anon, none to update or delete), and the app asks for a signed URL of five minutes
+when a member presses play. The rules and the tests: `supabase/migrations/20261114020000_buddy_voice.sql`,
+`supabase/tests/buddy_voice_test.sql`; the screen: docs/parity.md, "Buddy read, a thread".
+
+**No audio outlives its message, and that is the sweep's job.** The database cannot delete a Storage object (the Storage
+guard refuses it from SQL and the bytes would stay in the object store), so a deleted message, a tombstone, a member who left
+choosing to delete her messages, a deleted account and a deleted read **queue** the object (`private.buddy_voice_trash`, by
+trigger), and the Edge Function `buddy-voice-sweep` removes the queued objects through the Storage API. It is kicked by the
+database when something is queued (pg_net, after the transaction commits) and by the hourly pg_cron job `sweep-buddy-voice`;
+it also removes objects no live message points at that are older than a day (an upload whose message never came: the member
+closed the thread, or discarded a failed send). **It is off until configured, and until then deleted audio stays in the
+bucket**, so set these up before the release that carries the migration reaches members (docs/SETUP.md lists them):
+
+1. **The function** deploys with every release (`release.yml` deploys every folder of `supabase/functions`; `verify_jwt` is
+   off in `supabase/config.toml`). Give it its token: `supabase secrets set BUDDY_VOICE_SWEEP_TOKEN=<a long random value>`
+   (`openssl rand -hex 32`).
+2. **The same value in the Vault**, for the database's call: `select vault.create_secret('<the value>', 'buddy_voice_sweep_token');`
+3. **Its address**: `update private.buddy_voice_settings set function_url = 'https://<ref>.supabase.co/functions/v1/buddy-voice-sweep';`
+
+**Check it works** (once, after the first deletion of a voice message, or by hand): `select * from private.buddy_voice_trash;`
+lists what waits (it is empty a minute after a deletion when the function runs), and
+`select net._http_response.status_code, left(content::text, 200) from net._http_response order by created desc limit 5;`
+shows the function's last answers (`200` with `{"state":"ran","removed":n}`; `401` = the two tokens differ; `503` = the
+function's secret is not set). A queue that does not empty: the function is not configured or fails (its logs: Edge
+Functions, `buddy-voice-sweep`); nothing is lost, the next run names the same objects again, and the hourly job tries
+again by itself. To run it by hand: `curl -X POST -H "Authorization: Bearer <the value>" https://<ref>.supabase.co/functions/v1/buddy-voice-sweep`.
+
+**Watch** (Storage page): the size of `buddy-voice` (a two-minute recording is about 0.7 MB; Free: 1 GB for all of
+Storage, covers excluded) and its egress (a play downloads the recording; Free: 5 GB a month). The limits that keep it
+small: 10 voice messages a minute and 100 a day a member (on top of the 30 a minute and 600 a day of every message), at most
+60 uploads an hour, 3 MB an object. **Not in a backup** (the nightly dump is the database; like the profile photos, the
+recordings are not in it): a restored database has the messages and no sound, which the bubble says ("Playing did not work").
 
 ## Own covers
 

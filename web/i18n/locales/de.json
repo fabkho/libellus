@@ -2289,7 +2289,7 @@
       "deleteTitle": "Diese Nachricht löschen?",
       "deleteText": "Für alle steht dort dann „Nachricht entfernt“. Das lässt sich nicht rückgängig machen.",
       "deleteTextHost": "Du bist der Host und kannst sie für alle entfernen. Dort steht dann „Nachricht entfernt“. Das lässt sich nicht rückgängig machen.",
-      "deleteTextVoice": "Es steht dann für alle „Nachricht entfernt“, und die Aufnahme wird gelöscht. Das lässt sich nicht rückgängig machen.",
+      "deleteTextVoice": "Für alle steht dort dann „Nachricht entfernt“, und die Aufnahme wird gelöscht. Das lässt sich nicht rückgängig machen.",
       "deleteTextVoiceHost": "Du bist der Host und kannst sie für alle entfernen. Dort steht dann „Nachricht entfernt“, und die Aufnahme wird gelöscht. Das lässt sich nicht rückgängig machen.",
       "ahead": "Du liest voraus: Das liegt hinter deinem aktuellen Stand.",
       "empty": "Noch hat niemand etwas zu diesem Abschnitt geschrieben. Machst du den Anfang?",

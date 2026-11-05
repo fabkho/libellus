@@ -276,7 +276,8 @@ On top of Pages' defaults (`X-Content-Type-Options: nosniff`,
 `Referrer-Policy: strict-origin-when-cross-origin`, `Access-Control-Allow-Origin: *`):
 
 - `Strict-Transport-Security`, `X-Frame-Options: DENY`, a `Permissions-Policy` that allows only
-  the camera (the barcode scanner), and only to BetterReads.
+  the camera (the barcode scanner) and the microphone (a voice message in a buddy read), and only to BetterReads;
+  the report-only CSP's `media-src` has Supabase Storage (`https://*.supabase.co`: the signed URL a voice message plays from) and `blob:` (the recording she just made).
 - `Content-Security-Policy-Report-Only`: violations show in the browser console, nothing is
   blocked. A new host the app talks to (a search source, a cover host read with CORS: `i.gr-assets.com`, `assets.hardcover.app`) goes into
   `connect-src` first. To enforce it, rename the header once a while of real use reports

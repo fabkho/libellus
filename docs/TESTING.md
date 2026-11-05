@@ -509,6 +509,7 @@ End-to-end tests are worth their cost only for **critical paths**, and a flow ex
 5. deleting the account;
 6. (when it lands) the social loop;
 7. a buddy read, the one flow `web/e2e/buddy-read.spec.ts` (`@full`): two members in two browsers, a message that arrives live, a Section that stays veiled until "Show anyway", a removed message. Buddy reads are for every member (no build flag, no switch), so the flows need nothing set up. It sets the read up through the RPCs; the entry points have their own flows in the same file, a Book that is not in her Library going through the setup sheet (the Book becomes Currently reading, the room exists) and the Book page's action in every state of the Book.
+7b. a buddy read's voice messages and its message gestures, the specs `web/e2e/buddy-voice.spec.ts` (`@full`, Chromium with a fake microphone: record, send, live arrival, nothing asked of the bucket until play, the signed URL, a reply, a like, a long press, the host's delete and the sweep, a blocked member, a veiled Section; a refused microphone and a send without a connection) and `web/e2e/buddy-gestures.spec.ts` (`@full`, WebKit with a touch screen: double tap, long press, right click, the React button, the six reactions, Reply, the swipe, on a text and on a voice message). They record nothing of the member's but a generated tone; the fixtures are `web/tests/fixtures/voice.m4a` and `voice.webm`. A member is made through the RPCs and the repository, the Edge Function's sweep runs from its own pure module against the real service role (`web/e2e/buddyVoice.ts`).
 8. progress on an earlier day, the two specs `web/e2e/progress-earlier-day.spec.ts` (the sheet) and `web/e2e/reading-log-edit.spec.ts` (the Reading log): a write path through four screens (the sheet, the log, Home's card, the Profile) and the outbox, whose result is read back from the database. They are flows because what they prove is the chain, not a rule (*Progress on an earlier day*, below).
 
 Everything else is tested where it is cheapest: rules in pgTAP (`supabase/tests/`), logic in Vitest
@@ -540,7 +541,7 @@ Any change under `.github/` runs everything, so CI changes are tested by CI.
 | `web/**`, `supabase/migrations/**`, `supabase/seed.sql`, `supabase/config.toml` | pgTAP, Vitest and the backup round trip (`backend`), plus the web build for `web/**` |
 | `supabase/tests/**`, `supabase/templates/**`, `scripts/*backup*` | pgTAP, Vitest and the backup round trip |
 | `design/**`, `web/app/assets/css/tokens.generated.css`, `supabase/templates/**` | Tokens check and emails check (the generated mail is current) |
-| `supabase/functions/<name>/**` (goodreads-rating, regal-export, reading-page-og, enrich, waitlist-invite) | Deno lint, check, test of that function |
+| `supabase/functions/<name>/**` (goodreads-rating, regal-export, reading-page-og, enrich, waitlist-invite, buddy-voice-sweep) | Deno lint, check, test of that function |
 
 A pull request or a push to `main` that touches several of these runs the union. A skipped job is a pass
 for everything downstream, and no branch is protected by required checks, so a skip never blocks a merge.
