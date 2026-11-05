@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.35.0](https://github.com/fabkho/libellus/compare/v1.34.0...v1.35.0) (2026-11-05)
+
+
+### Features
+
+* **web:** a suggestion starts the read with that friend already picked ([#500](https://github.com/fabkho/libellus/issues/500)) ([6ed3583](https://github.com/fabkho/libellus/commit/6ed3583c103127d393659cbf1548920e3b8c644f))
+
 ## [1.34.0](https://github.com/fabkho/libellus/compare/v1.33.1...v1.34.0) (2026-11-04)
 
 
