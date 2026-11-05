@@ -31,7 +31,7 @@
 import type { BarAction } from '#layers/ui/app/components/ui/ReactionBar.vue'
 import { threadKey } from '#layers/chat/app/utils/thread'
 import { mayLoadMedia } from '#layers/chat/app/utils/veil'
-import type { BuddyErrorCode } from '~/data/buddyReads'
+import { BUDDY_EMOJI, type BuddyErrorCode } from '~/data/buddyReads'
 import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
 import { isReadId, isSectionSegment, roomPath, sectionOfSegment } from '~/utils/buddyRoute'
 import { buddyErrorKey } from '~/utils/buddyRead'
@@ -253,11 +253,10 @@ function reveal(key: string) {
   revealed.value = new Set([...revealed.value, key])
 }
 
-// Reaction bar: Delete (her own message, or any as the host) and Report (somebody else's).
-// Three of the database's six (`react_to_buddy_message`: ❤️ 😂 😮 😢 🔥 📚): the base's bar is as wide as its buttons (44 px each) and opens
-// from the bubble's own edge, beside the sender's face; with Reply, Copy and Report it is seven buttons, which is what a 360 px
-// phone has room for. A reaction another client sets with one of the others still shows on the bubble.
-const EMOJIS = ['❤️', '😂', '🔥'] as const
+// Reaction bar: the database's six (`react_to_buddy_message`: ❤️ 😂 😮 😢 🔥 📚; ❤️ is also what a double tap puts on a message), then Reply, Copy (a text) and the
+// app's own: Delete (her own message, or any as the host) and Report (somebody else's). The bar is as wide as its buttons (44 px each): six reactions and Reply
+// fit a 360 px phone, and what follows scrolls (the style below: the bar stops at the screen's edge, its arrow keys and its focus bring a button into view).
+const EMOJIS = BUDDY_EMOJI
 function actionsOf(item: ThreadItem): BarAction[] {
   if (item.removed || !item.id || archived.value) return []
   const list: BarAction[] = []
@@ -315,7 +314,8 @@ onBeforeUnmount(() => voicePlayer.stop())
 
 /** The base's double-tap window (`UiBubble`): a second press inside it likes. */
 const DOUBLE_TAP_MS = 300
-const lastPress = new Map<string, { at: number; started: boolean }>()
+type Press = { at: number; started: boolean; liked: boolean }
+const lastPress = new Map<string, Press>()
 
 /**
  * The press on the play button of a **stored voice message of somebody else's**, taken before the base's own (the capture phase of the thread's root:
@@ -339,20 +339,25 @@ function voicePress(event: MouseEvent) {
   const canLike = !archived.value && !!item.id && event.detail > 0
   if (canLike && before && now - before.at <= DOUBLE_TAP_MS) {
     lastPress.delete(item.key)
+    // The first press may still be waiting for its URL: it is told not to play when it comes.
+    before.liked = true
     if (before.started) voicePlayer.stop()
     void react(item.id!, EMOJIS[0])
     return
   }
-  lastPress.set(item.key, { at: now, started: false })
-  void playVoice(item)
+  const press: Press = { at: now, started: false, liked: false }
+  lastPress.set(item.key, press)
+  void playVoice(item, press)
 }
 
-async function playVoice(item: ThreadItem) {
+async function playVoice(item: ThreadItem, press: Press) {
   notice.value = null
   const path = item.media!.path!
   // Her press again on the one that is playing (or paused): the base's player pauses or resumes it, with no new URL.
   if (voicePlayer.current.key === item.key && !voicePlayer.current.failed) {
+    const playing = voicePlayer.current.playing
     voicePlayer.toggle(item.key, VOICE_UNSIGNED)
+    press.started = !playing
     return
   }
   const answer = await store.voiceUrl(path)
@@ -360,9 +365,10 @@ async function playVoice(item: ThreadItem) {
     notice.value = answer.error === 'offline' ? t(buddyErrorKey('offline')) : t('together.thread.voice.playFailed')
     return
   }
+  // A second press came while the URL was on its way: that was a double tap, which likes and does not play.
+  if (press.liked) return
   voicePlayer.toggle(item.key, answer.data)
-  const press = lastPress.get(item.key)
-  if (press) press.started = true
+  press.started = true
 }
 
 // ------------------------------------------------------------------ the veil

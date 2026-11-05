@@ -297,6 +297,21 @@ describe('the Cloudflare Pages headers (public/_headers)', () => {
     expect(rules['/*']?.['Referrer-Policy']).toBeUndefined()
   })
 
+  // A voice message in a buddy read: the recorder asks the browser for the microphone (a policy that says `microphone=()` refuses it before the
+  // member is asked), and the player loads the sound from Supabase Storage by a signed URL (the recording she just made is a blob). The policy
+  // only reports for now: it must stay a report (a Content-Security-Policy that blocked would break the page), and say what the app loads.
+  it('lets BetterReads itself record and play a voice message, and only that', () => {
+    const policy = rules['/*']?.['Permissions-Policy'] ?? ''
+    expect(policy).toContain('microphone=(self)')
+    expect(policy).toContain('camera=(self)')
+    for (const denied of ['geolocation=()', 'payment=()', 'usb=()']) expect(policy).toContain(denied)
+    const csp = rules['/*']?.['Content-Security-Policy-Report-Only'] ?? ''
+    expect(rules['/*']?.['Content-Security-Policy']).toBeUndefined()
+    expect(csp).toMatch(/media-src 'self' blob: https:\/\/\*\.supabase\.co(;|$)/)
+    // The upload and the signing are asks of the same origin the rest of the app uses.
+    expect(csp).toMatch(/connect-src [^;]*https:\/\/\*\.supabase\.co/)
+  })
+
   it('leaves every /_nuxt/ answer, and with it the cache, to Nitro’s Cloudflare preset', () => {
     // The preset appends its own rules for the hashed chunks and for `builds/*`; Pages merges the values
     // of rules that match one URL, so a `Cache-Control` of ours on the catch-all would fight them.
