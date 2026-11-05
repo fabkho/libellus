@@ -26,6 +26,8 @@ const ALLOWED: Record<string, string> = {
   'web/app/legal/imprint.ts': 'one sentence per language: the same app can still be reached at the old address',
   'web/public/_headers': 'a comment on the noindex rule: the old address is an alias that stays',
   'docs/HOSTING.md': '"Addresses": the alias, what it keeps and why; the zone and rule notes for it',
+  'docs/ANDROID.md': 'the app is opened from betterreads.de only; says the alias serves the same app and the assetlinks file',
+  'docs/legal-checklist.md': 'the owner check on the imprint: it says the old address still reaches the same app, drop it with the alias',
   'docs/SETUP.md': 'step 1.3: the owner\'s instance keeps the old address in Supabase\'s Redirect URLs',
   'docs/parity.md': 'a header check dated 2026-10-14, read on the address that was live then',
   'SPEC.md': 'the hosting row: the alias and the Pages host',
