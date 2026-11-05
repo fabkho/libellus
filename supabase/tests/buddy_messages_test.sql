@@ -893,7 +893,7 @@ select is(tests.reports_of(:'jo'), 1, 'one feedback row of kind report (27)');
 select tests.last_report(:'jo') as v \gset
 select ok(:'v'::jsonb ->> 'member_id' = :'jo' and :'v'::jsonb ->> 'body' = E'Buddy read report: harassment\n\nShe keeps doing this.',
   'as hers, with her reason and note');
-select is(tests.keys(:'v'::jsonb -> 'context'), array['author', 'buddy_read', 'excerpt', 'message', 'section'], 'its context');
+select is(tests.keys(:'v'::jsonb -> 'context'), array['author', 'buddy_read', 'excerpt', 'kind', 'message', 'section'], 'its context');
 select ok(:'v'::jsonb -> 'context' ->> 'buddy_read' = :'r_a' and :'v'::jsonb -> 'context' ->> 'section' = :'a2'
           and :'v'::jsonb -> 'context' ->> 'message' = :'s_long' and :'v'::jsonb -> 'context' ->> 'author' = :'hana'
           and char_length(:'v'::jsonb -> 'context' ->> 'excerpt') = 300

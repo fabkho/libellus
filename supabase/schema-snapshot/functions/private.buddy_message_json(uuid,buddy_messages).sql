@@ -21,6 +21,12 @@ AS $function$
     'deleted_at', p_message.deleted_at,
     'reactions', case when p_message.deleted_at is null
                       then private.buddy_reactions_json(p_caller, p_message.id) else '[]'::jsonb end
-  )
+  ) || case when p_message.deleted_at is null and p_message.voice_mime is not null
+            then jsonb_build_object('voice', jsonb_build_object(
+                   'path', private.buddy_voice_path(p_message.buddy_read_id, p_message.author_id, p_message.client_id, p_message.voice_mime),
+                   'mime', p_message.voice_mime,
+                   'duration_ms', p_message.voice_duration_ms,
+                   'peaks', to_jsonb(p_message.voice_peaks)))
+            else '{}'::jsonb end
 $function$
 ;

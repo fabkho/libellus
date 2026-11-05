@@ -21,6 +21,7 @@ begin
   delete from public.buddy_reactions where message_id = p_message;
   update public.buddy_messages
      set body = '', media_url = null, media_width = null, media_height = null,
+         voice_mime = null, voice_duration_ms = null, voice_peaks = null,
          deleted_at = clock_timestamp(), deleted_by = v_caller
    where id = p_message;
 end;
