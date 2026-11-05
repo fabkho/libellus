@@ -38,3 +38,20 @@ web/.i18n-sample/
 
 # Screenshots and videos a proof script writes (web/perf/shelf.ts): looked at, never committed.
 /.shots/
+
+# Android (docs/ANDROID.md): Gradle state, node_modules and build output, and never a signing key.
+# The keystore lives in ~/.android-keys/; these patterns catch one copied into the repo by mistake.
+android/.gradle/
+android/build/
+android/app/build/
+android/node_modules/
+android/local.properties
+android/.idea/
+android/app-release-*
+*.jks
+*.keystore
+*.p12
+*.pk8
+*.apk
+*.aab
+*.idsig

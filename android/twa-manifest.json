@@ -1,0 +1,88 @@
+{
+  "packageId": "de.betterreads.app",
+  "host": "betterreads.de",
+  "name": "BetterReads",
+  "launcherName": "BetterReads",
+  "display": "standalone",
+  "themeColor": "#0E0C0A",
+  "themeColorDark": "#0E0C0A",
+  "navigationColor": "#F4F0E9",
+  "navigationColorDark": "#0E0C0A",
+  "navigationDividerColor": "#F4F0E9",
+  "navigationDividerColorDark": "#0E0C0A",
+  "backgroundColor": "#0E0C0A",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://betterreads.de/icon-512.png",
+  "maskableIconUrl": "https://betterreads.de/icon-maskable-512.png",
+  "monochromeIconUrl": "https://betterreads.de/icon-monochrome-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "~/.android-keys/betterreads-upload.jks",
+    "alias": "betterreads-upload"
+  },
+  "appVersion": "1.38.0",
+  "appVersionCode": 13800,
+  "shortcuts": [
+    {
+      "name": "Search",
+      "shortName": "Search",
+      "url": "https://betterreads.de/?search=1",
+      "chosenIconUrl": "https://betterreads.de/shortcut-search-96.png",
+      "chosenMaskableIconUrl": "https://betterreads.de/shortcut-search-96.png"
+    },
+    {
+      "name": "Update progress",
+      "shortName": "Progress",
+      "url": "https://betterreads.de/?progress=1",
+      "chosenIconUrl": "https://betterreads.de/shortcut-progress-96.png",
+      "chosenMaskableIconUrl": "https://betterreads.de/shortcut-progress-96.png"
+    },
+    {
+      "name": "Library",
+      "shortName": "Library",
+      "url": "https://betterreads.de/library",
+      "chosenIconUrl": "https://betterreads.de/shortcut-library-96.png",
+      "chosenMaskableIconUrl": "https://betterreads.de/shortcut-library-96.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://betterreads.de/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://betterreads.de/",
+  "minSdkVersion": 26,
+  "shareTarget": {
+    "action": "https://betterreads.de/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "ebooks",
+          "accept": [
+            ".epub",
+            "application/epub+zip"
+          ]
+        }
+      ]
+    }
+  },
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": []
+}

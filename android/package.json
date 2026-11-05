@@ -1,0 +1,10 @@
+{
+  "name": "betterreads-android",
+  "private": true,
+  "type": "module",
+  "description": "Tooling for the Android app (docs/ANDROID.md): Bubblewrap generates the project, resvg draws the store icon and the legacy splash.",
+  "devDependencies": {
+    "@bubblewrap/cli": "1.27.0",
+    "@resvg/resvg-js": "2.6.2"
+  }
+}

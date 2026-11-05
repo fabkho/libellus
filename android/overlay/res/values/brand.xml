@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Brand colours of the shell (docs/ANDROID.md). design/tokens.json: color.surface.dark, the night room. -->
+<resources>
+    <color name="night">#0e0c0a</color>
+</resources>

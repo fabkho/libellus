@@ -15,7 +15,7 @@ A calm, mobile-first book tracker you install from the home screen: search a boo
 - **Bring your history**: a Goodreads or Hardcover export (CSV, or Hardcover's zip) is told apart by its header; its shelves, lists, reads, ratings and reviews come along.
 - **Friends, by choice.** Your switches decide what followers see, your account is private until you let them in, and you can hide a single book or block someone.
 - **Buddy reads, by choice.** Read one Book with friends in Sections, with a thread per Section that stays veiled until you have read it, and messages that can be a voice recording only that read's members can hear. The only thing about your reading it shows is which Section you are in.
-- **Offline and installed**: the Library stays on the device, changes wait in an outbox, and the PWA runs full screen in light and dark.
+- **Offline and installed**: the Library stays on the device, changes wait in an outbox, and the PWA runs full screen in light and dark. On Android there is also an installable app, a thin shell around the same site ([docs/ANDROID.md](docs/ANDROID.md)).
 
 ## Privacy
 
