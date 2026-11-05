@@ -20,10 +20,15 @@ const place = computed(() => {
   if (!at) return name
   return at.count ? t('series.nextPlaceOf', { n: at.n, count: at.count, name }) : t('series.nextPlace', { n: at.n, name })
 })
+// The same place, structured: the Book's page shows it before it has read the Book (utils/bookPreview.ts).
+const seriesLineOf = computed(() => {
+  const at = nextPlace(props.item)
+  return { name: props.item.series.name, position: at?.n ?? null, count: at?.count ?? null }
+})
 </script>
 
 <template>
-  <AuthorWorkRow :work="item.next" :place="place" :testid="testid" :year="false" :eager="eager">
+  <AuthorWorkRow :work="item.next" :place="place" :series="seriesLineOf" :testid="testid" :year="false" :eager="eager">
     <template #trailing>
       <button
         type="button"

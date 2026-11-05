@@ -3,7 +3,7 @@ import { START_LOCATION, type RouteLocationNormalized } from 'vue-router'
 import { useNuxtApp, useRouter } from '#imports'
 import { bookPageOf } from '~/utils/bookPageKey'
 import { isBookPath } from '~/utils/flight'
-import { tabPlaces, untilReachable, type PageWatch, type ScrollPlace } from '~/utils/tabPlaces'
+import { keepPlace, tabPlaces, untilReachable, type HeldPage, type ScrollPlace } from '~/utils/tabPlaces'
 import { knownSignedOut, signedOutDestination } from '~/utils/signedOutRoute'
 
 // Where a page opens (Nuxt's own scroll behaviour, plus the tabs' places):
@@ -21,7 +21,9 @@ import { knownSignedOut, signedOutDestination } from '~/utils/signedOutRoute'
 // a scroll position, e2e/support.ts `untilStill`) waits for it.
 
 /** The document, as `untilReachable` watches it. */
-const documentWatch: PageWatch = {
+const documentWatch: HeldPage = {
+  top: () => window.scrollY,
+  scrollTo: (top) => window.scrollTo({ left: 0, top, behavior: 'instant' }),
   maxTop: () => document.documentElement.scrollHeight - document.documentElement.clientHeight,
   onResize(changed) {
     const observer = new ResizeObserver(() => changed())
@@ -39,6 +41,8 @@ const documentWatch: PageWatch = {
 
 /** The navigation whose scroll is on its way; a newer one cancels it. */
 let landing: { cancel(): void } | null = null
+/** The page that has landed on its place, holding it for a moment against rows that come in after (`keepPlace`). */
+let holding: (() => void) | null = null
 
 export default {
   // A visitor the device knows to be signed out is sent to the sign-in screen by the router's first
@@ -81,6 +85,8 @@ export default {
     const router = useRouter()
     const current = () => router.currentRoute.value.fullPath === to.fullPath
     landing?.cancel()
+    holding?.()
+    holding = null
     return new Promise<ScrollPlace | false>((resolve) => {
       let stopWaiting = () => {}
       const self = {
@@ -108,7 +114,13 @@ export default {
           stopWaiting = wait.cancel
           const reach = await wait.reached
           // The member scrolled herself meanwhile, or another page took over: no jump.
-          land(reach === 'reachable' || reach === 'patience' ? (current() ? position : false) : false)
+          const lands = (reach === 'reachable' || reach === 'patience') && current()
+          land(lands ? position : false)
+          // The router scrolls in the microtask after this; from the frame after that the place is held.
+          if (lands && position.top > 0)
+            requestAnimationFrame(() => {
+              if (landing === null && current()) holding = keepPlace(position, documentWatch)
+            })
         })
       nuxtApp.hooks.hookOnce('page:loading:end', () => {
         const transition = (nuxtApp as { '~transitionPromise'?: Promise<void> })['~transitionPromise']

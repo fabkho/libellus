@@ -58,7 +58,7 @@ const PressLink = resolveComponent('UiPressLink')
           v-on="flightOf(single ? `/book/${single.id}` : null)"
           class="stretched flex items-center justify-between gap-sm text-left"
           data-testid="home.friendsRow.open"
-          @press="single && books.prefetch(single.id)"
+          @press="single && books.prefetch(single.id, single)"
           @click="!single && $emit('open')"
         >
           <span class="sr-only">{{ name }}: </span>
