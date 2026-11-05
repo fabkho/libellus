@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.39.0](https://github.com/fabkho/libellus/compare/v1.38.0...v1.39.0) (2026-11-05)
+
+
+### Features
+
+* **android:** BetterReads as a sideloadable Trusted Web Activity ([#471](https://github.com/fabkho/libellus/issues/471)) ([27bc6dd](https://github.com/fabkho/libellus/commit/27bc6dd2b1ecf7f35de8a5c3f3818547ccd3e54f))
+* betterreads.de is the main address ([#512](https://github.com/fabkho/libellus/issues/512)) ([f38f19f](https://github.com/fabkho/libellus/commit/f38f19f0be76419dc11b416616b1d32c39aa599b))
+
+
+### Fixes
+
+* **web:** a Book opens at once, and Home keeps its place on the way back ([#511](https://github.com/fabkho/libellus/issues/511)) ([ab83846](https://github.com/fabkho/libellus/commit/ab83846de8ec5833363d84298caa7550709b0311))
+* **web:** percent on the reading card, a calm Friends empty state ([#509](https://github.com/fabkho/libellus/issues/509)) ([d70fb58](https://github.com/fabkho/libellus/commit/d70fb5868949c72d7acbda5aa1d844d50e1b59a0))
+* **web:** reader translate works for books without a language ([#508](https://github.com/fabkho/libellus/issues/508)) ([79e481c](https://github.com/fabkho/libellus/commit/79e481c0f09112be36924e173d870e51826138fa))
+
 ## [1.38.0](https://github.com/fabkho/libellus/compare/v1.37.0...v1.38.0) (2026-11-05)
 
 
