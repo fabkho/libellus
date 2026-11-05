@@ -2542,6 +2542,11 @@
       },
       "voice": {
         "record": "Record a voice message",
+        "recordHint": "Hold to record, release to send. Slide up to lock, slide left to cancel. Or tap to record hands-free.",
+        "slideToCancel": "Slide to cancel",
+        "locked": "Recording locked. Press send when you are done.",
+        "discarded": "Recording discarded.",
+        "tooShort": "Recording too short, so it was discarded. Hold the microphone longer, or tap it to record hands-free.",
         "recording": "Recording",
         "stopped": "Recording stopped",
         "timer": "{elapsed} of {max}",

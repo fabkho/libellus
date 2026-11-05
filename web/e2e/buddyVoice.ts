@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
-import type { Page } from '@playwright/test'
+import { expect, type BrowserContextOptions, type ElementHandle, type Page } from '@playwright/test'
+import { follows, joinRead, startRead } from '../tests/support/buddy'
+import { signedIn } from './support'
 import { VOICE_BUCKET } from '../app/data/buddyVoice'
 import { buddyOf } from '../tests/support/buddy'
 import type { TestMember } from '../tests/support/member'
@@ -91,3 +93,48 @@ export function watchLive(page: Page): { joined: () => boolean } {
   })
   return { joined: () => joined }
 }
+
+// ------------------------------------------------------------------ hold to record (e2e/buddy-voice-hold*.spec.ts)
+
+export const MIC = 'buddyThread.record'
+
+export type Finger = { down(): Promise<void>; move(dx: number, dy: number): Promise<void>; up(dx?: number, dy?: number): Promise<void> }
+
+/** One finger on the microphone: the pointer events of a touch pointer on its own element, which they keep after the panel has taken the button's place. */
+export async function finger(page: Page): Promise<Finger> {
+  const button = (await page.getByTestId(MIC).elementHandle()) as ElementHandle<HTMLElement>
+  const box = (await page.getByTestId(MIC).boundingBox())!
+  const x = box.x + box.width / 2
+  const y = box.y + box.height / 2
+  const fire = (type: 'pointerdown' | 'pointermove' | 'pointerup', dx: number, dy: number) =>
+    button.evaluate(
+      (el, [kind, px, py]) =>
+        void el.dispatchEvent(new PointerEvent(kind as string, { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: px as number, clientY: py as number, button: 0 })),
+      [type, x + dx, y + dy] as const,
+    )
+  return {
+    down: () => fire('pointerdown', 0, 0),
+    move: (dx, dy) => fire('pointermove', dx, dy),
+    // What a browser does after a touch: the pointer goes up, then the click.
+    up: async (dx = 0, dy = 0) => {
+      await fire('pointerup', dx, dy)
+      await button.evaluate((el) => void el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 })))
+    },
+  }
+}
+
+export const rows = (readId: string) => sql<{ id: string; ms: number }>(`select id, voice_duration_ms as ms from public.buddy_messages where buddy_read_id = $1 and kind = 'voice'`, [readId])
+
+export async function pair(page: Page, browser: import('@playwright/test').Browser, options: BrowserContextOptions) {
+  const context = await browser.newContext(options)
+  const ben = await context.newPage()
+  const ida = await signedIn(page)
+  const benMember: TestMember = await signedIn(ben)
+  await Promise.all([ida, benMember].map((m, i) => sql(`update auth.users set raw_user_meta_data = raw_user_meta_data || jsonb_build_object('name', $2::text) where id = $1`, [m.id, i ? 'Ben' : 'Ida'])))
+  await follows(ida, benMember)
+  const made = await startRead(ida, { title: 'The Hold Flow', parts: 2, link: true })
+  await joinRead(benMember, made.linkToken!)
+  expect((await buddyOf(ida).read(made.id)).error).toBeNull()
+  return { context, ben, ida, made, room: `/together/${made.id}/room` }
+}
+
