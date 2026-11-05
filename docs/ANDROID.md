@@ -191,11 +191,10 @@ APK asks Android for no permission at all).
 ## Digital Asset Links
 
 `web/public/.well-known/assetlinks.json` holds one statement for `de.betterreads.app` with the list of
-fingerprints (32 colon-separated upper-case hex pairs; JSON has no comments):
+fingerprints (32 colon-separated upper-case hex pairs):
 
-1. the signing key above, for the APK installed by hand;
-2. **a placeholder** (`00:00:…:00`, well formed so the file stays valid, and it matches no key): the Play
-   app signing key, **to be replaced** when the app is on Play. Delete it if the app never is.
+the signing key above, the only entry. If the app ever goes to Google Play, add Play's app signing key SHA-256
+next to it (Play re-signs what people install with its own key).
 
 `betterreads.de` and `libellus.fabkho.dev` are one Pages deploy, so both serve the file; the entry is
 about the app's package and key, not a host, and the app opens `https://betterreads.de` only.
