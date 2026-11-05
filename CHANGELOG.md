@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.37.0](https://github.com/fabkho/libellus/compare/v1.36.0...v1.37.0) (2026-11-05)
+
+
+### Features
+
+* **web:** hold to record a voice message, slide up to lock ([#504](https://github.com/fabkho/libellus/issues/504)) ([757ca76](https://github.com/fabkho/libellus/commit/757ca7611ea2e689e922983e1ce838cb86e98730))
+
 ## [1.36.0](https://github.com/fabkho/libellus/compare/v1.35.0...v1.36.0) (2026-11-05)
 
 
