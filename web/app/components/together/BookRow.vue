@@ -15,11 +15,13 @@ import type { LibraryEntry } from '~/data/library'
 import { useBuddyInvitesStore } from '~/stores/buddyInvites'
 import { roomPath } from '~/utils/buddyRoute'
 import { bookEntryAction, whereWords } from '~/utils/buddyEntry'
+import { WITH_PARAM } from '~/utils/buddyPreselect'
 
 const props = defineProps<{ book: Book | BookSnapshot; entry: LibraryEntry | null }>()
 
 const { t } = useI18n()
 const invites = useBuddyInvitesStore()
+const route = useRoute()
 
 const action = computed(() => bookEntryAction(props.book, !!props.entry, invites.reads))
 const read = computed(() => (action.value?.kind === 'open' ? action.value.read : null))
@@ -30,7 +32,10 @@ const whereText = computed(() => (where.value ? t(where.value.key, where.value.v
 // The sheet is built open when she first presses the action (it initialises itself on mounting), and then kept.
 const open = ref(false)
 const asked = ref(false)
+/** The friend a "Potential buddy reads" cover named (`?with=`), as the page's address says it when she presses the action; the sheet checks it (utils/buddyPreselect.ts) and ticks her. */
+const friend = ref<unknown>(null)
 function start() {
+  friend.value = route.query[WITH_PARAM]
   asked.value = true
   open.value = true
 }
@@ -63,6 +68,6 @@ onMounted(() => void invites.load({ force: true }))
       </UiButton>
       <p id="book-together-why" class="mt-xs text-center text-caption text-ink-muted" data-testid="book.together.unavailable">{{ t('together.entry.unavailable') }}</p>
     </template>
-    <LazyTogetherSetupSheet v-if="asked" v-model:open="open" :entry="entry" :book="book" />
+    <LazyTogetherSetupSheet v-if="asked" v-model:open="open" :entry="entry" :book="book" :friend="friend" />
   </div>
 </template>

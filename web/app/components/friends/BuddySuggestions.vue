@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // "Potential buddy reads" on a friend's profile: Books she and this friend could read together, a sideways row of covers, each a link to the Book's
-// page (which carries the Read together action). Worked out here, on her phone, from what she may already see (utils/buddySuggestions.ts: her Library,
+// page (which carries the Read together action) with this friend already picked as invitee (`?with=`, utils/buddyPreselect.ts). Worked out here, on her phone, from what she may already see (utils/buddySuggestions.ts: her Library,
 // her active buddy reads, and what this profile shows of the friend under the friend's switches), so it can never show more of the friend than the
 // page does and asks the database for nothing new. Nothing is asked while the profile hides what it needs (no want-to-read, reading or finished
 // list); a section with nothing to suggest is not drawn at all, no empty state. Each cover is named by its title and its reason ("On both your
@@ -12,6 +12,7 @@ import type { MemberProfile, SocialBook } from '~/data/social'
 import { useBuddyTogetherStore } from '~/stores/buddyTogether'
 import { useBookStore } from '~/stores/book'
 import { useLibraryStore } from '~/stores/library'
+import { bookWith } from '~/utils/buddyPreselect'
 import {
   friendShowsAnything,
   suggestBuddyReads,
@@ -110,7 +111,7 @@ const rows = computed(() =>
   items.value.map(({ book, reason }) => ({
     book,
     reason: reason.kind,
-    to: `/book/${book.id}`,
+    to: bookWith(book.id, props.profile.member.id),
     label: t('member.buddy.label', { title: book.title, reason: why(reason) }),
   })),
 )

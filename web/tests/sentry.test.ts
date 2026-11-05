@@ -38,6 +38,8 @@ describe('scrubString', () => {
     expect(scrubString('https://x.supabase.co/rest/v1/profiles?select=*&name=eq.Ida#top')).toBe('https://x.supabase.co/rest/v1/profiles')
     expect(scrubString('GET https://x.supabase.co/rest/v1/rpc/feed?limit=5 failed')).toBe('GET https://x.supabase.co/rest/v1/rpc/feed failed')
     expect(scrubString('/chat/abc?draft=hallo')).toBe('/chat/abc')
+    // A suggestion's link to a Book names a friend (`?with=<id>`, utils/buddyPreselect.ts): never in an event.
+    expect(scrubString('/book/6f1c1b0e-5f4d-4c55-9a52-2f0a6d1c9a11?with=0b9d7c1e-8f3a-4d27-b0c3-6a5e1f2d3c4b')).not.toContain('0b9d7c1e')
   })
   it('replaces e-mail addresses and member ids', () => {
     expect(scrubString('sign-in failed for ida@example.com')).toBe('sign-in failed for [email]')
