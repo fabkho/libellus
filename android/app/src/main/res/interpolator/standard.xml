@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- docs/MOTION.md `standard`: cubic-bezier(0.2, 0, 0, 1), fast out of the gate, a long soft landing. -->
+<pathInterpolator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:controlX1="0.2" android:controlY1="0" android:controlX2="0" android:controlY2="1" />

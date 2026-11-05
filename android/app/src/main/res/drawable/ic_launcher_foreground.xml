@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- design/icons/app/icon.svg without its room: the mark on nothing, in the place it holds in the
+     tile (translate(18.26 10.22) scale(0.7149), inside the 66 dp safe zone). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group android:translateX="18.26" android:translateY="10.22" android:scaleX="0.7149" android:scaleY="0.7149">
+        <path android:fillColor="#f1e3c8" android:pathData="M48.4 70C42 58 26 56 10 62V78C26 72 42 74 48.4 86ZM51.6 70C58 58 74 56 90 62V78C74 72 58 74 51.6 86Z" />
+        <group>
+            <clip-path android:pathData="M0 0H100V58H90C74 52 58 54 50 66C42 54 26 52 10 58H0Z" />
+            <path android:fillColor="#efb768" android:pathData="M50 36.5A18.5 18.5 0 1 1 50 73.5A18.5 18.5 0 1 1 50 36.5Z" />
+        </group>
+    </group>
+</vector>

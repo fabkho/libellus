@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The theme of LauncherActivity (scripts/patch-project.mjs puts it in the manifest, where Bubblewrap
+     leaves a bare translucent one). Below Android 12 only the window background counts: the night
+     room until the launcher's own splash view and then Chrome's take over.
+     values-v31/themes.xml adds the system splash. -->
+<resources>
+    <style name="LauncherTheme" parent="@android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowBackground">@color/night</item>
+    </style>
+</resources>
