@@ -12,7 +12,7 @@ import { goto } from './support'
  *
  * The finger is `PointerEvent`s of a touch pointer (id 7, as the base's own stories drive it: a mouse pointer id has no capture in Chromium), dispatched on the microphone
  * the way the browser delivers them, followed by the `click` a browser sends after a touch (the component swallows it). Chromium has the fake microphone
- * (`--use-fake-device-for-media-stream`); WebKit cannot fake one: e2e/buddy-voice-hold-webkit.spec.ts checks what does not need one.
+ * (`--use-fake-device-for-media-stream`); WebKit cannot fake one, and on the Linux runner it has no `MediaRecorder` at all, so the base does not draw the microphone there: this gesture is Chromium's.
  *
  * Tagged @full (docs/TESTING.md): it runs in the release run and on a pull request with the `full-e2e` label.
  */
@@ -162,6 +162,39 @@ test('hold and let go sends one message, live for the other; slide up locks and 
     expect(stored).toHaveLength(2)
     expect(stored.map((r) => r.ms).sort((a, b) => a - b)[1]).toBeGreaterThanOrEqual(3_000)
     expect(asked.filter((a) => a.startsWith('POST '))).toHaveLength(2)
+  } finally {
+    await context.close()
+  }
+})
+
+test('a hold with the microphone refused says so plainly, leaves nothing running and starts no answer @full', { tag: '@full' }, async ({ page: ida, browser }) => {
+  test.setTimeout(120_000)
+  const { context, made, room } = await pair(ida, browser, {
+    ...devices['iPhone 15'],
+    baseURL: test.info().project.use.baseURL,
+    colorScheme: 'dark',
+    reducedMotion: 'reduce',
+    serviceWorkers: 'block',
+    permissions: ['microphone'],
+  })
+  try {
+    await goto(ida, room)
+    await expect(ida.getByTestId('buddyThread.screen')).toHaveAttribute('data-status', 'ready')
+    await ida.evaluate(() => {
+      navigator.mediaDevices.getUserMedia = () => Promise.reject(Object.assign(new Error('denied'), { name: 'NotAllowedError' }))
+    })
+    const asked = watchBucket(ida)
+    // A slide up on the microphone, which would lock a recording: the microphone is refused, so it is told, and nothing started, locked or answered.
+    const f = await finger(ida)
+    await f.down()
+    await f.move(-3, -90)
+    await f.up(-3, -90)
+    await expect(ida.getByTestId('buddyThread.mediaError')).toHaveText(en.uiText.chat.voice.problems.denied)
+    await expect(ida.getByTestId('buddyThread.recorder')).toHaveCount(0)
+    await expect(ida.getByTestId('buddyThread.quoteBar')).toHaveCount(0)
+    await expect(ida.getByTestId(MIC)).toBeVisible()
+    expect(await rows(made.id)).toHaveLength(0)
+    expect(asked).toEqual([])
   } finally {
     await context.close()
   }
