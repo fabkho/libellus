@@ -54,6 +54,11 @@ pg_restore --data-only -f - "$work/plain.dump" \
          on { n[t]++ }
          END { for (t in n) print t, n[t] }' | LC_ALL=C sort > "$work/archive.counts"
 
+# Google Books' answers live a day at most (its terms), so no backup may hold them, and their keys are what members typed.
+if grep -q '^public.google_books_cache ' "$work/archive.counts"; then
+  echo "FAIL: the backup holds public.google_books_cache." >&2; exit 1
+fi
+
 # Exact row counts in the database $1 of the tables named in the file $2.
 counts() {
   local sql

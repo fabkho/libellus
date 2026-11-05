@@ -23,7 +23,7 @@ A calm, mobile-first book tracker you install from the home screen: search a boo
 - **Your data is yours.** Row-level security means a member only ever reads her own Library, reviews, Collections and Book links; the people she follows see what they chose to show, through functions that check the follow and their switches, and private is the default; in a buddy read she joined, its members also see which Section she is in (never a page), until she leaves.
 - **Sharing is opt-in.** A reading page is off until she turns it on, shows only the sections she picks (never her email, notes, highlights or a review she did not share), sits at an unguessable link out of search engines and dies when she turns it off; a cover that came with a Hardcover export shows inside the app only. The waitlist is the only address a visitor can leave: kept to send an invite, readable only by the owner, deleted on request.
 - **Delete is in the app**: Profile → Account → Delete account removes your account and everything of yours at once; the encrypted nightly backups forget it when they expire, within 35 days. An export of your data is planned; until then the app only imports.
-- **Search and the reader stay plain.** The browser asks Apple Books and Open Library directly for the words you type, the Goodreads rating is looked up by the server (so Goodreads never sees you), and *Translate* and *Define* send only the words you select (MyMemory, Wiktionary); the book itself never leaves your device.
+- **Search and the reader stay plain.** The browser asks Apple Books and Open Library directly for the words you type, Google Books is asked by the server only where those find little (the question and never you), the Goodreads rating is looked up by the server (so Goodreads never sees you), and *Translate* and *Define* send only the words you select (MyMemory, Wiktionary); the book itself never leaves your device.
 - **Errors** (message, stack, screen, app version; never a book, note or search) go to a table in the instance's own Supabase, kept 30 days, and — when the owner turns them on — to Sentry (EU, 30 days, no account, IP or content).
 
 **Where your data lives** (details in [docs/THIRD-PARTY.md](docs/THIRD-PARTY.md)):
@@ -35,12 +35,13 @@ A calm, mobile-first book tracker you install from the home screen: search a boo
 | [Cloudflare R2](https://developers.cloudflare.com/r2/) | Two private buckets: the nightly backup, encrypted before upload with a key only the owner holds and deleted after 35 days; and the covers of books in members' Libraries, under hashed names, deleted 30 days after no Library holds the book |
 | Resend (an email provider, over SMTP) | Sends the sign-in codes and the waitlist invites, so it sees the address it mails |
 | [Sentry](https://sentry.io), EU region (Frankfurt) | Error reports and performance measurements, only when the instance turns Sentry on: message and stack, app version, browser and device family, the screen as a route pattern, the last taps, freeze length. No account, name, email, IP, content or replay; kept 30 days ([docs/THIRD-PARTY.md](docs/THIRD-PARTY.md)) |
+| [Google Books](https://developers.google.com/books) (Google Ireland Ltd / Google LLC) | The last book source: asked by the server, never by your device, for a title, author, ISBN or search words when the other sources find little. No account, name or IP of yours goes with it; answers are kept at most a day. The cover of a book only Google knew is a link your browser loads from Google, never copied or shown outside the app |
 | [GitHub](https://github.com) | The code and its CI. None of your data: the backup job encrypts the dump as it streams and keeps no artifact |
 
 ## Tech stack
 
 - **App**: [Nuxt 4](https://nuxt.com) as a single-page app (`ssr: false`), Vue 3, TypeScript, Pinia, Tailwind CSS v4 on generated design tokens; static files on Cloudflare Pages.
-- **Backend**: [Supabase](https://supabase.com): Postgres with the rules in the database (constraints, triggers, RPC, RLS), Auth by email code, ten Deno edge functions.
+- **Backend**: [Supabase](https://supabase.com): Postgres with the rules in the database (constraints, triggers, RPC, RLS), Auth by email code, twelve Deno edge functions.
 - **Tests**: pgTAP for the database, Vitest against a real local stack, Playwright flows in WebKit at iPhone size.
 
 ## Quick start

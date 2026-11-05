@@ -214,3 +214,17 @@ Deno.test('an edition found by title is another edition of the work: the hint is
   // The file's own row (no edition found): hers.
   assertEquals(matchResult({ row: jobRow(PIRANESI, 0), book: PIRANESI, edition: withHardcoverCover({ ...titled, via: null }, HINT), matched: false, review: { tier: 'needsLook', choose: false, notes: [] } as never }).cover, 'hardcover')
 })
+
+Deno.test('Google Books: a row nothing else found is asked once, as an import, through the function; a row Open Library found is never asked', async () => {
+  const w = world()
+  await w.work(JOB, [jobRow(PIRANESI, 0), jobRow(NOBODY, 2)], w.context())
+  const googled = w.invoked.filter((call) => call.name === 'google-books')
+  assert(googled.length >= 1, 'the unfound row reached Google')
+  for (const call of googled) assertEquals(call.body.purpose, 'import')
+  assert(googled.every((call) => call.body.action === 'search' && call.body.title === 'A Book Nobody Ever Wrote'), 'only the unfound row, by title and author')
+  assertEquals(resultOf(w.saves, 0).verdict, 'matched')
+  // The function says "unavailable" (its key is not set) or nothing: the row is the file's own, a look, and not unsure.
+  const result = resultOf(w.saves, 2)
+  assertEquals(result.verdict, 'fromFile')
+  assert(!(result.edition as EditionSummary).unsure, 'Google being silent is no reason to ask again')
+})

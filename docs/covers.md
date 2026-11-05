@@ -616,6 +616,23 @@ So the signed-in screens did not change: they were lazy already, and the audit's
 prove it and to find the few exceptions (above). Home's first screen asks for the 8 covers it shows
 and no more; the Library asks for 28 of the 51 images in its DOM, those within 1,250 px.
 
+## Google Books covers (#305)
+
+The last cover fallback before the placeholder (owner decision): a Google edition (a book only Google Books knows: the function's `coverUrl`,
+`https://books.google.com/books/content?id=…&printsec=frontcover&img=1&zoom=1&source=gbs_api`, https and without Google's page-curl effect)
+carries its cover with it, and an exact-ISBN Google edition is asked only when Apple, Open Library and the National Library had nothing,
+so a better cover is never traded for it: in the merge it is the lowest-ranked source (`SOURCE_RANK.cover`, 128 px high, `COVER_HEIGHT.google`),
+and `fillIn` (data/merge.ts) takes it only for a result that has none.
+
+- **Linked, never copied** (Google's terms allow no permanent copy): `private.cover_allowed` (20261115010000) knows the exact image path so the
+  Catalogue accepts the address; `private.cover_storable` (the same list without Google) is what `cover_store_reconcile` and `owner_cover_status`
+  ask, so a Google cover is never queued for the bucket; the cover-store function has no rule for the host either, the `/cover` cache and the service
+  worker do not list it. The member's own browser loads the image from Google, so Google sees her IP address and the image address (the privacy
+  notice says so).
+- **Inside the app only**: `private.cover_shown` is false for the host (a reading page, `/r/`, the feed, a profile draw the generated cover), and
+  the Regal export leaves it out (`isGoogleCover`, data/googleCover.ts), like Hardcover's.
+- No thumbhash or colours: the app cannot read a Google image with CORS, so a Google cover has none until something better replaces it.
+
 ## The cover cache (29 Oct 2026)
 
 `web/functions/cover.js` (docs/HOSTING.md, "The cover cache") answers `/cover?u=<cover URL>&w=<width>` from Cloudflare's Cache API

@@ -1,6 +1,7 @@
 import { formatOf, type Book, type BookFormat, type BookSnapshot } from './books.ts'
 import { createApple } from './apple.ts'
 import type { Dnb } from './dnb.ts'
+import type { GoogleBooks } from './googleBooks.ts'
 import type { CatalogueSearch } from './catalogueSearch.ts'
 import { abortError, type FetchLike } from './fetching.ts'
 import { editionKeys, normalise } from './merge.ts'
@@ -40,8 +41,8 @@ export type EditionCandidate = { book: Book | BookSnapshot; current: boolean }
 export type EditionsOutcome = { candidates: EditionCandidate[]; pending: boolean; failed: boolean }
 
 /** Where a candidate came from; internal, and the order they rank in when nothing else decides. */
-export type EditionSourceName = 'catalogue' | 'work' | 'apple' | 'openlibrary' | 'dnb'
-export const EDITION_SOURCE_ORDER: readonly EditionSourceName[] = ['catalogue', 'work', 'apple', 'openlibrary', 'dnb']
+export type EditionSourceName = 'catalogue' | 'work' | 'apple' | 'openlibrary' | 'dnb' | 'google'
+export const EDITION_SOURCE_ORDER: readonly EditionSourceName[] = ['catalogue', 'work', 'apple', 'openlibrary', 'dnb', 'google']
 
 /** At most this many editions besides the current one. */
 export const EDITIONS_LIMIT = 60
@@ -310,7 +311,7 @@ export function appendEditions(shown: readonly EditionCandidate[], merged: reado
 // ------------------------------------------------------------ by its ISBN
 
 /** Where an edition found by its ISBN came from; internal. */
-export type IsbnSourceName = 'catalogue' | 'apple' | 'openlibrary' | 'dnb'
+export type IsbnSourceName = 'catalogue' | 'apple' | 'openlibrary' | 'dnb' | 'google'
 
 /**
  * What a lookup by ISBN found ("My edition isn't listed"). `edition`: the
@@ -345,13 +346,17 @@ export function isbnEdition(
   const openLibrary = answers.openlibrary?.[0]
   // A German edition the others do not know: the National Library's (its facts; a cover only where Open Library has one).
   const german = answers.dnb?.[0]
-  const lead = openLibrary ?? apple ?? german
+  // Google Books, last: its facts for an ISBN nobody else has (its cover is linked, the last cover there is).
+  const google = answers.google?.[0]
+  const lead = openLibrary ?? apple ?? german ?? google
   if (!lead) return null
   const found: BookSnapshot = { ...lead, isbn13 }
   if (openLibrary && apple)
     for (const field of ISBN_FILLABLE) if (found[field] == null && apple[field] != null) (found[field] as unknown) = apple[field]
   if (german && lead !== german)
     for (const field of ISBN_FILLABLE) if (found[field] == null && german[field] != null) (found[field] as unknown) = german[field]
+  if (google && lead !== google)
+    for (const field of ISBN_FILLABLE) if (found[field] == null && google[field] != null) (found[field] as unknown) = google[field]
   if (!found.authors.length) found.authors = [...current.authors]
   return found
 }
@@ -393,6 +398,8 @@ export function createEditions(options: {
   catalogue?: CatalogueSearch
   /** The German National Library (data/dnb.ts): editions of German books, and a last resort by ISBN. */
   dnb?: Pick<Dnb, 'editions' | 'lookupIsbn'>
+  /** Google Books (data/googleBooks.ts): more editions of the work, German ones especially, and the last resort by ISBN. */
+  google?: Pick<GoogleBooks, 'editions' | 'lookupIsbn'>
 }): Editions {
   const apple = createApple(options)
   const openLibrary = createOpenLibrary(options)
@@ -423,6 +430,10 @@ export function createEditions(options: {
       ...(options.dnb && wantsGerman(options.languages, book)
         ? { dnb: async (found: Book, signal?: AbortSignal) => (await options.dnb!.editions(found, { signal })).filter((edition) => isEditionOf(found, edition)) }
         : {}),
+      // One question (title and first author), whatever the language: German editions the others lack come from here.
+      ...(options.google
+        ? { google: async (found: Book, signal?: AbortSignal) => (await options.google!.editions(found, { signal })).filter((edition) => isEditionOf(found, edition)) }
+        : {}),
     }
   }
 
@@ -441,7 +452,8 @@ export function createEditions(options: {
       return {
         candidates: shown,
         pending: answered < names.length,
-        failed: failures.size === names.length,
+        // Google Books never fails (it is optional: no key, no answer); the others all failing is what "failed" says.
+        failed: names.filter((name) => name !== 'google').every((name) => failures.has(name)) && names.some((name) => name !== 'google'),
       }
     }
 
@@ -487,6 +499,15 @@ export function createEditions(options: {
         }
       } catch {
         if (signal?.aborted) throw abortError()
+      }
+    }
+    // Still none: Google Books, the last resort (never rejects but on abort).
+    if (!edition && options.google) {
+      const googled = await options.google.lookupIsbn(isbn13, { signal })
+      if (signal?.aborted) throw abortError()
+      if (googled) {
+        answers.google = [googled]
+        edition = isbnEdition(book, isbn13, answers)
       }
     }
     // Nothing found while neither Apple nor OpenLibrary answered: whether they know it cannot be told.

@@ -45,12 +45,12 @@ begin
     'unsupported', (select count(*) from private.cover_store_queue where state = 'unsupported'),
     -- Storable and not queued yet: the next tick's reconcile takes them.
     'unqueued', (select count(*) from public.books b
-                  where b.cover_key is null and b.cover_url is not null and private.cover_allowed(b.cover_url)
+                  where b.cover_key is null and b.cover_url is not null and private.cover_storable(b.cover_url)
                     and exists (select 1 from public.library_entries e where e.book_id = b.id)
                     and not exists (select 1 from private.cover_store_queue q where q.book_id = b.id)),
     -- Other hosts: not stored in v1.
     'not_storable', (select count(*) from public.books b
-                      where b.cover_url is not null and not private.cover_allowed(b.cover_url)
+                      where b.cover_url is not null and not private.cover_storable(b.cover_url)
                         and exists (select 1 from public.library_entries e where e.book_id = b.id)),
     'objects', (select count(*) from private.cover_objects),
     'bytes', v_bytes,

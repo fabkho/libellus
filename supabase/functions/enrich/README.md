@@ -52,7 +52,9 @@ Without the function's URL and token (the local stack, CI) nothing is sent: the 
    introducer the edition credits stays unlinked); a first author nobody knows gets a name-only row.
 5. **Genres**: Apple's genre names (iTunes lookup by track id, else by ISBN, in English, many Books per
    request), Wikidata's genres, Open Library's subjects → `web/app/data/enrich/genres.ts` (versioned,
-   unit-tested) → at most three canonical ids. The raw signals are kept for a later mapping version.
+   unit-tested) → at most three canonical ids. The raw signals are kept for a later mapping version. A Book
+   those left **without a genre** that has an ISBN-13 is asked once of the `google-books` function (service role): it maps Google's
+   categories to the app's genre ids (`GOOGLE_CATEGORY_GENRES`) and only the ids are kept, as signals of source `google` (docs/ENRICHMENT.md).
 6. Every linked author not fetched in 30 days: Wikidata facts (one SPARQL query: life dates with precision,
    portrait, Open Library ids, Wikipedia articles), the portrait on **Commons** (thumbnail, licence,
    author), else Open Library's photo; the **Wikipedia** summary per language (`ENRICH_LANGUAGES`); the

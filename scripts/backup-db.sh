@@ -56,9 +56,12 @@ done
 # The schemas whose schema and data are kept, and the tables whose data is not:
 # what only makes sense on the project it came from (sign-in sessions and
 # tokens, half-finished flows, GoTrue's own migration record, the audit log)
-# and the CLI's local seed record.
+# and the CLI's local seed record; and Google Books' answer cache, which Google's terms
+# let us keep for a day at most (a backup is kept 35 days) and whose keys are search
+# words members typed.
 SCHEMAS=(public private auth supabase_migrations)
 NO_DATA=(
+  public.google_books_cache
   auth.sessions auth.refresh_tokens auth.mfa_amr_claims auth.mfa_challenges
   auth.flow_state auth.one_time_tokens auth.saml_relay_states auth.audit_log_entries
   auth.schema_migrations auth.oauth_authorizations auth.oauth_client_states

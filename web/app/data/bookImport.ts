@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { parseIsbn, type Book, type BookSnapshot } from './books.ts'
 import type { CatalogueSearch } from './catalogueSearch.ts'
 import type { Dnb } from './dnb.ts'
+import type { GoogleBooks } from './googleBooks.ts'
 import { resolveBookCover, type ProbeImage, type ResolvedCover } from './covers.ts'
 import { coverKindOf, type CoverKind } from './coverRank.ts'
 import { languageFits, mergeCover } from './coverFill.ts'
@@ -32,7 +33,8 @@ import type { Search, SearchOutcome } from './search.ts'
  *   1. by its ISBN: the Catalogue (a Book some member added before), then
  *      Apple Books (asked for the whole file's ISBNs in a few batch requests
  *      first, `primeIsbns`), then OpenLibrary, then the National
- *      Library (data/dnb.ts: a German edition only it knows). An exact edition with its own
+ *      Library (data/dnb.ts: a German edition only it knows), then Google Books (data/googleBooks.ts: the
+ *      last resort, only for an ISBN none of them has). An exact edition with its own
  *      cover is the match, nothing more is asked;
  *   2. the work by its title: first the Catalogue alone (`catalogueFirst`: the
  *      ladder's first two questions); the work with a cover, in the row's
@@ -42,7 +44,8 @@ import type { Search, SearchOutcome } from './search.ts'
  *      series prefix, umlauts written out, the title alone, the name turned)
  *      until one finds the row's work (`isSameWork`) with a cover; the
  *      National Library's one question is asked early for a row that is
- *      probably German, last for any other. Every
+ *      probably German, last for any other, and Google Books' one (data/googleBooks.ts)
+ *      only when nothing of the work was found at all. Every
  *      edition each source names is a candidate (not one per book, as search
  *      shows them), ranked by `rankEditions` (language, format, cover, pages,
  *      year; all from the file itself, no app's book pages, #155);
@@ -190,6 +193,13 @@ export type Lookups = {
    */
   dnb?: Pick<Dnb, 'editions'>
   /**
+   * Google Books (data/googleBooks.ts), the last resort of all: asked once, for a row the ladder and the National
+   * Library found no edition of its work for, so one big file stays inside the daily quota (the ISBN step has its
+   * own, in `createSearch`'s `lookupIsbn`). Optional by nature: it answers nothing while its key is not set, and
+   * that is never "unsure".
+   */
+  google?: Pick<GoogleBooks, 'editions'>
+  /**
    * Goodreads' cover of a Goodreads file's row nothing else found a cover for (flagged: data/coverRank.ts,
    * `GOODREADS_COVERS`), already checked to be an image: the cover, null for none, 'blocked' when Goodreads turns us away.
    */
@@ -312,6 +322,11 @@ export async function titleCandidates(row: ImportBook, lookups: Lookups, signal?
     if (!all && same.some((book) => book.coverUrl)) break
   }
   if (!german && (all || !same.some((book) => book.coverUrl))) await askDnb()
+  // Nothing of the row's work anywhere: Google Books, once. Its failure or silence is not `incomplete`.
+  if (!same.length && lookups.google) {
+    const found = await asker(lookups, signal, () => {})((s) => lookups.google!.editions({ title: aboutDnb?.title ?? row.title, authors: aboutDnb ? [...aboutDnb.authors] : row.authors.slice(0, 1) }, { signal: s }))
+    if (found?.length) keep(found)
+  }
   return { same, near: nearEditions(row, pool).map(({ book }) => book), incomplete }
 }
 

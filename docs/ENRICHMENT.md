@@ -164,6 +164,16 @@ line, series sheet and correction; Next in your series). What they read last is 
 `libellus.enrich` (`data/enrich/device.ts`), so they open offline. The genre screens are described in
 docs/parity.md, *Genres*; the author page's genre chips use the same labels (`genre.<id>`).
 
+## Google Books genres (#305)
+
+A Catalogue Book that Apple, Open Library and Wikidata left **without a genre** and that has an ISBN-13 is asked once of the
+`google-books` function (`enrichBook`, step 4b; `Sources.googleGenres`, wired in `enrich/index.ts`: the service role, the function's own cache
+and daily budget; nothing while its key is not set). The function maps Google's `categories` (BISAC paths such as `Fiction / Romance / General`)
+to the app's genres with a small explicit table (`GOOGLE_CATEGORY_GENRES` in `web/app/data/enrich/genres.ts`: each path is split at the slashes, each
+part looked up whole, anything unlisted dropped, at most three) and the enrichment keeps only the ids as signals of source `google`
+(`book_genres.source = 'google'`, weight 0.6 per genre: one passes the threshold alone). The raw categories are never stored, and the signal is
+asked for no Book the other sources placed. A Google signal is the Book's own (the volume's), so it never becomes a *work's* genre.
+
 ## Not yet
 
 - The outbox does not carry the corrections yet (`sync_write`): they need a connection.

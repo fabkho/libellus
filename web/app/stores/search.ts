@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { bookKey, type Book, type BookSnapshot } from '~/data/books'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
 import { createDnb } from '~/data/dnb'
+import { createGoogleBooks } from '~/data/googleBooks'
 import type { LibraryEntry } from '~/data/library'
 import { editionKeys, workKey } from '~/data/merge'
 import { useLibraryStore } from '~/stores/library'
@@ -128,6 +129,8 @@ export const useSearchStore = defineStore('search', () => {
       catalogue: catalogue ?? undefined,
       // German editions Apple Books and Open Library do not know, by ISBN (the scan, a typed ISBN).
       dnb: backend ? createDnb(backend, { online: () => isOnline() }) : undefined,
+      // Google Books, the last resort: an ISBN none of them has, a query they leave (nearly) empty. Optional: it answers nothing while the function has no key.
+      google: backend ? createGoogleBooks(backend, { online: () => isOnline(), languages: () => languages }) : undefined,
     })
     return source
   }

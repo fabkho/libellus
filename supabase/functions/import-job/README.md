@@ -75,7 +75,9 @@ extensions so Deno can load them, the edge runtime has no "sloppy imports"), wir
 
 **Match**, 8 rows at once (`matchRow` → `findEdition`): the Catalogue first (as the member: `import_job_search_books`),
 the ISBN, the title ladder over Open Library (direct, identified with `OPENLIBRARY_CONTACT`, on the `edge_pace` bucket
-`openlibrary` shared with the `openlibrary` function) and the National Library (`dnb-lookup`, service role).
+`openlibrary` shared with the `openlibrary` function) the National Library (`dnb-lookup`, service role) and, last, Google Books (`google-books`, service role, `purpose: 'import'`: the
+ISBN step's last resort and one title question for a row nothing else found a Book of its work for; its key, cache and daily budget are
+the function's, and while the key is not set it answers nothing and no row is unsure because of it).
 **Apple is never asked** (owner decision 2026-10-19): every Apple address gets Apple's own empty answer, so no row is
 "unsure" because of it. A first-pass row a source could not be asked about (`unsure`) is deferred to the second pass.
 A row's result (`matchResult`) is its verdict (`matched` / `fromFile`), the preview's review tier (`reviewOf`), the

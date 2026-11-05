@@ -1,6 +1,7 @@
 import { parseIsbn, type Book, type BookSnapshot } from './books.ts'
 import { createApple } from './apple.ts'
 import type { Dnb } from './dnb.ts'
+import type { GoogleBooks } from './googleBooks.ts'
 import type { CatalogueSearch } from './catalogueSearch.ts'
 import { abortError, type FetchLike } from './fetching.ts'
 import type { LibraryEntry } from './library.ts'
@@ -10,7 +11,9 @@ import { createOpenLibrary } from './openLibrary.ts'
 /**
  * Finding Books (issue #1, Search): one query, three sources at once — the own
  * Catalogue, Apple Books and OpenLibrary — and one list out of their answers
- * (merge.ts). Each source's answer is merged in as it arrives, so the list
+ * (merge.ts); then, only where those leave too little, the two last resorts: the
+ * National Library for an ISBN (data/dnb.ts) and Google Books (data/googleBooks.ts: an ISBN
+ * none had, or a query that found fewer than `GOOGLE_BELOW` Books, so a day's quota lasts). Each source's answer is merged in as it arrives, so the list
  * grows while the slower ones are still on their way. A source that fails is
  * left out without a word; only when every source fails does the outcome say
  * so. Where a result came from never reaches the member.
@@ -25,6 +28,20 @@ export type { SearchResult } from './merge.ts'
 
 /** Below this many characters nothing is asked: one letter matches everything. */
 export const MIN_QUERY_LENGTH = 2
+
+/**
+ * Google Books is asked for a query only when the other sources found fewer than this many editions: its free quota
+ * (about 900 requests a day for the whole app, docs/OPERATIONS.md) is for what they cannot answer, not for every keystroke.
+ */
+export const GOOGLE_BELOW = 3
+
+/** And only for a query this long: Google is asked after a typing pause, and two letters are no book. */
+export const GOOGLE_MIN_QUERY = 4
+
+/** Sources asked after the others have answered, and only where those left a gap. */
+const LATE_SOURCES: readonly SourceName[] = ['dnb', 'google']
+/** Sources whose failure is no news: they are optional (Google Books answers nothing while its key is not set), so the list never says "could not reach". */
+const OPTIONAL_SOURCES: readonly SourceName[] = ['google']
 
 /** How long typing has to pause before a query goes out. */
 export const SEARCH_DEBOUNCE_MS = 220
@@ -133,6 +150,8 @@ export function createSearch(options: {
    * other sources found nothing for it, so a German edition they do not know still shows.
    */
   dnb?: Pick<Dnb, 'lookupIsbn'>
+  /** Google Books (data/googleBooks.ts), the last of the last resorts: an ISBN nobody had, a query that found (almost) nothing. */
+  google?: Pick<GoogleBooks, 'lookupIsbn' | 'search'>
 }): Search {
   const apple = createApple(options)
   const openLibrary = createOpenLibrary(options)
@@ -154,6 +173,13 @@ export function createSearch(options: {
             return book ? [{ book, source: 'dnb' as const, popularity: 0 }] : []
           } }
         : {}),
+      ...(options.google
+        ? { google: async (signal?: AbortSignal): Promise<Found[]> => {
+            if (!isbn && text.length < GOOGLE_MIN_QUERY) return []
+            const books = isbn ? [await options.google!.lookupIsbn(isbn, { signal })] : await options.google!.search(text, { signal })
+            return books.filter((book): book is BookSnapshot => book !== null).map((book) => ({ book, source: 'google' as const, popularity: 0 }))
+          } }
+        : {}),
     }
   }
 
@@ -171,10 +197,11 @@ export function createSearch(options: {
 
     async function outcome(): Promise<SearchOutcome> {
       const answered = Object.keys(answers).length + failures.size
+      const required = names.filter((name) => !OPTIONAL_SOURCES.includes(name))
       return {
         results: mergeResults(text, answers, await entries),
         pending: answered < names.length,
-        failed: failures.size === names.length,
+        failed: required.length ? required.every((name) => failures.has(name)) : names.length === 0,
         editions: everyEdition(answers),
         unanswered: [...new Set([...failures, ...partial])],
       }
@@ -189,7 +216,8 @@ export function createSearch(options: {
             answers[name] = found
             if (found.partial) partial.add(name)
           },
-          () => void failures.add(name),
+          // An optional source that could not answer is an empty answer, not a failure.
+          () => void (OPTIONAL_SOURCES.includes(name) ? (answers[name] = []) : failures.add(name)),
         )
         .then(() => {
           reported = reported.then(async () => {
@@ -198,12 +226,18 @@ export function createSearch(options: {
           })
           return reported
         })
-    const direct = names.filter((name) => name !== 'dnb').map((name) => answerOf(name))
-    // The National Library is a last resort: it is asked once the others have answered and none had the ISBN.
-    const last = names.includes('dnb')
-      ? Promise.allSettled(direct).then(() =>
-          answerOf('dnb', Object.values(answers).some((found) => found.length > 0) ? async () => [] : sources.dnb),
-        )
+    const direct = names.filter((name) => !LATE_SOURCES.includes(name)).map((name) => answerOf(name))
+    // The last resorts come once the others have answered, and only where those left a gap: the National Library
+    // when none had the ISBN, then Google Books when still none has it, or (for words) fewer than GOOGLE_BELOW editions.
+    const last = names.some((name) => LATE_SOURCES.includes(name))
+      ? Promise.allSettled(direct).then(async () => {
+          const nothing = async () => [] as Found[]
+          if (names.includes('dnb')) await answerOf('dnb', Object.values(answers).some((found) => found.length > 0) ? nothing : sources.dnb)
+          if (names.includes('google')) {
+            const enough = parseIsbn(text) ? Object.values(answers).some((found) => found.length > 0) : everyEdition(answers).length >= GOOGLE_BELOW
+            await answerOf('google', enough ? nothing : sources.google)
+          }
+        })
       : null
     await Promise.all(last ? [...direct, last] : direct)
     if (signal?.aborted) throw abortError()
@@ -298,6 +332,13 @@ export function createSearch(options: {
           // Its refusal is no "not found": whether it has the ISBN cannot be told.
           dnbUnanswered = true
         }
+      }
+      // Google Books, the last of the last resorts: an ISBN none of the others has. It never rejects but on abort, and an
+      // answer it could not give is no reason to call the row unsure (it is optional).
+      if (options.google && !(fromApple.status === 'rejected' && fromOpenLibrary.status === 'rejected')) {
+        const googled = await options.google.lookupIsbn(isbn13, { signal })
+        if (signal?.aborted) throw abortError()
+        if (googled) return googled
       }
       if (fromApple.status === 'rejected' && fromOpenLibrary.status === 'rejected') throw fromApple.reason
       // Strict: one of them (or the National Library) did not answer, so "neither has it" cannot be told.

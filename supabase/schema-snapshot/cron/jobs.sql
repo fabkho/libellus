@@ -31,6 +31,9 @@ select cron.schedule('purge-client-errors', '45 3 * * *', $job$select private.pu
 -- purge-cron-log
 select cron.schedule('purge-cron-log', '15 3 * * *', $job$select private.purge_cron_log()$job$);
 
+-- purge-google-books
+select cron.schedule('purge-google-books', '25 * * * *', $job$select private.purge_google_books()$job$);
+
 -- purge-synced-writes
 select cron.schedule('purge-synced-writes', '30 3 * * *', $job$select public.purge_synced_writes()$job$);
 

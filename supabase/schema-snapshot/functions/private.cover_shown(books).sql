@@ -6,5 +6,6 @@ CREATE OR REPLACE FUNCTION private.cover_shown(p_book books)
 AS $function$
   select private.cover_allowed(p_book.cover_url)
      and p_book.cover_url !~* '^https://assets\.hardcover\.app(/|$)'
+     and p_book.cover_url !~* '^https://books\.google\.com/'
 $function$
 ;

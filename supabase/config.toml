@@ -404,6 +404,13 @@ verify_jwt = false
 [functions.dnb-lookup]
 verify_jwt = false
 
+# Google Books as the last book source (issue #305): the API key (GOOGLE_BOOKS_API_KEY, a function secret, never in this
+# file) stays in the function; the browser never talks to Google. The function checks the caller itself (a signed-in
+# member, or the service role), like goodreads-rating; without the secret it answers `unavailable` and asks Google
+# nothing: supabase/functions/google-books/README.md.
+[functions.google-books]
+verify_jwt = false
+
 # The import's Open Library asks, identified and paced (supabase/functions/openlibrary): the
 # function checks the caller itself (a signed-in member, or the service role), like
 # goodreads-rating. Its OPENLIBRARY_CONTACT secret (the contact address Open Library is given)

@@ -9,9 +9,11 @@ import type { GoodreadsRating } from './goodreads.ts'
 /**
  * Where a snapshot came from. `dnb` (the National Library, data/dnb.ts) is only the app's own
  * word for it: the Catalogue has no `dnb` value (`public.book_source`), so a DNB edition is
- * written as `import`, as the `dnb-lookup` function writes it (`bookToRow`, data/library.ts).
+ * written as `import`, as the `dnb-lookup` function writes it (`bookToRow`, data/library.ts). `google` (Google Books,
+ * data/googleBooks.ts) is the same: the app's word for a result only Google knew, written as `import` by the
+ * `google-books` function.
  */
-export type BookSource = 'apple' | 'openlibrary' | 'manual' | 'import' | 'dnb'
+export type BookSource = 'apple' | 'openlibrary' | 'manual' | 'import' | 'dnb' | 'google'
 
 /** What an edition is, as the database names it (`book_format`). */
 export type BookFormat = 'hardcover' | 'paperback' | 'ebook' | 'audiobook'

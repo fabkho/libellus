@@ -4,6 +4,7 @@
  * (http.ts). One instance per function run; everything it asks goes through
  * the client's per-host limit and short-term cache.
  */
+import type { GenreId } from '../../../web/app/data/enrich/genres.ts'
 import { type AppleGenres, lookupUrl, parseLookup } from './apple.ts'
 import type { Http } from './http.ts'
 import * as ol from './openlibrary.ts'
@@ -12,9 +13,16 @@ import { imageInfoUrl, parseImageInfo, parseSummary, type Photo, type Summary, s
 
 export type Sources = ReturnType<typeof createSources>
 
-export function createSources(http: Http, languages: readonly string[]) {
+/**
+ * Sources that are not a polite HTTP client of their own: `googleGenres` asks the `google-books` function (its key,
+ * cache and daily budget stay there) for the app's genres of an ISBN-13; left out, Google is not asked.
+ */
+export type Extras = { googleGenres?: (isbn13: string) => Promise<readonly GenreId[]> }
+
+export function createSources(http: Http, languages: readonly string[], extras: Extras = {}) {
   return {
     languages,
+    googleGenres: extras.googleGenres ?? null,
 
     // ------------------------------------------------------------ Open Library
     async olEditionByIsbn(isbn: string): Promise<ol.OlEdition | null> {

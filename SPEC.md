@@ -42,7 +42,7 @@ from Swift.
 | UI | Tailwind v4 on generated tokens | Mobile patterns only: tab bar, sheets, 44 pt touch targets |
 | Design tokens | `design/tokens.json` → Style Dictionary → Tailwind `@theme` CSS and Swift | Never hand-edit generated files; CI checks them |
 | Copy | `@nuxtjs/i18n`, one locale, `web/i18n/locales/en.json` | No hard-coded strings; German and native string catalogues map the keys |
-| Search sources | Own Catalogue (Postgres full-text), Apple Books (iTunes Search), OpenLibrary | Client-side, in parallel; all allow cross-origin reads. Google Books later via an Edge Function |
+| Search sources | Own Catalogue (Postgres full-text), Apple Books (iTunes Search), OpenLibrary | Client-side, in parallel; all allow cross-origin reads. The German National Library and Google Books are last resorts, asked through Edge Functions (`dnb-lookup`, `google-books`: the key and the daily quota stay on the server, #305) |
 | Hosting | Cloudflare Pages, served at `betterreads.de` (`libellus.fabkho.dev` stays as an alias, `libellus-3q1.pages.dev` as the Pages host) | Preview deploy per pull request |
 
 ## 3. Domain
@@ -219,7 +219,7 @@ Each is a `ready-for-agent` issue linking back to #1.
 | [#18](https://github.com/fabkho/libellus/issues/18) | Go-live | Hosted backend, production deploy, Fabian's account with his history |
 
 After v1, roughly in order: page progress, Goodreads CSV import, German UI, offline write queue,
-edition picker, Regal as a display layer, profile and stats (#78, done), Google Books via an Edge Function, cover
+edition picker, Regal as a display layer, profile and stats (#78, done), Google Books via an Edge Function (#305, done), cover
 upload and barcode scanning, quotes and notes, a custom domain, the native decision.
 
 ## 8. Decisions (settled 2026-10-02)
