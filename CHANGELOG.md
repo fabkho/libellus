@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.36.0](https://github.com/fabkho/libellus/compare/v1.35.0...v1.36.0) (2026-11-05)
+
+
+### Features
+
+* voice messages in buddy reads, and the reaction gestures checked ([#502](https://github.com/fabkho/libellus/issues/502)) ([5136e7a](https://github.com/fabkho/libellus/commit/5136e7ab5c8541254a101fa5cb187bb1b743f136))
+
 ## [1.35.0](https://github.com/fabkho/libellus/compare/v1.34.0...v1.35.0) (2026-11-05)
 
 
