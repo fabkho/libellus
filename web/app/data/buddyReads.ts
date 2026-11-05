@@ -582,8 +582,12 @@ export function createBuddyReads(client: SupabaseClient, { online = () => true, 
     async uploadVoice(readId: string, authorId: string, clientId: string, blob: Blob, mime: VoiceMime): Promise<BuddyResult<string>> {
       if (!online()) return { data: null, error: 'offline' }
       const path = `${readId}/${authorId}/${clientId}.${voiceExtension(mime)}`
+      // Storage keeps the type of the Blob it is given (storage-js ignores `contentType` for a Blob), and a recorder's blob says "audio/webm;codecs=opus":
+      // the sound is wrapped in a Blob of the bare type, which is what the database compares (`buddy_voice_ext`) and what the bucket allows. `cacheControl`
+      // 0: a deleted recording must not stay in a browser's cache (the signed URL is the only way to it, and it is short-lived).
+      const audio = new Blob([blob], { type: mime })
       const { error } = await Promise.resolve(
-        client.storage.from(VOICE_BUCKET).upload(path, blob, { contentType: mime, upsert: false, cacheControl: '3600' }),
+        client.storage.from(VOICE_BUCKET).upload(path, audio, { contentType: mime, upsert: false, cacheControl: '0' }),
       ).catch(() => ({ error: { name: 'StorageUnknownError', message: 'fetch failed' } as StorageFailure }))
       if (!error) return { data: path, error: null }
       const code = mapVoiceStorageError(error as StorageFailure)

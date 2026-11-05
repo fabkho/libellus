@@ -28,6 +28,12 @@ export const VOICE_URL_SECONDS = 300
 /** A URL signed this long ago is asked for again (a minute of margin before it dies). */
 export const VOICE_URL_REUSE_MS = (VOICE_URL_SECONDS - 60) * 1000
 export const VOICE_BUCKET = 'buddy-voice'
+/**
+ * How long a stored recording may wait in the send queue before it is given up (a connection that stays away for hours): the database sweeps an upload
+ * no message points at after 6 hours (`buddy_voice_sweep_batch`), so the app never sends one that is older than 4, with two hours of margin for a
+ * clock that is off. The bubble then says the recording did not upload (`message_voice_missing`), and she records it again.
+ */
+export const VOICE_QUEUE_MAX_AGE_MS = 4 * 60 * 60 * 1000
 
 /** What `checkVoice` holds a finished recording to. */
 export const VOICE_LIMITS: VoiceLimits = { minMs: VOICE_MIN_MS, maxBytes: VOICE_MAX_BYTES }

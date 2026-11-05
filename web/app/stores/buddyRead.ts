@@ -21,7 +21,7 @@ import {
   type ReportReason,
 } from '~/data/buddyReads'
 import type { BuddyLive, BuddyLiveEvent, LiveRealtimeModule } from '~/data/buddyLive'
-import { prepareVoice, VOICE_URL_REUSE_MS, type PreparedVoice } from '~/data/buddyVoice'
+import { prepareVoice, VOICE_QUEUE_MAX_AGE_MS, VOICE_URL_REUSE_MS, type PreparedVoice } from '~/data/buddyVoice'
 import { useSessionStore } from '~/stores/session'
 import { parseAppConfig } from '~/utils/appConfig'
 import { buddyPeekKey, buddyQueueKey, deviceHasBuddyLine } from '~/utils/buddyStorage'
@@ -242,6 +242,8 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     const since = epoch
     if (!me.value || me.value !== queueFor) return { ok: false, retry: true, error: 'offline' }
     const voice = voiceOfJob(job)
+    // A recording that waited too long is not sent: its object may be swept already (`VOICE_QUEUE_MAX_AGE_MS`); she records it again.
+    if (voice && Date.now() - Date.parse(job.createdAt) > VOICE_QUEUE_MAX_AGE_MS) return { ok: false, retry: false, error: 'message_voice_missing', field: null }
     const answer = voice
       ? await r.sendVoice({ readId: job.conversationId, sectionId: job.threadId, clientId: job.clientId, media: voice, replyTo: job.replyTo, spoiler: job.spoiler })
       : await r.post({ readId: job.conversationId, sectionId: job.threadId, clientId: job.clientId, body: job.body, replyTo: job.replyTo, spoiler: job.spoiler })

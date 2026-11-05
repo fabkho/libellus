@@ -19,7 +19,7 @@ begin
   end if;
   return (select count(*) from storage.objects o
            where o.bucket_id = 'buddy-voice' and o.owner_id = v_caller::text
-             and o.created_at > now() - interval '1 hour') < 60;
+             and o.created_at > now() - interval '1 hour') < 20;
 end;
 $function$
 ;

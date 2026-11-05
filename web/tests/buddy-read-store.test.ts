@@ -36,7 +36,7 @@ const server = {
   /** While set, a read of a read, of the list or of a thread waits for it. */
   readGate: null as null | Promise<void>,
   /** The recordings stored (voice), the URLs asked for, and what Storage says to the next upload: null = stored, else its refusal. */
-  uploads: [] as { bucket: string; path: string; type: string | undefined }[],
+  uploads: [] as { bucket: string; path: string; type: string | undefined; blobType: string; cache: string | undefined }[],
   signs: [] as { path: string; seconds: number }[],
   uploadRefusal: null as null | { message: string; statusCode: string },
 }
@@ -118,10 +118,10 @@ const backend = {
   auth: { getSession: async () => ({ data: { session: { access_token: 'token' } } }) },
   storage: {
     from: (bucket: string) => ({
-      upload: async (path: string, _blob: Blob, options?: { contentType?: string }) => {
+      upload: async (path: string, blob: Blob, options?: { contentType?: string; cacheControl?: string }) => {
         if (server.mode === 'silent') return { data: null, error: { name: 'StorageUnknownError', message: 'Failed to fetch' } }
         if (server.uploadRefusal) return { data: null, error: server.uploadRefusal }
-        server.uploads.push({ bucket, path, type: options?.contentType })
+        server.uploads.push({ bucket, path, type: options?.contentType, blobType: blob.type, cache: options?.cacheControl })
         return { data: { path }, error: null }
       },
       createSignedUrl: async (path: string, seconds: number) => {
@@ -945,7 +945,7 @@ describe('a voice message', () => {
     expect(buddy.previewOf(clientId)).toMatch(/^blob:/)
     await settle()
     // The sound went to the private bucket under that name, with its type, before anything was posted.
-    expect(server.uploads).toEqual([{ bucket: 'buddy-voice', path: `${READ}/${ME}/${clientId}.m4a`, type: 'audio/mp4' }])
+    expect(server.uploads).toEqual([{ bucket: 'buddy-voice', path: `${READ}/${ME}/${clientId}.m4a`, type: 'audio/mp4', blobType: 'audio/mp4', cache: '0' }])
     expect(voicePosts()).toHaveLength(1)
     expect(voicePosts()[0]!.args).toMatchObject({ p_read: READ, p_section: S1, p_client_id: clientId, p_mime: 'audio/mp4', p_duration_ms: 3_200, p_peaks: [10, 80, 100, 30], p_spoiler: true })
     expect(posts()).toHaveLength(0)
@@ -955,6 +955,36 @@ describe('a voice message', () => {
     // Nothing was signed: she plays her own from the device.
     expect(server.signs).toEqual([])
     expect(buddy.waiting).toBe(0)
+  })
+
+  it('uploads the sound as a Blob of the bare type though the recorder named its codec (Storage keeps the Blob\'s own type), not cached', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    await buddy.openThread(READ, S1)
+    await buddy.sendVoice(READ, S1, { ...recording(), blob: new Blob([new Uint8Array(4_000)], { type: 'audio/webm;codecs=opus' }) })
+    await settle()
+    expect(server.uploads).toHaveLength(1)
+    expect(server.uploads[0]).toMatchObject({ path: expect.stringMatching(/\.webm$/), type: 'audio/webm', blobType: 'audio/webm', cache: '0' })
+    expect(voicePosts()[0]!.args).toMatchObject({ p_mime: 'audio/webm' })
+  })
+
+  it('does not send a recording that waited longer than four hours in the line (the database sweeps an upload nobody sent after six): it says it did not upload', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    await buddy.openThread(READ, S1)
+    const now = Date.now()
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now + 4 * 3600_000 + 60_000)
+    await buddy.sendVoice(READ, S1, recording())
+    await settle()
+    clock.mockRestore()
+    expect(voicePosts()).toHaveLength(0)
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ kind: 'voice', state: 'failed', error: 'message_voice_missing' })
+    // One that waited three hours and a half is sent.
+    const early = vi.spyOn(Date, 'now').mockReturnValue(now + 3.5 * 3600_000)
+    await buddy.sendVoice(READ, S1, recording())
+    await settle()
+    early.mockRestore()
+    expect(voicePosts()).toHaveLength(1)
   })
 
   it('answers a message, in the room, with no spoiler outside a Section', async () => {

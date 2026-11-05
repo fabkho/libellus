@@ -12,28 +12,33 @@
 --             here) and voice_peaks (up to 48 values 0 - 100, the waveform the bubble draws). Three nullable
 --             columns without a default: no table rewrite.
 --   checks    buddy_messages_kind gains 'voice', buddy_messages_shape says which columns a voice message
---             carries and that a tombstone keeps none. Both are added NOT VALID and validated in the same
---             migration (the validation takes only a SHARE UPDATE EXCLUSIVE lock; the drop of the two old
---             checks and the add of the new ones hold ACCESS EXCLUSIVE for the length of this transaction
---             on a table that has held buddy messages since 1.34 and is small).
+--             carries and that a tombstone keeps none. The two old checks are dropped and the two new ones added
+--             in this one transaction, so the table is locked ACCESS EXCLUSIVE from the ADD COLUMN until the
+--             commit, and the new checks scan it once under that lock (a plain ADD CONSTRAINT: NOT VALID with a
+--             VALIDATE after it would gain nothing here, the drop and the add already hold the lock until the
+--             commit). That is a moment on a table that has held buddy messages since 1.34 and is small, and
+--             `lock_timeout` of 5 s makes the migration fail and roll back, rather than queue every reader and
+--             writer of the table behind it, should something hold the table.
 --   bucket    `buddy-voice`, PRIVATE (no public URL, ever), 3 MB an object, audio/mp4 (Safari, Chrome 126+),
 --             audio/webm (older Chrome, Android), audio/ogg (Firefox). The object of a message is
 --             `<read id>/<author id>/<client id>.<m4a|webm|ogg>`: the name is worked out from the row
 --             (private.buddy_voice_path), never stored and never sent over Realtime.
 --   policies  on storage.objects: a member of the read, and nobody else, reads an object whose message is live
 --             and whose author is not blocked with her either way (her own always); she writes only under her
---             own folder of a read she has joined that is not archived, at most 60 objects an hour. No update
+--             own folder of a read she has joined that is not archived, at most 20 objects an hour. No update
 --             and no delete policy: no member deletes an object, the database's sweep does.
 --   helpers   private.buddy_voice_ext, buddy_voice_path, buddy_voice_readable, buddy_voice_writable,
---             buddy_voice_attached, buddy_voice_kick, the trash queue private.buddy_voice_trash and
---             the settings private.buddy_voice_settings.
+--             buddy_voice_attached, buddy_voice_kick, the trash queue private.buddy_voice_trash (a path, when it
+--             was queued, how often the sweep tried it) and the settings private.buddy_voice_settings (the
+--             function's address, the debounce).
 --   RPCs      send_buddy_voice (the sending), buddy_voice_sweep_batch / buddy_voice_sweep_done (for the Edge
 --             Function `buddy-voice-sweep`, service role only).
 --   changes   private.buddy_message_json (the voice object, never for a tombstone), delete_buddy_message (a
 --             tombstone keeps no audio), report_buddy_message (the report carries the kind; a voice message's
 --             excerpt says so), private.buddy_message_new (the Realtime payload: kind, length, waveform and type,
 --             no audio location).
---   cron      pg_cron `sweep-buddy-voice`, hourly.
+--   cron      pg_cron `sweep-buddy-voice` (hourly: the queue and the uploads nobody sent) and
+--             `sweep-buddy-voice-queue` (every ten minutes: only when something waits in the queue).
 --
 -- Who may hear what. An object is read through a short-lived signed URL the app asks for when a member plays
 -- it (`createSignedUrl`, 5 minutes): Storage checks the select policy below when it signs. A non-member, a
@@ -49,11 +54,21 @@
 -- read deleted: the foreign keys cascade and the trigger fires for every row) or becomes a tombstone (her
 -- own delete, the host's). The database cannot remove a file itself (Storage's protect_delete refuses a
 -- direct delete from SQL and a deleted row would leave the bytes in the object store), so the Edge Function
--- `buddy-voice-sweep` removes the queued objects through the Storage API, and objects no message points at
--- that are older than a day (an upload whose message never came). The trigger nudges the function once per
--- transaction (pg_net, after commit); the hourly job is the net under it. The function is off until the owner
--- gives it an address (private.buddy_voice_settings.function_url, docs/OPERATIONS.md, "Voice messages");
--- nothing is sent before.
+-- `buddy-voice-sweep` removes the queued objects through the Storage API, and, on its hourly run, objects no
+-- message points at that are older than 6 hours (an upload whose message never came: the app refuses to send a
+-- recording that waited longer than 4 hours in its queue, so a sent one is never swept first). The trigger
+-- nudges the function once per transaction (pg_net, after commit) and at most once a minute (the debounce
+-- in private.buddy_voice_settings: a member who sends and deletes ten times a minute makes one request); what a
+-- debounced nudge left waits for the ten-minute job. The function is off until the owner gives it an address
+-- (private.buddy_voice_settings.function_url, docs/OPERATIONS.md, "Voice messages"); nothing is sent before and
+-- what is queued meanwhile waits in the table.
+--
+-- The sweep cannot be starved by one object it cannot remove: every time a path is handed to the function
+-- its `attempts` count goes up and it waits longer before it is handed out again (5 minutes times its attempts),
+-- the paths tried least go first, and after 20 attempts it is left in the queue for the owner to look at
+-- (docs/OPERATIONS.md). An object nobody sent is queued by the hourly run when it finds it, so it is
+-- counted the same way. The hourly run reads only the objects of this bucket and at most as many a run as the
+-- function removes in one go (100 an ask, 10 asks a run).
 --
 -- What it leaves out: photos, GIFs and stickers (a voice message has no caption); a voice message in a
 -- 1:1 chat (there is none here); transcoding (the file is kept as the phone recorded it).
@@ -63,12 +78,18 @@
 -- PT429 message_rate_limited (the 30 a minute and 600 a day of every message), rate_limited (10 voice
 -- messages a minute, 100 a day); 22023 message_client_id_required, buddy_section_invalid,
 -- message_spoiler_unavailable, message_reply_unavailable, message_voice_invalid (type, length or
--- waveform), message_voice_missing (no object at its name), message_voice_too_large.
+-- waveform, a waveform with a null in it), message_voice_missing (no object at its name),
+-- message_voice_too_large. The type the object was stored with is compared without its parameters
+-- ("audio/webm;codecs=opus" is "audio/webm"): a browser's recorder names its codec and Storage keeps what it
+-- is sent.
 --
 -- Safe on a live database: additive columns without a default, a bucket row, policies, new functions and a
--- queue table of its own; no data is rewritten and no big table is locked beyond the two checks above.
+-- queue table of its own; no data is rewritten and no table is locked beyond buddy_messages (above).
 
 -- -------------------------------------------------------------------------- columns
+
+-- Everything below is one transaction; a lock it cannot get in 5 s fails the migration (and rolls it back) instead of waiting.
+set local lock_timeout = '5s';
 
 alter table public.buddy_messages
   add column voice_mime        text,
@@ -88,7 +109,7 @@ alter table public.buddy_messages drop constraint buddy_messages_kind;
 alter table public.buddy_messages drop constraint buddy_messages_shape;
 
 alter table public.buddy_messages
-  add constraint buddy_messages_kind check (kind in ('text', 'gif', 'voice')) not valid;
+  add constraint buddy_messages_kind check (kind in ('text', 'gif', 'voice'));
 
 -- A tombstone keeps nothing it said; a live text has something visible; a GIF is KLIPY's, with a size; a voice
 -- message has a type, a length and (maybe) a waveform and no words.
@@ -114,10 +135,7 @@ alter table public.buddy_messages
              and (voice_peaks is null or (cardinality(voice_peaks) between 1 and 48
                                           and 0 <= all (voice_peaks) and 100 >= all (voice_peaks)))
       else false
-    end, false)) not valid;
-
-alter table public.buddy_messages validate constraint buddy_messages_kind;
-alter table public.buddy_messages validate constraint buddy_messages_shape;
+    end, false));
 
 comment on table public.buddy_messages is
   'Buddy reads (20261113030000, 20261114020000): the messages of a read. section_id null = the room thread, else a Section''s '
@@ -161,12 +179,16 @@ $$;
 
 -- Objects whose message is gone: removed by the Edge Function, then forgotten here. Only the service role reads it.
 create table private.buddy_voice_trash (
-  path      text primary key,
-  queued_at timestamptz not null default now()
+  path            text primary key,
+  queued_at       timestamptz not null default now(),
+  -- How often the sweep handed the path to the function, and when last: a path the Storage API keeps refusing waits longer
+  -- each time and, after 20 tries, is left here for the owner (buddy_voice_sweep_batch).
+  attempts        integer not null default 0,
+  last_attempt_at timestamptz
 );
 
 comment on table private.buddy_voice_trash is
-  'buddy-voice objects whose message is gone (deleted, a tombstone, its author''s account deleted): removed from storage by the Edge Function buddy-voice-sweep, then forgotten here.';
+  'buddy-voice objects whose message is gone (deleted, a tombstone, its author''s account deleted) or that no message ever pointed at: removed from storage by the Edge Function buddy-voice-sweep, then forgotten here. attempts: how often the function was handed the path (20 is the last).';
 
 alter table private.buddy_voice_trash enable row level security;
 revoke all on private.buddy_voice_trash from public, anon, authenticated;
@@ -174,19 +196,26 @@ revoke all on private.buddy_voice_trash from public, anon, authenticated;
 -- Where the sweeping function is; null = off (nothing is sent, the queue waits). Its token is the Vault secret
 -- buddy_voice_sweep_token.
 create table private.buddy_voice_settings (
-  id           boolean primary key default true check (id),
-  function_url text check (function_url ~ '^https?://[^[:space:]]+$')
+  id            boolean primary key default true check (id),
+  function_url  text check (function_url ~ '^https?://[^[:space:]]+$'),
+  -- The kick of a deletion does not ask the function again sooner than this after the last kick (the hourly and ten-minute jobs are
+  -- not held back): a member who sends and deletes ten times a minute makes one request, not ten.
+  min_interval  interval not null default interval '1 minute' check (min_interval >= interval '0'),
+  last_kick_at  timestamptz
 );
 
 comment on table private.buddy_voice_settings is
-  'Where the buddy-voice-sweep edge function is (null = off). One row. Its token is the Vault secret buddy_voice_sweep_token.';
+  'Where the buddy-voice-sweep edge function is (null = off), and when it was last kicked (the debounce). One row. Its token is the Vault secret buddy_voice_sweep_token.';
 
 insert into private.buddy_voice_settings default values;
+alter table private.buddy_voice_settings enable row level security;
 revoke all on private.buddy_voice_settings from public, anon, authenticated;
 
--- Asks the function to sweep now (pg_net, after the calling transaction commits). Answers 'off' (no address: the
--- local stack, CI), 'unavailable' (no pg_net or no Vault secret) or 'sent'. Never raises.
-create or replace function private.buddy_voice_kick()
+-- Asks the function to sweep now (pg_net, after the calling transaction commits), at most once in `min_interval` (p_force asks
+-- anyway: the jobs). p_full also lets the function look for objects nobody sent (the hourly job): a kick for a deletion only
+-- empties the queue, which is cheap. Answers 'off' (no address: the local stack, CI), 'unavailable' (no pg_net or no Vault
+-- secret), 'debounced' (asked a moment ago: the ten-minute job will see what is left) or 'sent'. Never raises.
+create or replace function private.buddy_voice_kick(p_force boolean default false, p_full boolean default false)
 returns text
 language plpgsql
 security definer
@@ -206,9 +235,15 @@ begin
   execute 'select decrypted_secret from vault.decrypted_secrets where name = $1 limit 1'
     into v_token using 'buddy_voice_sweep_token';
   if nullif(btrim(v_token), '') is null then return 'unavailable'; end if;
+  -- The slot: one statement, so two transactions that kick together cannot both take it (the second waits for the first's commit
+  -- and then finds the interval running).
+  update private.buddy_voice_settings
+     set last_kick_at = clock_timestamp()
+   where id and (p_force or last_kick_at is null or last_kick_at < clock_timestamp() - min_interval);
+  if not found then return 'debounced'; end if;
   execute 'select net.http_post(url := $1, body := $2, headers := $3, timeout_milliseconds := 30000)'
     into v_request
-    using v_url, '{}'::jsonb,
+    using v_url, jsonb_build_object('full', coalesce(p_full, false)),
           jsonb_build_object('Authorization', 'Bearer ' || btrim(v_token), 'Content-Type', 'application/json');
   return 'sent';
 exception when others then
@@ -235,7 +270,7 @@ begin
   end if;
   return null;
 exception when others then
-  -- Never costs the delete or the account its success; the hourly job finds the object by the sweep's second rule.
+  -- Never costs the delete or the account its success; the hourly job finds the object by the sweep's second rule (the uploads nobody sent).
   raise warning 'buddy-voice: object of message % not queued: %', old.id, sqlerrm;
   return null;
 end;
@@ -296,8 +331,8 @@ begin
 end;
 $$;
 
--- The insert policy: her own folder of a read she has joined that is not archived, at most 60 objects an hour (the
--- post limits count messages, and an upload comes before its message).
+-- The insert policy: her own folder of a read she has joined that is not archived, at most 20 objects an hour (the
+-- post limits count messages, and an upload comes before its message; 20 x 3 MB a member an hour is the most that can wait, unsent, for the sweep).
 create or replace function private.buddy_voice_writable(p_name text)
 returns boolean
 language plpgsql
@@ -320,7 +355,7 @@ begin
   end if;
   return (select count(*) from storage.objects o
            where o.bucket_id = 'buddy-voice' and o.owner_id = v_caller::text
-             and o.created_at > now() - interval '1 hour') < 60;
+             and o.created_at > now() - interval '1 hour') < 20;
 end;
 $$;
 
@@ -446,6 +481,7 @@ begin
   if private.buddy_voice_ext(p_mime) is null
      or p_duration_ms is null or p_duration_ms not between 1 and 120000
      or (p_peaks is not null and (cardinality(p_peaks) not between 1 and 48
+                                  or array_position(p_peaks, null) is not null
                                   or 0 > any (p_peaks) or 100 < any (p_peaks))) then
     raise exception 'message_voice_invalid' using errcode = '22023';
   end if;
@@ -456,7 +492,8 @@ begin
   if not found then
     raise exception 'message_voice_missing' using errcode = '22023';
   end if;
-  if v_object ->> 'mimetype' is distinct from p_mime then
+  -- The type Storage kept, without its parameters: a browser's recorder says "audio/webm;codecs=opus" and Storage keeps what it is sent.
+  if lower(btrim(split_part(coalesce(v_object ->> 'mimetype', ''), ';', 1))) is distinct from p_mime then
     raise exception 'message_voice_invalid' using errcode = '22023';
   end if;
   v_size := coalesce(nullif(v_object ->> 'size', '')::bigint, 0);
@@ -636,35 +673,58 @@ begin
 end;
 $$;
 
--- For the Edge Function buddy-voice-sweep: the objects to remove now, at most p_limit: the queued ones that
--- exist, and objects of the bucket no message points at that are older than p_grace (a day: a younger one may be
--- an upload whose message is on its way). Never an object a live message points at.
-create or replace function public.buddy_voice_sweep_batch(p_limit integer default 100, p_grace interval default interval '1 day')
+-- For the Edge Function buddy-voice-sweep: the objects to remove now, at most p_limit. The queue (paths of deleted messages), the
+-- ones tried least first; a path waits 5 minutes times the tries it has had before it is handed out again and is left alone after
+-- 20 (so one object Storage will not remove cannot starve the rest, nor be asked for again in the same run). With p_orphans (the
+-- hourly run) it first queues, at most p_limit, the objects of the bucket no message points at that are older than p_grace (6 hours:
+-- a younger one may be an upload whose message is on its way: the app sends a recording that waited at most 4 hours, VOICE_QUEUE_MAX_AGE_MS).
+-- Never an object a live message points at; a queued path whose object is gone or whose message came back is forgotten.
+create or replace function public.buddy_voice_sweep_batch(
+  p_limit    integer default 100,
+  p_grace    interval default interval '6 hours',
+  p_orphans  boolean default true
+)
 returns text[]
 language plpgsql
 security definer
 set search_path = pg_catalog, public, private
 as $$
 declare
+  v_limit integer := least(greatest(coalesce(p_limit, 100), 1), 500);
   v_paths text[];
 begin
+  if coalesce(p_orphans, false) then
+    insert into private.buddy_voice_trash (path)
+    select o.name
+      from storage.objects o
+     where o.bucket_id = 'buddy-voice'
+       and o.created_at < now() - p_grace
+       and not exists (select 1 from private.buddy_voice_trash t where t.path = o.name)
+       and not private.buddy_voice_attached(o.name)
+     limit v_limit
+    on conflict do nothing;
+  end if;
+
   delete from private.buddy_voice_trash t
    where private.buddy_voice_attached(t.path)
       or not exists (select 1 from storage.objects o where o.bucket_id = 'buddy-voice' and o.name = t.path);
 
-  select coalesce(array_agg(x.path order by x.since), '{}') into v_paths
-    from (
-      select t.path, t.queued_at as since
-        from private.buddy_voice_trash t
-      union
-      select o.name, o.created_at
-        from storage.objects o
-       where o.bucket_id = 'buddy-voice'
-         and o.created_at < now() - p_grace
-         and not private.buddy_voice_attached(o.name)
-       order by 2
-       limit greatest(coalesce(p_limit, 100), 1)
-    ) x;
+  with picked as (
+    select t.path
+      from private.buddy_voice_trash t
+     where t.attempts < 20
+       and (t.last_attempt_at is null or t.last_attempt_at < now() - t.attempts * interval '5 minutes')
+     order by t.attempts, t.queued_at
+     limit v_limit
+       for update skip locked
+  ), marked as (
+    update private.buddy_voice_trash t
+       set attempts = t.attempts + 1, last_attempt_at = now()
+      from picked
+     where t.path = picked.path
+    returning t.path, t.queued_at
+  )
+  select coalesce(array_agg(m.path order by m.queued_at, m.path), '{}') into v_paths from marked m;
   return v_paths;
 end;
 $$;
@@ -679,14 +739,29 @@ as $$
   delete from private.buddy_voice_trash where path = any (coalesce(p_paths, '{}'))
 $$;
 
--- The hourly net under the triggers (and the only thing that catches an upload that never became a message).
+-- The hourly job: asks the function whatever the debounce says, and to look for uploads nobody sent as well.
 create or replace function private.buddy_voice_sweep_tick()
 returns text
 language sql
 security definer
 set search_path = pg_catalog, private
 as $$
-  select private.buddy_voice_kick()
+  select private.buddy_voice_kick(true, true)
+$$;
+
+-- Every ten minutes: asks only when something waits that the function may be handed (a kick the debounce held back, a run that
+-- failed), so a quiet bucket costs one count of a small table.
+create or replace function private.buddy_voice_queue_tick()
+returns text
+language sql
+security definer
+set search_path = pg_catalog, private
+as $$
+  select case when exists (select 1 from private.buddy_voice_trash t
+                            where t.attempts < 20
+                              and (t.last_attempt_at is null or t.last_attempt_at < now() - t.attempts * interval '5 minutes'))
+              then private.buddy_voice_kick(true, false)
+              else 'idle' end
 $$;
 
 -- -------------------------------------------------------------------------- grants
@@ -694,18 +769,19 @@ $$;
 revoke all on function private.buddy_voice_ext(text) from public, anon, authenticated;
 revoke all on function private.buddy_voice_path(uuid, uuid, uuid, text) from public, anon, authenticated;
 revoke all on function private.buddy_voice_parts(text) from public, anon, authenticated;
-revoke all on function private.buddy_voice_kick() from public, anon, authenticated;
+revoke all on function private.buddy_voice_kick(boolean, boolean) from public, anon, authenticated;
 revoke all on function private.buddy_voice_gone() from public, anon, authenticated;
 revoke all on function private.buddy_voice_attached(text) from public, anon, authenticated;
 revoke all on function private.buddy_voice_sweep_tick() from public, anon, authenticated;
+revoke all on function private.buddy_voice_queue_tick() from public, anon, authenticated;
 revoke all on function private.buddy_message_json(uuid, public.buddy_messages) from public, anon, authenticated;
 revoke all on function private.buddy_message_new() from public, anon, authenticated;
 
 revoke all on function public.send_buddy_voice(uuid, uuid, uuid, text, integer, integer[], uuid, boolean) from public, anon;
 grant execute on function public.send_buddy_voice(uuid, uuid, uuid, text, integer, integer[], uuid, boolean) to authenticated;
-revoke all on function public.buddy_voice_sweep_batch(integer, interval) from public, anon, authenticated;
+revoke all on function public.buddy_voice_sweep_batch(integer, interval, boolean) from public, anon, authenticated;
 revoke all on function public.buddy_voice_sweep_done(text[]) from public, anon, authenticated;
-grant execute on function public.buddy_voice_sweep_batch(integer, interval) to service_role;
+grant execute on function public.buddy_voice_sweep_batch(integer, interval, boolean) to service_role;
 grant execute on function public.buddy_voice_sweep_done(text[]) to service_role;
 
 -- -------------------------------------------------------------------------- pg_cron
@@ -715,11 +791,12 @@ begin
   if exists (select 1 from pg_extension where extname = 'pg_cron') then
     begin
       perform cron.schedule('sweep-buddy-voice', '37 * * * *', 'select private.buddy_voice_sweep_tick()');
+      perform cron.schedule('sweep-buddy-voice-queue', '7,17,27,47,57 * * * *', 'select private.buddy_voice_queue_tick()');
     exception when others then
       raise warning 'sweep-buddy-voice could not be scheduled (%): objects of deleted voice messages are removed only when a deletion kicks the function', sqlerrm;
     end;
   else
-    raise warning 'pg_cron is not here: enable it, then schedule sweep-buddy-voice (select cron.schedule(''sweep-buddy-voice'', ''37 * * * *'', ''select private.buddy_voice_sweep_tick()''))';
+    raise warning 'pg_cron is not here: enable it, then schedule sweep-buddy-voice (select cron.schedule(''sweep-buddy-voice'', ''37 * * * *'', ''select private.buddy_voice_sweep_tick()'')) and sweep-buddy-voice-queue (''7,17,27,47,57 * * * *'', ''select private.buddy_voice_queue_tick()'')';
   end if;
 end;
 $$;

@@ -5,7 +5,7 @@ import { VOICE_BUCKET, VOICE_MAX_BYTES, VOICE_URL_SECONDS, voicePath } from '@/d
 import { removedNames, sweep } from '../../supabase/functions/buddy-voice-sweep/sweep'
 import { buddyOf, joinRead, startRead } from './support/buddy'
 import { signUpMember, type TestMember } from './support/member'
-import { serviceRoleKey, stack } from './support/stack'
+import { serviceRoleKey, sql, stack } from './support/stack'
 
 /**
  * Voice messages through the repository and the real Storage API on the local stack (data/buddyVoice.ts and the voice calls of data/buddyReads.ts; the
@@ -111,6 +111,36 @@ describe('sending a recording', () => {
   })
 })
 
+describe('the type the object is stored with', () => {
+  it('is the bare type: a recorder\'s blob that names its codec is wrapped, and Storage keeps what it is sent', async () => {
+    const repo = buddyOf(ben)
+    const clientId = crypto.randomUUID()
+    // What `MediaRecorder` hands over in Chrome and on Android.
+    const recorded = asBlob(WEBM, 'audio/webm;codecs=opus')
+    expect(recorded.type).toBe('audio/webm;codecs=opus')
+    const stored = await repo.uploadVoice(read.id, ben.id, clientId, recorded, 'audio/webm')
+    expect(stored.error).toBeNull()
+    const [object] = await sql<{ mimetype: string; cache: string }>(
+      `select metadata ->> 'mimetype' as mimetype, metadata ->> 'cacheControl' as cache from storage.objects where bucket_id = 'buddy-voice' and name = $1`,
+      [stored.data],
+    )
+    expect(object!.mimetype).toBe('audio/webm')
+    // A deleted recording must not stay in a browser's cache.
+    expect(object!.cache).toBe('max-age=0')
+    // And the post is accepted (the database compares the type without its parameters in any case).
+    const sent = await repo.sendVoice({ readId: read.id, sectionId: section, clientId, media: { mime: 'audio/webm', durationMs: 2_000, peaks: [] } })
+    expect(sent.error).toBeNull()
+  })
+
+  it('is refused by the bucket when it is no recording at all, with or without a codec', async () => {
+    const bucket = ben.client.storage.from(VOICE_BUCKET)
+    for (const type of ['audio/mpeg', 'audio/mpeg;codecs=mp3', 'image/png']) {
+      const refused = await bucket.upload(`${read.id}/${ben.id}/${crypto.randomUUID()}.m4a`, asBlob(M4A, type), { contentType: type })
+      expect(refused.error, type).toBeTruthy()
+    }
+  })
+})
+
 describe('hearing it', () => {
   it('gives a member of the read a URL that lives five minutes and plays the bytes that were recorded; the page of the thread carries none', async () => {
     const { path, message } = await say(host)
@@ -176,7 +206,6 @@ describe('no audio outlives its message', () => {
     const page = (await buddyOf(cy).messages(read.id, section)).data!.items.find((m) => m.id === message.id)!
     expect(page).toMatchObject({ kind: 'text', body: '', voice: null, media: null })
     expect((await buddyOf(cy).voiceUrl(path)).error).toBeTruthy()
-    expect(((await service.rpc('buddy_voice_sweep_batch', { p_limit: 500 })).data as string[]).includes(path)).toBe(true)
     await runSweep()
     expect(await objectThere(path)).toBe(false)
     expect(((await service.rpc('buddy_voice_sweep_batch', { p_limit: 500 })).data as string[]).includes(path)).toBe(false)

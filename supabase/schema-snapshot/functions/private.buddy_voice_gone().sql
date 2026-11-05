@@ -14,7 +14,7 @@ begin
   end if;
   return null;
 exception when others then
-  -- Never costs the delete or the account its success; the hourly job finds the object by the sweep's second rule.
+  -- Never costs the delete or the account its success; the hourly job finds the object by the sweep's second rule (the uploads nobody sent).
   raise warning 'buddy-voice: object of message % not queued: %', old.id, sqlerrm;
   return null;
 end;

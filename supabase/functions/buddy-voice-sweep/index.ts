@@ -25,10 +25,10 @@ const supabase = createClient(url, serviceKey, {
 
 const handler = createHandler({
   token: env('BUDDY_VOICE_SWEEP_TOKEN'),
-  run: () =>
+  run: ({ full }) =>
     sweep({
       batch: async (limit) => {
-        const { data, error } = await supabase.rpc('buddy_voice_sweep_batch', { p_limit: limit })
+        const { data, error } = await supabase.rpc('buddy_voice_sweep_batch', { p_limit: limit, p_orphans: full })
         if (error) throw new Error(`buddy_voice_sweep_batch: ${error.message}`)
         return (data as string[] | null) ?? []
       },

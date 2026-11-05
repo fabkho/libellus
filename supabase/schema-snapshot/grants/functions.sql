@@ -60,7 +60,7 @@ grant execute on function public.buddy_read_messages(uuid,uuid,timestampwithtime
 grant execute on function public.buddy_read_messages(uuid,uuid,timestampwithtimezone,timestampwithtimezone,integer) to service_role;
 grant execute on function public.buddy_read_target(text) to authenticated;
 grant execute on function public.buddy_read_target(text) to service_role;
-grant execute on function public.buddy_voice_sweep_batch(integer,interval) to service_role;
+grant execute on function public.buddy_voice_sweep_batch(integer,interval,boolean) to service_role;
 grant execute on function public.buddy_voice_sweep_done(text[]) to service_role;
 grant execute on function public.can_see_member_file(text) to authenticated;
 grant execute on function public.can_see_member_file(text) to service_role;

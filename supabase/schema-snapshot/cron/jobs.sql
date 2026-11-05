@@ -39,3 +39,6 @@ select cron.schedule('shelf-publish', '*/5 * * * *', $job$select private.shelf_p
 
 -- sweep-buddy-voice
 select cron.schedule('sweep-buddy-voice', '37 * * * *', $job$select private.buddy_voice_sweep_tick()$job$);
+
+-- sweep-buddy-voice-queue
+select cron.schedule('sweep-buddy-voice-queue', '7,17,27,47,57 * * * *', $job$select private.buddy_voice_queue_tick()$job$);

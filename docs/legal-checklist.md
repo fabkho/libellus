@@ -79,7 +79,7 @@ The notice says these; confirm each, or change the text (and the version date) w
   (`docs/plans/buddy-read-shared.md`, part 5.5) when the feature changes what a co-member sees or what is kept.
 - **Voice messages** (5 November 2026): the notice has a *Voice messages (only if you record one)* bullet under "What data I process" and
   lines in *Who receives data* (Supabase: voice message storage), *How long I keep data* (a voice recording goes with its message, with a
-  member who leaves choosing to delete her messages, with her account and with a deleted room, within the hour at the latest; not part
+  member who leaves choosing to delete her messages, with her account and with a deleted room, shortly after, normally within the hour; an upload that was never sent within hours; not part
   of the backups). It is true only while the sweep runs (the Edge Function `buddy-voice-sweep`, docs/OPERATIONS.md, "Voice messages"):
   **check the queue empties before the release that carries voice messages goes to members.**
 

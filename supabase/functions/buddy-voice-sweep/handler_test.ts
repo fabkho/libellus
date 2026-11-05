@@ -3,6 +3,8 @@ import { createHandler } from './handler.ts'
 
 const request = (headers: Record<string, string> = {}, method = 'POST') => new Request('http://local/buddy-voice-sweep', { method, headers })
 const ran = { removed: 3, rounds: 1 }
+const post = (body: unknown, token = 'secret') =>
+  new Request('http://local/buddy-voice-sweep', { method: 'POST', headers: { authorization: `Bearer ${token}` }, body: typeof body === 'string' ? body : JSON.stringify(body) })
 
 Deno.test('only a POST with the token is let in', async () => {
   const handler = createHandler({ token: 'secret', run: () => Promise.resolve(ran) })
@@ -38,4 +40,15 @@ Deno.test('a failed run is a 500 that says nothing of why', async () => {
   assertEquals(answer.status, 500)
   assertEquals(await answer.json(), { error: 'failed' })
   assertEquals(logged, ['buddy-voice-sweep failed: storage: down'])
+})
+
+Deno.test('a run is a full one (it looks for uploads nobody sent) unless the database says full: false', async () => {
+  const seen: boolean[] = []
+  const handler = createHandler({ token: 'secret', run: ({ full }) => (seen.push(full), Promise.resolve(ran)) })
+  await handler(post({ full: true }))
+  await handler(post({ full: false }))
+  await handler(post({}))
+  await handler(post('not json'))
+  await handler(request({ authorization: 'Bearer secret' }))
+  assertEquals(seen, [true, false, true, true, true])
 })

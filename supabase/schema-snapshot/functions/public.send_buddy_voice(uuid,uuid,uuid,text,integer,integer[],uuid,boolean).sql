@@ -50,6 +50,7 @@ begin
   if private.buddy_voice_ext(p_mime) is null
      or p_duration_ms is null or p_duration_ms not between 1 and 120000
      or (p_peaks is not null and (cardinality(p_peaks) not between 1 and 48
+                                  or array_position(p_peaks, null) is not null
                                   or 0 > any (p_peaks) or 100 < any (p_peaks))) then
     raise exception 'message_voice_invalid' using errcode = '22023';
   end if;
@@ -60,7 +61,8 @@ begin
   if not found then
     raise exception 'message_voice_missing' using errcode = '22023';
   end if;
-  if v_object ->> 'mimetype' is distinct from p_mime then
+  -- The type Storage kept, without its parameters: a browser's recorder says "audio/webm;codecs=opus" and Storage keeps what it is sent.
+  if lower(btrim(split_part(coalesce(v_object ->> 'mimetype', ''), ';', 1))) is distinct from p_mime then
     raise exception 'message_voice_invalid' using errcode = '22023';
   end if;
   v_size := coalesce(nullif(v_object ->> 'size', '')::bigint, 0);

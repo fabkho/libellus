@@ -4,6 +4,6 @@ CREATE OR REPLACE FUNCTION private.buddy_voice_sweep_tick()
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'private'
 AS $function$
-  select private.buddy_voice_kick()
+  select private.buddy_voice_kick(true, true)
 $function$
 ;

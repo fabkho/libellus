@@ -1,4 +1,6 @@
 create table private.buddy_voice_trash (
+  attempts integer default 0 not null,
+  last_attempt_at timestamp with time zone,
   path text not null,
   queued_at timestamp with time zone default now() not null
 );

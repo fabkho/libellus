@@ -13,7 +13,7 @@
 -- rows this test made, never counts of a table.
 
 begin;
-select plan(160);
+select plan(191);
 
 create schema if not exists tests;
 
@@ -163,6 +163,25 @@ create or replace function tests.clear_calls(p_member uuid)
 returns void language sql security definer as $$
   delete from private.buddy_calls where member_id = p_member
 $$;
+-- The queue, past RLS: a path in it, how often it was tried, and when (minutes ago).
+create or replace function tests.queue(p_path text)
+returns void language sql security definer as $$
+  insert into private.buddy_voice_trash (path, queued_at) values (p_path, clock_timestamp()) on conflict do nothing
+$$;
+create or replace function tests.attempts(p_path text)
+returns integer language sql security definer as $$
+  select attempts from private.buddy_voice_trash where path = p_path
+$$;
+create or replace function tests.tried(p_path text, p_attempts integer, p_minutes_ago integer)
+returns void language sql security definer as $$
+  update private.buddy_voice_trash set attempts = p_attempts, last_attempt_at = now() - p_minutes_ago * interval '1 minute' where path = p_path
+$$;
+create or replace function tests.requests()
+returns bigint language sql security definer as $$ select count(*) from net.http_request_queue $$;
+create or replace function tests.last_request_full()
+returns text language sql security definer as $$
+  select convert_from(body, 'utf8')::jsonb ->> 'full' from net.http_request_queue order by id desc limit 1
+$$;
 create or replace function tests.fill_objects(p_owner uuid, p_read uuid, p_n integer)
 returns void language sql security definer as $$
   insert into storage.objects (bucket_id, name, owner_id, metadata)
@@ -284,19 +303,19 @@ select is(
               is distinct from array['search_path=pg_catalog, public, private']),
   0, 'send_buddy_voice: members only, security definer, search path pinned');
 select is(
-  (select count(*)::int from unnest(array['public.buddy_voice_sweep_batch(integer, interval)', 'public.buddy_voice_sweep_done(text[])']) f,
+  (select count(*)::int from unnest(array['public.buddy_voice_sweep_batch(integer, interval, boolean)', 'public.buddy_voice_sweep_done(text[])']) f,
           unnest(array['public', 'anon', 'authenticated']) r
     where has_function_privilege(r, f::regprocedure, 'execute')),
   0, 'the sweep functions are not for members or anon');
 select is(
-  (select count(*)::int from unnest(array['public.buddy_voice_sweep_batch(integer, interval)', 'public.buddy_voice_sweep_done(text[])']) f
+  (select count(*)::int from unnest(array['public.buddy_voice_sweep_batch(integer, interval, boolean)', 'public.buddy_voice_sweep_done(text[])']) f
     where not has_function_privilege('service_role', f::regprocedure, 'execute')),
   0, 'but the service role may call them');
 select is(
   (select count(*)::int from unnest(array[
       'private.buddy_voice_ext(text)', 'private.buddy_voice_path(uuid, uuid, uuid, text)', 'private.buddy_voice_parts(text)',
-      'private.buddy_voice_kick()', 'private.buddy_voice_gone()', 'private.buddy_voice_attached(text)',
-      'private.buddy_voice_sweep_tick()'
+      'private.buddy_voice_kick(boolean, boolean)', 'private.buddy_voice_gone()', 'private.buddy_voice_attached(text)',
+      'private.buddy_voice_sweep_tick()', 'private.buddy_voice_queue_tick()'
     ]) f, unnest(array['public', 'anon', 'authenticated']) r
     where has_function_privilege(r, f::regprocedure, 'execute')),
   0, 'no API role can call a voice helper');
@@ -313,6 +332,8 @@ select is(
 select is((select relrowsecurity from pg_class where oid = 'private.buddy_voice_trash'::regclass), true, 'with RLS on');
 select is((select function_url from private.buddy_voice_settings where id), null, 'the sweep is off until the owner gives it an address');
 select is(private.buddy_voice_kick(), 'off', 'and a kick without an address sends nothing');
+select is((select relrowsecurity from pg_class where oid = 'private.buddy_voice_settings'::regclass), true, 'the settings have RLS on too');
+select is((select min_interval from private.buddy_voice_settings where id), interval '1 minute', 'a kick is debounced to one a minute');
 
 -- ------------------------------------------------------------------------- the row's checks (past the API)
 
@@ -365,10 +386,10 @@ select is(tests.outcome(format($$ update storage.objects set name = name || 'x' 
 select is(tests.obj_there(:'p1'), true, 'and changes nothing: there is no update policy');
 reset role;
 
--- The 60 an hour.
-select tests.fill_objects(:'ned', :'r_a', 60);
+-- The 20 an hour.
+select tests.fill_objects(:'ned', :'r_a', 20);
 select tests.act_as(:'ned');
-select is(tests.upload(tests.path(:'r_a', :'ned', gen_random_uuid()), :'ned'), '42501', 'sixty objects within the hour are the most she uploads');
+select is(tests.upload(tests.path(:'r_a', :'ned', gen_random_uuid()), :'ned'), '42501', 'twenty objects within the hour are the most she uploads');
 reset role;
 select tests.clear_objects(:'ned');
 select tests.act_as(:'ned');
@@ -450,6 +471,19 @@ select gen_random_uuid() as c10 \gset
 select tests.obj(tests.path(:'r_a', :'hana', :'c10'), :'hana', 'audio/mp4', 0);
 select is(tests.outcome(format($$ select public.send_buddy_voice('%s', null, '%s', 'audio/mp4', 2000) $$, :'r_a', :'c10')),
           '22023 message_voice_invalid', 'an empty file is no message');
+select is(tests.outcome(format($$ select public.send_buddy_voice('%s', null, '%s', 'audio/mp4', 2000, array[1, null, 3]) $$, :'r_a', gen_random_uuid())),
+          '22023 message_voice_invalid', 'a waveform with a null in it');
+-- What Storage kept is what the recorder named: with its codec, in any case or spacing.
+select gen_random_uuid() as cm1 \gset
+select gen_random_uuid() as cm2 \gset
+select gen_random_uuid() as cm3 \gset
+select tests.obj(tests.path(:'r_a', :'hana', :'cm1', 'webm'), :'hana', 'audio/webm;codecs=opus');
+select tests.obj(tests.path(:'r_a', :'hana', :'cm2', 'webm'), :'hana', 'Audio/WebM; codecs=opus');
+select tests.obj(tests.path(:'r_a', :'hana', :'cm3'), :'hana', 'audio/mpeg;codecs=mp4a.40.2');
+select is(public.send_buddy_voice(:'r_a', null, :'cm1', 'audio/webm', 2000) ->> 'kind', 'voice', 'an object stored as audio/webm;codecs=opus is a webm recording');
+select is(public.send_buddy_voice(:'r_a', null, :'cm2', 'audio/webm', 2000) ->> 'kind', 'voice', 'in any case and spacing');
+select is(tests.outcome(format($$ select public.send_buddy_voice('%s', null, '%s', 'audio/mp4', 2000) $$, :'r_a', :'cm3')),
+          '22023 message_voice_invalid', 'but a codec does not make another type the right one');
 select is(tests.outcome(format($$ select public.send_buddy_voice('%s', null, '%s', 'audio/mp4', 2000) $$, :'r_b', gen_random_uuid())),
           'PT404 not_found', 'a read she is not in');
 select tests.act_as(:'kim');
@@ -593,39 +627,109 @@ reset role;
 
 -- An object queued and gone from the bucket is forgotten; a queued one there is listed.
 select tests.act_service();
-select is(public.buddy_voice_sweep_batch(100) @> array[:'p1'], true, 'the batch lists the deleted message''s object');
-select is(public.buddy_voice_sweep_batch(100) @> array[tests.path(:'r_a', :'jo', :'cj')], false, 'never an object a live message points at');
+select public.buddy_voice_sweep_batch(100) as b1 \gset
+select is(:'b1'::text[] @> array[:'p1'], true, 'the batch lists the deleted message''s object');
+select is(:'b1'::text[] @> array[tests.path(:'r_a', :'ivo', :'ci')], true, 'and the host''s deletion');
+select is(:'b1'::text[] @> array[tests.path(:'r_a', :'jo', :'cj')], false, 'never an object a live message points at');
 reset role;
+select is(tests.attempts(:'p1'), 1, 'a path handed out is counted');
 select tests.obj_remove(:'p1');
 select tests.act_service();
-select is(public.buddy_voice_sweep_batch(100) @> array[:'p1'], false, 'an object the bucket no longer has is not listed');
+select public.buddy_voice_sweep_batch(100) as b2 \gset
+select is(:'b2'::text[] @> array[:'p1'], false, 'an object the bucket no longer has is not listed');
 reset role;
 select is(tests.in_trash(:'p1'), false, 'and is forgotten by the queue');
 select tests.act_service();
-select is(public.buddy_voice_sweep_batch(100) @> array[tests.path(:'r_a', :'ivo', :'ci')], true, 'the host''s deletion is listed');
 select public.buddy_voice_sweep_done(array[tests.path(:'r_a', :'ivo', :'ci'), 'nothing']);
 reset role;
 select is(tests.in_trash(tests.path(:'r_a', :'ivo', :'ci')), false, 'done forgets what the function removed');
 
--- An upload no message points at: swept after a day, never before; one a live message points at, never.
+-- An upload no message points at: queued by the full run once it is 6 hours old, never before; one a live message points at, never.
 select gen_random_uuid() as cu1 \gset
 select gen_random_uuid() as cu2 \gset
+select gen_random_uuid() as cu3 \gset
 select tests.obj(tests.path(:'r_a', :'hana', :'cu1'), :'hana', 'audio/mp4', 1000, interval '2 days');
 select tests.obj(tests.path(:'r_a', :'hana', :'cu2'), :'hana', 'audio/mp4', 1000, interval '1 hour');
+select tests.obj(tests.path(:'r_a', :'hana', :'cu3'), :'hana', 'audio/mp4', 1000, interval '7 hours');
 select tests.path(:'r_a', :'hana', gen_random_uuid(), 'wav') as pw \gset
 select tests.obj(:'pw', :'hana', 'audio/mp4', 1000, interval '2 days');
 select tests.age_obj(tests.path(:'r_a', :'jo', :'cj'), interval '3 days');
+-- One of them is in the queue already (its message was deleted): it is handed out once, not twice.
+select tests.queue(tests.path(:'r_a', :'hana', :'cu1'));
 select tests.act_service();
-select is(public.buddy_voice_sweep_batch(1000) @> array[tests.path(:'r_a', :'hana', :'cu1')], true, 'an upload of two days ago that never became a message is listed');
-select is(public.buddy_voice_sweep_batch(1000) @> array[tests.path(:'r_a', :'hana', :'cu2')], false, 'one of an hour ago is not (its message is on its way)');
-select is(public.buddy_voice_sweep_batch(1000) @> array[tests.path(:'r_a', :'jo', :'cj')], false, 'a live message''s object is not, however old');
-select is(public.buddy_voice_sweep_batch(1000) @> array[:'pw'], true, 'an object with a name that is no message''s is junk and listed');
-select is(public.buddy_voice_sweep_batch(1000, interval '0 seconds') @> array[tests.path(:'r_a', :'hana', :'cu2')], true, 'the grace is the caller''s to shorten');
-select is(public.buddy_voice_sweep_batch(1) is not null and cardinality(public.buddy_voice_sweep_batch(1)) = 1, true, 'the limit is honoured');
+select public.buddy_voice_sweep_batch(1000) as b3 \gset
+select is(:'b3'::text[] @> array[tests.path(:'r_a', :'hana', :'cu1')], true, 'an upload of two days ago that never became a message is listed');
+select is((select count(*)::int from unnest(:'b3'::text[]) x where x = tests.path(:'r_a', :'hana', :'cu1')), 1, 'once, though the queue held it and the scan found it');
+select is(:'b3'::text[] @> array[tests.path(:'r_a', :'hana', :'cu3')], true, 'and one of 7 hours ago');
+select is(:'b3'::text[] @> array[tests.path(:'r_a', :'hana', :'cu2')], false, 'one of an hour ago is not (its message is on its way: the app sends one that waited 4 hours at the most)');
+select is(:'b3'::text[] @> array[tests.path(:'r_a', :'jo', :'cj')], false, 'a live message''s object is not, however old');
+select is(:'b3'::text[] @> array[:'pw'], true, 'an object with a name that is no message''s is junk and listed');
+reset role;
+select is(tests.attempts(tests.path(:'r_a', :'hana', :'cu3')), 1, 'an upload nobody sent is queued and counted like any path');
+select tests.act_service();
+select public.buddy_voice_sweep_batch(1000, interval '0 seconds') as b4 \gset
+select is(:'b4'::text[] @> array[tests.path(:'r_a', :'hana', :'cu2')], true, 'the grace is the caller''s to shorten');
+select is(:'b4'::text[] @> array[tests.path(:'r_a', :'hana', :'cu3')], false, 'and what was just handed out waits before it is handed out again');
+select is(public.buddy_voice_sweep_batch(1000, interval '0 seconds', false), '{}'::text[], 'nothing is eligible a moment later');
 reset role;
 select tests.act_as(:'hana');
 select is(tests.outcome($$ select public.buddy_voice_sweep_batch(10) $$), '42501 permission denied for function buddy_voice_sweep_batch', 'a member cannot call the sweep');
 reset role;
+
+-- The limit, the order, and one path Storage will not remove not starving the rest.
+delete from private.buddy_voice_trash;
+select tests.path(:'r_a', :'hana', gen_random_uuid(), 'wav') as q1 \gset
+select tests.path(:'r_a', :'hana', gen_random_uuid(), 'wav') as q2 \gset
+select tests.path(:'r_a', :'hana', gen_random_uuid(), 'wav') as q3 \gset
+select tests.obj(:'q1', :'hana'); select tests.obj(:'q2', :'hana'); select tests.obj(:'q3', :'hana');
+select tests.queue(:'q1');
+select tests.queue(:'q2');
+select tests.queue(:'q3');
+select tests.act_service();
+select public.buddy_voice_sweep_batch(2, p_orphans => false) as l1 \gset
+select is(cardinality(:'l1'::text[]), 2, 'the limit is honoured');
+select is(:'l1'::text[], array[:'q1', :'q2'], 'the oldest first');
+select public.buddy_voice_sweep_batch(2, p_orphans => false) as l2 \gset
+select is(:'l2'::text[], array[:'q3'], 'the rest is not asked for again at once, and the next round has the third');
+reset role;
+-- q1 is the poison: handed out again after its wait, behind what has not been tried so often, and left alone after 20.
+select tests.tried(:'q1', 1, 6);
+select tests.tried(:'q2', 1, 1);
+select tests.tried(:'q3', 1, 1);
+select tests.queue(:'pw');
+select tests.act_service();
+select public.buddy_voice_sweep_batch(1, p_orphans => false) as l3 \gset
+select is(:'l3'::text[], array[:'pw'], 'a path tried less often goes before one tried more, so a poison path does not starve a new one');
+select public.buddy_voice_sweep_batch(1, p_orphans => false) as l4 \gset
+select is(:'l4'::text[], array[:'q1'], 'and the poison path waited its 5 minutes and is handed out again');
+reset role;
+select is(tests.attempts(:'q1'), 2, 'counted again');
+select tests.tried(:'q1', 20, 10000);
+select tests.act_service();
+select is(public.buddy_voice_sweep_batch(10, p_orphans => false), '{}'::text[], 'after 20 tries a path is left alone');
+reset role;
+select is(tests.in_trash(:'q1'), true, 'and stays in the queue, where the owner sees it');
+
+-- The kick: debounced to one a minute (the jobs are not held back), and what it asks.
+delete from private.buddy_voice_trash;
+select vault.create_secret('a-token', 'buddy_voice_sweep_token');
+update private.buddy_voice_settings set function_url = 'http://127.0.0.1:9/buddy-voice-sweep', last_kick_at = null;
+select tests.requests() as r0 \gset
+select is(private.buddy_voice_kick(), 'sent', 'a kick with an address, a token and no kick a moment ago is sent');
+select is(tests.last_request_full(), 'false', 'a kick for a deletion asks for the queue only');
+select is(private.buddy_voice_kick(), 'debounced', 'the next one inside the minute is not');
+select is(private.buddy_voice_kick(), 'debounced', 'nor the one after');
+select is(tests.requests() - :'r0'::bigint, 1::bigint, 'ten sends and deletes a minute make one request');
+select is(private.buddy_voice_sweep_tick(), 'sent', 'the hourly job asks whatever the debounce says');
+select is(tests.last_request_full(), 'true', 'and asks for the uploads nobody sent as well');
+select is(private.buddy_voice_queue_tick(), 'idle', 'the ten-minute job asks for nothing when nothing waits');
+select tests.queue(:'pw');
+select is(private.buddy_voice_queue_tick(), 'sent', 'and asks when something does, the debounce notwithstanding');
+select is(tests.last_request_full(), 'false', 'for the queue only');
+update private.buddy_voice_settings set last_kick_at = now() - interval '2 minutes';
+select is(private.buddy_voice_kick(), 'sent', 'a kick after the minute is sent again');
+update private.buddy_voice_settings set function_url = null;
+select is(private.buddy_voice_kick(true, true), 'off', 'and with no address nothing is asked, forced or not');
 
 -- ------------------------------------------------------------------------- leaving, with and without her messages
 

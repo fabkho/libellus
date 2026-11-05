@@ -81,6 +81,12 @@ test('Ida records a voice message in a Section thread; Ben gets it live and play
     await goto(cy!, thread)
     await expect(cy!.getByTestId('together.thread.veiled')).toBeVisible()
 
+    // What Ida's page sends to the bucket: the sound as a part of the bare type ("audio/webm", never "audio/webm;codecs=opus"), which is what Storage keeps.
+    const idaUploads: string[] = []
+    ida.on('request', (request) => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname.includes('/object/buddy-voice/')) idaUploads.push(request.postDataBuffer()?.toString('latin1') ?? '')
+    })
+
     // Ida's thread: the microphone stands where send is while the field is empty; with a word in the field, send again.
     await goto(ida, thread)
     await expect(ida.getByTestId('buddyThread.screen')).toHaveAttribute('data-status', 'ready')
@@ -143,6 +149,12 @@ test('Ida records a voice message in a Section thread; Ben gets it live and play
     expect(row!.peaks).toBeGreaterThan(5)
     const path = `${made.id}/${idaMember.id}/`
     expect(await sql(`select 1 from storage.objects where bucket_id = 'buddy-voice' and name like $1 and (metadata ->> 'mimetype') = $2`, [`${path}%`, row!.voice_mime])).toHaveLength(1)
+    // One upload, its part typed with the bare type, and not cached by a browser.
+    expect(idaUploads).toHaveLength(1)
+    expect(idaUploads[0]).toMatch(new RegExp(`content-type: ${row!.voice_mime}\\r\\n`, 'i'))
+    expect(idaUploads[0]).not.toMatch(/codecs/i)
+    const [stored] = await sql<{ mimetype: string; cache: string }>(`select metadata ->> 'mimetype' as mimetype, metadata ->> 'cacheControl' as cache from storage.objects where bucket_id = 'buddy-voice' and name like $1`, [`${path}%`])
+    expect(stored).toEqual({ mimetype: row!.voice_mime, cache: 'max-age=0' })
 
     // Ben presses play: that is when the URL is signed and the sound is fetched, once; the button turns to pause and the bar moves.
     await ben!.getByTestId('buddyThread.voicePlay').click()
