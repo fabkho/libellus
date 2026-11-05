@@ -21,8 +21,8 @@
     "path": "~/.android-keys/betterreads-upload.jks",
     "alias": "betterreads-upload"
   },
-  "appVersion": "0.1.0",
-  "appVersionCode": 1,
+  "appVersion": "1.38.0",
+  "appVersionCode": 13800,
   "shortcuts": [
     {
       "name": "Search",

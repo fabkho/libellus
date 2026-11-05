@@ -9,9 +9,12 @@ const dir = new URL('../', import.meta.url)
 const origin = (process.env.ORIGIN ?? readFileSync(new URL('origin.txt', dir), 'utf8')).trim().replace(/\/+$/, '')
 const host = new URL(origin).host
 
-// The version stays in the file once it exists: appVersionCode counts up per release (regenerate.sh --bump).
-let previous = {}
-try { previous = JSON.parse(readFileSync(new URL('twa-manifest.json', dir), 'utf8')) } catch { /* first run */ }
+// The version is the web app's (../version.txt, release-please's): versionName 1.38.0, versionCode
+// 1 * 10000 + 38 * 100 + 0 = 13800, so a newer web release is always a newer APK. Android refuses a
+// version code it has seen, over an installed app; a second APK of the same web version needs OFFSET.
+const appVersion = readFileSync(new URL('../../version.txt', import.meta.url), 'utf8').trim()
+const [major, minor, patch] = appVersion.split('.').map(Number)
+const appVersionCode = major * 10000 + minor * 100 + patch + Number(process.env.ANDROID_VERSION_CODE_OFFSET ?? 0)
 
 const NIGHT = '#0E0C0A' // design/tokens.json color.surface.dark, the web manifest's background_color
 const shortcut = (name, shortName, path, icon) => ({
@@ -44,8 +47,8 @@ const manifest = {
   monochromeIconUrl: `${origin}/icon-monochrome-512.png`,
   splashScreenFadeOutDuration: 300,
   signingKey: { path: '~/.android-keys/betterreads-upload.jks', alias: 'betterreads-upload' },
-  appVersion: previous.appVersion ?? '0.1.0',
-  appVersionCode: previous.appVersionCode ?? 1,
+  appVersion,
+  appVersionCode,
   shortcuts: [
     shortcut('Search', 'Search', '/?search=1', 'search'),
     shortcut('Update progress', 'Progress', '/?progress=1', 'progress'),

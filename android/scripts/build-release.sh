@@ -44,6 +44,8 @@ mkdir -p "$OUT"
 VERSION="$(node -p 'const m = require("./twa-manifest.json"); `${m.appVersion}-${m.appVersionCode}`')"
 cp app-release-bundle.aab "$OUT/betterreads-$VERSION.aab"
 cp app-release-signed.apk "$OUT/betterreads-$VERSION.apk"
+mkdir -p "$HOME/Downloads"
+cp "$OUT/betterreads-$VERSION.apk" "$HOME/Downloads/BetterReads-$(node -p 'require("./twa-manifest.json").appVersion').apk"
 rm -f app-release-bundle.aab app-release-signed.apk app-release-unsigned-aligned.apk app-release-signed.apk.idsig
 
 # The key the build was signed with has to be in web/public/.well-known/assetlinks.json, or the
@@ -52,6 +54,7 @@ FINGERPRINT="$("$JAVA_HOME/bin/keytool" -list -v -keystore "$KEYSTORE" -alias "$
   -storepass "$BUBBLEWRAP_KEYSTORE_PASSWORD" | sed -n 's/^.*SHA256: *//p')"
 echo
 echo "Built $OUT/betterreads-$VERSION.apk (adb install, or the file on the phone) and $OUT/betterreads-$VERSION.aab (Play, later)."
+echo "Copied to ~/Downloads/BetterReads-<version>.apk"
 echo "Signing key SHA-256: $FINGERPRINT"
 if ! grep -q "$FINGERPRINT" ../web/public/.well-known/assetlinks.json; then
   echo "WARNING: this fingerprint is not in web/public/.well-known/assetlinks.json yet (docs/ANDROID.md)." >&2

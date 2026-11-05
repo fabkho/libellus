@@ -37,7 +37,7 @@ thing that needs a deploy ([Digital Asset Links](#digital-asset-links)).
 | `android/scripts/twa-manifest.mjs` | Writes `twa-manifest.json` (Bubblewrap's input) from `origin.txt`: package, names, colours, shortcuts, share target, version. The shell's choices are here. |
 | `android/twa-manifest.json`, `android/app/`, `android/*.gradle`, `gradlew` | The generated Android project (Bubblewrap 1.27.0, `androidbrowserhelper` 2.7.4), committed. |
 | `android/overlay/` | What the shell adds to it: the animated splash, the themes, the icon's layers (`res/`), the launcher activity (`java/`). Bubblewrap rewrites `res/` and the Java on every update, so these are copied back in. |
-| `android/scripts/regenerate.sh` | `twa-manifest.mjs` → `bubblewrap update` → `patch-project.mjs` (manifest theme, adaptive icon, launcher activity, overlay) → `render-assets.mjs` (splash PNGs, shortcut icons). `--bump` counts the version code up. |
+| `android/scripts/regenerate.sh` | `twa-manifest.mjs` → `bubblewrap update` → `patch-project.mjs` (manifest theme, adaptive icon, launcher activity, overlay) → `render-assets.mjs` (splash PNGs, shortcut icons). |
 | `android/scripts/create-upload-key.sh` | Creates the signing key, once. |
 | `android/scripts/build-release.sh` | The signed APK (sideload) and AAB (Play, later). |
 | `web/public/.well-known/assetlinks.json` | Digital Asset Links. |
@@ -100,11 +100,12 @@ android/scripts/create-upload-key.sh        # the signing key, see Signing
 - **A change to the shell** (`origin.txt`, `twa-manifest.mjs`, `overlay/`, the design icons):
   `android/scripts/regenerate.sh`, review and commit `android/`. It fetches the icons Bubblewrap wants
   from the *live* site, then replaces them with the shell's own.
-- **A new APK to install**: Android refuses a version code it has seen, over an installed app:
-  `android/scripts/regenerate.sh --bump` (code + 1; change `appVersion` in `twa-manifest.json` by hand if
-  you like), commit, then the release build.
+- **A new APK to install**: its version is the web app's (`version.txt`: versionName `1.38.0`, versionCode
+  `1·10000 + 38·100 + 0 = 13800`), so a newer web release is always a newer APK, which Android needs to
+  update over an installed app. After a web release: `android/scripts/regenerate.sh`, commit, release build.
+  A second APK of the same web version: `ANDROID_VERSION_CODE_OFFSET=1 android/scripts/regenerate.sh`.
 - **The release build**: `android/scripts/build-release.sh [out-dir]` builds `betterreads-<version>-<code>.apk`
-  and `.aab` into `/tmp/betterreads-android-release/`, signed with the key below, and warns when its
+  and `.aab` into `/tmp/betterreads-android-release/` and copies the APK to `~/Downloads/BetterReads-<version>.apk`, signed with the key below, and warns when its
   fingerprint is not in `assetlinks.json`. Builds are never committed (`.gitignore`).
 - **A debug build** for the emulator, signed with Android's per-machine debug key (uninstall a release
   build first, the signatures differ):
@@ -138,24 +139,54 @@ app goes to Google Play later; Play then signs what people install with its own 
 goes into `assetlinks.json` next to this one, and an APK from this key cannot be updated in place by the
 Play build (and the other way round).
 
+**Keep safe (back up together, never in the repo):** `~/.android-keys/betterreads-upload.jks` and the two
+Keychain items `betterreads-android-store` and `betterreads-android-key` (account `betterreads`; the same
+password under both).
+
 Nothing of the key is ever committed: `.gitignore` refuses `*.jks`, `*.keystore`, `*.p12`, `*.pk8`.
 
 ## Installing and updating by hand
 
-The APK is `/tmp/betterreads-android-release/betterreads-<version>.apk` after `build-release.sh`.
+The APK is `~/Downloads/BetterReads-<version>.apk` after `build-release.sh` (also in
+`/tmp/betterreads-android-release/`, next to the AAB). **The full-screen app needs
+`assetlinks.json` live first** (next section): release the web app, then install.
 
-- **adb** (phone with USB debugging, or `adb pair` over Wi-Fi): `adb install -r betterreads-0.1.0-1.apk`.
-  `-r` updates in place, keeping the app (and Chrome's data for the site).
-- **A file**: get the `.apk` onto the phone (Drive, Signal's "Note to self", a USB cable), open it there
-  and allow *Install unknown apps* for the app you opened it from, once. Play Protect may ask to scan
-  an app it has not seen: "Install anyway".
-- **Updating**: build a new APK with a higher version code (`regenerate.sh --bump`), install it the same way:
+1. Check the file you carry: `shasum -a 256 BetterReads-1.38.0.apk`
+   (`73c90e206becfaa45c08ad889cdec5808602ae464148865bbcd02eb51fb34bb4` for the first build, 1.38.0) and, optional,
+   `$ANDROID_HOME/build-tools/36.1.0/apksigner verify --print-certs BetterReads-1.38.0.apk`: the certificate
+   SHA-256 has to be the key's below.
+2. **adb** (phone with Developer options → USB debugging, cable or `adb pair` over Wi-Fi):
+   `adb install -r ~/Downloads/BetterReads-1.38.0.apk`. `-r` updates in place, keeping the app.
+3. **Or the file**: get the `.apk` onto the phone (Drive, Signal's "Note to self", a USB cable) and open it
+   there. Android asks to *allow installing from this source* (the app you opened it from: Files, Chrome,
+   Drive), once: Settings → Apps → Special access → Install unknown apps. Play Protect may ask to scan an app
+   it has not seen: "Install anyway".
+4. Open BetterReads. **No address bar** = verified. If Chrome shows one, see *Digital Asset Links*.
+- **Updating**: after a web release run `regenerate.sh` and the release build, install it the same way:
   it has to be signed with the same key. Nothing to do for a web change.
 - **Idea, not built**: attach each APK to a GitHub Release and point
   [Obtainium](https://obtainium.imranr.dev) at the repository: the phone then offers new APKs itself
   (the repository is public, no token needed). It would want a release workflow that builds the APK with
   the key as a secret; by hand, `gh release upload` of the APK from `build-release.sh` does it.
 - **Uninstall**: Settings → Apps → BetterReads. The site's data is Chrome's, not the app's.
+
+### What works inside the app (microphone, vibration, push)
+
+The app is Chrome with its address bar off, so it gets Chrome's web platform and Chrome's permission
+prompts for `https://betterreads.de`; there is nothing to declare in the Android manifest for them (the
+APK asks Android for no permission at all).
+
+- **Microphone** (voice messages, hold to record): the page asks with `getUserMedia`; Chrome shows its own
+  prompt for the site (and Android's microphone prompt for Chrome the first time), once; the choice is
+  Chrome's site setting. Nothing blocks it: `web/public/_headers` sends `Permissions-Policy: …microphone=(self)…`
+  (and `camera=(self)` for the barcode scanner; the camera goes the same way). Not tried on the emulator:
+  it needs a signed-in member.
+- **Vibration** (the haptics while recording): `navigator.vibrate` needs no permission.
+- **Push** (the import job's "Notify me when it's done"): it is Web Push through the same service worker and
+  Chrome's notification permission for the site; Chrome shows the notification (the app's notification
+  delegation is off: `enableNotifications: false`, the shell sends none itself), and Android 13+ asks
+  once for Chrome's notifications. Expected to work as in Chrome; not tried here (needs a signed-in member and
+  the VAPID keys).
 
 ## Digital Asset Links
 
@@ -165,6 +196,9 @@ fingerprints (32 colon-separated upper-case hex pairs; JSON has no comments):
 1. the signing key above, for the APK installed by hand;
 2. **a placeholder** (`00:00:…:00`, well formed so the file stays valid, and it matches no key): the Play
    app signing key, **to be replaced** when the app is on Play. Delete it if the app never is.
+
+`betterreads.de` and `libellus.fabkho.dev` are one Pages deploy, so both serve the file; the entry is
+about the app's package and key, not a host, and the app opens `https://betterreads.de` only.
 
 The file has to come back from https://betterreads.de/.well-known/assetlinks.json with status 200,
 `Content-Type: application/json` and **no redirect**. `web/public/_headers` sets the type and an hour's
@@ -267,7 +301,7 @@ Chrome's verification skipped by the flag above, the live site (signed out).
 | Service worker | Registered and controlling in the TWA (`display-mode: standalone`, referrer `android-app://de.betterreads.app/`); same worker as in Chrome |
 | "New version available" sheet | Not exercised: there is no new version to find without a deploy. Nothing in the shell touches the worker |
 
-Not checked: a real phone, a verified origin, signed-in screens, Android < 12, `/share` with an EPUB.
+Not checked: a real phone, a verified origin, signed-in screens (voice messages, push), Android < 12, `/share` with an EPUB.
 
 ## Going to Google Play later
 
