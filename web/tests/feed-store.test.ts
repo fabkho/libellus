@@ -248,3 +248,53 @@ describe('dropMember', () => {
     expect(calls).toEqual(['my_people'])
   })
 })
+
+describe('the empty state is decided before the first frame', () => {
+  it('shows none while the answer is on its way (the skeleton), then the right one', async () => {
+    followingIds = []
+    const feed = await store()
+    expect(feed.emptyState).toBeNull()
+    expect(feed.emptyUnknown).toBe(false)
+
+    await feed.refresh()
+
+    expect(feed.emptyState).toBe('nobody')
+    expect(feed.emptyUnknown).toBe(false)
+    expect(JSON.parse(device.items.get('libellus.feedFollowing')!)).toEqual({ memberId: 'ada', following: 0 })
+  })
+
+  it("starts with what it knew of an empty feed: 'nobody' at once, never 'quiet' for a moment, and it stays while it asks again", async () => {
+    followingIds = []
+    await (await store()).refresh()
+    const feed = await store([])
+    expect(feed.loaded).toBe(true)
+    expect(feed.emptyState).toBe('nobody')
+
+    const asking = feed.refresh()
+    expect(feed.emptyState).toBe('nobody')
+    await asking
+    expect(feed.emptyState).toBe('nobody')
+  })
+
+  it('knows a member who follows people but has no news as quiet, and forgets the count once the feed has entries', async () => {
+    followingIds = ['ben']
+    const feed = await store()
+    await feed.refresh()
+    expect(feed.emptyState).toBe('quiet')
+    expect(JSON.parse(device.items.get('libellus.feedFollowing')!).following).toBe(1)
+
+    feedAnswer = [json(entry('e1', 'ben', 5))]
+    await feed.refresh()
+    expect(feed.emptyState).toBeNull()
+    expect(device.items.has('libellus.feedFollowing')).toBe(false)
+  })
+
+  it('keeps asking-failed as quiet, as it did, but never flashes the empty state before the first answer', async () => {
+    people = 'fail'
+    const feed = await store()
+    const first = feed.refresh()
+    expect(feed.emptyState).toBeNull()
+    await first
+    expect(feed.emptyState).toBe('quiet')
+  })
+})
