@@ -385,7 +385,7 @@ function browserTabs(fav16, theme) {
       <div class="tb on" style="background:${c.tab}"><img src="${fav16}" width="16" height="16" style="image-rendering:pixelated"><span>BetterReads · Home</span><em>×</em></div>
       ${other('Piranesi — Wikipedia', '#888')}${other('Open Library', '#c96a3a')}
     </div>
-    <div class="bar" style="background:${c.bar}"><div class="field" style="background:${c.field};color:${c.faint}"><img src="${fav16}" width="16" height="16" style="opacity:0"> libellus.fabkho.dev</div></div>
+    <div class="bar" style="background:${c.bar}"><div class="field" style="background:${c.field};color:${c.faint}"><img src="${fav16}" width="16" height="16" style="opacity:0"> betterreads.de</div></div>
   </div>`
 }
 const BROWSER_CSS = `

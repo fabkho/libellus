@@ -31,6 +31,7 @@ import { useSocialStore } from '~/stores/social'
 import { useSessionStore } from '~/stores/session'
 import { preselected } from '~/utils/buddyPreselect'
 import type { BuddyErrorCode, CreatedBuddyRead } from '~/data/buddyReads'
+import { canonicalOrigin } from '~/utils/siteOrigin'
 import {
   buddyLink,
   DEFAULT_SECTION_COUNT,
@@ -244,7 +245,7 @@ async function start() {
 }
 
 const resultHeading = useTemplateRef<HTMLElement>('resultHeading')
-const url = computed(() => (created.value?.linkToken && import.meta.client ? buddyLink(window.location.origin, created.value.linkToken) : null))
+const url = computed(() => (created.value?.linkToken && import.meta.client ? buddyLink(canonicalOrigin(window.location.origin), created.value.linkToken) : null))
 /** The room of the read (W4's `/together/<id>`): the sheet goes there itself and tells its owner. */
 function openRoom(id: string) {
   open.value = false

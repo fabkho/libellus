@@ -17,7 +17,7 @@ import { runTitle, sql, stack, TEST_PUBLISHER, uniqueAppleId, visitorClient } fr
  * so a renewed or switched-off link really does stop the preview.
  */
 
-const SITE = 'https://libellus.fabkho.dev'
+const SITE = 'https://betterreads.de'
 
 /** The shell Pages would serve: short, with the two places the Function writes into. */
 const SHELL = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>BetterReads</title></head><body><div id="__nuxt"></div></body></html>'

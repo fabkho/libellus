@@ -10,6 +10,7 @@ import { useBuddyReadStore } from '~/stores/buddyRead'
 import type { BuddyErrorCode } from '~/data/buddyReads'
 import { buddyErrorKey } from '~/utils/buddyRead'
 import { buddyLink, MAX_INVITES } from '~/utils/buddySetup'
+import { canonicalOrigin } from '~/utils/siteOrigin'
 
 const open = defineModel<boolean>('open', { required: true })
 const props = defineProps<{ readId: string }>()
@@ -20,7 +21,7 @@ const online = useOnline()
 
 const read = computed(() => store.reads[props.readId] ?? null)
 const token = computed(() => read.value?.linkToken ?? null)
-const url = computed(() => (token.value && import.meta.client ? buddyLink(window.location.origin, token.value) : null))
+const url = computed(() => (token.value && import.meta.client ? buddyLink(canonicalOrigin(window.location.origin), token.value) : null))
 const ended = computed(() => !!read.value && (read.value.status !== 'active'))
 
 const picked = ref<string[]>([])

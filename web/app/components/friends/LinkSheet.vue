@@ -6,6 +6,7 @@
 import { followLink } from '~/data/social'
 import { useSocialStore } from '~/stores/social'
 import { copyLink, shareLink, type ShareOutcome } from '~/utils/shareLink'
+import { canonicalOrigin } from '~/utils/siteOrigin'
 
 const open = defineModel<boolean>('open', { required: true })
 
@@ -20,7 +21,7 @@ watch(open, (isOpen) => {
   void social.load()
 })
 
-const url = computed(() => (social.mine && import.meta.client ? followLink(window.location.origin, social.mine.link) : null))
+const url = computed(() => (social.mine && import.meta.client ? followLink(canonicalOrigin(window.location.origin), social.mine.link) : null))
 const disabled = computed(() => !online.value || social.busy || !social.mine)
 
 /** What the last Share or Copy did, said politely ("Copied."). */

@@ -1,6 +1,6 @@
 # The owner's instance
 
-Tooling that only the owner's instance (libellus.fabkho.dev) uses: bringing the owner's Fable
+Tooling that only the owner's instance (betterreads.de) uses: bringing the owner's Fable
 history over once (and, from the app's own export, a Reado account's), and publishing the owner's Library to Regal, the 3D bookshelf on
 fabkho.dev/books. Nothing here is needed to run BetterReads; anyone not working on these two can ignore this page and
 the files it names (`web/scripts/import-fable.ts`, `web/scripts/fable/`,

@@ -9,7 +9,7 @@ import { onRequest } from '../functions/c/[[path]].js'
  * and says.
  */
 
-const SITE = 'https://libellus.fabkho.dev'
+const SITE = 'https://betterreads.de'
 const KEY = 'c0ffeec0ffeec0ffeec0ffeec0ffeec0'
 const WEBP = new Uint8Array([0x52, 0x49, 0x46, 0x46, 1, 2, 3, 4])
 
@@ -198,7 +198,7 @@ describe('who may ask', () => {
     ['a foreign Origin', { Origin: 'https://evil.example' }],
     ['a foreign Referer', { Referer: 'https://evil.example/page' }],
     ['a Referer that names a look-alike of this host', { Referer: `${SITE}.evil.example/` }],
-    ['a Referer on another port of this host', { Referer: 'https://libellus.fabkho.dev:8443/x' }],
+    ['a Referer on another port of this host', { Referer: 'https://betterreads.de:8443/x' }],
   ])('is a 403 with no-store for %s, and the bucket and the cache are left alone', async (_, headers) => {
     const response = await call(`/c/${KEY}/240`, { env: { COVERS: covers }, headers }).settled()
     expect(response.status).toBe(403)
@@ -209,12 +209,13 @@ describe('who may ask', () => {
   })
 
   it('lets this app (Referer as an <img> sends it), a listed origin, and a request that names nobody', async () => {
-    const env = { COVERS: covers, COVER_ALLOWED_ORIGINS: 'https://betterreads.de, https://libellus-3q1.pages.dev' }
-    for (const headers of [{ Referer: `${SITE}/library` }, { Referer: 'https://betterreads.de/library' }, {}] as Record<string, string>[]) {
+    // The other address of the instance (the alias that stays, docs/HOSTING.md "Addresses") is listed, like a Pages address.
+    const env = { COVERS: covers, COVER_ALLOWED_ORIGINS: 'https://libellus.fabkho.dev, https://libellus-3q1.pages.dev' }
+    for (const headers of [{ Referer: `${SITE}/library` }, { Referer: 'https://libellus.fabkho.dev/library' }, {}] as Record<string, string>[]) {
       expect((await call(`/c/${KEY}/240`, { env, headers }).settled()).status, JSON.stringify(headers)).toBe(200)
     }
-    const listed = await call(`/c/${KEY}/240`, { env, headers: { Origin: 'https://betterreads.de' } }).settled()
-    expect(listed.headers.get('Access-Control-Allow-Origin')).toBe('https://betterreads.de')
+    const listed = await call(`/c/${KEY}/240`, { env, headers: { Origin: 'https://libellus.fabkho.dev' } }).settled()
+    expect(listed.headers.get('Access-Control-Allow-Origin')).toBe('https://libellus.fabkho.dev')
   })
 
   it('judges the foreign Referer before the cache, so a cached copy is not an open door', async () => {

@@ -129,7 +129,7 @@ jobs:
     # "Releases": what to set up). Its deployment branch rule should allow `main` only.
     environment:
       name: production
-      url: https://libellus.fabkho.dev
+      url: https://betterreads.de
     # One deploy at a time; a newer one waiting replaces an older one waiting.
     concurrency:
       group: deploy-production
@@ -399,7 +399,7 @@ jobs:
             if [ "$MOVED" = success ]; then
               echo "Branch \`production\` is at \`${TARGET:0:7}\` ($MOVE). Cloudflare Pages builds it now: its check on"
               echo "[the commit]($REPO/commit/$TARGET) links the deployment (also Workers & Pages → libellus → Deployments)."
-              echo "Live at https://libellus.fabkho.dev once the build is done."
+              echo "Live at https://betterreads.de once the build is done."
             else
               echo "Branch \`production\` not moved (${MOVED:-not reached}): the live site is unchanged."
             fi
@@ -423,7 +423,7 @@ jobs:
     # The environment gives this job its secrets (the token is stored there, like the deploy job's).
     environment:
       name: production
-      url: https://libellus.fabkho.dev
+      url: https://betterreads.de
     permissions:
       contents: read
     env:

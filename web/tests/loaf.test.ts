@@ -14,7 +14,7 @@ import {
 } from '@/data/loaf'
 import { POOR_LOAF } from '@/data/vitals'
 
-const ORIGIN = 'https://libellus.fabkho.dev'
+const ORIGIN = 'https://betterreads.de'
 const context = { route: '/library', origin: ORIGIN, loadState: 'complete' }
 
 const frame = (over: Partial<LoafEntry> = {}): LoafEntry => ({

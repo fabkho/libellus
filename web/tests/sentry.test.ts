@@ -28,6 +28,9 @@ describe('sentryEnvironment', () => {
     expect(sentryEnvironment('app.bookretreats-with-nina.com', false)).toBe('production')
     expect(sentryEnvironment('0a1b2c.libellus-3q1.pages.dev', false)).toBe('preview')
     expect(sentryEnvironment('main.libellus-3q1.pages.dev', false)).toBe('preview')
+    // Both addresses of the live instance are production (docs/HOSTING.md, "Addresses").
+    expect(sentryEnvironment('betterreads.de', false)).toBe('production')
+    expect(sentryEnvironment('libellus.fabkho.dev', false)).toBe('production')
     expect(sentryEnvironment('localhost', false)).toBe('dev')
     expect(sentryEnvironment('app.bookretreats-with-nina.com', true)).toBe('dev')
   })
@@ -51,8 +54,8 @@ describe('scrubString', () => {
     expect(token).toHaveLength(22)
     expect(scrubString(`/t/${token}`)).toBe('/t/:token')
     expect(scrubString(`/f/${token}?x=1`)).toBe('/f/:token')
-    expect(scrubString(`https://libellus.fabkho.dev/t/${token}/`)).toBe('https://libellus.fabkho.dev/t/:token/')
-    expect(scrubString(`GET https://libellus.fabkho.dev/f/${token}#join failed`)).toBe('GET https://libellus.fabkho.dev/f/:token failed')
+    expect(scrubString(`https://betterreads.de/t/${token}/`)).toBe('https://betterreads.de/t/:token/')
+    expect(scrubString(`GET https://betterreads.de/f/${token}#join failed`)).toBe('GET https://betterreads.de/f/:token failed')
     expect(scrubString(`navigated from /f/${token} to /t/${token}`)).toBe('navigated from /f/:token to /t/:token')
     // Not a token: a shorter segment, other routes.
     expect(scrubString('/t/short')).toBe('/t/short')
@@ -142,14 +145,14 @@ describe('scrubEvent', () => {
     const out = scrubEvent({
       ...(event() as object),
       transaction: `/t/${token}`,
-      request: { url: `https://libellus.fabkho.dev/t/${token}?utm=x` },
-      breadcrumbs: [{ category: 'navigation', data: { from: `/f/${token}`, to: `/t/${token}` } }, { category: 'fetch', data: { url: `https://libellus.fabkho.dev/f/${token}` } }],
+      request: { url: `https://betterreads.de/t/${token}?utm=x` },
+      breadcrumbs: [{ category: 'navigation', data: { from: `/f/${token}`, to: `/t/${token}` } }, { category: 'fetch', data: { url: `https://betterreads.de/f/${token}` } }],
       tags: { route: '/t/[token]' },
     }) as Record<string, any>
     expect(JSON.stringify(out)).not.toContain(token)
     expect(out.transaction).toBe('/t/:token')
-    expect(out.request).toEqual({ url: 'https://libellus.fabkho.dev/t/:token' })
-    expect(out.breadcrumbs.map((b: any) => b.data)).toEqual([{ from: '/f/:token', to: '/t/:token' }, { url: 'https://libellus.fabkho.dev/f/:token' }])
+    expect(out.request).toEqual({ url: 'https://betterreads.de/t/:token' })
+    expect(out.breadcrumbs.map((b: any) => b.data)).toEqual([{ from: '/f/:token', to: '/t/:token' }, { url: 'https://betterreads.de/f/:token' }])
   })
   it('cleans a transaction: route, spans, no component props', () => {
     const out = scrubEvent(event()) as Record<string, any>

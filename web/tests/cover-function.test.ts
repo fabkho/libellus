@@ -9,7 +9,7 @@ import { onRequest } from '../functions/cover.js'
  * cache are mocks, so what is checked is what the Function asks, stores and says.
  */
 
-const SITE = 'https://libellus.fabkho.dev'
+const SITE = 'https://betterreads.de'
 const APPLE = 'https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/c8/bf/b3/c8bf/9780593983768.d.jpg/600x900bb.jpg'
 const OL = 'https://covers.openlibrary.org/b/id/8231856-L.jpg'
 const HARDCOVER = 'https://assets.hardcover.app/edition/30524155/2d30ac0e2eb1f4cd0ea3a93b5cd8a1fa1a63e0e.jpeg'
