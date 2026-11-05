@@ -83,7 +83,7 @@ async function add() {
     v-on="flightOf(`/book/${book.id}`)"
     class="icon-action text-ink-faint"
     :data-testid="testid"
-    @press="books.prefetch(book.id)"
+    @press="books.prefetch(book.id, book)"
   >
     <UiIcon name="bookmark" :size="18" class="fill-current" />
     <span class="sr-only">{{ t('social.wantToRead.inLabel', { title: book.title, where: t(`social.state.${state.where}`) }) }}</span>

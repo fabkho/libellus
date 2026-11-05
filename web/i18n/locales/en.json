@@ -1604,10 +1604,14 @@
       "device": "Translated on this device",
       "service": "Machine translation · MyMemory",
       "define": "Define",
+      "auto": "Detected automatically",
+      "retry": "Try again",
       "error": {
         "offline": "Translating needs a connection.",
         "quota": "The free translations for today are used up.",
-        "failed": "This could not be translated just now."
+        "failed": "This could not be translated just now.",
+        "empty": "No translation came back for this text.",
+        "same": "This text is already in {language}. Pick another language above."
       }
     },
     "define": {

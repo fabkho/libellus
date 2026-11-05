@@ -4,6 +4,7 @@ import type { LibraryEntry, LibraryErrorCode } from '~/data/library'
 import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
+import { forgetPreviews, previewFromBook, rememberPreview, type PreviewSource } from '~/utils/bookPreview'
 
 /**
  * loading: nothing to show yet · ready: the Book (and the entry, if any) ·
@@ -140,8 +141,13 @@ export const useBookStore = defineStore('book', () => {
     return task
   }
 
-  /** On touch-down: start before the route does, unless it is already there. */
-  function prefetch(key: string) {
+  /**
+   * On touch-down: start before the route does, unless it is already there. `from` is the card that
+   * carries the Book (a friend's tile, a Library row): what it shows of it is the page's first frame
+   * (utils/bookPreview.ts); a Book in her Library needs none, its page is hers from the first frame.
+   */
+  function prefetch(key: string, from?: PreviewSource) {
+    if (from) rememberPreview(key, previewFromBook(from))
     if (!pages.has(key)) void load(key)
   }
 
@@ -164,6 +170,7 @@ export const useBookStore = defineStore('book', () => {
     pages.clear()
     loading.clear()
     rowCovers.clear()
+    forgetPreviews()
   }
 
   // The entries on these pages are the member's: another member starts afresh.

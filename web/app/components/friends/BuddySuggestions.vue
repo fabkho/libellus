@@ -132,7 +132,7 @@ const shown = computed(() => rows.value.length > 0)
             :data-reason="row.reason"
             data-testid="member.buddy.book"
             v-on="flightOf(row.to)"
-            @press="books.prefetch(row.book.id)"
+            @press="books.prefetch(row.book.id, row.book)"
           >
             <UiCover
               decorative

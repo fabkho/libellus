@@ -9,9 +9,15 @@
 // Goodreads' line. Nothing for a Book in no series. Owns its sheets, so the
 // page only places this line.
 import type { LibraryEntry } from '~/data/library'
+import type { SeriesLine } from '~/utils/enrich'
 import { useSeriesStore } from '~/stores/series'
 
-const props = defineProps<{ bookId: string | null; entry: LibraryEntry | null }>()
+const props = defineProps<{
+  bookId: string | null
+  entry: LibraryEntry | null
+  /** Where the list that opened the page said the Book stands (Home's "Book 2 of 9 · The Expanse"): the line until the page's own is read. */
+  preview?: SeriesLine | null
+}>()
 
 const { t } = useI18n()
 const series = useSeriesStore()
@@ -26,7 +32,7 @@ onMounted(() =>
 
 const place = computed(() => (props.bookId ? series.ofBook(props.bookId)?.series[0] : undefined))
 // What arrives late waits for the cover's flight (useAfterMotion): the line is there in the first frame when the device has it.
-const line = useAfterMotion(() => seriesLine(place.value))
+const line = useAfterMotion(() => seriesLine(place.value) ?? props.preview ?? null)
 const where = computed(() => {
   const l = line.value
   if (!l?.position) return null
@@ -41,7 +47,17 @@ function open() {
 <template>
   <UiReveal :show="Boolean(line)" class="w-full">
     <p v-if="line" class="mt-xs flex justify-center">
+      <!-- The list's word for it, before the series is read: the same line, with nothing to open yet. -->
+      <span v-if="!place" class="series -my-xs inline-flex max-w-full py-xs min-w-0 items-center gap-xs text-caption text-ink-muted" data-testid="book.seriesPreview">
+        <span class="truncate">
+          <span v-if="where">{{ where }}</span>
+          <template v-if="where">{{ ' · ' }}</template>
+          <span>{{ line.name }}</span>
+        </span>
+        <UiIcon name="chevron" :size="12" class="shrink-0 text-ink-faint" />
+      </span>
       <button
+        v-else
         type="button"
         class="series -my-xs inline-flex max-w-full py-xs min-w-0 items-center gap-xs text-caption text-ink-muted"
         data-testid="book.series"

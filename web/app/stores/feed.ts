@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { createFeed, feedDays, FEED_PAGE, readFeed, saveFeed, type Feed, type FeedEntry } from '~/data/feed'
+import { createFeed, feedDays, FEED_PAGE, readFeed, readFollowing, saveFeed, saveFollowing, type Feed, type FeedEntry } from '~/data/feed'
 import type { SocialErrorCode } from '~/data/socialShapes'
 import { isoDay } from '~/utils/dates'
 import { appendPage, copyTakenAt, feedEmptyState, mergeFirstPage, withoutDoubledReviews, withoutMember } from '~/utils/feedView'
@@ -49,24 +49,33 @@ export const useFeedStore = defineStore('feed', () => {
   const following = ref<number | null>(null)
   /** `my_people()` is on its way: no empty state yet, so the wrong one never shows for a moment. */
   const asking = ref(false)
+  /** `my_people()` has answered (or failed) at least once for this member. */
+  const asked = ref(false)
 
   const days = computed(() => feedDays(withoutDoubledReviews(entries.value), (at) => isoDay(new Date(at))))
   /** Offline with entries on screen: when they are from (the offline line). */
   const offlineSince = computed(() => (!online.value && entries.value.length ? takenAt.value : null))
   /** Which empty state to show; null while there are entries or nothing has answered yet. */
-  const emptyState = computed(() => (loaded.value && !asking.value && !entries.value.length ? feedEmptyState(following.value) : null))
+  const emptyState = computed(() => (loaded.value && !entries.value.length && (following.value !== null || (asked.value && !asking.value)) ? feedEmptyState(following.value) : null))
+  /** True while a feed with nothing in it is shown but the count of people she follows is not known: no empty state yet, a neutral skeleton. */
+  const emptyUnknown = computed(() => loaded.value && !entries.value.length && following.value === null && !emptyState.value)
 
   async function askFollowing() {
     if (!backend) return
     asking.value = true
     try {
       const { data, error } = await backend.rpc('my_people')
-      following.value = error ? null : ((data as { followingIds?: unknown[] } | null)?.followingIds?.length ?? 0)
+      // An error says nothing: what was known stays (the device's copy of it, or not known).
+      if (!error) {
+        following.value = (data as { followingIds?: unknown[] } | null)?.followingIds?.length ?? 0
+        const member = session.member?.id
+        if (import.meta.client && member) saveFollowing(window.localStorage, member, following.value)
+      }
     } catch {
-      // A request cancelled by a navigation (WebKit: "Fetch API cannot load …") says nothing: not known, as on an error.
-      following.value = null
+      // A request cancelled by a navigation (WebKit: "Fetch API cannot load …") says nothing either.
     } finally {
       asking.value = false
+      asked.value = true
     }
   }
 
@@ -106,8 +115,10 @@ export const useFeedStore = defineStore('feed', () => {
     const now = new Date()
     takenAt.value = now
     if (import.meta.client && member) saveFeed(window.localStorage, member, result.data, now)
-    if (merged.length) following.value = null
-    else await askFollowing()
+    if (merged.length) {
+      following.value = null
+      if (import.meta.client && member) saveFollowing(window.localStorage, member, null)
+    } else await askFollowing()
   }
 
   /** The next older page, when there is one and the device can ask. */
@@ -151,6 +162,7 @@ export const useFeedStore = defineStore('feed', () => {
     takenAt.value = null
     following.value = null
     asking.value = false
+    asked.value = false
   }
 
   /** Puts back the first page this device saw last, if it is this member's. */
@@ -159,6 +171,8 @@ export const useFeedStore = defineStore('feed', () => {
     if (!import.meta.client || !member || loaded.value) return
     const saved = readFeed(window.localStorage, member, new Date())
     if (!saved) return
+    // An empty copy: how many she follows was kept with it, so the first frame is the right empty state (or none).
+    if (!saved.length) following.value = readFollowing(window.localStorage, member)
     entries.value = saved
     takenAt.value = copyTakenAt(window.localStorage, member)
     ended.value = saved.length < FEED_PAGE
@@ -180,5 +194,5 @@ export const useFeedStore = defineStore('feed', () => {
     if (now && (loadError.value === 'offline' || takenAt.value)) void refresh()
   })
 
-  return { entries, days, loaded, loading, loadingMore, loadError, ended, takenAt, offlineSince, emptyState, refresh, loadMore, dropMember, reset }
+  return { entries, days, loaded, loading, loadingMore, loadError, ended, takenAt, offlineSince, emptyState, emptyUnknown, refresh, loadMore, dropMember, reset }
 })
