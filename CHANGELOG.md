@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.40.0](https://github.com/fabkho/libellus/compare/v1.39.0...v1.40.0) (2026-11-05)
+
+
+### Features
+
+* Google Books as a fourth book source ([#513](https://github.com/fabkho/libellus/issues/513)) ([1bd9bd6](https://github.com/fabkho/libellus/commit/1bd9bd6e5fcdcfbbd8b3de21800d4078442a0c7d))
+
 ## [1.39.0](https://github.com/fabkho/libellus/compare/v1.38.0...v1.39.0) (2026-11-05)
 
 
