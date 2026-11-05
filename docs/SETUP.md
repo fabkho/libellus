@@ -1,6 +1,6 @@
 # Setting up the owner's instance
 
-How the one BetterReads instance (libellus.fabkho.dev) is put together, as steps its owner takes once:
+How the one BetterReads instance (betterreads.de) is put together, as steps its owner takes once:
 a Supabase project for the data and sign-in, and the web app as static files on Cloudflare Pages.
 Both are on free tiers that are plenty for a handful of readers. The same steps stand up a
 replacement when the hosted project is gone ([OPERATIONS.md, Restoring](OPERATIONS.md#restoring));
@@ -53,7 +53,8 @@ Run everything below from the repository's root unless it says otherwise.
      invite check is in the database (a sign-up without a valid code is rolled back), so nobody gets
      in without a code the owner made.
    - *URL Configuration*: **Site URL** `https://<the address>`; add it (and
-     `https://<project>.pages.dev` if that address is used too) under Redirect URLs. The codes don't
+     `https://<project>.pages.dev` and any alias of the address that is used too; the owner's instance keeps
+     `https://libellus.fabkho.dev`, its first address) under Redirect URLs. The codes don't
      use links, but Supabase builds a few addresses from these.
    - *Emails → Templates*: for **Magic Link** and for **Confirm signup**, subject
      `Your BetterReads sign-in code` and the body of `supabase/templates/magic_link.html` (it shows

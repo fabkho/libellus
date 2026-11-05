@@ -42,7 +42,7 @@ beforeAll(async () => {
   })
 })
 
-const LINK = followLink('https://libellus.fabkho.dev', 'aB3dE5gH7jK9mN2pQ4rS6t')
+const LINK = followLink('https://betterreads.de', 'aB3dE5gH7jK9mN2pQ4rS6t')
 
 describe('the follow link as a QR code', () => {
   it('reads back as the link', async () => {
@@ -66,7 +66,7 @@ describe('the follow link as a QR code', () => {
   })
 
   it('is another code for another link (a renewed link changes it), and the same one for the same link', () => {
-    const renewed = followLink('https://libellus.fabkho.dev', 'zZ9yY8xX7wW6vV5uU4tT3s')
+    const renewed = followLink('https://betterreads.de', 'zZ9yY8xX7wW6vV5uU4tT3s')
     expect(qrCode(renewed).path).not.toBe(qrCode(LINK).path)
     expect(qrCode(LINK).path).toBe(qrCode(LINK).path)
   })

@@ -17,7 +17,7 @@ import {
   type VitalMetric,
 } from '@/data/vitals'
 
-const ORIGIN = 'https://libellus.fabkho.dev'
+const ORIGIN = 'https://betterreads.de'
 const box = (y: number, height: number) => ({ x: 12, y, width: 388, height })
 
 const cls = (value: number, attribution: Partial<Extract<VitalMetric, { name: 'CLS' }>['attribution']> = {}): VitalMetric => ({

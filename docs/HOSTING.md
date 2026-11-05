@@ -1,7 +1,7 @@
 # Hosting
 
 BetterReads is static files on **Cloudflare Pages**, project `libellus`, served at
-https://libellus.fabkho.dev. Supabase (eu-central-1) is the backend; the owner's shelf reads
+https://betterreads.de (the main address; `libellus.fabkho.dev` stays a working alias, see "Addresses"). Supabase (eu-central-1) is the backend; the owner's shelf reads
 its library file from `books.fabkho.dev` (R2 bucket `portfolio-books`, published by Regal's
 workflow, docs/OWNER.md "Feeding Regal"). The database is backed up every night into the private R2
 bucket `libellus-backups` (docs/OPERATIONS.md, "Backups"). This page is what is set up outside the repository and
@@ -118,8 +118,8 @@ a page that names itself by `Origin`, `Access-Control-Allow-Origin` for that ori
 load it same-origin, a WebGL texture needs a CORS-clean image, so does a canvas read).
 
 - **Who may ask.** A request that carries an `Origin` or a `Referer` (an `<img>` sends the page as `Referer`) must name
-  this host or an origin in the Pages project's `COVER_ALLOWED_ORIGINS` variable (comma-separated: a second domain,
-  a preview), otherwise it is a 403 with `no-store`, no CORS, and no host asked. A request with neither (curl) is
+  this host (either address of the instance: a request is judged against the host it was made to) or an origin in the
+  Pages project's `COVER_ALLOWED_ORIGINS` variable (comma-separated: a second domain, a preview), otherwise it is a 403 with `no-store`, no CORS, and no host asked. A request with neither (curl) is
   not judged. **That keeps other sites from embedding our cache, no more. The guard against a flood burning the 100,000
   Function requests a day (shared with `/r`, `/share` and `/c/*`) is a Cloudflare rate-limiting rule on `/cover`**
   (Security → WAF → Rate limiting rules, by IP, on the path), which no code in a Function can be; set it up in the
@@ -191,7 +191,7 @@ object, and **a bucket that is not bound yet** are a 404 with `no-store`. Who ma
   the code.
 - **Rate limiting and the WAF.** The `/cover` WAF custom rule (a `/cover` request that does not carry the app's
   `Referer` is a 403; already in place in the `betterreads.de` zone) and the rate-limiting rule on `/cover` get `/c/`
-  added, **in both zones** (`fabkho.dev` for `libellus.fabkho.dev`, `betterreads.de`). They are the real guard on the
+  added, **in both zones** (`betterreads.de`, and `fabkho.dev` for the `libellus.fabkho.dev` alias). They are the real guard on the
   100,000 Function requests a day that `/share`, `/r/*`, `/cover` and `/c/*` share; the Function's own sender check only
   keeps other sites from embedding it.
 - **In the app.** `runtimeConfig.public.ownCovers` (`NUXT_PUBLIC_OWN_COVERS`, `on`/`off`; unset: **off in every build**).
@@ -227,8 +227,18 @@ day the render happens once per link and version. It is deployed by hand like th
 
 ## Addresses
 
-- `libellus.fabkho.dev`: the Pages project's custom domain, a proxied CNAME to
-  `libellus-3q1.pages.dev` in the `fabkho.dev` zone. Zone settings (TLS, caching) apply to it.
+- `betterreads.de`: **the main address.** A custom domain of the Pages project, in the `betterreads.de` zone (zone
+  settings, the WAF custom rule and the rate-limiting rules apply to it). Links the app makes for other people (a follow
+  link, a buddy read's invite, a reading page, a card) are built on it, wherever the member has the app open
+  (`web/app/utils/siteOrigin.ts`).
+- `libellus.fabkho.dev`: **an alias that stays**, the project's first custom domain, a proxied CNAME to
+  `libellus-3q1.pages.dev` in the `fabkho.dev` zone, serving the very same build. It is not redirected: an app installed
+  from it, a session signed in on it and every link already sent keep working. A browser keeps its storage, its service
+  worker and its installed app **per origin**, so the two addresses are two installs of the one app: a member who moves
+  to `betterreads.de` signs in once more there (the e-mail code), and her installed app on the old address is not moved.
+  The web app manifest (`id: '/'`, `start_url`, `scope`) is relative on purpose: each address is its own app identity,
+  and changing `id` would make an installed app a different app. Do not remove the alias, and keep it in every
+  allow-list (Supabase Redirect URLs, `COVER_ALLOWED_ORIGINS`, below), until nobody uses it any more.
 - `libellus-3q1.pages.dev`: production's Pages address. It stays reachable and is **not**
   redirected to the custom domain (the owner's decision); it answers with
   `X-Robots-Tag: noindex` instead (`web/public/_headers`). Preview addresses get `noindex` from
@@ -294,22 +304,22 @@ merged `_headers`) and serve it with `npx wrangler pages dev dist`, which applie
 way Pages does. Headers a preview deployment sends can be read with `curl -sI`.
 
 The zone's **Browser Cache TTL** (4 hours) raises a shorter `max-age` on the zone's cacheable file
-types (scripts, images) on `libellus.fabkho.dev` only: `sw-sync.js` and the icons arrive there
-with `max-age=14400`.
+types (scripts, images) of the `fabkho.dev` zone, so on the `libellus.fabkho.dev` alias only: `sw-sync.js` and the icons
+arrive there with `max-age=14400`.
 
 ## Web Analytics
 
 Cloudflare Web Analytics measures page loads and Core Web Vitals without cookies or any
 identifier stored on the device (no consent banner needed). It is switched on in the Pages
 project (Metrics → Web Analytics; via the API: `build_config.web_analytics_tag` and
-`web_analytics_token` of the project), for the site `libellus.fabkho.dev`: Pages adds the beacon
+`web_analytics_token` of the project), for the site `betterreads.de`: Pages adds the beacon
 (`static.cloudflareinsights.com/beacon.min.js`, reporting to `cloudflareinsights.com`) to every HTML
 response of every deployment built after it was switched on, previews and the pages.dev address
-included, so the dashboard's host filter separates `libellus.fabkho.dev` from the rest. Route
+included, so the dashboard's host filter separates `betterreads.de` and `libellus.fabkho.dev` from the rest. Route
 changes inside the app count as page views. Nothing in the repository loads it; the CSP above
 allows it. A browser with an ad blocker sends nothing.
 
-The numbers: dashboard → Analytics & Logs → Web Analytics → libellus.fabkho.dev, or the GraphQL
+The numbers: dashboard → Analytics & Logs → Web Analytics → betterreads.de (the alias is filtered by its host), or the GraphQL
 Analytics API (`rumPageloadEventsAdaptiveGroups`, `rumPerformanceEventsAdaptiveGroups`, filtered
 by the site tag). To switch it off: Metrics → Web Analytics → Disable, then retry the latest
 production deployment.

@@ -11,6 +11,7 @@ import {
   type SharedBook,
 } from '~/data/readingPage'
 import { useSessionStore } from '~/stores/session'
+import { canonicalOrigin } from '~/utils/siteOrigin'
 
 /**
  * Sharing, her side (issue #171, data/readingPage.ts): her reading page's
@@ -142,7 +143,7 @@ export const useSharingStore = defineStore('sharing', () => {
   return { settings, loadError, busy, error, load, setOn, renewLink, setSection, pagePath, pageUrl, cardUrl, sharedBook, shareBook, clearError, reset }
 })
 
-/** An address on this origin, whole (what a messenger needs). */
+/** An address on the main address of the instance (this origin elsewhere), whole (what a messenger needs). */
 function absolute(path: string): string {
-  return import.meta.client ? new URL(path, window.location.origin).href : path
+  return import.meta.client ? new URL(path, canonicalOrigin(window.location.origin)).href : path
 }

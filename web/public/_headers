@@ -45,7 +45,8 @@
   Cache-Control: no-cache
 
 # The Pages address of production (libellus-3q1.pages.dev) stays reachable, without a
-# redirect, but out of search results: libellus.fabkho.dev is the one address. Preview and
+# redirect, but out of search results: betterreads.de is the main address (libellus.fabkho.dev, the
+# first one, is an alias that stays: docs/HOSTING.md, "Addresses"). Preview and
 # branch addresses (<id>.libellus-3q1.pages.dev) get noindex from Pages already.
 https://:project.pages.dev/*
   X-Robots-Tag: noindex

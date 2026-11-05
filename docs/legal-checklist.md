@@ -25,6 +25,11 @@ lines in `privacy.ts` (and list it in a table here).
   and for rights requests: send it a test mail and see that it arrives.
 - **Resend's sending region.** The notice says Ireland (EU): confirm in the Resend dashboard under Domains that the
   sending region is Ireland.
+- **What Resend sends.** The notice says it sends the sign-in codes (Supabase Auth's SMTP) and the waitlist invites (the
+  `waitlist-invite` function), nothing else. Anything new sent by mail (a notification, a digest) changes that paragraph
+  and the version date first.
+- **The address.** The imprint names `betterreads.de` as the site and says the old address, `libellus.fabkho.dev`, still
+  reaches the same app (docs/HOSTING.md, "Addresses"); drop that sentence if the alias is ever removed.
 - **A lawyer's glance** before a wider launch.
 
 ## The imprint is postponed: what turning it on needs

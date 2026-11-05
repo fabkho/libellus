@@ -159,13 +159,13 @@ describe('the address of our cache', () => {
   })
 
   it('goes on the origin it is given', () => {
-    expect(coverFor(OL, { height: 300, dpr: 2, proxy: true, origin: 'https://libellus.fabkho.dev' })).toMatch(/^https:\/\/libellus\.fabkho\.dev\/cover\?u=https%3A%2F%2Fcovers\.openlibrary\.org/)
+    expect(coverFor(OL, { height: 300, dpr: 2, proxy: true, origin: 'https://betterreads.de' })).toMatch(/^https:\/\/betterreads\.de\/cover\?u=https%3A%2F%2Fcovers\.openlibrary\.org/)
   })
 
   it('is read back as the cover it asks for, by the Function and by the app', () => {
     const address = coverFor(APPLE, { height: 300, dpr: 2, proxy: true })!
     expect(unproxied(address)).toBe(apple('480x720'))
-    expect(unproxied(`https://libellus.fabkho.dev${address}`)).toBe(apple('480x720'))
+    expect(unproxied(`https://betterreads.de${address}`)).toBe(apple('480x720'))
     expect(unproxied(APPLE)).toBe(APPLE)
     expect(parseCoverRequest(new URL(address, 'https://x.test').searchParams)).toEqual({ source: apple('480x720'), width: 480 })
   })

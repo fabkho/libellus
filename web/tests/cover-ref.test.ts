@@ -25,7 +25,7 @@ const SIZES: CoverSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
 describe('our own copy', () => {
   it('is the address /c/<key>/<width>, on the page\'s origin or the one asked for', () => {
     expect(ownCoverUrl(KEY, 240)).toBe(`/c/${KEY}/240`)
-    expect(ownCoverUrl(KEY, 240, 'https://libellus.fabkho.dev')).toBe(`https://libellus.fabkho.dev/c/${KEY}/240`)
+    expect(ownCoverUrl(KEY, 240, 'https://betterreads.de')).toBe(`https://betterreads.de/c/${KEY}/240`)
     expect(ownCoverObject(KEY, 240)).toBe(`c/${KEY}/240`)
   })
 
@@ -188,7 +188,7 @@ describe('the chain never changes the artwork', () => {
 
 describe('a cover at a size no token names (the reel)', () => {
   it('is our copy at the width that is sharp for its height and the pixel ratio, absolute with an origin', () => {
-    const site = 'https://libellus.fabkho.dev'
+    const site = 'https://betterreads.de'
     // 300 px tall = 200 wide: 1× needs 200 -> 240; 2× needs 400 -> 600; 3× needs 600.
     expect(coverAt(apple, { height: 300, dpr: 1, ...own, origin: site })).toBe(`${site}/c/${KEY}/240`)
     expect(coverAt(apple, { height: 300, dpr: 2, ...own, origin: site })).toBe(`${site}/c/${KEY}/600`)
@@ -197,7 +197,7 @@ describe('a cover at a size no token names (the reel)', () => {
   })
 
   it('is coverFor\'s answer without a copy or with the switch off (/cover on the page\'s origin, else the source)', () => {
-    const site = 'https://libellus.fabkho.dev'
+    const site = 'https://betterreads.de'
     expect(coverAt({ coverUrl: APPLE }, { height: 300, dpr: 2, proxy: true, origin: site, own: true })).toBe(coverFor(APPLE, { height: 300, dpr: 2, proxy: true, origin: site }))
     expect(coverAt(apple, { height: 300, dpr: 2, proxy: false })).toBe(coverFor(APPLE, { height: 300, dpr: 2 }))
     expect(coverAt(apple, { height: 300, dpr: 2, proxy: true, origin: site, own: false })).toMatch(new RegExp(`^${site}/cover\\?u=`))
