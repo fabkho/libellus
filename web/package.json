@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@fabkho/chat": "github:fabkho/chat#v0.1.0",
-    "@fabkho/ui": "github:fabkho/ui#v0.10.6",
+    "@fabkho/ui": "github:fabkho/ui#v0.11.0",
     "@fontsource/geist": "^5.3.0",
     "@fontsource/geist-mono": "^5.3.0",
     "@fontsource/newsreader": "^5.3.0",

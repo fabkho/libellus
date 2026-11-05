@@ -166,6 +166,10 @@ shimmer stops, the tab bar stays.
   the dark colour scheme and the light one. The reader is scanned in its three rooms (sepia, light, dark) in
   `e2e/reader.spec.ts` (it needs Chromium), with its assistive buttons: the controls and the page turns
   without a tap in the middle or a swipe (WCAG 2.5.1).
+  **Voice messages** in a buddy read's thread: the microphone's hold-to-record, slide-up-to-lock and slide-left-to-cancel (WCAG 2.5.1, 2.5.7)
+  always have a single-pointer alternative: a tap, Enter or Space on the microphone (and VoiceOver's or Switch Control's activation) records
+  hands-free in the panel with ✕ and Send as ordinary 44 px buttons; the microphone's description names both ways (`uiText.chat.voice.recordHint`) and
+  locking, discarding and a too-short hold are announced politely (`e2e/buddy-voice-hold.spec.ts`).
   A violation that cannot be fixed in BetterReads goes in `ALLOWED` in `e2e/support.ts` with its reason
   — never a rule switched off for a whole page.
 - **The keyboard and the screen reader** are not covered by axe: the second flow in `a11y.spec.ts`
