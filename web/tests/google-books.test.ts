@@ -227,6 +227,12 @@ describe('Search', () => {
     expect(asked).toBe(1)
   })
 
+  it('is not asked for a query of a few letters', async () => {
+    let asked = 0
+    await withGoogle({ lookupIsbn: async () => null, search: async () => (asked++, volumeBooks) }).search('abc')
+    expect(asked).toBe(0)
+  })
+
   it('an ISBN: Google is asked last, when none of the others had it', async () => {
     const calls: string[] = []
     const google = { lookupIsbn: async (isbn13: string) => (calls.push(`google:${isbn13}`), snapshotFromGoogleVolume(hit[0]!)), search: async () => [] }

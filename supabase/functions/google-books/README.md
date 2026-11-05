@@ -48,7 +48,7 @@ One request per question, never more; the answer says what is asked:
   answer is ordered by them instead (`rankedBy`).
 
 The order across the app keeps the quota for what the others cannot answer: Search asks Google only for an ISBN none of them had
-or for a query that found fewer than three editions (`GOOGLE_BELOW`, `data/search.ts`); the edition picker once per opening;
+or for a query of at least four characters that found fewer than three editions (`GOOGLE_BELOW`, `GOOGLE_MIN_QUERY`, `data/search.ts`); the edition picker once per opening;
 the import once per row the ISBN step and the title ladder left without any Book of its work; `enrich` once per Catalogue Book
 that has no genre, by its ISBN.
 

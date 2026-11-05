@@ -35,6 +35,9 @@ export const MIN_QUERY_LENGTH = 2
  */
 export const GOOGLE_BELOW = 3
 
+/** And only for a query this long: Google is asked after a typing pause, and two letters are no book. */
+export const GOOGLE_MIN_QUERY = 4
+
 /** Sources asked after the others have answered, and only where those left a gap. */
 const LATE_SOURCES: readonly SourceName[] = ['dnb', 'google']
 /** Sources whose failure is no news: they are optional (Google Books answers nothing while its key is not set), so the list never says "could not reach". */
@@ -172,6 +175,7 @@ export function createSearch(options: {
         : {}),
       ...(options.google
         ? { google: async (signal?: AbortSignal): Promise<Found[]> => {
+            if (!isbn && text.length < GOOGLE_MIN_QUERY) return []
             const books = isbn ? [await options.google!.lookupIsbn(isbn, { signal })] : await options.google!.search(text, { signal })
             return books.filter((book): book is BookSnapshot => book !== null).map((book) => ({ book, source: 'google' as const, popularity: 0 }))
           } }
