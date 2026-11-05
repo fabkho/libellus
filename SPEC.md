@@ -166,6 +166,16 @@ and ported as the design system (#5, docs/DESIGN.md); this spec fixes structure 
   switched on, never a hidden Book, her notes, her progress or her reasons for not finishing; a block hides
   each member from the other everywhere. Nothing is visible to anyone before she lets a follower in or
   makes her account public. Follow writes need the connection; only *Hide from followers* waits offline.
+  The one place progress is shown is a buddy read she joined: its members see which Section she is in,
+  never a page, a percent or a date, and only while she is a member.
+- Buddy reads: a room for one Book with up to 12 members who joined by invitation or link, with a thread
+  per Section that stays veiled until she has read it. Her position is a Section, worked out from her
+  progress or set by her hand; the other members see that Section and nothing else about her reading
+  (never a page, a percent, a date, how it was set, or her notes), only while she is a member: leaving or
+  being removed stops it at once. Buddy reads are for every member, with no switch; what protects her is in the room: leave (and delete her messages), block, report, and deleting the account.
+  Anyone signed in who holds the link sees the names of the members before joining. The design is `docs/plans/buddy-read-shared.md`.
+  A friend's profile suggests Books to read together (*Potential buddy reads*): worked out on her phone from her own Library and
+  what that profile already shows her, so it never reveals more of the friend than the page; no function of its own.
 - Sharing (#171) is off until she turns it on, and only what she chose leaves the database: her
   first name, the sections she switched on (the Books she is reading, this year's counts, her
   favourites, what she finished with its Ratings, her shelf) and the reviews she shared one by one.

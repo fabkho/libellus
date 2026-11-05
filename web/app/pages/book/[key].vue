@@ -354,6 +354,8 @@ function back() {
       >
         <UiIcon name="repeat" :size="18" />{{ notFinished ? t('book.startAgain') : t('book.readAgain') }}
       </UiButton>
+      <!-- Read together (buddy reads): on every Book page, in her Library or not, in the action area, right under the Book's one action. -->
+      <TogetherBookRow :book="book" :entry="entry" />
       <!-- Its ebook on this device, when one is linked (#131); a finished or abandoned Book opens in the reader from here. -->
       <BookEbook v-if="entry" :entry="entry" :read="Boolean(ebook) && entry.status !== 'want_to_read' && entry.status !== 'reading'" @read="read(entry)" />
       <!-- The reader's code could not be brought in (docs/perf/bundle.md F6): say so, where a tap used to do nothing. -->

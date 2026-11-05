@@ -14,12 +14,13 @@ A calm, mobile-first book tracker you install from the home screen: search a boo
 - **Progress** in pages or percent with a day-by-day chart, and **Collections**, your own shelves, in your order.
 - **Bring your history**: a Goodreads or Hardcover export (CSV, or Hardcover's zip) is told apart by its header; its shelves, lists, reads, ratings and reviews come along.
 - **Friends, by choice.** Your switches decide what followers see, your account is private until you let them in, and you can hide a single book or block someone.
+- **Buddy reads, by choice.** Read one Book with friends in Sections, with a thread per Section that stays veiled until you have read it, and messages that can be a voice recording only that read's members can hear. The only thing about your reading it shows is which Section you are in.
 - **Offline and installed**: the Library stays on the device, changes wait in an outbox, and the PWA runs full screen in light and dark. On Android there is also an installable app, a thin shell around the same site ([docs/ANDROID.md](docs/ANDROID.md)).
 
 ## Privacy
 
 - **No trackers, no ads.** The app sets no cookies; Cloudflare Web Analytics counts page loads without storing anything on your device (docs/HOSTING.md).
-- **Your data is yours.** Row-level security means a member only ever reads her own Library, reviews, Collections and Book links; the people she follows see what they chose to show, through functions that check the follow and their switches, and private is the default.
+- **Your data is yours.** Row-level security means a member only ever reads her own Library, reviews, Collections and Book links; the people she follows see what they chose to show, through functions that check the follow and their switches, and private is the default; in a buddy read she joined, its members also see which Section she is in (never a page), until she leaves.
 - **Sharing is opt-in.** A reading page is off until she turns it on, shows only the sections she picks (never her email, notes, highlights or a review she did not share), sits at an unguessable link out of search engines and dies when she turns it off; a cover that came with a Hardcover export shows inside the app only. The waitlist is the only address a visitor can leave: kept to send an invite, readable only by the owner, deleted on request.
 - **Delete is in the app**: Profile → Account → Delete account removes your account and everything of yours at once; the encrypted nightly backups forget it when they expire, within 35 days. An export of your data is planned; until then the app only imports.
 - **Search and the reader stay plain.** The browser asks Apple Books and Open Library directly for the words you type, the Goodreads rating is looked up by the server (so Goodreads never sees you), and *Translate* and *Define* send only the words you select (MyMemory, Wiktionary); the book itself never leaves your device.
@@ -29,7 +30,7 @@ A calm, mobile-first book tracker you install from the home screen: search a boo
 
 | Service | What it holds or does |
 | --- | --- |
-| [Supabase](https://supabase.com), `eu-central-1` | The database, sign-in, profile photos and the edge functions: everything you save, your email address, the waitlist and the error log |
+| [Supabase](https://supabase.com), `eu-central-1` | The database, sign-in, profile photos, voice messages and the edge functions: everything you save, your email address, the waitlist and the error log |
 | [Cloudflare Pages](https://pages.cloudflare.com) | Serves the app and the link previews of a shared reading page; its Web Analytics counts page loads |
 | [Cloudflare R2](https://developers.cloudflare.com/r2/) | Two private buckets: the nightly backup, encrypted before upload with a key only the owner holds and deleted after 35 days; and the covers of books in members' Libraries, under hashed names, deleted 30 days after no Library holds the book |
 | Resend (an email provider, over SMTP) | Sends the sign-in codes and the waitlist invites, so it sees the address it mails |

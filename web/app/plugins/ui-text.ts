@@ -14,7 +14,7 @@ export default defineNuxtPlugin({
   name: 'libellus:ui-text',
   dependsOn: ['i18n:plugin'],
   setup(nuxtApp) {
-    const { t } = nuxtApp.$i18n as { t: (key: string) => string }
+    const { t } = nuxtApp.$i18n as { t: (key: string, named?: Record<string, string>) => string }
     const text = computed(() => uiTextOf(t))
     watch(text, (words) => updateAppConfig({ ui: { text: words } }), { immediate: true, flush: 'sync' })
   },

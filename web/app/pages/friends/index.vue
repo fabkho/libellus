@@ -16,6 +16,7 @@
 // (the follow link, Profile for now), or following people with nothing yet (quiet). A load that
 // fails with nothing to show says so, with Try again.
 import type { FeedRow } from '~/data/feed'
+import { useBuddyInvitesStore } from '~/stores/buddyInvites'
 import { useFeedStore } from '~/stores/feed'
 
 definePageMeta({
@@ -33,6 +34,11 @@ const pushed = computed(() => Boolean(useRoute().meta.pushed))
 const feed = useFeedStore()
 const online = useOnline()
 const { label } = useFeedDay()
+// Her buddy invitations (the small store): read when the page opens; their component is built the first time one waits, and stays for the sheet it holds.
+const invites = useBuddyInvitesStore()
+const inviteSeen = ref(false)
+watch(() => invites.count, (count) => count > 0 && (inviteSeen.value = true), { immediate: true })
+onMounted(() => void invites.load())
 
 useHead({ title: () => `${t('feed.title')} · ${t('app.name')}` })
 
@@ -125,6 +131,9 @@ watch(
     <div role="status">
       <p v-if="offline" class="eyebrow px-screen pt-sm" data-testid="friends.offline">{{ offline }}</p>
     </div>
+
+    <!-- Buddy read invitations (W3): a lazy component, built the first time one waits and kept for the sheet it holds. -->
+    <LazyTogetherInvitations v-if="inviteSeen" :load="false" />
 
     <div v-if="feed.days.length" class="px-screen pt-sm" data-testid="friends.list">
       <section v-for="(day, dayIndex) in feed.days" :key="day.day" class="pt-md">

@@ -630,6 +630,22 @@ export type Library = {
     day?: string,
   ) => Promise<Result<LibraryEntry>>
   /**
+   * Progress on an earlier day (docs/plans/backdated-progress.md): where the member ended `day` (`YYYY-MM-DD`) of
+   * her open read, as a page or a percent. One row per day: a day that has one moves its end, a new one is added;
+   * the value is clamped between the neighbouring days, the next day then starts where this one ends, and the read's
+   * own value follows only when the days lead it and this is the latest (rules R1-R12, `data/progressDays.ts`
+   * has the same rules for the client). Returns the entry as it is now: the member's value may have moved, or not.
+   * Refused with `not_reading` (no open read, a finished one included), `progress_invalid`, `date_invalid` (a new day
+   * before the read began, or after tomorrow somewhere on Earth), `entry_not_found`. Waits in the outbox offline.
+   */
+  setProgressDay: (entryId: string, day: string, progress: ProgressValue) => Promise<Result<LibraryEntry>>
+  /**
+   * Removes `day` from the open read's days: the next day absorbs its pages, and the read's value goes back to where
+   * the day began when it was the latest day and the days lead it. A day without a row is a no-op that succeeds.
+   * Same refusals as `setProgressDay`. Waits in the outbox offline.
+   */
+  deleteProgressDay: (entryId: string, day: string) => Promise<Result<LibraryEntry>>
+  /**
    * Progress by day (issue #68) of these reads: for each session id, its days oldest
    * first (a read without any has an empty list). Only the member's own reads answer.
    */
@@ -952,6 +968,33 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       const updated = await client.rpc('update_progress', args)
       if (isNoAnswer(updated)) return unansweredEntry('update_progress', args, entryId)
       if (updated.error) return { data: null, error: mapLibraryError(updated.error) }
+      return reread(entryId)
+    },
+
+    async setProgressDay(entryId, day, progress) {
+      const args = {
+        p_entry_id: entryId,
+        p_day: day,
+        p_page: 'page' in progress ? progress.page : null,
+        p_percent: 'percent' in progress ? progress.percent : null,
+      }
+      const waiting = await queuedEntry('set_progress_day', args, entryId)
+      if (waiting) return waiting
+      if (!online()) return OFFLINE
+      const set = await client.rpc('set_progress_day', args)
+      if (isNoAnswer(set)) return unansweredEntry('set_progress_day', args, entryId)
+      if (set.error) return { data: null, error: mapLibraryError(set.error) }
+      return reread(entryId)
+    },
+
+    async deleteProgressDay(entryId, day) {
+      const args = { p_entry_id: entryId, p_day: day }
+      const waiting = await queuedEntry('delete_progress_day', args, entryId)
+      if (waiting) return waiting
+      if (!online()) return OFFLINE
+      const removed = await client.rpc('delete_progress_day', args)
+      if (isNoAnswer(removed)) return unansweredEntry('delete_progress_day', args, entryId)
+      if (removed.error) return { data: null, error: mapLibraryError(removed.error) }
       return reread(entryId)
     },
 

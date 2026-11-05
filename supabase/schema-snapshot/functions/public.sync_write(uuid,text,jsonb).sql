@@ -95,6 +95,21 @@ begin
         p_clear          => coalesce((v_args ->> 'p_clear')::boolean, false)
       );
 
+    when 'set_progress_day' then
+      -- An earlier day as queued: not moved into update_progress's window (see above).
+      perform public.set_progress_day(
+        p_entry_id => (v_args ->> 'p_entry_id')::uuid,
+        p_day      => (v_args ->> 'p_day')::date,
+        p_page     => (v_args ->> 'p_page')::integer,
+        p_percent  => (v_args ->> 'p_percent')::integer
+      );
+
+    when 'delete_progress_day' then
+      perform public.delete_progress_day(
+        p_entry_id => (v_args ->> 'p_entry_id')::uuid,
+        p_day      => (v_args ->> 'p_day')::date
+      );
+
     when 'update_session' then
       perform public.update_session(
         p_session_id     => (v_args ->> 'p_session_id')::uuid,

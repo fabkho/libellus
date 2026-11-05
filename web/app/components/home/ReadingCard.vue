@@ -15,6 +15,7 @@ import { pageCountOf, progressFraction, progressOf, progressReachedEnd } from '~
 import { useBookStore } from '~/stores/book'
 import { useReadingStore } from '~/stores/reading'
 import type { FriendsGroup } from '~/utils/friendsNames'
+import { canReadTogether } from '~/utils/buddyEntry'
 
 // Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
 const coverHosts = { ...useCoverHosts(), proxy: false }
@@ -22,7 +23,11 @@ const coverHosts = { ...useCoverHosts(), proxy: false }
 // `friends`: the followed members reading the same Book now (social v2a, FriendsAlsoAvatars), on the cover's lower edge.
 const props = defineProps<{ entry: LibraryEntry; eager?: boolean; friends?: FriendsGroup | null }>()
 
+const emit = defineEmits<{ together: [entry: LibraryEntry] }>()
+
 const { t, n } = useI18n()
+// Buddy reads: the "..." (Read together) is on a card of a Catalogue Book; a Manual book cannot be read together.
+const together = computed(() => canReadTogether(props.entry.book))
 const { formatDay, dayOfRead } = useDays()
 const books = useBookStore()
 const reading = useReadingStore()
@@ -88,7 +93,19 @@ function act() {
       />
     </div>
     <div class="relative flex min-w-0 flex-1 flex-col pt-xxs">
-      <UiPressLink :to="`/book/${entry.book.id}`" v-on="flightOf(`/book/${entry.book.id}`)" class="flex flex-col gap-xs" data-testid="home.entry" @press="books.prefetch(entry.book.id)">
+      <!-- Buddy reads: the card's small menu (Read together). At the corner, a button of its own, beside the title's link, never inside it. -->
+      <button
+        v-if="together"
+        type="button"
+        class="absolute -top-xs -right-xs z-10 flex size-(--size-touch) items-center justify-center text-ink-faint hover:text-ink"
+        aria-haspopup="dialog"
+        :aria-label="t('together.entry.moreLabel', { title: entry.book.title })"
+        data-testid="home.together.more"
+        @click="emit('together', entry)"
+      >
+        <UiIcon name="more" :size="20" />
+      </button>
+      <UiPressLink :to="`/book/${entry.book.id}`" v-on="flightOf(`/book/${entry.book.id}`)" class="flex flex-col gap-xs" :class="together && 'pr-ml'" data-testid="home.entry" @press="books.prefetch(entry.book.id)">
         <span class="book-title line-clamp-2 text-book-title" data-testid="home.entryTitle">{{ entry.book.title }}</span>
         <span class="flex min-w-0 items-center gap-xs">
           <span class="truncate text-body text-ink-muted">{{ authorLine }}</span>

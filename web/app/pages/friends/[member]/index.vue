@@ -6,7 +6,7 @@
 //    after it Requested (a tap withdraws the request);
 //  - a profile she may see (public, or followed): the hero (photo, name, since when, the Library line),
 //    Follow where the account is public and she does not follow yet, then, by her switches, Currently
-//    reading, Want to read (the newest, then See all), the year pills and the four figures, the chart by
+//    reading, Want to read (the newest, then See all), Potential buddy reads (worked out from her Library and what this page shows), the year pills and the four figures, the chart by
 //    month or by week (read-only, its own window), Ratings, Records, Authors, Recently finished (the newest 3, then See all) and the Years in review. The Profile's own
 //    blocks, fed from her record. Never her reading days, a progress, an account row or a shelf.
 // A Book opens its page with the cover flying into it, a Manual book opens nothing (it is not in the
@@ -307,6 +307,9 @@ function back() {
             <FriendsMemberCovers :books="open.want.map((w) => w.book)" size="sm" testid="member.wantBooks" />
           </section>
         </UiReveal>
+
+        <!-- Potential buddy reads: worked out here from her Library and what this profile shows; nothing of its own is asked of the database (docs/parity.md). -->
+        <FriendsBuddySuggestions :profile="open" :want="view.want" :record="record" :name="name" />
 
         <div v-if="recordFailed" class="flex flex-col items-center gap-sm pb-xl text-center" data-testid="member.recordError">
           <p class="text-subhead text-ink-muted">{{ view.recordError === 'offline' ? t('member.offline') : t('member.loadError') }}</p>

@@ -33,7 +33,7 @@ export function useReadingDays(entry: () => LibraryEntry | null) {
   const sessionId = computed(() => entry()?.latestSession?.id ?? null)
   watchEffect(() => store.want(sessionId.value))
 
-  const days = computed(() => (sessionId.value ? (store.bySession[sessionId.value] ?? null) : null))
+  const days = computed(() => (sessionId.value ? (store.shown[sessionId.value] ?? null) : null))
   const loaded = computed(() => days.value !== null)
   /** The read's days are being asked for again after a save or Undo. */
   const refreshing = computed(() => (sessionId.value ? store.refreshing[sessionId.value] === true : false))
@@ -82,6 +82,13 @@ export function useReadingDays(entry: () => LibraryEntry | null) {
     if (ago > 1 && ago < 7) return dateFormat(locale.value, { weekday: 'short' }).format(parseDay(day))
     return formatDay(day)
   }
+  /** `dayWords` inside a sentence: "today" and "yesterday" in lower case, the rest as it is. */
+  function dayWordsInline(day: string): string {
+    const ago = daysBetween(day, today())
+    if (ago === 0) return t('book.progress.dayTodayInline')
+    if (ago === 1) return t('book.progress.dayYesterdayInline')
+    return dayWords(day)
+  }
   /** "24 pages", "5 %". */
   const amountWords = (amount: number) =>
     unit.value === 'page' ? t('book.progress.amountPages', { count: n(amount) }, amount) : t('book.progress.amountPercent', { count: amount })
@@ -115,6 +122,7 @@ export function useReadingDays(entry: () => LibraryEntry | null) {
     log,
     sofar,
     dayWords,
+    dayWordsInline,
     amountWords,
     perDayWords,
     daysWords,

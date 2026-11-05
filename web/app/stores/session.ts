@@ -6,6 +6,7 @@ import { browserPort, disablePush, readPushChoice } from '~/data/pushSubscriptio
 import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useSyncStore } from '~/stores/sync'
 import { keepCodeSent, recentCode, stepFor, whoIs, type CodeSent } from '~/utils/codeCooldown'
+import { PENDING_BUDDY_READ_KEY } from '~/utils/pendingBuddyRead'
 import { PENDING_FOLLOW_KEY } from '~/utils/pendingFollow'
 import { PENDING_SHARE_KEY } from '~/utils/pendingShare'
 import { PENDING_SIGN_IN_KEY } from '~/utils/signedOutRoute'
@@ -164,7 +165,8 @@ export const useSessionStore = defineStore('session', () => {
    */
   async function signedInAs(next: Member) {
     if (import.meta.client) {
-      if (otherMemberHere(window.localStorage, next.id, readSavedMember(window.localStorage)?.id ?? null)) await forgetDevice()
+      // The buddy read link she opened to get here is hers, not the last member's: it stays.
+      if (otherMemberHere(window.localStorage, next.id, readSavedMember(window.localStorage)?.id ?? null)) await forgetDevice({ keepForNext: [PENDING_BUDDY_READ_KEY] })
     }
     adopt(next)
   }
@@ -379,7 +381,7 @@ export const useSessionStore = defineStore('session', () => {
    * `accountDeleted`: she deleted her account, so nothing of hers stays at all: not what waits for a
    * sign-in, a share or a follow, and not even the code last mailed.
    */
-  async function forgetDevice({ sessionEnded = false, accountDeleted = false }: { sessionEnded?: boolean; accountDeleted?: boolean } = {}) {
+  async function forgetDevice({ sessionEnded = false, accountDeleted = false, keepForNext = [] }: { sessionEnded?: boolean; accountDeleted?: boolean; keepForNext?: readonly string[] } = {}) {
     if (import.meta.client) {
       const memberId = member.value?.id ?? readSavedMember(window.localStorage)?.id ?? null
       useSyncStore().close()
@@ -390,7 +392,7 @@ export const useSessionStore = defineStore('session', () => {
           caches: typeof caches === 'undefined' ? null : caches,
           files: navigator.storage,
         },
-        { sessionEnded, accountDeleted, memberId, keep: accountDeleted ? [] : [PENDING_SIGN_IN_KEY, PENDING_SHARE_KEY, PENDING_FOLLOW_KEY] },
+        { sessionEnded, accountDeleted, memberId, keepForNext, keep: accountDeleted ? [] : [PENDING_SIGN_IN_KEY, PENDING_SHARE_KEY, PENDING_FOLLOW_KEY, PENDING_BUDDY_READ_KEY] },
       )
       // The Friends tab setting went with the rest: back to its default, on.
       useFriendsTabStore().reload()

@@ -9,7 +9,7 @@
 // opened again. A message that went through turns the sheet into its thanks, and the next opening is
 // empty. The textarea takes the keyboard once the sheet has risen (`data-autofocus`, UiSheet). What is
 // sent: stores/feedback.ts, data/feedback.ts.
-import { FEEDBACK_KINDS, FEEDBACK_MAX, FEEDBACK_MIN } from '~/data/feedback'
+import { CONTACT_KINDS, FEEDBACK_MAX, FEEDBACK_MIN } from '~/data/feedback'
 import { useFeedbackStore } from '~/stores/feedback'
 
 const open = defineModel<boolean>('open', { required: true })
@@ -21,7 +21,7 @@ const context = useFeedbackContext()
 
 watch(open, (isOpen) => isOpen && store.begin())
 
-const kinds = computed(() => FEEDBACK_KINDS.map((value) => ({ value, label: t(`contact.kind.${value}`) })))
+const kinds = computed(() => CONTACT_KINDS.map((value) => ({ value, label: t(`contact.kind.${value}`) })))
 const length = computed(() => [...store.text].length)
 const label = computed(() => (store.sending ? t('contact.sending') : store.sendError ? t('contact.retry') : t('contact.send')))
 

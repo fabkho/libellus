@@ -244,9 +244,10 @@ viewer may see her). Top to bottom, each block present only if her switch allows
 | **In common** (phase 2): the Books you both finished, both your stars side by side | `show_finished` | new, small |
 | Her menu (⋯): Unfollow · Remove as follower · Block | — | `UiSheet` + `UiConfirm` |
 
-Never shown, whatever the switches: her address, progress and reading days
+Never shown **to followers**, whatever the switches: her address, progress and reading days
 (`reading_progress_days` stays hers: it is a diary of when she reads), abandon reasons, highlights,
-notes, Collections (until §8's shared Collections), Book links, private Books.
+notes, Collections (until §8's shared Collections), Book links, private Books. Progress is shown only
+inside a buddy read she joined, as a Section (§8, idea 5).
 
 ### Reuse: a read-only Profile, not a new design
 
@@ -297,7 +298,7 @@ card (phase 2).
 | **Reviewed** (a review written later) | `review` set on a finished session that had none, after its finish event settled | on only with `show_reviews` | — |
 | **Did not finish** | a session closed `abandoned` | **off** (`show_abandoned`) | — |
 | Rating changed | — | **no event**: an edit is not news; the finish row shows the current stars anyway | — |
-| Progress, milestones ("finished her 20th book of 2026"), "follows Ben" | — | **no event**: progress stays private (it already is on the reading page), milestones are goals in disguise (#166: "Not planned: reading goals"; the Profile: "no streaks, no goals") and the graph is nobody's business | — |
+| Progress, milestones ("finished her 20th book of 2026"), "follows Ben" | — | **no event**: progress stays out of the feed and the reading page; a buddy read shows a Section to its members, milestones are goals in disguise (#166: "Not planned: reading goals"; the Profile: "no streaks, no goals") and the graph is nobody's business | — |
 | Collection created / shared | — | not until shared Collections exist (§8) | — |
 
 **What never makes an event** (the "nothing by accident" rule):
@@ -657,7 +658,7 @@ Value / effort / risk: H, M, L. "Fits" is why it belongs in *this* app.
 | 2 | **Your circle on a Book's page.** Under the Goodreads line: "Anna ★4.5 · Ben is reading it" (by work, via `book_works`). | H | S | L | The Book page is where she decides to read; a friend's stars beat a stranger's average. |
 | 3 | **Send a book.** Book → ⋯ → *Send to…* a follower, with a note (≤ 280 characters). It lands in a small *For you* row on Home, never in the feed; one tap puts it on Want to read. | H | M | L | A recommendation between two people, the way it happens in life; no feed noise. |
 | 4 | **Spoiler-safe reviews.** A switch on the Finish sheet: "Contains spoilers". Followers who have not finished the Book see the review folded behind *Show anyway*. | M | S | L | Reviews to followers only work if they do not ruin the Book for the next friend. |
-| 5 | **Reading together (buddy read).** Two members link their open reads of the same work. Each sees the other's progress bar on the Book page and the Home card, and can pin a note to a page that stays hidden until the other has passed it (StoryGraph's [buddy reads](https://roadmap.thestorygraph.com/changelog/buddy-reads-) do the same). Progress leaves the database only here, only with both opting in. | H | L | M | Couples and friends do read the same book at the same time; this is the warmest feature a circle of five can have. |
+| 5 | **Reading together (buddy read).** A buddy read of up to 12 members for one Book; its members see each other's **Section**, never a bar, a page or a percent, and there is a thread per Section that stays veiled until you have read it (StoryGraph's [buddy reads](https://roadmap.thestorygraph.com/changelog/buddy-reads-) do something similar). The shipped design is in `docs/plans/buddy-read-shared.md`. | H | L | M | Couples and friends do read the same book at the same time; this is the warmest feature a circle of five can have. |
 | 6 | **Currently reading together (light).** Without any linking: the Home card shows the small avatars of followed members who have the same work open right now. | M | S | L | A free by-product of #2; a nice surprise, no setup. |
 | 7 | **Friends' Want to read on yours.** On your Want to read row and in the Library: a tiny avatar on Books a followed member also wants to read, and a *Read it together?* link that starts #5. | M | S | L | Turns two shelves into a plan, without a single new screen. |
 | 8 | **Shared Collections.** A Collection with members who can all add to it ("Holiday 2027", "Books for the cottage"). | M | L | M | Collections already exist and are per member; sharing one is natural, but `collection_entries` point at a member's entries, so it needs a Book-level model: phase 3. |

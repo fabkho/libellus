@@ -32,7 +32,8 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   - `ui.config.ts` says which of the base's plugins run (`touch-active`, `stranded-viewport`) and why `no-focus-zoom`
     is held.
   - App-set values live in `app/app.config.ts`: `ui.text` (words set from the messages by `plugins/ui-text.ts`; a word
-    the base adds needs a line in `utils/uiText.ts`, `tests/ui-text.test.ts`; a variable it reads needs a token,
+    the base adds needs a line in `utils/uiText.ts` (and its blank, `{count}` or `{name}`, a name in `UI_TEXT_BLANKS`: vue-i18n turns a blank it is
+    given no value for into nothing), `tests/ui-text.test.ts`; a variable it reads needs a token,
     `tests/ui-layer.test.ts`), `ui.icons` (BetterReads' own drawings of `people`, `heart`, `external`), `ui.cover`
     (sources and artwork) and `ui.ambient.grain: 'inline'` (the grain as an inline SVG, not a `background-image`, which
     Chrome counts as the LCP element: `../docs/perf/client-1-startup.md` F-12).
@@ -42,6 +43,29 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
     (`stranded-viewport`, `tests/viewport-pan.test.ts`); use `float-bottom` or `screen-bottom` for a new one.
   - A link that flies a cover (`UiPressLink` to a book page) gets the flight from the app: `v-on="flightOf(path)"`
     (`composables/useBookFlight.ts`).
+- **The shared chat package** (fabkho/chat, a Nuxt layer of chat logic; `@fabkho/chat` pinned to a tag in `package.json`,
+  never a branch; its README: `node_modules/@fabkho/chat/README.md`) is the send queue, threads and chapters, the spoiler
+  veil, photo and GIF helpers and a Realtime core, framework-free behind an adapter. Taken in `chat.config.ts`
+  (`extends`, the last layer; `CHAT_LAYER=/path/to/chat-checkout` points at a local checkout, and `#layers/chat`, which
+  the Vitest alias follows, too); `tests/chat-layer.test.ts` keeps it registered once and the app's names the app's.
+  - Its rules: **no words** (it returns codes and state; the app's components word them in the message files), **no app
+    imports** (nothing of `~`, stores or `#imports` goes in; the app's side stays in `app/`), **no Supabase and no
+    `@supabase/realtime-js`**: the app provides the adapter (`ChatAdapter`, `RealtimeLike`) in `app/data/`, and the
+    Realtime client it gives is the lazy `import('#realtime-client')` door below, never the stub. A fix to the layer is
+    a release of fabkho/chat and a bump here (`docs/DEVELOPMENT.md`, "The package bumps"), not an edit under `node_modules`.
+  - Its first user is the buddy read (`data/buddyReads.ts`, `data/buddyLive.ts`, `stores/buddyRead.ts`): the store is imported only by
+    buddy read screens, which `retain()` the live channel (the real client loads lazily through the store's
+    `import('#realtime-client')`; Home and the Book page read `my_buddy_reads()` through the small store `stores/buddyInvites.ts` instead), and
+    `tests/buddy-read-entry.test.ts` keeps the big store, the live module and the chat layer out of the entry, Home and the Book page. A refusal code is worded under `buddyRead.error.<code>`.
+    The screens: `pages/together/[id]/index.vue` (the room) and `[section].vue` (a thread: the base's chat screen over the store; the room's own
+    thread is the segment `room`), `components/together/*`, `utils/buddyRoom.ts`, `utils/buddyThread.ts` (the veil, in the view model) and
+    `utils/buddyRoute.ts`. A page's `validate` is the address only (an address that is not a read id is the app's 404).
+  - **Voice messages** (`data/buddyVoice.ts`, the voice calls of `data/buddyReads.ts`, the store's `sendVoice` and `voiceUrl`, `utils/buddyThread.ts` for the bubble): the recording and the
+    sound are the base's (`UiComposer` `voiceMaxMs`, `UiVoiceBubble`, `@fabkho/ui/pure/voice`); the sound is an object in the private bucket `buddy-voice` and **nothing is signed or fetched
+    when a thread loads**: the page takes the play button's press first (`voicePress`, capture phase on the thread's root) and asks `voiceUrl` for a URL of five minutes. The recorder and the
+    player are in the thread page's lazy chunk, never the entry (`perf:bundle`). A deleted message's sound is removed by the Edge Function `buddy-voice-sweep` (docs/OPERATIONS.md, "Voice messages").
+  - `entry-guard.config.ts` fails a production build if any chunk the entry loads statically holds
+    `@supabase/realtime-js` (the stub is fine; `tests/entry-guard.test.ts`).
 - **Portable by default** (rules: the base README): a component that could ever be generic is written so it moves to
   the base by copying the file. A presentational component holds no app state (no `~/stores`, Pinia, Supabase or i18n
   calls: data and copy come in by props, slots or `ui.text`); pure helpers are fine, `~/utils` and `~/composables` that touch app
@@ -58,6 +82,19 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   precached (`globIgnores`): `data/reader/prefetch.ts` says when they are fetched ahead (a member with an
   ebook on this device, online, no Save-Data), a CacheFirst rule keeps them. Keep the group's modules apart
   from the two files imported dynamically (nuxt.config.ts says why), and a prefetch trigger behind `prefetchReader`.
+- **Buddy reads are for every member**: no build flag, no Profile switch, no route middleware (they had both for the first release; 1.34 removed them,
+  with the turn-off confirm, `docs/parity.md`). What protects a member is in the rooms: leave (with the choice to delete her messages), a Host removing a
+  member, block, report, delete account, and the rule that a co-member sees a Section only. Keep the entry lean: the chat layer, the big store
+  (`stores/buddyRead.ts`) and the Realtime client are lazy chunks loaded by a room, never by Home, a Book page or Friends.
+  - `stores/buddyInvites.ts` is the small door the shell, Home, a Book page and Friends use: her `my_buddy_reads()` list (invitations and reads), the repository
+    loaded by a dynamic `import()`, nothing asked while signed out. The lamp dot, *Reading together* on Home and the Book page's action read it; a room's screen
+    uses the big store.
+  - The entry points: **the Book page's action** (`components/together/BookRow.vue`, in the action area of `pages/book/[key].vue` on every Book, in her Library or
+    not: Read together, Open the buddy read, or disabled for a Manual book), Home's *Reading together* card and a Currently reading card's ⋯ menu
+    (`components/home/{Together,TogetherMenu}.vue`). The setup sheet (`components/together/SetupSheet.vue`) is built when she presses an action, not with the page,
+    and adds a Book that is not in her Library as Currently reading when she presses Start (`stores/library.ts` `addReading`). View models: `utils/buddyEntry.ts`;
+    `tests/buddy-entry.test.ts` pins where they sit. Home reads the list on focus (`onMounted` and `onActivated`, no Realtime).
+  - The link `/t/<token>` needs the sign-in (`utils/publicPath.ts` is untouched) and is kept through it by `utils/pendingBuddyRead.ts`; an open link shows the join card.
 - **Mobile first: VoiceOver, touch and gestures before desktop/keyboard** (every swipe, drag and long press has a single-tap alternative; text at 200 % reflows).
 - No full typechecks (`nuxi typecheck`, `tsc --noEmit`) unless asked. Run the targeted test instead.
 - Never read `.env`. Pass `NUXT_PUBLIC_*` as exported env vars when a command needs them.

@@ -1,5 +1,88 @@
 # Changelog
 
+## [1.38.0](https://github.com/fabkho/libellus/compare/v1.37.0...v1.38.0) (2026-11-05)
+
+
+### Features
+
+* **web:** firmer haptics when recording a voice message ([#506](https://github.com/fabkho/libellus/issues/506)) ([70eef0f](https://github.com/fabkho/libellus/commit/70eef0f572a5bc29b7e3e8bff74f611d50b9323d))
+
+## [1.37.0](https://github.com/fabkho/libellus/compare/v1.36.0...v1.37.0) (2026-11-05)
+
+
+### Features
+
+* **web:** hold to record a voice message, slide up to lock ([#504](https://github.com/fabkho/libellus/issues/504)) ([757ca76](https://github.com/fabkho/libellus/commit/757ca7611ea2e689e922983e1ce838cb86e98730))
+
+## [1.36.0](https://github.com/fabkho/libellus/compare/v1.35.0...v1.36.0) (2026-11-05)
+
+
+### Features
+
+* voice messages in buddy reads, and the reaction gestures checked ([#502](https://github.com/fabkho/libellus/issues/502)) ([5136e7a](https://github.com/fabkho/libellus/commit/5136e7ab5c8541254a101fa5cb187bb1b743f136))
+
+## [1.35.0](https://github.com/fabkho/libellus/compare/v1.34.0...v1.35.0) (2026-11-05)
+
+
+### Features
+
+* **web:** a suggestion starts the read with that friend already picked ([#500](https://github.com/fabkho/libellus/issues/500)) ([6ed3583](https://github.com/fabkho/libellus/commit/6ed3583c103127d393659cbf1548920e3b8c644f))
+
+## [1.34.0](https://github.com/fabkho/libellus/compare/v1.33.1...v1.34.0) (2026-11-04)
+
+
+### Features
+
+* **web:** buddy reads for everyone, a clear start on every Book ([#498](https://github.com/fabkho/libellus/issues/498)) ([3615c22](https://github.com/fabkho/libellus/commit/3615c22b5b7e0df3c74e389ef4da172d36897492))
+* **web:** potential buddy reads on a friend's profile ([#497](https://github.com/fabkho/libellus/issues/497)) ([d9f6f06](https://github.com/fabkho/libellus/commit/d9f6f06959ff59e0392208a9917a59cdfb0189d7))
+
+## [1.33.1](https://github.com/fabkho/libellus/compare/v1.33.0...v1.33.1) (2026-11-04)
+
+
+### Fixes
+
+* **web:** buddy reads after review ([#494](https://github.com/fabkho/libellus/issues/494)) ([37ffaf8](https://github.com/fabkho/libellus/commit/37ffaf8dd292b68e3aa829010f8bd73c7f540fb3))
+* **web:** buddy reads, the rehearsal's findings ([#496](https://github.com/fabkho/libellus/issues/496)) ([91d4f84](https://github.com/fabkho/libellus/commit/91d4f842ba6600cb80b5b9e5660e6a8135966c63))
+
+## [1.33.0](https://github.com/fabkho/libellus/compare/v1.32.0...v1.33.0) (2026-11-04)
+
+
+### Features
+
+* **db:** progress on an earlier day: set_progress_day and delete_progress_day ([#482](https://github.com/fabkho/libellus/issues/482)) ([5351275](https://github.com/fabkho/libellus/commit/535127524f29812a9c51550b6749af9301a9b010))
+* **web:** buddy reads, the data layer, the store and the live channel ([#484](https://github.com/fabkho/libellus/issues/484)) ([fd5c46b](https://github.com/fabkho/libellus/commit/fd5c46bdcd0ced7bcaf06b398c5157739eb1d284))
+* **web:** progress on an earlier day, the data layer ([#485](https://github.com/fabkho/libellus/issues/485)) ([baea53e](https://github.com/fabkho/libellus/commit/baea53e9b5b2fcec6be26018e5d16762146d28fc))
+* **web:** progress on an earlier day, the reading log ([#492](https://github.com/fabkho/libellus/issues/492)) ([fcd242c](https://github.com/fabkho/libellus/commit/fcd242ce8f5a9971f6f7b94df31dc9f320855a89))
+* **web:** progress on an earlier day, the sheet's day switch ([#489](https://github.com/fabkho/libellus/issues/489)) ([952dca0](https://github.com/fabkho/libellus/commit/952dca0a67ac2edc0553e37c776ddbdf430b5265))
+* **web:** start a buddy read, invite friends, join by link ([#488](https://github.com/fabkho/libellus/issues/488)) ([47b4070](https://github.com/fabkho/libellus/commit/47b4070776006cf63f656cc14082f8b740d09dee))
+* **web:** take @fabkho/chat ([#481](https://github.com/fabkho/libellus/issues/481)) ([1752bc3](https://github.com/fabkho/libellus/commit/1752bc3746d90b5438be18c293896ebf57af620e))
+* **web:** the Book page row and the Home card ([#490](https://github.com/fabkho/libellus/issues/490)) ([94bc113](https://github.com/fabkho/libellus/commit/94bc113867db3025cf3f37110c3dd7b0b4a7256b))
+* **web:** the Buddy reads switch in Profile → Account ([#472](https://github.com/fabkho/libellus/issues/472)) ([39c281d](https://github.com/fabkho/libellus/commit/39c281d47d0d101f788818b2f28fed16f97f5622))
+* **web:** the room, a Section's thread, reactions, delete, report, finish ([#487](https://github.com/fabkho/libellus/issues/487)) ([6da5adf](https://github.com/fabkho/libellus/commit/6da5adfc1176b7b003029011d79c40daf2bbaf0a))
+* **web:** turn Buddy reads off only after leaving the rooms ([#491](https://github.com/fabkho/libellus/issues/491)) ([19d72dc](https://github.com/fabkho/libellus/commit/19d72dce938cfddb7e6e89e2dc74fbae2c0b0bc9))
+
+## [1.32.0](https://github.com/fabkho/libellus/compare/v1.31.1...v1.32.0) (2026-11-03)
+
+
+### Features
+
+* **db:** buddy read live updates over private per-member topics ([#477](https://github.com/fabkho/libellus/issues/477)) ([9922b18](https://github.com/fabkho/libellus/commit/9922b189ddb885ca7ceda1d02fbfa77d4a2cffb1))
+* **db:** buddy read messages, reactions, delete and reports ([#475](https://github.com/fabkho/libellus/issues/475)) ([4faa821](https://github.com/fabkho/libellus/commit/4faa821817e25a37cd3b645794a46dbd61426f00))
+* **db:** buddy reads: a member's Section from her reading progress (D2) ([#474](https://github.com/fabkho/libellus/issues/474)) ([2d000a6](https://github.com/fabkho/libellus/commit/2d000a651d3d65c75dbcd68887aa456cbe7f712e))
+* **db:** buddy reads: rooms, members and Sections ([#473](https://github.com/fabkho/libellus/issues/473)) ([9224503](https://github.com/fabkho/libellus/commit/922450338d50f85e71242d33a9e69acbff56ce6e))
+
+
+### Fixes
+
+* **db:** a member can block a co-member of a buddy read ([#476](https://github.com/fabkho/libellus/issues/476)) ([54b5473](https://github.com/fabkho/libellus/commit/54b5473a4f3b64e1a6d73aed158f3f550d3f8351))
+
+## [1.31.1](https://github.com/fabkho/libellus/compare/v1.31.0...v1.31.1) (2026-11-02)
+
+
+### Fixes
+
+* **e2e:** the Profile chart's flow runs on a fixed day, in three flows ([#469](https://github.com/fabkho/libellus/issues/469)) ([edb821c](https://github.com/fabkho/libellus/commit/edb821cde9a1fc8919446679616dba43fa7d6d93))
+
 ## [1.31.0](https://github.com/fabkho/libellus/compare/v1.30.0...v1.31.0) (2026-11-01)
 
 

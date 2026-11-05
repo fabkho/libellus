@@ -1,3 +1,5 @@
+CREATE TRIGGER buddy_refresh_on_entry_change AFTER UPDATE OF book_id, page_count_override ON library_entries FOR EACH ROW WHEN (old.book_id IS DISTINCT FROM new.book_id OR old.page_count_override IS DISTINCT FROM new.page_count_override) EXECUTE FUNCTION private.buddy_on_entry();
+
 CREATE TRIGGER library_entries_activity AFTER INSERT ON library_entries FOR EACH ROW EXECUTE FUNCTION private.activity_on_entry();
 
 CREATE TRIGGER library_entries_cover_gc_grace AFTER INSERT ON library_entries FOR EACH ROW EXECUTE FUNCTION private.cover_gc_entry_added();

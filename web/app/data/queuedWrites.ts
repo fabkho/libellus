@@ -31,6 +31,9 @@ export const QUEUED_ACTIONS = [
   'finish_reading',
   'abandon_reading',
   'update_progress',
+  // Progress on an earlier day (backdated progress): one day of the open read, set or removed; replayed in order.
+  'set_progress_day',
+  'delete_progress_day',
   'update_session',
   'remove_from_library',
   // Hide a Book from her followers (social v1): one flag on her own entry.
@@ -253,6 +256,22 @@ export function applyWrite(entry: LibraryEntry | null, write: QueuedWrite): Libr
         next = { ...next, progressPage: page, progressPercent: percent, progressUpdatedAt: queuedAt }
       }
       return { ...entry, pageCountOverride, latestSession: next }
+    }
+    case 'set_progress_day':
+    case 'delete_progress_day': {
+      // The days live in `reading_progress_days`, which the entry does not carry: the entry stays as it is. Only the
+      // read's own value can move, and only when the days lead it (R5): the days store knows that, from the days it
+      // has loaded (data/progressDays.ts, `dayEdit`); where it does not, the entry shows no change until the sync.
+      if (!openSession(entry)) return 'not_reading'
+      if (typeof args.p_day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(args.p_day)) return 'date_invalid'
+      if (write.action === 'delete_progress_day') return entry
+      const page = number(args.p_page)
+      const percent = number(args.p_percent)
+      if ((page === null) === (percent === null)) return 'progress_invalid'
+      const count = entry.pageCountOverride ?? entry.book.pageCount
+      if (page !== null && (count == null || page < 0 || page > count)) return 'progress_invalid'
+      if (percent !== null && (percent < 0 || percent > 100)) return 'progress_invalid'
+      return entry
     }
     case 'update_session': {
       const session = entry.latestSession

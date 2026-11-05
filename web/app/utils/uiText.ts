@@ -73,6 +73,11 @@ export const UI_TEXT_KEYS = {
   'chat.media.gifRemoved': 'uiText.chat.media.gifRemoved',
   'chat.media.unavailable': 'uiText.chat.media.unavailable',
   'chat.voice.record': 'uiText.chat.voice.record',
+  'chat.voice.recordHint': 'uiText.chat.voice.recordHint',
+  'chat.voice.slideToCancel': 'uiText.chat.voice.slideToCancel',
+  'chat.voice.locked': 'uiText.chat.voice.locked',
+  'chat.voice.discarded': 'uiText.chat.voice.discarded',
+  'chat.voice.tooShort': 'uiText.chat.voice.tooShort',
   'chat.voice.recording': 'uiText.chat.voice.recording',
   'chat.voice.stopped': 'uiText.chat.voice.stopped',
   'chat.voice.timer': 'uiText.chat.voice.timer',
@@ -137,9 +142,17 @@ export const setPath = (target: Record<string, unknown>, path: string, value: st
   at[parts[parts.length - 1]!] = value
 }
 
+/**
+ * The blanks the base's words have (`{count} comments`, `New message from {name}`): the base fills them in itself (`fillWords`), so they
+ * must arrive as they are. vue-i18n turns a named placeholder that no value is given for into nothing (`" comments"`), so each of them is
+ * handed its own name back; a word that adds a blank needs it here (tests/ui-text.test.ts reads every word of the messages for one).
+ */
+export const UI_TEXT_BLANKS = ['count', 'max', 'min', 'percent', 'name', 'preview', 'elapsed', 'now', 'total', 'q', 'n', 'title', 'parts'] as const
+const KEEP_BLANKS: Record<string, string> = Object.fromEntries(UI_TEXT_BLANKS.map((blank) => [blank, `{${blank}}`]))
+
 /** The base's words in the language `t` speaks, nested as `ui.text` is. */
-export const uiTextOf = (t: (key: string) => string): UiText => {
+export const uiTextOf = (t: (key: string, named?: Record<string, string>) => string): UiText => {
   const words: Record<string, unknown> = {}
-  for (const [path, key] of Object.entries(UI_TEXT_KEYS)) setPath(words, path, t(key))
+  for (const [path, key] of Object.entries(UI_TEXT_KEYS)) setPath(words, path, t(key, KEEP_BLANKS))
   return words as UiText
 }
