@@ -458,6 +458,11 @@ verify_jwt = false
 [functions.waitlist-invite]
 verify_jwt = true
 
+# The voice messages' audio is removed when its message goes (supabase/functions/buddy-voice-sweep): the database's kick (pg_net, the
+# Vault secret buddy_voice_sweep_token) is its only caller and carries the token the function checks itself (BUDDY_VOICE_SWEEP_TOKEN).
+[functions.buddy-voice-sweep]
+verify_jwt = false
+
 [analytics]
 # Off, as in Trappist: nothing reads the local logs, and it is one container less.
 enabled = false

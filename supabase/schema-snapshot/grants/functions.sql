@@ -1,3 +1,5 @@
+grant execute on function private.buddy_voice_readable(text) to authenticated;
+grant execute on function private.buddy_voice_writable(text) to authenticated;
 grant execute on function private.cover_allowed(text) to service_role;
 grant execute on function private.cover_artwork(text) to service_role;
 grant execute on function private.member_topic(uuid) to authenticated;
@@ -58,6 +60,8 @@ grant execute on function public.buddy_read_messages(uuid,uuid,timestampwithtime
 grant execute on function public.buddy_read_messages(uuid,uuid,timestampwithtimezone,timestampwithtimezone,integer) to service_role;
 grant execute on function public.buddy_read_target(text) to authenticated;
 grant execute on function public.buddy_read_target(text) to service_role;
+grant execute on function public.buddy_voice_sweep_batch(integer,interval,boolean) to service_role;
+grant execute on function public.buddy_voice_sweep_done(text[]) to service_role;
 grant execute on function public.can_see_member_file(text) to authenticated;
 grant execute on function public.can_see_member_file(text) to service_role;
 grant execute on function public.can_see_member_folder(text) to authenticated;
@@ -297,6 +301,8 @@ grant execute on function public.save_reader_place(uuid,text,real,text,timestamp
 grant execute on function public.save_reader_place(uuid,text,real,text,timestampwithtimezone) to service_role;
 grant execute on function public.search_books(text,integer) to authenticated;
 grant execute on function public.search_books(text,integer) to service_role;
+grant execute on function public.send_buddy_voice(uuid,uuid,uuid,text,integer,integer[],uuid,boolean) to authenticated;
+grant execute on function public.send_buddy_voice(uuid,uuid,uuid,text,integer,integer[],uuid,boolean) to service_role;
 grant execute on function public.series_works(uuid,text) to authenticated;
 grant execute on function public.series_works(uuid,text) to service_role;
 grant execute on function public.session_likers(uuid) to authenticated;

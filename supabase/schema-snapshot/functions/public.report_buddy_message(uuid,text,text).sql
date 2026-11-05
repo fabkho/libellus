@@ -39,7 +39,10 @@ begin
             'section', v_msg.section_id,
             'message', v_msg.id,
             'author', v_msg.author_id,
-            'excerpt', left(concat_ws(' ', nullif(v_msg.body, ''), v_msg.media_url), 300)));
+            'kind', v_msg.kind,
+            'excerpt', case when v_msg.kind = 'voice'
+                            then 'Voice message, ' || round(v_msg.voice_duration_ms / 1000.0)::integer || ' s'
+                            else left(concat_ws(' ', nullif(v_msg.body, ''), v_msg.media_url), 300) end));
 end;
 $function$
 ;

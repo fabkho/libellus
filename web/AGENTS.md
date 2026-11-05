@@ -60,6 +60,10 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
     The screens: `pages/together/[id]/index.vue` (the room) and `[section].vue` (a thread: the base's chat screen over the store; the room's own
     thread is the segment `room`), `components/together/*`, `utils/buddyRoom.ts`, `utils/buddyThread.ts` (the veil, in the view model) and
     `utils/buddyRoute.ts`. A page's `validate` is the address only (an address that is not a read id is the app's 404).
+  - **Voice messages** (`data/buddyVoice.ts`, the voice calls of `data/buddyReads.ts`, the store's `sendVoice` and `voiceUrl`, `utils/buddyThread.ts` for the bubble): the recording and the
+    sound are the base's (`UiComposer` `voiceMaxMs`, `UiVoiceBubble`, `@fabkho/ui/pure/voice`); the sound is an object in the private bucket `buddy-voice` and **nothing is signed or fetched
+    when a thread loads**: the page takes the play button's press first (`voicePress`, capture phase on the thread's root) and asks `voiceUrl` for a URL of five minutes. The recorder and the
+    player are in the thread page's lazy chunk, never the entry (`perf:bundle`). A deleted message's sound is removed by the Edge Function `buddy-voice-sweep` (docs/OPERATIONS.md, "Voice messages").
   - `entry-guard.config.ts` fails a production build if any chunk the entry loads statically holds
     `@supabase/realtime-js` (the stub is fine; `tests/entry-guard.test.ts`).
 - **Portable by default** (rules: the base README): a component that could ever be generic is written so it moves to

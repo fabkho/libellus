@@ -4,13 +4,14 @@
 
 # Every response. Pages already sends X-Content-Type-Options: nosniff and
 # Referrer-Policy: strict-origin-when-cross-origin; these add the rest.
-# - The camera for the barcode scanner (#92), for BetterReads itself only; off: what the app never
-#   asks for. (Vibration is not a policy feature, nothing to allow.)
+# - The camera for the barcode scanner (#92) and the microphone for a voice message in a buddy read, for BetterReads itself only; off: what
+#   the app never asks for. (Vibration is not a policy feature, nothing to allow.)
 # - Never framed: everything personal sits behind the sign-in.
 # - The Content-Security-Policy only reports for now (in the browser console): what the app
 #   loads, from where. Supabase (API, functions, realtime), Apple and Open Library (search,
 #   covers, their thumbhash read with CORS), the owner's shelf (`books.fabkho.dev`, Regal's
-#   textures as blobs), the barcode decoder (WebAssembly), Sentry's EU ingest (only with a DSN, README "Sentry"), Cloudflare Web Analytics (the
+#   textures as blobs), a voice message (`media-src`: the recording she just made as a blob, and a message's sound from Supabase Storage, a
+#   signed URL of five minutes asked for when she presses play; `connect-src` already has Supabase for the upload and the signing), the barcode decoder (WebAssembly), Sentry's EU ingest (only with a DSN, README "Sentry"), Cloudflare Web Analytics (the
 #   beacon Pages adds to the HTML, docs/HOSTING.md), and for the built-in reader (#131) the
 #   book's pages (blob: frames, sanitized, each with its own script-src 'none'; they inherit this
 #   policy too, so their stylesheets, blobs as well, need style-src blob:), MyMemory (Translate) and Wiktionary (Define), asked only with
@@ -19,9 +20,9 @@
 #   import map and Nuxt's runtime config are inline, and two of them change with every build.
 /*
   Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()
+  Permissions-Policy: camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), browsing-topics=()
   X-Frame-Options: DENY
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' blob:; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.ingest.de.sentry.io https://*.supabase.co wss://*.supabase.co https://books.fabkho.dev https://itunes.apple.com https://openlibrary.org https://covers.openlibrary.org https://*.mzstatic.com https://i.gr-assets.com https://assets.hardcover.app https://cloudflareinsights.com https://api.mymemory.translated.net https://en.wiktionary.org; frame-src 'self' blob:; media-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' blob:; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.ingest.de.sentry.io https://*.supabase.co wss://*.supabase.co https://books.fabkho.dev https://itunes.apple.com https://openlibrary.org https://covers.openlibrary.org https://*.mzstatic.com https://i.gr-assets.com https://assets.hardcover.app https://cloudflareinsights.com https://api.mymemory.translated.net https://en.wiktionary.org; frame-src 'self' blob:; media-src 'self' blob: https://*.supabase.co; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
 
 # A buddy read's invite link carries its token in the path (`/t/<token>`): whoever holds it may join. Nothing that page loads (covers from any
 # https host, the API) is told where it was opened from, whatever the platform's default is. `!` takes the default off first: Pages

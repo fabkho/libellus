@@ -2169,6 +2169,9 @@
       "message_kind_invalid": "That kind of message can’t be sent.",
       "message_body_invalid": "Write something, up to 2,000 characters.",
       "message_gif_invalid": "That GIF can’t be sent.",
+      "message_voice_invalid": "That recording can’t be sent. Try recording it again.",
+      "message_voice_missing": "That recording didn’t upload. Try recording it again.",
+      "message_voice_too_large": "That recording is too large to send. Keep it under two minutes.",
       "message_spoiler_unavailable": "Only comments in a section can be marked as spoilers.",
       "message_reply_unavailable": "The message you answered is gone.",
       "message_emoji_invalid": "That reaction isn’t available.",
@@ -2177,6 +2180,9 @@
       "report_self": "You can’t report your own message.",
       "offline": "You’re offline.",
       "busy": "Busy right now. Try again in a moment.",
+      "voice_short": "That recording was too short. Hold on a little longer.",
+      "voice_large": "That recording is too large to send. Keep it under two minutes.",
+      "voice_type": "This browser records in a format we can’t send.",
       "unknown": "That didn’t go through. Try again."
     }
   },
@@ -2283,6 +2289,8 @@
       "deleteTitle": "Delete this message?",
       "deleteText": "It will read “Message removed” for everyone. This can’t be undone.",
       "deleteTextHost": "You’re the host, so you can remove it for everyone. It will read “Message removed”. This can’t be undone.",
+      "deleteTextVoice": "It will read “Message removed” for everyone and the recording is deleted. This can’t be undone.",
+      "deleteTextVoiceHost": "You’re the host, so you can remove it for everyone. It will read “Message removed” and the recording is deleted. This can’t be undone.",
       "ahead": "You’re reading ahead: this is past where you are.",
       "empty": "No one has said anything about this part yet. Start?",
       "emptyRoom": "Say hello before you start.",
@@ -2296,7 +2304,10 @@
       "paused": "Live updates are paused. We keep checking for new messages.",
       "notSentFinal": "It can’t be sent.",
       "discard": "Delete",
-      "discardLabel": "Delete this unsent message"
+      "discardLabel": "Delete this unsent message",
+      "voice": {
+        "playFailed": "Couldn’t load this voice message. Check your connection and try again."
+      }
     },
     "hint": "Everyone reads at their own pace. Comments sit in Sections, and a Section stays hidden until you have read it. The others see which Section you are in, never your page.",
     "count": {

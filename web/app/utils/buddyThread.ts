@@ -28,6 +28,8 @@ export type ThreadItem = BubbleMessage & {
   removed: boolean
   /** A spoiler she has not tapped: the bubble keeps its size but shows no word (`UiBubble` `veiled`). */
   veiled: boolean
+  /** A voice message (its sound is the bubble's, drawn by `UiVoiceBubble`; veiled or not, its words are none: the quote says "Voice message"). */
+  voice: boolean
   /** It was refused for a reason a second try cannot change (removed, blocked, archived, invalid): no "Try again", only "Delete". */
   permanent: boolean
 }
@@ -43,7 +45,18 @@ export type ThreadContext = {
   nameOf: (memberId: string | null) => string | null
   /** The sentence a refusal is worded with (`buddyRead.error.<code>`). */
   errorWord: (code: BuddyErrorCode) => string
+  /** The device's own copy of a recording she sent in this session (a `blob:` URL), by client id; null for every other message. */
+  previewOf?: (clientId: string | null) => string | null
+  /** What a veiled voice message is drawn as (its size is a text bubble's; "Voice message"): the one phrase of the message file's. */
+  voiceLabel?: string
 }
+
+/**
+ * What a voice bubble plays from before anything is signed: nothing (the thread never fetches a sound). The base's play button is off while a
+ * message has no `url`, so an unsigned one carries this stand-in; the page asks for the real, short-lived URL when she presses play
+ * (`pages/together/[id]/[section].vue`, the press gate) and the stand-in is never given to the player.
+ */
+export const VOICE_UNSIGNED = 'about:blank'
 
 /** The key a message keeps from its bubble to its stored row: the client id (the same send), else the stored id. */
 export const bubbleKey = (bubble: Pick<BuddyBubble, 'clientId' | 'id'>): string => bubble.clientId ?? bubble.id
@@ -58,17 +71,34 @@ export function threadItems(bubbles: readonly BuddyBubble[], ctx: ThreadContext)
     const removed = bubble.deletedAt !== null
     const mine = ctx.me !== null && bubble.senderId === ctx.me
     const reaction = bubble.reactions.find((r) => r.mine)
+    const veiled = !removed && !mine && messageVeiled(bubble, ctx.revealed.has(bubbleKey(bubble)))
+    const voice = !removed && bubble.kind === 'voice' ? bubble.voice : null
+    // A voice message under the veil is a veiled text bubble (the same size, no words, no play button): nothing of it is signed or played.
+    const playable = voice && !veiled
     return {
       key: bubbleKey(bubble),
       // Null while it is on its way or refused: it cannot be reacted to or answered yet.
       id: bubble.state === 'sent' ? bubble.id : null,
       mine,
-      kind: removed ? 'system' : 'text',
-      body: removed ? '' : bubble.body,
+      kind: removed ? 'system' : playable ? 'media' : 'text',
+      body: removed ? '' : voice ? (veiled ? (ctx.voiceLabel ?? '') : '') : bubble.body,
       createdAt: bubble.createdAt,
       delivery: bubble.state,
       error: bubble.state === 'failed' && bubble.error ? ctx.errorWord(bubble.error) : null,
-      media: null,
+      media: playable
+        ? {
+            kind: 'voice',
+            // Stored: the stand-in, until she presses play. On its way with no copy on this device (restored after a reload): no URL, the button is off.
+            url: ctx.previewOf?.(bubble.clientId) ?? (bubble.state === 'sent' ? VOICE_UNSIGNED : null),
+            path: voice.path,
+            width: 1,
+            height: 1,
+            removed: false,
+            durationMs: voice.durationMs,
+            peaks: voice.peaks,
+            mime: voice.mime,
+          }
+        : null,
       reactions: removed ? [] : bubble.reactions.map((r) => ({ emoji: r.emoji, count: r.count, mine: r.mine })),
       myReaction: removed ? null : (reaction?.emoji ?? null),
       authorId: bubble.senderId,
@@ -76,7 +106,8 @@ export function threadItems(bubbles: readonly BuddyBubble[], ctx: ThreadContext)
       replyTo: bubble.replyTo,
       spoiler: bubble.spoiler,
       removed,
-      veiled: !removed && !mine && messageVeiled(bubble, ctx.revealed.has(bubbleKey(bubble))),
+      veiled,
+      voice: voice !== null,
       permanent: bubble.state === 'failed' && !!bubble.error && !isRetryableBuddyError(bubble.error),
     }
   })
@@ -94,17 +125,17 @@ export function sameAuthorRun(before: Pick<ThreadItem, 'mine' | 'kind' | 'author
 }
 
 /** The words a quote needs that are the app's. */
-export type QuoteWords = { deleted: string; spoiler: string; someone: string; you: string }
+export type QuoteWords = { deleted: string; spoiler: string; someone: string; you: string; voice?: string }
 
 /**
  * The message `replyTo` names, as a quote over a bubble or the composer: who wrote it and its first words. A tombstone says it is
- * gone and a spoiler she has not tapped gives none of its words away. null when it answers nothing.
+ * gone, a voice message is "Voice message" (it has no words) and a spoiler she has not tapped gives none of its words away. null when it answers nothing.
  */
 export function quoteOf(items: readonly ThreadItem[], replyTo: string | null, words: QuoteWords): BubbleQuote | null {
   if (!replyTo) return null
   const original = items.find((item) => item.id === replyTo)
   if (!original) return { id: null, mine: false, name: words.someone, preview: words.deleted }
-  const preview = original.removed ? words.deleted : original.veiled ? words.spoiler : original.body.replace(/\s+/g, ' ').trim().slice(0, 120)
+  const preview = original.removed ? words.deleted : original.veiled ? words.spoiler : original.voice ? (words.voice ?? '') : original.body.replace(/\s+/g, ' ').trim().slice(0, 120)
   return { id: original.removed ? null : original.id, mine: original.mine, name: original.mine ? words.you : (original.author ?? words.someone), preview }
 }
 

@@ -7,7 +7,7 @@ import { buddyErrorKey } from '@/utils/buddyRead'
 const en = JSON.parse(readFileSync(new URL('../i18n/locales/en.json', import.meta.url), 'utf8')) as { buddyRead: { error: Record<string, string> } }
 
 describe('buddy read refusals have words', () => {
-  const codes: BuddyErrorCode[] = [...BUDDY_ERROR_CODES, 'offline', 'busy', 'unknown']
+  const codes: BuddyErrorCode[] = [...BUDDY_ERROR_CODES, 'offline', 'busy', 'unknown', 'voice_short', 'voice_large', 'voice_type']
 
   it.each(codes)('%s has a sentence under its key', (code) => {
     expect(buddyErrorKey(code)).toBe(`buddyRead.error.${code}`)

@@ -13,7 +13,10 @@ create table public.buddy_messages (
   media_width integer,
   reply_to uuid,
   section_id uuid,
-  spoiler boolean default false not null
+  spoiler boolean default false not null,
+  voice_duration_ms integer,
+  voice_mime text,
+  voice_peaks smallint[]
 );
 
 -- constraints
@@ -23,15 +26,16 @@ alter table public.buddy_messages add constraint buddy_messages_body_length CHEC
 alter table public.buddy_messages add constraint buddy_messages_buddy_read_id_fkey FOREIGN KEY (buddy_read_id) REFERENCES buddy_reads(id) ON DELETE CASCADE;
 alter table public.buddy_messages add constraint buddy_messages_deleted_by CHECK (((deleted_by IS NULL) OR (deleted_at IS NOT NULL)));
 alter table public.buddy_messages add constraint buddy_messages_deleted_by_fkey FOREIGN KEY (deleted_by) REFERENCES auth.users(id) ON DELETE SET NULL;
-alter table public.buddy_messages add constraint buddy_messages_kind CHECK ((kind = ANY (ARRAY['text'::text, 'gif'::text])));
+alter table public.buddy_messages add constraint buddy_messages_kind CHECK ((kind = ANY (ARRAY['text'::text, 'gif'::text, 'voice'::text])));
 alter table public.buddy_messages add constraint buddy_messages_pkey PRIMARY KEY (id);
 alter table public.buddy_messages add constraint buddy_messages_reply_to_fkey FOREIGN KEY (reply_to) REFERENCES buddy_messages(id) ON DELETE SET NULL;
 alter table public.buddy_messages add constraint buddy_messages_section_id_fkey FOREIGN KEY (section_id) REFERENCES buddy_read_sections(id) ON DELETE CASCADE;
 alter table public.buddy_messages add constraint buddy_messages_shape CHECK (COALESCE(
 CASE
-    WHEN (deleted_at IS NOT NULL) THEN ((body = ''::text) AND (media_url IS NULL) AND (media_width IS NULL) AND (media_height IS NULL))
-    WHEN (kind = 'text'::text) THEN ((char_length(body) >= 1) AND (body ~ '[^[:space:][:cntrl:]\u00a0\u200b]'::text) AND (media_url IS NULL) AND (media_width IS NULL) AND (media_height IS NULL))
-    WHEN (kind = 'gif'::text) THEN ((char_length(media_url) <= 500) AND (media_url ~ '^https://static[0-9]*\.klipy\.com/[A-Za-z0-9._~%/+=?&-]+$'::text) AND ((media_width >= 1) AND (media_width <= 10000)) AND ((media_height >= 1) AND (media_height <= 10000)))
+    WHEN (deleted_at IS NOT NULL) THEN ((body = ''::text) AND (media_url IS NULL) AND (media_width IS NULL) AND (media_height IS NULL) AND (voice_mime IS NULL) AND (voice_duration_ms IS NULL) AND (voice_peaks IS NULL))
+    WHEN (kind = 'text'::text) THEN ((char_length(body) >= 1) AND (body ~ '[^[:space:][:cntrl:]\u00a0\u200b]'::text) AND (media_url IS NULL) AND (media_width IS NULL) AND (media_height IS NULL) AND (voice_mime IS NULL) AND (voice_duration_ms IS NULL) AND (voice_peaks IS NULL))
+    WHEN (kind = 'gif'::text) THEN ((char_length(media_url) <= 500) AND (media_url ~ '^https://static[0-9]*\.klipy\.com/[A-Za-z0-9._~%/+=?&-]+$'::text) AND ((media_width >= 1) AND (media_width <= 10000)) AND ((media_height >= 1) AND (media_height <= 10000)) AND (voice_mime IS NULL) AND (voice_duration_ms IS NULL) AND (voice_peaks IS NULL))
+    WHEN (kind = 'voice'::text) THEN ((body = ''::text) AND (media_url IS NULL) AND (media_width IS NULL) AND (media_height IS NULL) AND (voice_mime = ANY (ARRAY['audio/mp4'::text, 'audio/webm'::text, 'audio/ogg'::text])) AND ((voice_duration_ms >= 1) AND (voice_duration_ms <= 120000)) AND ((voice_peaks IS NULL) OR (((cardinality(voice_peaks) >= 1) AND (cardinality(voice_peaks) <= 48)) AND (0 <= ALL (voice_peaks)) AND (100 >= ALL (voice_peaks)))))
     ELSE false
 END, false));
 alter table public.buddy_messages add constraint buddy_messages_spoiler CHECK (((NOT spoiler) OR (section_id IS NOT NULL)));

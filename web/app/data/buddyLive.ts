@@ -76,6 +76,8 @@ export function parseBuddyEvent(event: string, payload: unknown): BuddyLiveEvent
           media_url: text(p.media_url),
           media_width: typeof p.media_width === 'number' ? p.media_width : null,
           media_height: typeof p.media_height === 'number' ? p.media_height : null,
+          // A voice message: its type, length and waveform; no object name, which the app works out from the ids above (data/buddyVoice.ts).
+          voice: p.voice && typeof p.voice === 'object' ? (p.voice as { mime?: string; duration_ms?: number; peaks?: number[] }) : null,
           reply_to: text(p.reply_to),
           spoiler: bool(p.spoiler),
           created_at: createdAt,

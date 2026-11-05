@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { BuddyChapter, BuddyReadData, ChatRecord } from '#layers/chat/app/types/adapter'
 import { isNoAnswer } from './network'
+import { voiceFromJson, VOICE_BUCKET, VOICE_URL_SECONDS, type VoiceInfo, type VoiceJobMedia, type VoiceMime } from './buddyVoice'
+import { voiceExtension } from '@fabkho/ui/pure/voice'
 import { cardFromJson, socialBookFromJson, type MemberCard, type SocialBook } from './socialShapes'
 
 /**
@@ -51,6 +53,9 @@ export const BUDDY_ERROR_CODES = [
   'message_kind_invalid',
   'message_body_invalid',
   'message_gif_invalid',
+  'message_voice_invalid',
+  'message_voice_missing',
+  'message_voice_too_large',
   'message_spoiler_unavailable',
   'message_reply_unavailable',
   'message_emoji_invalid',
@@ -59,7 +64,11 @@ export const BUDDY_ERROR_CODES = [
   'report_self',
 ] as const
 
-export type BuddyErrorCode = (typeof BUDDY_ERROR_CODES)[number] | 'offline' | 'busy' | 'unknown'
+/**
+ * What a refusal can be: the database's (`BUDDY_ERROR_CODES`) and the client's own: no connection, busy, unknown, and the three a recording
+ * is refused for before it is sent (`voice_short`: a slip of the finger, `voice_large`: over 3 MB, `voice_type`: a type the bucket does not take).
+ */
+export type BuddyErrorCode = (typeof BUDDY_ERROR_CODES)[number] | 'offline' | 'busy' | 'unknown' | 'voice_short' | 'voice_large' | 'voice_type'
 
 /** A call's answer. `existing`: the read she already has, on `buddy_read_exists`. */
 export type BuddyResult<T> = { data: T; error: null } | { data: null; error: BuddyErrorCode; existing?: string }
@@ -68,6 +77,24 @@ export type BuddyResult<T> = { data: T; error: null } | { data: null; error: Bud
 export const RETRYABLE_ERRORS: readonly BuddyErrorCode[] = ['offline', 'busy', 'unknown', 'message_rate_limited']
 
 export const isRetryableBuddyError = (code: BuddyErrorCode): boolean => RETRYABLE_ERRORS.includes(code)
+
+type StorageFailure = { message?: string; statusCode?: string | number; status?: number; name?: string }
+
+/**
+ * A refusal of the Storage API for a recording, as a code: no answer (a request that never came back has no status) is offline; 401 and 403 (the
+ * bucket's policy: she is not in the read, it is archived, or her hour of uploads is spent) a read she cannot write in; 413 and the bucket's type check
+ * the recording's own.
+ */
+export function mapVoiceStorageError(failure: StorageFailure): BuddyErrorCode {
+  const message = failure.message ?? ''
+  const status = Number(failure.statusCode ?? failure.status ?? 0)
+  if (status === 401 || status === 403 || /row-level security|unauthorized/i.test(message)) return 'not_found'
+  if (status === 413 || /payload too large|exceeded the maximum/i.test(message)) return 'message_voice_too_large'
+  if (/mime type|not supported/i.test(message)) return 'message_voice_invalid'
+  if (status === 409 || /already exists|duplicate/i.test(message)) return 'unknown'
+  if (!status || failure.name === 'StorageUnknownError') return 'offline'
+  return 'unknown'
+}
 
 /** A refusal as the database worded it, as a code. An id that is no id (22P02) finds nothing. */
 export function mapBuddyError(failure: { message?: string; code?: string }): BuddyErrorCode {
@@ -158,8 +185,13 @@ export type BuddyTarget = {
 
 export type BuddyReaction = { emoji: string; count: number; mine: boolean }
 
-/** A message of a read: the layer's `ChatRecord` and what the app adds. A tombstone has `deletedAt`, an empty body and no reactions. */
+/**
+ * A message of a read: the layer's `ChatRecord` and what the app adds. A tombstone has `deletedAt`, an empty body and no reactions. A voice message
+ * (`kind: 'voice'`) has `voice` (its type, length and waveform, and the name of its object; the sound is fetched through a signed URL when she
+ * presses play, never carried here) and no words.
+ */
 export type BuddyMessage = ChatRecord & {
+  voice: VoiceInfo | null
   /** Null from a live event (it does not carry the name): the app finds it among the members. */
   authorName: string | null
   deletedAt: string | null
@@ -186,6 +218,17 @@ export type CreateBuddyRead = {
 }
 
 export type CreatedBuddyRead = { id: string; linkToken: string | null; invited: string[]; skipped: string[] }
+
+/** A recording that is stored (`uploadVoice`) and is to be posted (`sendVoice`): the same client id names both the object and the message. */
+export type SendBuddyVoice = {
+  readId: string
+  /** Null: the room. */
+  sectionId: string | null
+  clientId: string
+  media: VoiceJobMedia
+  replyTo?: string | null
+  spoiler?: boolean
+}
 
 export type PostBuddyMessage = {
   readId: string
@@ -400,6 +443,7 @@ type MessageJson = {
   media_url: string | null
   media_width: number | null
   media_height: number | null
+  voice?: { path?: string | null; mime?: string | null; duration_ms?: number | null; peaks?: number[] | null } | null
   reply_to: string | null
   spoiler: boolean
   created_at: string
@@ -425,6 +469,7 @@ export function messageFromJson(readId: string, json: MessageJson): BuddyMessage
     replyTo: json.reply_to ?? null,
     spoiler: Boolean(json.spoiler),
     media: mediaOf(json.media_url, json.media_width, json.media_height, json.kind),
+    voice: json.kind === 'voice' ? voiceFromJson(json.voice, { readId, authorId: json.author?.id ?? null, clientId: json.client_id ?? null }) : null,
     authorName: json.author?.name ?? null,
     deletedAt: json.deleted_at ?? null,
     reactions: (json.reactions ?? []).map((r) => ({ emoji: r.emoji, count: Number(r.count), mine: Boolean(r.mine) })),
@@ -529,6 +574,54 @@ export function createBuddyReads(client: SupabaseClient, { online = () => true, 
         },
         (j) => messageFromJson(input.readId, j),
       ),
+    /**
+     * Stores a recording in the private bucket, in her own folder of the read, under the name its message will have (`<read>/<her id>/<client id>.<ext>`).
+     * Not the message: `sendVoice` posts it (through the send queue). The same client id again finds the object there and is answered as stored, so a retry
+     * after a lost answer does not fail on "already exists". Refused offline before anything leaves.
+     */
+    async uploadVoice(readId: string, authorId: string, clientId: string, blob: Blob, mime: VoiceMime): Promise<BuddyResult<string>> {
+      if (!online()) return { data: null, error: 'offline' }
+      const path = `${readId}/${authorId}/${clientId}.${voiceExtension(mime)}`
+      // Storage keeps the type of the Blob it is given (storage-js ignores `contentType` for a Blob), and a recorder's blob says "audio/webm;codecs=opus":
+      // the sound is wrapped in a Blob of the bare type, which is what the database compares (`buddy_voice_ext`) and what the bucket allows. `cacheControl`
+      // 0: a deleted recording must not stay in a browser's cache (the signed URL is the only way to it, and it is short-lived).
+      const audio = new Blob([blob], { type: mime })
+      const { error } = await Promise.resolve(
+        client.storage.from(VOICE_BUCKET).upload(path, audio, { contentType: mime, upsert: false, cacheControl: '0' }),
+      ).catch(() => ({ error: { name: 'StorageUnknownError', message: 'fetch failed' } as StorageFailure }))
+      if (!error) return { data: path, error: null }
+      const code = mapVoiceStorageError(error as StorageFailure)
+      // The object of this very send is already there (the answer of a first try was lost): as good as stored.
+      if (/already exists|duplicate/i.test((error as StorageFailure).message ?? '') || Number((error as StorageFailure).statusCode) === 409) return { data: path, error: null }
+      return { data: null, error: code }
+    },
+    /** Posts a stored recording into the room or a Section; the one she sent before under `clientId` answers again. */
+    sendVoice: (input: SendBuddyVoice) =>
+      call<MessageJson, BuddyMessage>(
+        'send_buddy_voice',
+        {
+          p_read: input.readId,
+          p_section: input.sectionId,
+          p_client_id: input.clientId,
+          p_mime: input.media.mime,
+          p_duration_ms: Math.round(input.media.durationMs),
+          p_peaks: input.media.peaks.length > 0 ? input.media.peaks : null,
+          p_reply_to: input.replyTo ?? null,
+          p_spoiler: input.spoiler ?? false,
+        },
+        (j) => messageFromJson(input.readId, j),
+      ),
+    /**
+     * A short-lived URL (`VOICE_URL_SECONDS`) for one recording, signed by Storage when it checks the bucket's policy for her: a member of the read who may
+     * hear that author, a live message. Asked for when she presses play, never when a thread loads. null when it is not hers to hear (or gone).
+     */
+    async voiceUrl(path: string): Promise<BuddyResult<string>> {
+      if (!online()) return { data: null, error: 'offline' }
+      const answer = await Promise.resolve(client.storage.from(VOICE_BUCKET).createSignedUrl(path, VOICE_URL_SECONDS)).catch(() => null)
+      if (!answer) return { data: null, error: 'offline' }
+      if (answer.error || !answer.data?.signedUrl) return { data: null, error: answer.error ? mapVoiceStorageError(answer.error as StorageFailure) : 'not_found' }
+      return { data: answer.data.signedUrl, error: null }
+    },
     /** A page of a thread, oldest first: the newest ones, or those older than `before`, or newer than `after` (the server's `created_at`, as it gave it). */
     messages: (readId: string, sectionId: string | null, { before, after, limit }: { before?: string | null; after?: string | null; limit?: number } = {}) => {
       const asked = clampPage(limit)
