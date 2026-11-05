@@ -19,6 +19,7 @@ import newsreader400i from '@fontsource/newsreader/files/newsreader-latin-400-it
 import newsreader600 from '@fontsource/newsreader/files/newsreader-latin-600-normal.woff2?url'
 import geist400 from '@fontsource/geist/files/geist-latin-400-normal.woff2?url'
 import geist600 from '@fontsource/geist/files/geist-latin-600-normal.woff2?url'
+import { sourceLanguage } from '~/data/reader/lookup'
 import { makeBook, UnsupportedTypeError } from './foliate-js/view.js'
 import { EPUB } from './foliate-js/epub.js'
 import { frame } from './foliate-js/frame.js'
@@ -227,10 +228,9 @@ export class ReaderEngine {
   customDoc: Document | null = null
   private pressWord: Range | null = null
   onSelect: ((s: Selection | null) => void) | null = null
-  /** The book's language (BCP 47, e.g. "en"), for translating and looking up words. */
+  /** The book's language as MyMemory wants it ("en", "pt-BR"), for translating and looking up words; "" when the book names none ("und", "mul", nothing). */
   get language(): string {
-    const lang = this.view.language?.canonical ?? text(this.view.book.metadata?.language)
-    return (lang || 'en').split('-')[0]!.toLowerCase()
+    return sourceLanguage(this.view.language?.canonical) ?? sourceLanguage(text(this.view.book.metadata?.language)) ?? ''
   }
 
   constructor(view: FoliateView, handlers: EngineHandlers) {
@@ -364,7 +364,7 @@ export class ReaderEngine {
     const caret = this.caretAt(doc, x, y)
     if (!caret || caret.node.nodeType !== Node.TEXT_NODE) return null
     const node = caret.node as Text
-    const segmenter = new Intl.Segmenter(this.language, { granularity: 'word' })
+    const segmenter = new Intl.Segmenter(this.language || undefined, { granularity: 'word' })
     for (const seg of segmenter.segment(node.data)) {
       const end = seg.index + seg.segment.length
       if (caret.offset >= seg.index && caret.offset <= end && (caret.offset < end || seg.isWordLike)) {

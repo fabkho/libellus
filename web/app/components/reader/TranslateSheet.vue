@@ -5,7 +5,7 @@
 // translation in the serif, large enough to read at a glance. Who translated
 // (the browser itself, or the service) in the smallest type at the foot. A
 // word offers Define.
-import { TARGET_LANGUAGES, defaultTarget, isDefinable, type LookupError, type Translation } from '~/data/reader/lookup'
+import { TARGET_LANGUAGES, baseLanguage, defaultTarget, isDefinable, type LookupError, type Translation } from '~/data/reader/lookup'
 import { useReaderStore } from '~/stores/reader'
 
 const open = defineModel<boolean>('open', { required: true })
@@ -16,10 +16,23 @@ const { t, locale } = useI18n()
 const reader = useReaderStore()
 
 const target = computed({
-  get: () => reader.settings.translateTo ?? defaultTarget(navigator.language, props.from),
+  get: () => reader.settings.translateTo ?? defaultTarget(navigator.language, baseLanguage(props.from)),
   set: (value: string) => (reader.settings.translateTo = value),
 })
-const languageName = (code: string) => new Intl.DisplayNames([code, locale.value], { type: 'language' }).of(code) ?? code
+const languageName = (code: string) => {
+  try {
+    return new Intl.DisplayNames([code, locale.value], { type: 'language' }).of(code) ?? code
+  } catch {
+    return code
+  }
+}
+// The book's language, or the one the service recognised in the selection, or a plain "detected".
+const sourceName = computed(() => {
+  const known = baseLanguage(props.from) || result.value?.detected
+  return known ? languageName(known) : t('reader.translate.auto')
+})
+// Worth another try: the network or the service, not the quota (tomorrow) or the languages (pick another).
+const retryable = computed(() => error.value === 'offline' || error.value === 'failed' || error.value === 'empty')
 const choices = computed(() => TARGET_LANGUAGES.map((code) => ({ code, name: languageName(code) })))
 
 const result = ref<Translation | null>(null)
@@ -52,7 +65,7 @@ watch([open, target, () => props.text], ([isOpen]) => isOpen && run(), { immedia
     <p class="source book-title text-callout text-ink-muted italic" data-testid="readerTranslate.source">“{{ text }}”</p>
 
     <div class="mt-md flex items-center gap-sm text-caption">
-      <span class="text-ink-faint">{{ languageName(from) }}</span>
+      <span class="text-ink-faint">{{ sourceName }}</span>
       <UiIcon name="arrow" :size="14" class="text-ink-ghost" />
       <label class="relative flex items-center gap-xxs font-medium text-accent-ink">
         {{ languageName(target) }}<UiIcon name="down" :size="13" />
@@ -64,7 +77,12 @@ watch([open, target, () => props.text], ([isOpen]) => isOpen && run(), { immedia
 
     <div class="mt-sm min-h-(--size-query) rounded-md bg-fill p-inset edge-faint" aria-live="polite" data-testid="readerTranslate.result">
       <p v-if="busy" class="text-subhead text-ink-faint">{{ t('reader.translate.busy') }}</p>
-      <p v-else-if="error" class="text-subhead text-error">{{ t(`reader.translate.error.${error}`) }}</p>
+      <template v-else-if="error">
+        <p class="text-subhead text-error" data-testid="readerTranslate.error">{{ t(`reader.translate.error.${error}`, { language: languageName(target) }) }}</p>
+        <button v-if="retryable" type="button" class="mt-xs min-h-(--size-touch) text-caption font-medium text-accent-ink" data-testid="readerTranslate.retry" @click="run()">
+          {{ t('reader.translate.retry') }}
+        </button>
+      </template>
       <p v-else-if="result" class="book-title text-input text-ink">{{ result.text }}</p>
     </div>
 

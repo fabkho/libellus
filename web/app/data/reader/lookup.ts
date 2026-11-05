@@ -18,12 +18,19 @@
  */
 export type Fetch = typeof fetch
 
-export type LookupError = 'offline' | 'quota' | 'failed'
+/**
+ * offline: no connection. quota: the day's free translations are used up.
+ * failed: the service or the network let us down. empty: it answered with nothing.
+ * same: the text is already in the target language (only seen when the book's language is unknown).
+ */
+export type LookupError = 'offline' | 'quota' | 'failed' | 'empty' | 'same'
 
 export interface Translation {
   text: string
   /** Who translated: the browser itself, or the service. */
   provider: 'device' | 'service'
+  /** The language the service recognised, when the book's own was unknown (ISO 639-1). */
+  detected?: string
 }
 
 export interface Sense {
@@ -44,6 +51,55 @@ export interface Definition {
 export type DeviceTranslator = {
   availability: (o: { sourceLanguage: string; targetLanguage: string }) => Promise<string>
   create: (o: { sourceLanguage: string; targetLanguage: string }) => Promise<{ translate: (t: string) => Promise<string> }>
+}
+
+/** ISO 639-2/3 codes EPUB metadata uses (both the B and the T form), to ISO 639-1, for the common languages. */
+const ISO3: Record<string, string> = {
+  eng: 'en', deu: 'de', ger: 'de', fra: 'fr', fre: 'fr', spa: 'es', ita: 'it', nld: 'nl', dut: 'nl', por: 'pt',
+  rus: 'ru', pol: 'pl', ces: 'cs', cze: 'cs', slk: 'sk', slo: 'sk', hun: 'hu', ron: 'ro', rum: 'ro', bul: 'bg',
+  ukr: 'uk', ell: 'el', gre: 'el', tur: 'tr', swe: 'sv', dan: 'da', nor: 'no', nob: 'nb', nno: 'nn', fin: 'fi',
+  isl: 'is', ice: 'is', cat: 'ca', hrv: 'hr', srp: 'sr', slv: 'sl', lit: 'lt', lav: 'lv', est: 'et',
+  zho: 'zh', chi: 'zh', jpn: 'ja', kor: 'ko', ara: 'ar', heb: 'he', fas: 'fa', per: 'fa', hin: 'hi',
+  tha: 'th', vie: 'vi', ind: 'id', msa: 'ms', may: 'ms', lat: 'la', gle: 'ga', eus: 'eu', baq: 'eu', glg: 'gl',
+}
+
+/**
+ * A language tag from a book (EPUB `dc:language`, "en", "eng", "de_DE", "pt-BR", "zh-Hans") as MyMemory wants
+ * a source: two letters, or two letters and a region ("pt-BR"). `null` for what names no language: empty,
+ * "und" (undetermined), "mul" (several), "zxx" (none) and anything unknown. A `null` is never sent as a language.
+ */
+export function sourceLanguage(tag: string | null | undefined): string | null {
+  const parts = (tag ?? '').trim().replace(/_/g, '-').toLowerCase().split('-').filter(Boolean)
+  const primary = parts[0] ?? ''
+  const language = primary.length === 3 ? ISO3[primary] : /^[a-z]{2}$/.test(primary) ? primary : undefined
+  if (!language) return null
+  const rest = parts.slice(1)
+  const script = rest.find((p) => /^[a-z]{4}$/.test(p))
+  const region = rest.find((p) => /^[a-z]{2}$/.test(p))
+  if (region) return `${language}-${region.toUpperCase()}`
+  if (language === 'zh' && script) return script === 'hans' ? 'zh-CN' : script === 'hant' ? 'zh-TW' : 'zh'
+  return language
+}
+
+/** The two-letter language of a tag ("pt-BR" is "pt"; unknown is ""). */
+export function baseLanguage(tag: string | null | undefined): string {
+  return sourceLanguage(tag)?.split('-')[0] ?? ''
+}
+
+/** MyMemory's word for "work it out from the text". */
+const AUTODETECT = 'Autodetect'
+
+/** What MyMemory's answer means. It reports most refusals as a 200 with a `responseStatus` in the body, and puts its own message where the translation goes. */
+type Answer = { responseData?: { translatedText?: string; detectedLanguage?: string }; responseDetails?: string; quotaFinished?: boolean | null; responseStatus?: number | string }
+
+function failureOf(body: Answer): LookupError | 'language' | null {
+  const status = Number(body.responseStatus ?? 200)
+  const said = `${body.responseDetails ?? ''} ${body.responseData?.translatedText ?? ''}`.toUpperCase()
+  if (body.quotaFinished || status === 429 || said.includes('MYMEMORY WARNING')) return 'quota'
+  if (status === 200 || Number.isNaN(status)) return null
+  if (said.includes('DISTINCT LANGUAGES')) return 'same'
+  if (said.includes('INVALID SOURCE LANGUAGE') || said.includes('INVALID TARGET LANGUAGE') || said.includes('LANGPAIR')) return 'language'
+  return 'failed'
 }
 
 /** The languages Translate offers as a target (ISO 639-1), in the order shown. */
@@ -94,26 +150,45 @@ export async function translate(
   to: string,
   { device = null, online = () => true, signal }: { device?: DeviceTranslator | null; online?: () => boolean; signal?: AbortSignal } = {},
 ): Promise<LookupResult<Translation>> {
-  if (from === to) return { data: { text, provider: 'device' }, error: null }
-  const local = await onDevice(device, text, from, to)
+  const source = sourceLanguage(from)
+  const target = baseLanguage(to) || to
+  if (source && baseLanguage(source) === target) return { data: { text, provider: 'device' }, error: null }
+  // On-device needs a known source; an unknown one goes to the service, which finds it out.
+  const local = source ? await onDevice(device, text, source.split('-')[0]!, target) : null
   if (local) return { data: { text: local, provider: 'device' }, error: null }
   if (!online()) return { data: null, error: 'offline' }
   const out: string[] = []
+  let detected: string | undefined
+  let pair = source ?? AUTODETECT
   try {
     for (const piece of piecesOf(text)) {
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(piece)}&langpair=${from}|${to}`
-      const response = await fetcher(url, { signal })
-      if (response.status === 429) return { data: null, error: 'quota' }
-      if (!response.ok) return { data: null, error: 'failed' }
-      const body = (await response.json()) as { responseData?: { translatedText?: string }; quotaFinished?: boolean; responseStatus?: number | string }
-      if (body.quotaFinished || Number(body.responseStatus) === 429) return { data: null, error: 'quota' }
+      let body: Answer
+      let failure: ReturnType<typeof failureOf>
+      // A source the service does not know is asked again once, by its own detection.
+      for (let attempt = 0; ; attempt++) {
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(piece)}&langpair=${pair}|${target}`
+        const response = await fetcher(url, { signal })
+        if (response.status === 429) return { data: null, error: 'quota' }
+        if (!response.ok) return { data: null, error: 'failed' }
+        body = (await response.json()) as Answer
+        failure = failureOf(body)
+        if (failure === 'language' && pair !== AUTODETECT && attempt === 0) {
+          pair = AUTODETECT
+          continue
+        }
+        break
+      }
+      if (failure) return { data: null, error: failure === 'language' ? 'failed' : failure }
+      detected ??= baseLanguage(body.responseData?.detectedLanguage) || undefined
       out.push(body.responseData?.translatedText ?? '')
     }
   } catch (error) {
     if ((error as Error).name === 'AbortError') throw error
     return { data: null, error: online() ? 'failed' : 'offline' }
   }
-  return { data: { text: out.join(' ').trim(), provider: 'service' }, error: null }
+  const joined = out.join(' ').trim()
+  if (!joined) return { data: null, error: 'empty' }
+  return { data: { text: joined, provider: 'service', ...(!source && detected ? { detected } : {}) }, error: null }
 }
 
 /** A word as a dictionary heads it: no surrounding punctuation or quotes, no possessive. */
