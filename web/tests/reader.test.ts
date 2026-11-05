@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { clearLocalData } from '../app/data/localData'
 import { openingPlace, readHighlights, readPlace, writeHighlights, writePlace, type LocalHighlight, type Place } from '../app/data/reader/device'
-import { defaultTarget, define, headwordOf, isDefinable, piecesOf, plain, translate, type DeviceTranslator, type Fetch } from '../app/data/reader/lookup'
+import { defaultTarget, define, baseLanguage, headwordOf, isDefinable, piecesOf, plain, sourceLanguage, translate, type DeviceTranslator, type Fetch } from '../app/data/reader/lookup'
 import { isAhead, progressAt, ProgressWriter, type Timers } from '../app/data/reader/progress'
 import { DEFAULT_SETTINGS, parseSettings, readSettings, READER_SETTINGS_KEY, writeSettings } from '../app/data/reader/settings'
 
@@ -226,6 +226,29 @@ function recorded(answer: (url: string) => { status: number; body?: unknown }) {
   return { fetcher, asked }
 }
 
+describe('the source language of a book', () => {
+  it('keeps tags MyMemory knows, with the region in capitals', () => {
+    expect(sourceLanguage('en')).toBe('en')
+    expect(sourceLanguage('EN-us')).toBe('en-US')
+    expect(sourceLanguage('pt_br')).toBe('pt-BR')
+    expect(sourceLanguage('zh-CN')).toBe('zh-CN')
+    expect(sourceLanguage('zh-Hant')).toBe('zh-TW')
+    expect(sourceLanguage(' de ')).toBe('de')
+    expect(sourceLanguage('sr-Latn')).toBe('sr')
+  })
+  it('turns the three-letter codes of EPUB metadata into two letters', () => {
+    for (const [code, two] of [['eng', 'en'], ['deu', 'de'], ['ger', 'de'], ['fra', 'fr'], ['fre', 'fr'], ['SPA', 'es'], ['nld', 'nl'], ['dut', 'nl'], ['zho', 'zh'], ['rus', 'ru']]) {
+      expect(sourceLanguage(code)).toBe(two)
+    }
+    expect(sourceLanguage('deu-AT')).toBe('de-AT')
+  })
+  it('names no language for und, mul, zxx, empty and the unknown', () => {
+    for (const tag of ['und', 'UND', 'mul', 'zxx', '', '  ', null, undefined, 'xyz', 'e', 'english', '123']) expect(sourceLanguage(tag)).toBeNull()
+    expect(baseLanguage('pt-BR')).toBe('pt')
+    expect(baseLanguage('und')).toBe('')
+  })
+})
+
 describe('Translate', () => {
   it('asks the browser first, and only then the service', async () => {
     const device: DeviceTranslator = {
@@ -251,6 +274,47 @@ describe('Translate', () => {
     expect(asked[0]).toContain('langpair=en|de')
     expect(answer.data?.provider).toBe('service')
     expect(answer.data?.text).toBe(Array(asked.length).fill('Er lag.').join(' '))
+  })
+
+  it('never sends und as a language: the service finds the language out, and says which', async () => {
+    const { fetcher, asked } = recorded(() => ({ status: 200, body: { responseData: { translatedText: 'Hallo Welt', detectedLanguage: 'en' }, responseStatus: 200 } }))
+    for (const from of ['und', '', 'mul', 'xyz']) {
+      asked.length = 0
+      expect(await translate(fetcher, 'Hello world', from, 'de')).toEqual({ data: { text: 'Hallo Welt', provider: 'service', detected: 'en' }, error: null })
+      expect(asked[0]).toContain('langpair=Autodetect|de')
+    }
+  })
+
+  it('sends a three-letter or regional tag the way MyMemory wants it', async () => {
+    const { fetcher, asked } = recorded(() => ({ status: 200, body: { responseData: { translatedText: 'x' }, responseStatus: 200 } }))
+    await translate(fetcher, 'Hello', 'eng', 'de')
+    await translate(fetcher, 'Olá', 'pt-BR', 'de')
+    expect(asked.map((u) => u.split('langpair=')[1])).toEqual(['en|de', 'pt-BR|de'])
+  })
+
+  it('asks again by detection when the service does not know the source', async () => {
+    const invalid = { responseData: { translatedText: "'XX' IS AN INVALID SOURCE LANGUAGE . EXAMPLE: LANGPAIR=EN|IT" }, quotaFinished: null, responseDetails: "'XX' IS AN INVALID SOURCE LANGUAGE . EXAMPLE: LANGPAIR=EN|IT", responseStatus: '403', matches: '' }
+    const { fetcher, asked } = recorded((url) => (url.includes('langpair=xx|') ? { status: 200, body: invalid } : { status: 200, body: { responseData: { translatedText: 'Hallo' }, responseStatus: 200 } }))
+    expect((await translate(fetcher, 'Hello', 'xx', 'de')).data?.text).toBe('Hallo')
+    expect(asked.map((u) => u.split('langpair=')[1])).toEqual(['xx|de', 'Autodetect|de'])
+  })
+
+  it('never hands the service’s own error text on: it is a short code', async () => {
+    const refusal = (details: string, status: number | string = '403') => ({ status: 200, body: { responseData: { translatedText: details }, quotaFinished: null, responseDetails: details, responseStatus: status, matches: '' } })
+    const invalid = recorded(() => refusal('LANGPAIR=EN|IT USING 2 LETTER ISO'))
+    expect(await translate(invalid.fetcher, 'Hello', 'en', 'de')).toEqual({ data: null, error: 'failed' })
+    const same = recorded(() => refusal('PLEASE SELECT TWO DISTINCT LANGUAGES'))
+    expect(await translate(same.fetcher, 'Guten Morgen', 'und', 'de')).toEqual({ data: null, error: 'same' })
+    const other = recorded(() => refusal('SOMETHING NEW WENT WRONG', 500))
+    expect(await translate(other.fetcher, 'Hello', 'en', 'de')).toEqual({ data: null, error: 'failed' })
+    const empty = recorded(() => ({ status: 200, body: { responseData: { translatedText: '' }, responseStatus: 200 } }))
+    expect(await translate(empty.fetcher, 'Hello', 'en', 'de')).toEqual({ data: null, error: 'empty' })
+    const limited = recorded(() => ({ status: 429 }))
+    expect((await translate(limited.fetcher, 'Hello', 'en', 'de')).error).toBe('quota')
+    const down = recorded(() => ({ status: 503 }))
+    expect((await translate(down.fetcher, 'Hello', 'en', 'de')).error).toBe('failed')
+    const broken = (async () => { throw new TypeError('Failed to fetch') }) as Fetch
+    expect((await translate(broken, 'Hello', 'en', 'de')).error).toBe('failed')
   })
 
   it('says when the day’s quota is used up, or there is no connection', async () => {

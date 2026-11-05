@@ -1604,10 +1604,14 @@
       "device": "Auf diesem Gerät übersetzt",
       "service": "Automatische Übersetzung · MyMemory",
       "define": "Nachschlagen",
+      "auto": "Automatisch erkannt",
+      "retry": "Nochmal versuchen",
       "error": {
         "offline": "Für die Übersetzung brauchst du eine Verbindung.",
         "quota": "Die kostenlosen Übersetzungen für heute sind aufgebraucht.",
-        "failed": "Das konnte gerade nicht übersetzt werden."
+        "failed": "Das konnte gerade nicht übersetzt werden.",
+        "empty": "Für diesen Text kam keine Übersetzung zurück.",
+        "same": "Dieser Text ist schon auf {language}. Wähle oben eine andere Sprache."
       }
     },
     "define": {
