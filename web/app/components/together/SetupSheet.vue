@@ -16,7 +16,8 @@
 // (`offline`), a refusal stays in the sheet worded under `buddyRead.error.<code>`, and the same click tries again with the same
 // client id (the database answers the read it made). A read she already has for the Book is offered to open (`buddy_read_exists`).
 //
-// Props: `entry` (her Library entry; null for a Book that is not in her Library yet), `book` (that Book, used while there is no entry). v-model:open. Emits `open(id)` once she chooses the room, and goes there.
+// Props: `entry` (her Library entry; null for a Book that is not in her Library yet), `book` (that Book, used while there is no entry), `friend` (the `?with=` of a
+// "Potential buddy reads" cover, untrusted: ticked in the picker only if she follows that member, utils/buddyPreselect.ts; a default she can untick). v-model:open. Emits `open(id)` once she chooses the room, and goes there.
 // Test ids: `buddySetup` (+ `.cancel`, `.back`), `buddySetup.next`, `.start`, `.starts`, `.mode.*`, `.count`, `.per.*`, `.pages`,
 // `.perPart`, `.preview`, `.summary`, `.picker`, `.linkOn`, `.error`, `.open`, and the result's `.result`, `.link.*`.
 import type { Book, BookSnapshot } from '~/data/books'
@@ -26,6 +27,9 @@ import { buddyErrorKey } from '~/utils/buddyRead'
 import { roomPath } from '~/utils/buddyRoute'
 import { useBuddyReadStore } from '~/stores/buddyRead'
 import { useLibraryStore } from '~/stores/library'
+import { useSocialStore } from '~/stores/social'
+import { useSessionStore } from '~/stores/session'
+import { preselected } from '~/utils/buddyPreselect'
 import type { BuddyErrorCode, CreatedBuddyRead } from '~/data/buddyReads'
 import {
   buddyLink,
@@ -45,13 +49,15 @@ import {
 import { DEFAULT_PAGES_PER_PART, type ChapterRange } from '#layers/chat/app/utils/chapters'
 
 const open = defineModel<boolean>('open', { required: true })
-const props = defineProps<{ entry: LibraryEntry | null; book?: Book | BookSnapshot | null }>()
+const props = defineProps<{ entry: LibraryEntry | null; book?: Book | BookSnapshot | null; friend?: unknown }>()
 const emit = defineEmits<{ open: [id: string] }>()
 
 const { t } = useI18n()
 const { relativeDay } = useDays()
 const store = useBuddyReadStore()
 const library = useLibraryStore()
+const social = useSocialStore()
+const session = useSessionStore()
 const online = useOnline()
 const coverHosts = { ...useCoverHosts(), proxy: false }
 
@@ -117,9 +123,27 @@ watch(
   error.value = null
   existing.value = null
   clientId = globalThis.crypto.randomUUID()
+  void tickFriend()
   },
   { immediate: true },
 )
+
+/**
+ * The friend a cover named, ticked once her people are read (the picker's own list: `followingIds`, which holds every one she follows and nobody she blocked), and only
+ * if she is still among the options (a page of them at a time: more are asked for until she is there). Nothing else is done for a wrong id: no error, no tick. A default:
+ * nothing is ticked if she has touched the ticks meanwhile, and she can untick it.
+ */
+async function tickFriend() {
+  if (props.friend === undefined || props.friend === null) return
+  const shownAt = clientId
+  await nextTick()
+  await social.loadPeople()
+  const id = preselected(props.friend, { offered: social.people?.followingIds ?? [], leave: [session.member?.id] })
+  if (!id) return
+  for (let pages = 0; pages < 20 && !social.people?.following.some((card) => card.id === id) && !social.peopleEnded.following; pages++) await social.loadMorePeople('following')
+  if (shownAt !== clientId || !open.value || invite.value.length || !social.people?.following.some((card) => card.id === id)) return
+  invite.value = [id]
+}
 
 const count = computed(() => wholeNumber(countText.value))
 const plan = computed<SetupPlan>(() =>

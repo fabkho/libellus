@@ -1,6 +1,7 @@
 import { expect, test } from './fixtures'
 import en from '../i18n/locales/en.json' with { type: 'json' }
-import { runTitle } from '../tests/support/stack'
+import { signUpMember } from '../tests/support/member'
+import { runTitle, sql } from '../tests/support/stack'
 import { catalogueBook, friendOf, friendShows, onPile } from './buddySuggestions'
 import { friendPath } from './bothRead'
 import { signedIn } from './support'
@@ -41,15 +42,15 @@ test.describe('Potential buddy reads', () => {
     const reason = en.member.buddy.bothWant
     await expect(books.nth(0)).toHaveAttribute('aria-label', `${runTitle('Circe')}. ${reason}`)
     await expect(books.nth(1)).toHaveAttribute('aria-label', `${runTitle('Piranesi')}. ${reason}`)
-    await expect(books.nth(0)).toHaveAttribute('href', `/book/${second}`)
-    await expect(books.nth(1)).toHaveAttribute('href', `/book/${first}`)
+    await expect(books.nth(0)).toHaveAttribute('href', `/book/${second}?with=${friend.id}`)
+    await expect(books.nth(1)).toHaveAttribute('href', `/book/${first}?with=${friend.id}`)
     // It is a list of links, and none of the Books that are only on one list, or that one of them has read, is in it.
     await expect(section.getByRole('list').getByRole('listitem')).toHaveCount(2)
     for (const title of ['Only hers', 'Only mine', 'Already read']) await expect(section.getByRole('link', { name: runTitle(title) })).toHaveCount(0)
 
     // A tap lands on the Book's page.
     await books.nth(1).click()
-    await expect(page).toHaveURL(new RegExp(`/book/${first}$`))
+    await expect(page).toHaveURL(new RegExp(`/book/${first}\\?with=${friend.id}$`))
     await expect(page.getByTestId('book.title')).toHaveText(runTitle('Piranesi'))
   })
 
@@ -91,5 +92,69 @@ test.describe('Potential buddy reads', () => {
     await expect(page.getByTestId('member.want')).toBeVisible()
     await page.waitForTimeout(800)
     await expect(page.getByTestId('member.buddy')).toHaveCount(0)
+  })
+
+  test('a suggestion starts the read with that friend already picked: Read together, the friend is ticked, Create, the invitation reaches her', async ({ page }) => {
+    const viewer = await signedIn(page)
+    const friend = await friendOf(viewer)
+    const other = await friendOf(viewer, 'Nina')
+    const shared = await catalogueBook('Preselect', 'Somebody')
+    await onPile(friend, shared, 'want')
+    await onPile(viewer, shared, 'want')
+
+    await page.goto(friendPath(friend))
+    await page.getByTestId('member.buddy.book').click()
+    await expect(page).toHaveURL(new RegExp(`/book/${shared}\\?with=${friend.id}$`))
+    await page.getByTestId('book.together.start').click()
+    await expect(page.getByTestId('buddySetup')).toBeVisible()
+    await page.getByTestId('buddySetup.next').click()
+    await page.getByTestId('buddySetup.next').click()
+    // The friend whose profile she came from is ticked, nobody else; a default, so it can be taken off and put on again.
+    const picked = page.getByTestId(`buddySetup.picker.list.option.${friend.id}`)
+    await expect(picked).toBeChecked()
+    await expect(page.getByTestId(`buddySetup.picker.list.option.${other.id}`)).not.toBeChecked()
+    await picked.uncheck()
+    await expect(picked).not.toBeChecked()
+    await picked.check()
+
+    await page.getByTestId('buddySetup.start').click()
+    await expect(page.getByTestId('buddySetup.result')).toBeVisible()
+    await expect(page.getByTestId('buddySetup.invited')).toBeVisible()
+    const waiting = await sql<{ member_id: string }>(
+      'select member_id from public.buddy_read_members where member_id = any($1::uuid[]) and joined_at is null and invited_by = $2',
+      [[friend.id, other.id], viewer.id],
+    )
+    expect(waiting.map((row) => row.member_id), 'the invitation reaches the friend, and only her').toEqual([friend.id])
+  })
+
+  test('a ?with= that names nobody she follows is ignored: no one is ticked and nothing is said', async ({ page }) => {
+    const viewer = await signedIn(page)
+    const friend = await friendOf(viewer)
+    const stranger = await signUpMember()
+    const shared = await catalogueBook('No preselect', 'Somebody')
+    await onPile(viewer, shared, 'want')
+
+    const addresses = [
+      `?with=${stranger.id}`,
+      `?with=${viewer.id}`,
+      '?with=not-an-id',
+      `?with=${friend.id}&with=${stranger.id}`,
+      '?with=',
+      '',
+    ]
+    for (const query of addresses) {
+      await page.goto(`/book/${shared}${query}`)
+      await page.getByTestId('book.together.start').click()
+      await expect(page.getByTestId('buddySetup')).toBeVisible()
+      await page.getByTestId('buddySetup.next').click()
+      await page.getByTestId('buddySetup.next').click()
+      const options = page.getByTestId(`buddySetup.picker.list.option.${friend.id}`)
+      await expect(options, query).toBeVisible()
+      await page.waitForTimeout(300)
+      await expect(options, `nobody is ticked for ${query || 'no parameter'}`).not.toBeChecked()
+      await expect(page.getByTestId('buddySetup.error')).toHaveCount(0)
+      await page.keyboard.press('Escape')
+      await expect(page.getByTestId('buddySetup')).toBeHidden()
+    }
   })
 })
