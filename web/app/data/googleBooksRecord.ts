@@ -105,39 +105,55 @@ function isbnsOf(identifiers: unknown): { isbn13: string | null; isbn10: string 
  * the app cannot add it, the function's caller decides). Never throws: anything else is no volume.
  */
 export function parseVolumes(body: unknown): GoogleVolume[] {
-  const items = (body as Raw | null)?.items
-  if (!Array.isArray(items)) return []
-  const out: GoogleVolume[] = []
-  const seen = new Set<string>()
-  for (const item of items) {
-    const info = item?.volumeInfo
-    const id = text(item?.id, 40)
-    const title = text(info?.title)
-    if (!info || !id || !title) continue
-    const { isbn13, isbn10 } = isbnsOf(info.industryIdentifiers)
-    if (isbn13) {
-      if (seen.has(isbn13)) continue
-      seen.add(isbn13)
+  try {
+    const items = (body as Raw | null)?.items
+    if (!Array.isArray(items)) return []
+    const out: GoogleVolume[] = []
+    const seen = new Set<string>()
+    for (const item of items) {
+      // One odd volume is one volume less, never a failed answer.
+      try {
+        const volume = volumeOf(item)
+        if (!volume) continue
+        if (volume.isbn13) {
+          if (seen.has(volume.isbn13)) continue
+          seen.add(volume.isbn13)
+        }
+        out.push(volume)
+      } catch {
+        continue
+      }
     }
-    const authors = Array.isArray(info.authors) ? info.authors.map((name) => text(name, 200)).filter((name): name is string => Boolean(name)).slice(0, 8) : []
-    const pages = typeof info.pageCount === 'number' && Number.isInteger(info.pageCount) && info.pageCount >= 1 && info.pageCount <= 10_000 ? info.pageCount : null
-    const year = /^(\d{4})/.exec(text(info.publishedDate, 20) ?? '')?.[1]
-    const language = /^[a-z]{2}$/i.test(String(info.language ?? '')) ? String(info.language).toLowerCase() : null
-    out.push({
-      id,
-      title,
-      authors,
-      isbn13,
-      isbn10,
-      pageCount: pages,
-      year: year && Number(year) >= 1400 ? Number(year) : null,
-      language,
-      publisher: text(info.publisher, 200),
-      genres: googleGenres(Array.isArray(info.categories) ? info.categories.filter((c): c is string => typeof c === 'string') : []),
-      coverUrl: coverUrlOf(info.imageLinks?.thumbnail),
-    })
+    return out
+  } catch {
+    return []
   }
-  return out
+}
+
+/** One item of the answer as a volume, or null when it has no id or title. May throw on hostile input: `parseVolumes` catches it. */
+function volumeOf(item: NonNullable<Raw['items']>[number] | null | undefined): GoogleVolume | null {
+  const info = item?.volumeInfo
+  const id = text(item?.id, 40)
+  const title = text(info?.title)
+  if (!info || !id || !title) return null
+  const { isbn13, isbn10 } = isbnsOf(info.industryIdentifiers)
+  const authors = Array.isArray(info.authors) ? info.authors.map((name) => text(name, 200)).filter((name): name is string => Boolean(name)).slice(0, 8) : []
+  const pages = typeof info.pageCount === 'number' && Number.isInteger(info.pageCount) && info.pageCount >= 1 && info.pageCount <= 10_000 ? info.pageCount : null
+  const year = /^(\d{4})/.exec(text(info.publishedDate, 20) ?? '')?.[1]
+  const language = /^[a-z]{2}$/i.test(String(info.language ?? '')) ? String(info.language).toLowerCase() : null
+  return {
+    id,
+    title,
+    authors,
+    isbn13,
+    isbn10,
+    pageCount: pages,
+    year: year && Number(year) >= 1400 ? Number(year) : null,
+    language,
+    publisher: text(info.publisher, 200),
+    genres: googleGenres(Array.isArray(info.categories) ? info.categories : []),
+    coverUrl: coverUrlOf(info.imageLinks?.thumbnail),
+  }
 }
 
 // -------------------------------------------------------------------- queries

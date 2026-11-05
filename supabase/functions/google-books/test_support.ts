@@ -18,7 +18,8 @@ export const ISBN_DE = '9791034567904'
 export const TEST_KEY = 'test-key-not-a-secret'
 
 const RECORDED: Record<string, { file: string; status?: number; headers?: Record<string, string> }> = {
-  [volumesUrl(isbnQuery(ISBN_HIT))]: { file: 'isbn-hit', headers: { 'cache-control': 'private, max-age=0' } },
+  // No Cache-Control at all: the one case the fallback lifetime applies to.
+  [volumesUrl(isbnQuery(ISBN_HIT))]: { file: 'isbn-hit' },
   [volumesUrl(isbnQuery(ISBN_MISS))]: { file: 'isbn-miss' },
   [volumesUrl(titleQuery('Der stille Hafen', 'Ida Beispiel')!)]: { file: 'title-german', headers: { 'cache-control': 'public, max-age=600' } },
   [volumesUrl('stille hafen beispiel')]: { file: 'title-german' },
@@ -29,9 +30,9 @@ const RECORDED: Record<string, { file: string; status?: number; headers?: Record
 
 /** A `fetch` that answers the recorded questions and remembers what was asked (never the key's value in `url`: it travels in a header). */
 export function recordedFetch(extra: Record<string, () => Response | Promise<Response>> = {}) {
-  const asked: { url: string; headers: Headers }[] = []
+  const asked: { url: string; headers: Headers; redirect: string }[] = []
   const fetch: FetchLike = async (url, init) => {
-    asked.push({ url, headers: new Headers(init.headers) })
+    asked.push({ url, headers: new Headers(init.headers), redirect: init.redirect })
     if (extra[url]) return await extra[url]!()
     const found = RECORDED[url]
     if (!found) throw new Error(`No recording for ${url}`)
@@ -53,15 +54,17 @@ export function memoryCache(clock: { now: () => number }) {
   return { cache, rows }
 }
 
-/** The day's counter in memory, with the refusal the real one gives past its limit. */
+/** The day's counters in memory, with the refusal the real ones give past their limits (the slice is counted in the day, both or neither). */
 export function memoryBudget(start = 0) {
-  const state = { used: start, calls: [] as number[] }
+  const state = { used: start, slices: {} as Record<string, number>, calls: [] as { limit: number; slice?: { scope: string; limit: number } }[] }
   return {
     state,
-    take(limit: number): Promise<boolean> {
-      state.calls.push(limit)
+    take(limit: number, slice?: { scope: string; limit: number }): Promise<boolean> {
+      state.calls.push({ limit, ...(slice ? { slice } : {}) })
+      if (slice && (state.slices[slice.scope] ?? 0) >= slice.limit) return Promise.resolve(false)
       if (state.used >= limit) return Promise.resolve(false)
       state.used++
+      if (slice) state.slices[slice.scope] = (state.slices[slice.scope] ?? 0) + 1
       return Promise.resolve(true)
     },
   }

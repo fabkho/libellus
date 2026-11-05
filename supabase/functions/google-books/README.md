@@ -11,7 +11,7 @@ POST /functions/v1/google-books   { "action": "isbn",   "isbn13": "9783499267017
 POST /functions/v1/google-books   { "action": "search", "query": "der schwarm schätzing", "languages": ["de-DE", "en-US"] }
 POST /functions/v1/google-books   { "action": "search", "title": "Der Schwarm", "authors": ["Frank Schätzing"] }
 POST /functions/v1/google-books   { "action": "book",   "isbn13": "9783499267017" }
-                                  (any of them with "purpose": "import": the import's own member bucket)
+                                  (the service role may add "purpose": "enrich": enrich's own slice of the day; a member's "purpose" is ignored)
 
 200 { "status": "found", "volume": { id, title, authors, isbn13, isbn10, pageCount, year, language, publisher, genres, coverUrl } }
 200 { "status": "not_found" }
@@ -60,9 +60,11 @@ so **every row expires**:
 
 | Answer | Kept |
 | --- | --- |
-| found, `Cache-Control: no-store` | not at all |
-| found, `max-age=N` (N > 0) | N seconds, at most a day |
-| found, no stated lifetime (`private`, `max-age=0`, no header) | `GOOGLE_BOOKS_CACHE_FALLBACK_SECONDS`, default 3600; **0 keeps nothing** |
+| found, `no-store`, `no-cache` or `private` | not at all |
+| found, `max-age=0` or `s-maxage=0` | not at all |
+| found, `s-maxage=N` (else `max-age=N`), N > 0, none of the above | N seconds, at most a day |
+| found, a header that states no lifetime (`public` alone) | not at all: it allows no copy |
+| found, **no `Cache-Control` header at all** | `GOOGLE_BOOKS_CACHE_FALLBACK_SECONDS`, default 3600, at most a day; **0 keeps nothing**: the only case it applies to |
 | not found (a miss) | six hours: it is our own finding, not Google's content |
 | a failure, a refusal, "unavailable" | never |
 
@@ -74,14 +76,24 @@ questions asked at once share one request.
 ## The daily budget and the breaker
 
 Google's default quota is about 1,000 requests a day for the whole project (and, keyless, none: every unkeyed request answered
-`429 Quota exceeded … Queries per day` when this was written). `google_books_budget_take(900)` counts each request that goes out
-against **900 a day** (Google's day: Pacific time, when the quota resets); past it the function answers `unavailable`
-(`reason: "budget"`, one log line `google_books_budget_spent` per day and instance) instead of burning what is left. A cached
-answer is still given. A refusal from Google (400, 401, 403, 429) opens a breaker for ten minutes (`BREAKER_MS`): no request goes
-out, one log line `google_books_blocked {"status":429,…}` (alert on it).
+`429 Quota exceeded … Queries per day` when this was written). `google_books_budget_take(900, scope, scope_limit)` counts each request
+that goes out against **900 a day** (Google's day: Pacific time, when the quota resets); past it the function answers `unavailable`
+(`reason: "budget"`, one log line `google_books_budget_spent` per day, instance and scope, with the Pacific day) instead of burning what is
+left. A cached answer is still given. **`enrich` has a slice of its own: 300 of the 900** (`ENRICH_DAILY_BUDGET`, counted as scope `enrich` and
+in the day: both or neither): after a big import it would otherwise ask for the genres of every new Book and leave members nothing. When its
+slice is gone enrich's asks answer `unavailable` and stop quietly (a Book simply keeps no Google genre until its next refresh); the other 600 stay
+for members and the import job. Only the service role can say `purpose: "enrich"`.
 
-A member may call it 30 times a minute (`edge_rate_hit`, bucket `google-books`), an import 120 (`google-books-import`); the
-service role (the import job, `enrich`) is not counted per member.
+A refusal of the key or the quota (401, 403, 429, or a 400 that says the key is invalid: `keyInvalid`) opens a breaker for ten minutes
+(`BREAKER_MS`): no request goes out, one log line `google_books_blocked {"status":429,…}` (alert on it). **Any other 400 is the request's
+own error** (it can come from a member's body) and opens nothing; a 5xx opens nothing either. `languages` is filtered against a short list of
+two-letter codes (`ALLOWED_LANGUAGES`) before anything reaches Google, and the request is never followed through a redirect (`redirect: 'error'`),
+so the key header cannot be forwarded. A question of nothing but punctuation is not sent at all.
+
+**Limits per caller.** A member: 30 calls a minute (`edge_rate_hit`, bucket `google-books`) **and 60 requests a day that really go out to
+Google** (`MEMBER_DAILY_LIMIT`, bucket `google-books-day`, 24 hours; a cached answer costs her nothing): interactive search, the picker and adding a
+Book need a handful, so one member can never spend the day's 900. A `purpose` in a member's body is ignored: the import job and `enrich` are the
+service role (not counted per member), and only the service role's `purpose: "enrich"` gets the slice.
 
 ## `book`
 

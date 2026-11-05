@@ -8,7 +8,7 @@
  */
 import { type GoogleVolume, parseVolumes, volumesUrl } from '../../../web/app/data/googleBooksRecord.ts'
 
-export type FetchLike = (url: string, init: { headers: Record<string, string>; signal: AbortSignal }) => Promise<Response>
+export type FetchLike = (url: string, init: { headers: Record<string, string>; signal: AbortSignal; redirect: 'error' }) => Promise<Response>
 
 /** How long one request may take. */
 export const REQUEST_TIMEOUT_MS = 4000
@@ -16,8 +16,10 @@ export const REQUEST_TIMEOUT_MS = 4000
 /**
  * Why Google could not answer:
  *  - `not_configured`: no API key is set (the function degrades, nothing is asked);
- *  - `blocked`: a refusal (400 bad key, 401, 403, 429 quota): it opens the breaker, and the quota is not asked again for a while;
- *  - `error`: a 5xx, a timeout or an answer that is not JSON: not stored, and the next call tries again.
+ *  - `blocked`: a refusal of the key or the quota (401, 403, 429, or a 400 that says the key is invalid): it opens the breaker,
+ *    and the quota is not asked again for a while;
+ *  - `error`: a 5xx, a timeout, a redirect, an answer that is not JSON, or any other 400 (a per-request error: a member's
+ *    odd question must never switch the source off for everybody): not stored, and the next call tries again.
  */
 export class GoogleUnavailable extends Error {
   constructor(readonly kind: 'not_configured' | 'blocked' | 'error', readonly status: number | null = null) {
@@ -40,13 +42,18 @@ export function createGoogleBooksClient(deps: { fetch: FetchLike; apiKey: () => 
       if (!key) throw new GoogleUnavailable('not_configured')
       let response: Response
       try {
-        response = await deps.fetch(volumesUrl(q, language), { headers: { 'x-goog-api-key': key, accept: 'application/json' }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
+        response = await deps.fetch(volumesUrl(q, language), { headers: { 'x-goog-api-key': key, accept: 'application/json' }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS), redirect: 'error' })
       } catch {
         throw new GoogleUnavailable('error')
       }
-      if ([400, 401, 403, 429].includes(response.status)) {
+      if ([401, 403, 429].includes(response.status)) {
         await response.body?.cancel().catch(() => {})
         throw new GoogleUnavailable('blocked', response.status)
+      }
+      if (response.status === 400) {
+        // Only a bad key is everybody's problem: Google says so in the error's reason (`keyInvalid`, `API_KEY_INVALID`).
+        const said = await response.text().catch(() => '')
+        throw new GoogleUnavailable(/keyInvalid|API_KEY_INVALID|API key not valid/i.test(said) ? 'blocked' : 'error', 400)
       }
       if (!response.ok) {
         await response.body?.cancel().catch(() => {})

@@ -150,7 +150,7 @@ grant execute on function public.follow_target(text) to authenticated;
 grant execute on function public.follow_target(text) to service_role;
 grant execute on function public.goodreads_rating(books) to authenticated;
 grant execute on function public.goodreads_rating(books) to service_role;
-grant execute on function public.google_books_budget_take(integer) to service_role;
+grant execute on function public.google_books_budget_take(integer,text,integer) to service_role;
 grant execute on function public.handle_new_user() to service_role;
 grant execute on function public.handle_user_confirmed() to service_role;
 grant execute on function public.import_book_for(uuid,text,jsonb) to service_role;

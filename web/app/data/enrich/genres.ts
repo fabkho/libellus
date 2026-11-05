@@ -405,15 +405,19 @@ export const GOOGLE_CATEGORY_GENRES: Readonly<Record<string, readonly GenreId[]>
   'historische romane': ['historical'],
 }
 
+/** The table as a Map: a category is text from outside, and a key such as `constructor`, `toString` or `__proto__` must find nothing (an object lookup finds the prototype's). */
+const GOOGLE_CATEGORY_MAP: ReadonlyMap<string, readonly GenreId[]> = new Map(Object.entries(GOOGLE_CATEGORY_GENRES))
+
 /**
  * The app's genres a volume's Google `categories` name, in the order they are named, each once, at most
- * `MAX_GENRES`. Pure: the table above and nothing else.
+ * `MAX_GENRES`. Pure: the table above and nothing else; anything that is not text is no category.
  */
-export function googleGenres(categories: readonly string[]): GenreId[] {
+export function googleGenres(categories: readonly unknown[]): GenreId[] {
   const found: GenreId[] = []
   for (const category of categories) {
+    if (typeof category !== 'string') continue
     for (const part of category.split('/')) {
-      for (const genre of GOOGLE_CATEGORY_GENRES[normalize(part).replace(/&/g, 'and').replace(/\s+/g, ' ')] ?? []) {
+      for (const genre of GOOGLE_CATEGORY_MAP.get(normalize(part).replace(/&/g, 'and').replace(/\s+/g, ' ')) ?? []) {
         if (!found.includes(genre)) found.push(genre)
       }
     }

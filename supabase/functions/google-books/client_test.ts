@@ -39,7 +39,7 @@ Deno.test('a hit: one volume per ISBN, the description dropped, the cover linked
   const { fetch } = recordedFetch()
   const client = createGoogleBooksClient({ fetch, apiKey: () => TEST_KEY })
   const answer = await client.ask(isbnQuery(ISBN_HIT))
-  assertEquals(answer.cacheControl, 'private, max-age=0')
+  assertEquals(answer.cacheControl, null)
   assertEquals(answer.volumes.length, 1, 'the second volume of the same ISBN is the first one again')
   const [volume] = answer.volumes
   assertEquals(volume, {

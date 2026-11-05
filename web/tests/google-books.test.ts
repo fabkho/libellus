@@ -87,6 +87,29 @@ describe('the mapping of a volumes answer', () => {
     expect(german[3]!.authors).toEqual([])
   })
 
+  it('never throws: one hostile volume is one volume less, not a failed answer', () => {
+    const volume = (categories: unknown, id: string, isbn: string) => ({
+      id,
+      volumeInfo: { title: `Title ${id}`, authors: ['A'], categories, industryIdentifiers: [{ type: 'ISBN_13', identifier: isbn }] },
+    })
+    const answer = {
+      items: [
+        volume(['Constructor', '__proto__', 'toString', 'hasOwnProperty'], 'one', ISBN_HIT),
+        volume('Fiction / Romance', 'two', ISBN_DE),
+        volume({ constructor: 1, length: 3 }, 'three', ISBN_EN),
+        { id: 'four', volumeInfo: new Proxy({}, { get() { throw new Error('hostile getter') } }) },
+        { id: 'five', get volumeInfo() { throw new Error('hostile getter') } },
+        volume([['nested'], null, 7], 'six', '9791034568000'),
+      ],
+    }
+    let volumes: GoogleVolume[] = []
+    expect(() => { volumes = parseVolumes(answer) }).not.toThrow()
+    expect(volumes.map((v) => v.id)).toEqual(['one', 'two', 'three', 'six'])
+    expect(volumes.every((v) => v.genres.length === 0)).toBe(true)
+    expect(() => parseVolumes(new Proxy({}, { get() { throw new Error('hostile') } }))).not.toThrow()
+    expect(parseVolumes(new Proxy({}, { get() { throw new Error('hostile') } }))).toEqual([])
+  })
+
   it('reads a miss, an error body and nonsense as no volumes', () => {
     expect(parseVolumes(fixture('isbn-miss'))).toEqual([])
     expect(parseVolumes(fixture('quota-429'))).toEqual([])
@@ -132,6 +155,15 @@ describe('Google\'s categories become the app\'s genres by a small explicit tabl
     expect(googleGenres(['Fiction / Short Stories (single author)'])).toEqual(['short-stories'])
     expect(googleGenres(['Fiction / General', 'Business & Economics / Marketing', 'Cooking / Baking', ''])).toEqual([])
     expect(googleGenres([])).toEqual([])
+  })
+
+  it('takes hostile category text for text: a prototype\'s key names no genre and nothing throws', () => {
+    const hostile = ['Constructor', 'constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf', 'Fiction / constructor / __proto__', 'prototype', 'Fiction / toString', '__defineGetter__', 'isPrototypeOf']
+    for (const category of hostile) expect(googleGenres([category])).toEqual([])
+    expect(googleGenres(hostile)).toEqual([])
+    // Real ones among them still count; what is not text is no category.
+    expect(googleGenres(['constructor', 'Fiction / Romance / General', '__proto__'])).toEqual(['romance'])
+    expect(googleGenres([null, 3, {}, ['Fiction / Fantasy'], undefined, 'Fiction / Fantasy'] as unknown[])).toEqual(['fantasy'])
   })
 
   it('keeps each genre once and at most three, in the order named', () => {

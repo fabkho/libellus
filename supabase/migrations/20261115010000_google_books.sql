@@ -9,11 +9,14 @@
 --                           deletes it. Never a description: the function does not ask for one.
 --                           Service role only, like `edge_pace` and `edge_rate_limits`, and NOT readable by members:
 --                           the key of a free-text row is whatever a member typed in Search.
--- 2. `google_books_budget`  one row a day, the requests the function has made to Google that day; and
---    `google_books_budget_take(limit)` counts one request and says whether the day still has room. The free quota is
---                           about 1,000 requests a day for the whole app; the function refuses (answers
---                           `unavailable`) beyond ~900 instead of burning the rest. Counted by Google's day (Pacific
---                           time, when the quota resets).
+-- 2. `google_books_budget`  one row a day and scope: the requests the function has made to Google that day ('all'), and
+--                           the slice `enrich` has spent ('enrich'); and `google_books_budget_take(limit, scope,
+--                           scope_limit)` counts one request against both (or neither) and says whether there is room.
+--                           The free quota is about 1,000 requests a day for the whole app; the function refuses
+--                           (answers `unavailable`) beyond ~900 instead of burning the rest, and `enrich` (a slice of
+--                           300 of them) cannot eat the members' and the imports' share. Counted by Google's day
+--                           (Pacific time, when the quota resets). A member's own day is the rate bucket
+--                           `google-books-day` (`edge_rate_hit`, 24 h): no table of its own.
 -- 3. `private.purge_google_books()` deletes expired cache rows and old counters; pg_cron runs it hourly.
 -- 4. `book_genres.source` may be `google`: a Catalogue Book that the other sources left without a genre gets the
 --    genres Google's categories map to (data/enrich/genres.ts `googleGenres`).
@@ -58,42 +61,62 @@ grant select, insert, update, delete on public.google_books_cache to service_rol
 
 create table public.google_books_budget (
   -- The day by Google's clock (Pacific time).
-  day  date primary key,
-  used integer not null default 0,
+  day   date not null,
+  -- 'all': every request of the day; any other word: a slice of it (`enrich`), counted in 'all' too.
+  scope text not null default 'all',
+  used  integer not null default 0,
+  primary key (day, scope),
+  constraint google_books_budget_scope check (scope ~ '^[a-z]{1,20}$'),
   constraint google_books_budget_used check (used >= 0)
 );
 
 comment on table public.google_books_budget is
-  'Requests the google-books function made to Google on a (Pacific) day (issue #305), against a daily budget of ~900. Service role only.';
+  'Requests the google-books function made to Google on a (Pacific) day (issue #305), in total and per slice, against a daily budget of ~900. Service role only.';
 
 alter table public.google_books_budget enable row level security;
 revoke all on public.google_books_budget from public, anon, authenticated;
 grant select, insert, update, delete on public.google_books_budget to service_role;
 
--- Counts one request of today and answers whether it is within `p_limit` (true) or the day is spent (false). One
--- statement, so concurrent calls count one by one; a refused call is not counted. Refusal: budget_invalid (22023).
-create function public.google_books_budget_take(p_limit integer)
+-- Counts one request of today against `p_limit` (the day, scope 'all') and, when `p_scope` names a slice, against
+-- `p_scope_limit` too: true when both have room, false (and nothing counted) when either is spent. Each statement counts
+-- one by one under the row lock; a slice taken and then refused by the day is given back. Refusal: budget_invalid (22023).
+create function public.google_books_budget_take(p_limit integer, p_scope text default 'all', p_scope_limit integer default null)
 returns boolean
 language plpgsql
 volatile
 set search_path = pg_catalog, public
 as $$
 declare
-  v_day  date := (now() at time zone 'America/Los_Angeles')::date;
-  v_used integer;
+  v_day   date := (now() at time zone 'America/Los_Angeles')::date;
+  v_used  integer;
+  v_slice boolean := p_scope is not null and p_scope <> 'all';
 begin
-  if p_limit is null or p_limit not between 1 and 100000 then
+  if p_limit is null or p_limit not between 1 and 100000
+     or (v_slice and (p_scope !~ '^[a-z]{1,20}$' or p_scope_limit is null or p_scope_limit not between 1 and 100000)) then
     raise exception 'budget_invalid' using errcode = '22023';
   end if;
-  insert into public.google_books_budget as b (day, used) values (v_day, 1)
-  on conflict (day) do update set used = b.used + 1 where b.used < p_limit
+  if v_slice then
+    insert into public.google_books_budget as b (day, scope, used) values (v_day, p_scope, 1)
+    on conflict (day, scope) do update set used = b.used + 1 where b.used < p_scope_limit
+    returning b.used into v_used;
+    if v_used is null then return false; end if;
+    v_used := null;
+  end if;
+  insert into public.google_books_budget as b (day, scope, used) values (v_day, 'all', 1)
+  on conflict (day, scope) do update set used = b.used + 1 where b.used < p_limit
   returning b.used into v_used;
-  return v_used is not null;
+  if v_used is null then
+    if v_slice then
+      update public.google_books_budget set used = used - 1 where day = v_day and scope = p_scope;
+    end if;
+    return false;
+  end if;
+  return true;
 end
 $$;
 
-revoke all on function public.google_books_budget_take(integer) from public, anon, authenticated;
-grant execute on function public.google_books_budget_take(integer) to service_role;
+revoke all on function public.google_books_budget_take(integer, text, integer) from public, anon, authenticated;
+grant execute on function public.google_books_budget_take(integer, text, integer) to service_role;
 
 -- --------------------------------------------------------------------------------------------------- 3. the purge
 

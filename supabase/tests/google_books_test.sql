@@ -10,7 +10,7 @@
 -- Assertions ask about the rows this test made, never about how many rows a table holds.
 
 begin;
-select plan(56);
+select plan(69);
 set local client_min_messages = warning;
 
 create schema if not exists tests;
@@ -56,7 +56,7 @@ grant execute on all functions in schema tests to authenticated, service_role, a
 select has_table('public', 'google_books_cache', 'the cache exists');
 select col_is_pk('public', 'google_books_cache', 'cache_key', 'keyed by the question');
 select has_table('public', 'google_books_budget', 'the budget exists');
-select col_is_pk('public', 'google_books_budget', 'day', 'one row a day');
+select col_is_pk('public', 'google_books_budget', array['day', 'scope'], 'one row a day and scope');
 select ok((select relrowsecurity from pg_class where oid = 'public.google_books_cache'::regclass), 'row level security is on (cache)');
 select ok((select relrowsecurity from pg_class where oid = 'public.google_books_budget'::regclass), 'row level security is on (budget)');
 select is(
@@ -134,7 +134,30 @@ select is(
   2, 'a refused request is not counted: the day stands at 2');
 select is(public.google_books_budget_take(3), true, 'a higher limit (the owner raised the quota) lets the day go on');
 select throws_ok($$ select public.google_books_budget_take(0) $$, '22023', 'budget_invalid', 'a limit under 1 is refused');
+
+-- A slice (enrich's 300 of the 900) is counted in the day too: both or neither.
+select is(public.google_books_budget_take(100, 'enrich', 2), true, 'the first request of a slice');
+select is(public.google_books_budget_take(100, 'enrich', 2), true, 'the second');
+select is(public.google_books_budget_take(100, 'enrich', 2), false, 'the third is refused by the slice');
+select is(
+  (select used from public.google_books_budget where day = (now() at time zone 'America/Los_Angeles')::date and scope = 'enrich'),
+  2, 'the slice stands at 2');
+select is(
+  (select used from public.google_books_budget where day = (now() at time zone 'America/Los_Angeles')::date and scope = 'all'),
+  5, 'and the refused one was not counted in the day either (3 before + 2)');
+select is(public.google_books_budget_take(5, 'enrich', 10), false, 'the day being spent refuses the slice');
+select is(
+  (select used from public.google_books_budget where day = (now() at time zone 'America/Los_Angeles')::date and scope = 'enrich'),
+  2, 'and gives the slice back (not 3)');
+select is(public.google_books_budget_take(6), true, 'a request outside any slice still has the day''s room');
+select throws_ok($$ select public.google_books_budget_take(100, 'Enrich;', 5) $$, '22023', 'budget_invalid', 'a slice is named by lower-case letters');
+select throws_ok($$ select public.google_books_budget_take(100, 'enrich', null) $$, '22023', 'budget_invalid', 'a slice needs its own limit');
 select throws_ok($$ select public.google_books_budget_take(null) $$, '22023', 'budget_invalid', 'a missing limit is refused');
+
+-- A member's own day: the rate bucket over 24 hours (`edge_rate_hit`), a window as long as a day.
+select is(public.edge_rate_hit(:'ida_id'::uuid, 'google-books-day', 2, 86400), true, 'a member''s first request of her day');
+select is(public.edge_rate_hit(:'ida_id'::uuid, 'google-books-day', 2, 86400), true, 'the second');
+select is(public.edge_rate_hit(:'ida_id'::uuid, 'google-books-day', 2, 86400), false, 'the third is over her day');
 
 -- ---------------------------------------------------------------- the purge
 

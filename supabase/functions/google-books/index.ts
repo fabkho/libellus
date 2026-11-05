@@ -14,7 +14,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { GoogleVolume } from '../../../web/app/data/googleBooksRecord.ts'
 import { createCallerCheck } from '../_shared/caller.ts'
 import { createGoogleBooksClient } from './client.ts'
-import { type BookRow, type Budget, createHandler, DEFAULT_FALLBACK_TTL_SECONDS, MEMBER_WINDOW_SECONDS } from './handler.ts'
+import { type BookRow, type Budget, createHandler, DEFAULT_FALLBACK_TTL_SECONDS, MEMBER_DAILY_BUDGET, MEMBER_DAILY_WINDOW_SECONDS, MEMBER_WINDOW_SECONDS } from './handler.ts'
 
 const url = Deno.env.get('SUPABASE_URL')
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -88,8 +88,23 @@ const handler = createHandler({
     },
   },
   configured: () => Boolean(Deno.env.get('GOOGLE_BOOKS_API_KEY')?.trim()),
-  async budget(limit) {
-    const { data, error } = await supabase.rpc('google_books_budget_take', { p_limit: limit })
+  async budget(limit, slice) {
+    const { data, error } = await supabase.rpc('google_books_budget_take', {
+      p_limit: limit,
+      p_scope: slice?.scope ?? 'all',
+      p_scope_limit: slice?.limit ?? null,
+    })
+    if (error) throw new Error(error.message)
+    return data === true
+  },
+  // A member's own day: the rate bucket over 24 hours (a request that really goes out to Google counts, a cached answer does not).
+  async memberDay(member) {
+    const { data, error } = await supabase.rpc('edge_rate_hit', {
+      p_member: member,
+      p_bucket: MEMBER_DAILY_BUDGET.bucket,
+      p_limit: MEMBER_DAILY_BUDGET.limit,
+      p_window_seconds: MEMBER_DAILY_WINDOW_SECONDS,
+    })
     if (error) throw new Error(error.message)
     return data === true
   },

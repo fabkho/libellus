@@ -71,7 +71,7 @@ export type GoogleBooksOptions = {
   online?: () => boolean
   /** The member's languages (`de-DE`, `en`): one of them narrows the question, several only order the answer. */
   languages?: () => readonly string[]
-  /** Who is asking, for the function's budgets: an import says so and gets its own, larger bucket. */
+  /** Who is asking. The function only honours it for the service role (the import job); a member's token gets the interactive limits whatever it says. */
   purpose?: 'import'
   /** At least this many milliseconds between two calls (0: right away). */
   gapMs?: number
