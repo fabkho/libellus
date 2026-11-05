@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import type { SendJob } from '#layers/chat/app/types/adapter'
+import type { VoiceMime as VoiceMimeType } from '~/data/buddyVoice'
 import { claimQueue, createSaveQueue, parseStoredQueue, type JobOutcome, type Refusal, type SaveQueue, type TabQueue, UNEXPLAINED_ATTEMPTS } from '#layers/chat/app/utils/queue'
 import { readPoint, threadKey } from '#layers/chat/app/utils/thread'
 import { chapterView, createPeeks, type ChapterView } from '#layers/chat/app/utils/veil'
@@ -20,6 +21,7 @@ import {
   type ReportReason,
 } from '~/data/buddyReads'
 import type { BuddyLive, BuddyLiveEvent, LiveRealtimeModule } from '~/data/buddyLive'
+import { prepareVoice, VOICE_URL_REUSE_MS, type PreparedVoice } from '~/data/buddyVoice'
 import { useSessionStore } from '~/stores/session'
 import { parseAppConfig } from '~/utils/appConfig'
 import { buddyPeekKey, buddyQueueKey, deviceHasBuddyLine } from '~/utils/buddyStorage'
@@ -33,6 +35,8 @@ import {
   reactedBy,
   sentBubble,
   tombstoneOf,
+  voiceJob,
+  voiceOfJob,
   type BuddyBubble,
 } from '~/utils/buddyRead'
 
@@ -50,6 +54,12 @@ import {
  *   book once she is through, a peek) and what a row may show; a veiled Section's unread is not counted in `unread(read)`.
  * - **Live** (data/buddyLive.ts) is started only while a screen has `retain`ed it and loaded lazily (the real Realtime client is a chunk
  *   of its own: no Realtime request until a screen asks). Home does not retain it: it reads `loadMine` on focus.
+ *
+ * - **A voice message** is a send too, in two steps (what Trappist's chat does for a photo and a recording): the recording is stored in the private
+ *   bucket first (`sendVoice`: a bubble at once, playable from the device's own copy; no connection or a refusal makes it a failed bubble she can send
+ *   again or delete: a recording is held in memory, not in the line, so a reload loses one that was not stored), then its post joins the same queue as
+ *   a text (retried with a pause, kept across a reload, a refusal handed back on the bubble). Nothing is signed or fetched for a recording until she
+ *   presses play (`voiceUrl`: a URL of five minutes, kept for four).
  *
  * Writes wait for a connection (the repository refuses them offline, the controls say Offline); a send does not: it waits in the
  * queue. Signing out, or another member signing in, forgets everything and closes the channel.
@@ -231,7 +241,10 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     // The line is the member's whose it was made for: a send under another session would be posted as somebody else.
     const since = epoch
     if (!me.value || me.value !== queueFor) return { ok: false, retry: true, error: 'offline' }
-    const answer = await r.post({ readId: job.conversationId, sectionId: job.threadId, clientId: job.clientId, body: job.body, replyTo: job.replyTo, spoiler: job.spoiler })
+    const voice = voiceOfJob(job)
+    const answer = voice
+      ? await r.sendVoice({ readId: job.conversationId, sectionId: job.threadId, clientId: job.clientId, media: voice, replyTo: job.replyTo, spoiler: job.spoiler })
+      : await r.post({ readId: job.conversationId, sectionId: job.threadId, clientId: job.clientId, body: job.body, replyTo: job.replyTo, spoiler: job.spoiler })
     // She was gone in the meantime: nothing of the answer is shown to the next member (the line itself is stopped).
     if (stale(since)) return { ok: false, retry: true, error: 'offline' }
     if (answer.error) {
@@ -364,8 +377,109 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     return { ok: true, clientId: job.clientId }
   }
 
+  // ---- voice
+
+  /** A recording that is not stored yet: its bytes (in memory only) and the send it will become. */
+  type VoiceUpload = { blob: Blob; mime: VoiceMimeType; job: SendJob }
+  const uploads = new Map<string, VoiceUpload>()
+  /** The device's own copy of a recording she sent, by client id (a `blob:` URL): she plays it from here, nothing is signed for it. */
+  const previews = ref<Record<string, string>>({})
+  const previewOf = (clientId: string | null): string | null => (clientId ? (previews.value[clientId] ?? null) : null)
+  /** The URL a recording was signed for, by object name: reused while it lives (`VOICE_URL_REUSE_MS`). */
+  const signed = new Map<string, { url: string; at: number }>()
+
+  function dropPreview(clientId: string) {
+    const url = previews.value[clientId]
+    if (url) URL.revokeObjectURL(url)
+    delete previews.value[clientId]
+  }
+
+  /**
+   * Sends a finished recording (the composer's `voice`): refused here when it is too short, too big or of a type the bucket does not take; otherwise a bubble
+   * at once, stored in the bucket, then posted through the line. The same Section, answer and spoiler mark as a text. The screen words the codes.
+   */
+  async function sendVoice(
+    readId: string,
+    sectionId: string | null,
+    voice: PreparedVoice,
+    { replyTo = null, spoiler = false }: { replyTo?: string | null; spoiler?: boolean } = {},
+  ): Promise<BuddySend> {
+    const member = me.value
+    if (!member) return { ok: false, error: 'not_signed_in' }
+    const prepared = prepareVoice(voice)
+    if (!prepared.ok) return { ok: false, error: prepared.reason === 'short' ? 'voice_short' : prepared.reason === 'large' ? 'voice_large' : 'voice_type' }
+    const since = epoch
+    await ensureQueue()
+    if (stale(since) || !queue) return { ok: false, error: 'not_signed_in' }
+    const clientId = newId()
+    const job = voiceJob(
+      { conversationId: readId, threadId: sectionId, clientId, replyTo, spoiler: sectionId === null ? false : spoiler, createdAt: new Date().toISOString() },
+      { mime: prepared.mime, durationMs: prepared.durationMs, peaks: prepared.peaks },
+    )
+    previews.value[clientId] = URL.createObjectURL(voice.blob)
+    uploads.set(clientId, { blob: voice.blob, mime: prepared.mime, job })
+    mergeBubble(thread(readId, sectionId).messages, pendingBubble(job, member, nameOf(readId, member)))
+    void uploadVoice(clientId)
+    return { ok: true, clientId }
+  }
+
+  /** Stores the recording; once it is there its post joins the line. A refusal (offline included) makes the bubble a failed one, for a tap to send again. */
+  async function uploadVoice(clientId: string) {
+    const entry = uploads.get(clientId)
+    const member = me.value
+    const r = repo()
+    if (!entry || !member) return
+    const { job } = entry
+    const bubble = () => thread(job.conversationId, job.threadId).messages.find((m) => m.clientId === clientId && m.state !== 'sent')
+    if (!r) {
+      const b = bubble()
+      if (b) Object.assign(b, { state: 'failed', error: 'offline' })
+      return
+    }
+    const since = epoch
+    const answer = await r.uploadVoice(job.conversationId, member, clientId, entry.blob, entry.mime)
+    if (stale(since) || uploads.get(clientId) !== entry) return
+    const b = bubble()
+    if (answer.error) {
+      if (b) Object.assign(b, { state: 'failed', error: answer.error })
+      return
+    }
+    uploads.delete(clientId)
+    await ensureQueue()
+    if (stale(since) || !queue) return
+    queue.enqueue(buddySendKey(clientId), job)
+  }
+
+  /**
+   * The short-lived URL of a recording, signed when she presses play (never when a thread loads): the one signed a moment ago again, else a new one.
+   * An error when it is not hers to hear (she left, a block, the message was deleted) or there is no connection.
+   */
+  async function voiceUrl(path: string): Promise<BuddyResult<string>> {
+    const hit = signed.get(path)
+    if (hit && Date.now() - hit.at < VOICE_URL_REUSE_MS) return { data: hit.url, error: null }
+    const r = repo()
+    if (!r) return unavailable()
+    const since = epoch
+    const answer = await r.voiceUrl(path)
+    if (stale(since)) return { data: null, error: 'not_signed_in' }
+    if (answer.error) signed.delete(path)
+    else signed.set(path, { url: answer.data, at: Date.now() })
+    return answer
+  }
+
   /** Sends a refused message again (the refusal is forgotten, the bubble is on its way). */
   async function retry(readId: string, sectionId: string | null, clientId: string) {
+    // A recording that was not stored: stored again from the copy in memory, then posted.
+    const pending = uploads.get(clientId)
+    if (pending) {
+      const bubble = messagesOf(readId, sectionId).find((m) => m.clientId === clientId && m.state === 'failed')
+      if (bubble && isRetryableBuddyError(bubble.error ?? 'unknown')) {
+        bubble.state = 'sending'
+        bubble.error = null
+        void uploadVoice(clientId)
+      }
+      return
+    }
     await ensureQueue()
     const refusal = queue?.snapshot().refusals.find((r) => r.payload.clientId === clientId)
     const bubble = messagesOf(readId, sectionId).find((m) => m.clientId === clientId)
@@ -382,6 +496,8 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
    * device, so a reload does not bring it back).
    */
   function discard(readId: string, sectionId: string | null, clientId: string) {
+    uploads.delete(clientId)
+    dropPreview(clientId)
     queue?.remove(buddySendKey(clientId))
     queue?.dismissRefusal(buddySendKey(clientId))
     const list = thread(readId, sectionId).messages
@@ -432,6 +548,11 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
       const snapshot = queue.snapshot()
       for (const waitingJob of snapshot.jobs) if (waitingJob.payload.conversationId === readId) queue.remove(waitingJob.key)
       for (const refusal of snapshot.refusals) if (refusal.payload.conversationId === readId) queue.dismissRefusal(refusal.key)
+    }
+    for (const [clientId, upload] of uploads) {
+      if (upload.job.conversationId !== readId) continue
+      uploads.delete(clientId)
+      dropPreview(clientId)
     }
     delete reads.value[readId]
     forgotten.value[readId] = true
@@ -784,6 +905,9 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     mine.value = null
     threads.value = {}
     waiting.value = 0
+    uploads.clear()
+    for (const clientId of Object.keys(previews.value)) dropPreview(clientId)
+    signed.clear()
     peekMemo = null
     for (const key of Object.keys(viewing)) delete viewing[key]
     for (const hold of holds.splice(0)) hold.released = true
@@ -834,6 +958,9 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     loadOlder,
     markThread,
     send,
+    sendVoice,
+    previewOf,
+    voiceUrl,
     retry,
     discard,
     kick,

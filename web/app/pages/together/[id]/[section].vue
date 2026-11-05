@@ -10,16 +10,33 @@
 // Section she reads ahead of her marker carries a banner that says so. A comment marked Spoiler is veiled for everybody else until
 // they tap it (`UiBubble` `veiled`); a deleted one reads "Message removed". Archived: read-only, said in the composer's place.
 //
+// **The gestures** (the base's `UiBubble`, as Trappist's chat has them): a double tap (a double click) on another member's message puts the
+// first reaction of the bar, ❤️, on it and takes it back the second time; a long press (a right click, or the bubble's own React button, which is
+// the single-tap way) opens the bar with the reactions, Reply, Report and Delete; a swipe to the right, or Reply in the bar, answers it, and the
+// quote over the answer jumps to the original on a tap. All of it works on a voice bubble too (e2e/buddy-voice.spec.ts, e2e/buddy-gestures.spec.ts).
+//
+// **Voice messages** (docs/parity.md, "Buddy read, a thread"): the composer's microphone (`voiceMaxMs`; the base's recorder: a tap starts, send or
+// ✕ ends it) hands a finished recording to the store (`sendVoice`: a bubble at once, the sound stored in the private bucket, then posted through
+// the same line as a text); a voice row is the base's `UiVoiceBubble` (play, waveform, time). **Nothing is signed or fetched when the thread
+// loads**: the play button's press is taken here first (`voicePress`, in the capture phase) and asks the store for a URL of five minutes the first
+// time she plays that message; the base's own press runs for her own recording (played from the device's copy), a failed send and the double tap
+// on the card. One voice at a time (the base's player), and leaving the thread silences it. A voice message marked Spoiler is veiled like a text
+// until she taps it: it is a veiled bubble with no play button, so nothing of it is signed.
+//
 // Accessibility: the base's thread is a labelled list with a polite status for a message that arrives (not for the first load, not for
 // her own), which stands in for `role="log"` (a log with a status says everything twice); every long press has the bubble's own React
-// button; a reaction needs a tap; 44 px targets; the page reflows at 200 % text (the base's chat screen is fixed to the viewport).
+// button and every double tap its bar, so a reaction never needs more than a tap; the recorder's buttons, the play button and the bar are
+// real buttons of 44 px with labels and announced states; Reduce Motion cuts the base's motion; the page reflows at 200 % text (the base's
+// chat screen is fixed to the viewport).
 import type { BarAction } from '#layers/ui/app/components/ui/ReactionBar.vue'
 import { threadKey } from '#layers/chat/app/utils/thread'
+import { mayLoadMedia } from '#layers/chat/app/utils/veil'
 import type { BuddyErrorCode } from '~/data/buddyReads'
+import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
 import { isReadId, isSectionSegment, roomPath, sectionOfSegment } from '~/utils/buddyRoute'
 import { buddyErrorKey } from '~/utils/buddyRead'
 import { sectionTitle } from '~/utils/buddySectionTitle'
-import { quoteOf, sameAuthorRun, threadItems, type ThreadItem } from '~/utils/buddyThread'
+import { quoteOf, sameAuthorRun, threadItems, VOICE_UNSIGNED, type ThreadItem } from '~/utils/buddyThread'
 import { useBuddyReadStore } from '~/stores/buddyRead'
 import { useSessionStore } from '~/stores/session'
 
@@ -124,6 +141,8 @@ const items = computed<ThreadItem[]>(() =>
     revealed: revealed.value,
     nameOf,
     errorWord: (code) => t(buddyErrorKey(code)),
+    previewOf: store.previewOf,
+    voiceLabel: t('uiText.chat.reply.voice'),
   }),
 )
 
@@ -152,7 +171,7 @@ async function loadOlder(): Promise<boolean> {
 }
 
 const sectionWords = { whole: () => t('together.wholeBook'), label: (n: string) => t('together.sectionLabel', { n }) }
-const quoteWords = computed(() => ({ deleted: t('uiText.chat.reply.deleted'), spoiler: t('uiText.chat.veiled.label'), someone: t('member.someone'), you: t('uiText.chat.reply.you') }))
+const quoteWords = computed(() => ({ deleted: t('uiText.chat.reply.deleted'), spoiler: t('uiText.chat.veiled.label'), someone: t('member.someone'), you: t('uiText.chat.reply.you'), voice: t('uiText.chat.reply.voice') }))
 const quoteFor = (item: ThreadItem) => quoteOf(items.value, item.replyTo, quoteWords.value)
 
 // ------------------------------------------------------------------ title and banners
@@ -201,6 +220,19 @@ async function send() {
   chat.value?.toNewest()
 }
 
+/** A finished recording from the composer: a bubble at once, stored, then posted (`store.sendVoice`). A refusal (too short, too big) is said above the thread. */
+async function sendVoice(voice: PreparedVoice) {
+  notice.value = null
+  const sent = await store.sendVoice(readId.value, sectionId.value, voice, { replyTo: replyTo.value?.id ?? null, spoiler: sectionId.value !== null && spoiler.value })
+  if (!sent.ok) {
+    notice.value = t(buddyErrorKey(sent.error))
+    return
+  }
+  replyTo.value = null
+  spoiler.value = false
+  chat.value?.toNewest()
+}
+
 async function retry(key: string) {
   const item = items.value.find((i) => i.key === key)
   // Refused for a reason a second try cannot change: the tap on the bubble leads nowhere, "Delete" is what is offered.
@@ -238,6 +270,12 @@ const deleting = ref<ThreadItem | null>(null)
 const deleteOpen = ref(false)
 const deleteBusy = ref(false)
 const deleteError = ref<BuddyErrorCode | null>(null)
+/** What the confirm says: it reads "Message removed" for everyone and, for a recording, the sound is deleted too. */
+const deleteText = computed(() => {
+  const host = !!deleting.value && !deleting.value.mine
+  if (deleting.value?.voice) return t(host ? 'together.thread.deleteTextVoiceHost' : 'together.thread.deleteTextVoice')
+  return t(host ? 'together.thread.deleteTextHost' : 'together.thread.deleteText')
+})
 const reportId = ref<string | null>(null)
 const reportOpen = ref(false)
 
@@ -267,6 +305,64 @@ async function confirmDelete() {
 function answer(key: string) {
   const item = items.value.find((i) => i.key === key)
   if (item?.id && !item.removed) replyTo.value = item
+}
+
+// ------------------------------------------------------------------ playing a voice message
+
+const voicePlayer = useVoicePlayer()
+// Leaving the thread silences the voice that is playing.
+onBeforeUnmount(() => voicePlayer.stop())
+
+/** The base's double-tap window (`UiBubble`): a second press inside it likes. */
+const DOUBLE_TAP_MS = 300
+const lastPress = new Map<string, { at: number; started: boolean }>()
+
+/**
+ * The press on the play button of a **stored voice message of somebody else's**, taken before the base's own (the capture phase of the thread's root:
+ * the base would play the placeholder it was given, `VOICE_UNSIGNED`, because nothing was signed when the thread loaded). Here the first press asks for
+ * the URL (`store.voiceUrl`, five minutes, kept for four) and plays it; a second press inside the double-tap window likes the message, as on any bubble
+ * (and stops the sound the first one started: a double tap likes, it does not play). A press with the keyboard (no `detail`) only plays or pauses: its
+ * way to react is the bubble's React button. Her own recording (played from the device's copy), a failed send and the double tap on the card itself are the
+ * base's.
+ */
+function voicePress(event: MouseEvent) {
+  const button = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-testid$=".voicePlay"]')
+  if (!button) return
+  const key = button.closest<HTMLElement>('[data-key]')?.dataset.key
+  const item = key ? items.value.find((i) => i.key === key) : undefined
+  if (!item?.voice || item.delivery !== 'sent' || !item.media?.path || store.previewOf(item.key)) return
+  event.stopPropagation()
+  event.preventDefault()
+  if (!mayLoadMedia(item, view.value?.open === true, revealed.value.has(item.key))) return
+  const now = Date.now()
+  const before = lastPress.get(item.key)
+  const canLike = !archived.value && !!item.id && event.detail > 0
+  if (canLike && before && now - before.at <= DOUBLE_TAP_MS) {
+    lastPress.delete(item.key)
+    if (before.started) voicePlayer.stop()
+    void react(item.id!, EMOJIS[0])
+    return
+  }
+  lastPress.set(item.key, { at: now, started: false })
+  void playVoice(item)
+}
+
+async function playVoice(item: ThreadItem) {
+  notice.value = null
+  const path = item.media!.path!
+  // Her press again on the one that is playing (or paused): the base's player pauses or resumes it, with no new URL.
+  if (voicePlayer.current.key === item.key && !voicePlayer.current.failed) {
+    voicePlayer.toggle(item.key, VOICE_UNSIGNED)
+    return
+  }
+  const answer = await store.voiceUrl(path)
+  if (answer.error) {
+    notice.value = answer.error === 'offline' ? t(buddyErrorKey('offline')) : t('together.thread.voice.playFailed')
+    return
+  }
+  voicePlayer.toggle(item.key, answer.data)
+  const press = lastPress.get(item.key)
+  if (press) press.started = true
 }
 
 // ------------------------------------------------------------------ the veil
@@ -333,6 +429,7 @@ function back() {
     class="together-thread"
     testid="buddyThread"
     landmark
+    @click.capture="voicePress"
   >
     <template #top>
       <UiRoundButton class="pointer-events-auto" icon="back" :label="t('together.thread.back')" data-testid="together.thread.back" @click="back" />
@@ -427,8 +524,11 @@ function back() {
         :label="t('together.thread.composerLabel')"
         :max="2000"
         :quote="replyQuote"
+        :voice-max-ms="VOICE_MAX_MS"
         testid="buddyThread"
         @send="send"
+        @voice="sendVoice"
+        @voice-error="notice = $event"
         @cancel-quote="replyTo = null"
       >
         <template v-if="sectionId !== null" #actions>
@@ -442,7 +542,7 @@ function back() {
     <UiConfirm
       v-model:open="deleteOpen"
       :title="t('together.thread.deleteTitle')"
-      :text="deleting && !deleting.mine ? t('together.thread.deleteTextHost') : t('together.thread.deleteText')"
+      :text="deleteText"
       :action="deleteBusy ? t('together.thread.deleting') : t('together.thread.delete')"
       :busy="deleteBusy"
       :error="deleteError ? t(buddyErrorKey(deleteError)) : null"

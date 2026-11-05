@@ -2169,6 +2169,9 @@
       "message_kind_invalid": "Diese Art von Nachricht kann nicht gesendet werden.",
       "message_body_invalid": "Schreib etwas mit bis zu 2.000 Zeichen.",
       "message_gif_invalid": "Dieses GIF kann nicht gesendet werden.",
+      "message_voice_invalid": "Diese Aufnahme kann nicht gesendet werden. Nimm sie bitte noch einmal auf.",
+      "message_voice_missing": "Diese Aufnahme ist nicht hochgeladen worden. Nimm sie bitte noch einmal auf.",
+      "message_voice_too_large": "Diese Aufnahme ist zu groß zum Senden. Halte sie unter zwei Minuten.",
       "message_spoiler_unavailable": "Nur Kommentare in einem Abschnitt können als Spoiler markiert werden.",
       "message_reply_unavailable": "Die Nachricht, auf die du antwortest, ist nicht mehr da.",
       "message_emoji_invalid": "Diese Reaktion ist nicht verfügbar.",
@@ -2177,6 +2180,9 @@
       "report_self": "Du kannst deine eigene Nachricht nicht melden.",
       "offline": "Du bist offline.",
       "busy": "Gerade viel zu tun. Versuch es gleich nochmal.",
+      "voice_short": "Diese Aufnahme war zu kurz. Halte sie etwas länger.",
+      "voice_large": "Diese Aufnahme ist zu groß zum Senden. Halte sie unter zwei Minuten.",
+      "voice_type": "Dieser Browser nimmt in einem Format auf, das wir nicht senden können.",
       "unknown": "Das hat nicht geklappt. Versuch es nochmal."
     }
   },
@@ -2283,6 +2289,8 @@
       "deleteTitle": "Diese Nachricht löschen?",
       "deleteText": "Für alle steht dort dann „Nachricht entfernt“. Das lässt sich nicht rückgängig machen.",
       "deleteTextHost": "Du bist der Host und kannst sie für alle entfernen. Dort steht dann „Nachricht entfernt“. Das lässt sich nicht rückgängig machen.",
+      "deleteTextVoice": "Es steht dann für alle „Nachricht entfernt“, und die Aufnahme wird gelöscht. Das lässt sich nicht rückgängig machen.",
+      "deleteTextVoiceHost": "Du bist der Host und kannst sie für alle entfernen. Dort steht dann „Nachricht entfernt“, und die Aufnahme wird gelöscht. Das lässt sich nicht rückgängig machen.",
       "ahead": "Du liest voraus: Das liegt hinter deinem aktuellen Stand.",
       "empty": "Noch hat niemand etwas zu diesem Abschnitt geschrieben. Machst du den Anfang?",
       "emptyRoom": "Sag kurz Hallo, bevor ihr loslegt.",
@@ -2296,7 +2304,10 @@
       "paused": "Live-Updates pausiert. Wir suchen weiter nach neuen Nachrichten.",
       "notSentFinal": "Kann nicht gesendet werden.",
       "discard": "Löschen",
-      "discardLabel": "Nicht gesendete Nachricht löschen"
+      "discardLabel": "Nicht gesendete Nachricht löschen",
+      "voice": {
+        "playFailed": "Diese Sprachnachricht konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut."
+      }
     },
     "hint": "Alle lesen im eigenen Tempo. Kommentare gehören zu Abschnitten, und ein Abschnitt bleibt verborgen, bis du ihn gelesen hast. Die anderen sehen, in welchem Abschnitt du bist, nie deine Seite.",
     "count": {

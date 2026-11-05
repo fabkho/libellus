@@ -35,6 +35,10 @@ const server = {
   gate: null as null | Promise<void>,
   /** While set, a read of a read, of the list or of a thread waits for it. */
   readGate: null as null | Promise<void>,
+  /** The recordings stored (voice), the URLs asked for, and what Storage says to the next upload: null = stored, else its refusal. */
+  uploads: [] as { bucket: string; path: string; type: string | undefined }[],
+  signs: [] as { path: string; seconds: number }[],
+  uploadRefusal: null as null | { message: string; statusCode: string },
 }
 
 const at = (n: number) => new Date(Date.UTC(2026, 10, 13, 10, 0, 0, n)).toISOString().replace('Z', '000+00:00')
@@ -73,6 +77,17 @@ const backend = {
         if (!same) server.messages.push(made)
         return { data: made, error: null, status: 200 }
       }
+      case 'send_buddy_voice': {
+        if (server.refuse) return fail(server.refuse)
+        await server.gate
+        const same = server.messages.find((m) => m.client_id === args.p_client_id)
+        const made = same ?? row({
+          section_id: args.p_section, author: { id: ME, name: 'ADA' }, client_id: args.p_client_id, kind: 'voice', body: '', spoiler: args.p_spoiler, reply_to: args.p_reply_to,
+          voice: { path: `${READ}/${ME}/${args.p_client_id}.m4a`, mime: args.p_mime, duration_ms: args.p_duration_ms, peaks: args.p_peaks },
+        })
+        if (!same) server.messages.push(made)
+        return { data: made, error: null, status: 200 }
+      }
       case 'buddy_read_messages': {
         await server.readGate
         const rows = server.messages
@@ -101,6 +116,20 @@ const backend = {
     }
   },
   auth: { getSession: async () => ({ data: { session: { access_token: 'token' } } }) },
+  storage: {
+    from: (bucket: string) => ({
+      upload: async (path: string, _blob: Blob, options?: { contentType?: string }) => {
+        if (server.mode === 'silent') return { data: null, error: { name: 'StorageUnknownError', message: 'Failed to fetch' } }
+        if (server.uploadRefusal) return { data: null, error: server.uploadRefusal }
+        server.uploads.push({ bucket, path, type: options?.contentType })
+        return { data: { path }, error: null }
+      },
+      createSignedUrl: async (path: string, seconds: number) => {
+        server.signs.push({ path, seconds })
+        return { data: { signedUrl: `https://storage.test/sign/${path}?token=t${server.signs.length}` }, error: null }
+      },
+    }),
+  },
 }
 
 // The live module, stood in for: it records how it was made and lets a test play the server's events.
@@ -182,6 +211,9 @@ beforeEach(() => {
   server.during = null
   server.gate = null
   server.readGate = null
+  server.uploads = []
+  server.signs = []
+  server.uploadRefusal = null
   online.value = true
   session.member = { id: ME }
   live.made = 0
@@ -886,5 +918,180 @@ describe('the peeks and the counts', () => {
     await settle()
     expect(buddy.countsOf(READ, S1)).toMatchObject({ count: 3 })
     expect(server.calls.filter((c) => c.fn === 'buddy_read')).toHaveLength(1)
+  })
+})
+
+// ------------------------------------------------------------------ voice
+
+const recording = (over: { ms?: number; bytes?: number; type?: string } = {}) => ({
+  blob: new Blob([new Uint8Array(over.bytes ?? 4_000)], { type: over.type ?? 'audio/mp4' }),
+  mime: (over.type ?? 'audio/mp4') as 'audio/mp4',
+  durationMs: over.ms ?? 3_200,
+  peaks: [10, 80, 100, 30],
+})
+const voicePosts = () => server.calls.filter((c) => c.fn === 'send_buddy_voice')
+
+describe('a voice message', () => {
+  it('shows a bubble at once from the device\'s own copy, stores the sound before it posts, and the stored row replaces the bubble', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    await buddy.openThread(READ, S1)
+    const sent = await buddy.sendVoice(READ, S1, recording(), { spoiler: true })
+    expect(sent.ok).toBe(true)
+    const clientId = (sent as { clientId: string }).clientId
+    // At once: her bubble, sending, a voice with the name its object will have, and a copy of it on the device.
+    const [bubble] = buddy.messagesOf(READ, S1)
+    expect(bubble).toMatchObject({ kind: 'voice', body: '', state: 'sending', senderId: ME, spoiler: true, voice: { path: `${READ}/${ME}/${clientId}.m4a`, mime: 'audio/mp4', durationMs: 3_200, peaks: [10, 80, 100, 30] } })
+    expect(buddy.previewOf(clientId)).toMatch(/^blob:/)
+    await settle()
+    // The sound went to the private bucket under that name, with its type, before anything was posted.
+    expect(server.uploads).toEqual([{ bucket: 'buddy-voice', path: `${READ}/${ME}/${clientId}.m4a`, type: 'audio/mp4' }])
+    expect(voicePosts()).toHaveLength(1)
+    expect(voicePosts()[0]!.args).toMatchObject({ p_read: READ, p_section: S1, p_client_id: clientId, p_mime: 'audio/mp4', p_duration_ms: 3_200, p_peaks: [10, 80, 100, 30], p_spoiler: true })
+    expect(posts()).toHaveLength(0)
+    const list = buddy.messagesOf(READ, S1)
+    expect(list).toHaveLength(1)
+    expect(list[0]).toMatchObject({ state: 'sent', kind: 'voice', clientId, id: 'm1' })
+    // Nothing was signed: she plays her own from the device.
+    expect(server.signs).toEqual([])
+    expect(buddy.waiting).toBe(0)
+  })
+
+  it('answers a message, in the room, with no spoiler outside a Section', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    await buddy.openThread(READ, null)
+    await buddy.sendVoice(READ, null, recording(), { replyTo: 'm9', spoiler: true })
+    await settle()
+    expect(voicePosts()[0]!.args).toMatchObject({ p_section: null, p_reply_to: 'm9', p_spoiler: false })
+  })
+
+  it('refuses a slip of the finger, a file that is too big and a type the bucket does not take before anything is stored', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    await buddy.openThread(READ, S1)
+    expect(await buddy.sendVoice(READ, S1, recording({ ms: 400 }))).toEqual({ ok: false, error: 'voice_short' })
+    expect(await buddy.sendVoice(READ, S1, recording({ bytes: 3 * 1024 * 1024 + 1 }))).toEqual({ ok: false, error: 'voice_large' })
+    expect(await buddy.sendVoice(READ, S1, recording({ type: 'audio/mpeg' }))).toEqual({ ok: false, error: 'voice_type' })
+    await settle()
+    expect(buddy.messagesOf(READ, S1)).toHaveLength(0)
+    expect(server.uploads).toHaveLength(0)
+  })
+
+  it('without a connection the bubble is a failed one, nothing is posted, and Try again stores it and posts it', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    await buddy.openThread(READ, S1)
+    server.mode = 'silent'
+    const sent = (await buddy.sendVoice(READ, S1, recording())) as { clientId: string }
+    await settle()
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ kind: 'voice', state: 'failed', error: 'offline' })
+    expect(voicePosts()).toHaveLength(0)
+    // Back: the same bubble, sending, stored and posted once.
+    server.mode = 'answer'
+    await buddy.retry(READ, S1, sent.clientId)
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ state: 'sending', error: null })
+    await settle()
+    expect(server.uploads).toHaveLength(1)
+    expect(voicePosts()).toHaveLength(1)
+    expect(buddy.messagesOf(READ, S1)).toHaveLength(1)
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ state: 'sent', kind: 'voice' })
+  })
+
+  it('a refusal of the bucket is a failed bubble nothing can change (only Delete), and Delete forgets it and its copy', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    await buddy.openThread(READ, S1)
+    server.uploadRefusal = { message: 'new row violates row-level security policy', statusCode: '403' }
+    const sent = (await buddy.sendVoice(READ, S1, recording())) as { clientId: string }
+    await settle()
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ state: 'failed', error: 'not_found' })
+    await buddy.retry(READ, S1, sent.clientId)
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ state: 'failed', error: 'not_found' })
+    buddy.discard(READ, S1, sent.clientId)
+    expect(buddy.messagesOf(READ, S1)).toHaveLength(0)
+    expect(buddy.previewOf(sent.clientId)).toBeNull()
+    expect(voicePosts()).toHaveLength(0)
+  })
+
+  it('a refusal of the post is handed back on the bubble: for good (a sound that is not there) only Delete, a failure nobody explained a retry that posts the stored sound again', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    await buddy.openThread(READ, S1)
+    server.refuse = 'message_voice_missing'
+    const gone = (await buddy.sendVoice(READ, S1, recording())) as { clientId: string }
+    await settle()
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ kind: 'voice', state: 'failed', error: 'message_voice_missing' })
+    server.refuse = null
+    await buddy.retry(READ, S1, gone.clientId)
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ state: 'failed', error: 'message_voice_missing' })
+    buddy.discard(READ, S1, gone.clientId)
+    expect(buddy.messagesOf(READ, S1)).toEqual([])
+    expect(buddy.previewOf(gone.clientId)).toBeNull()
+
+    server.refuse = 'something nobody explained'
+    const sent = (await buddy.sendVoice(READ, S1, recording())) as { clientId: string }
+    for (let i = 0; i < 8; i++) {
+      await settle()
+      buddy.kick()
+    }
+    await settle()
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ kind: 'voice', state: 'failed', error: 'unknown' })
+    server.refuse = null
+    await buddy.retry(READ, S1, sent.clientId)
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ state: 'sending', error: null })
+    await settle()
+    // The sound was stored once, before the first post: the retry only posts.
+    expect(server.uploads.filter((u) => u.path.endsWith(`${sent.clientId}.m4a`))).toHaveLength(1)
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ state: 'sent', kind: 'voice' })
+  })
+
+  it('signs the URL of a recording only when it is asked for, keeps it four minutes of its five, and asks again after', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    server.messages.push(row({ id: 'v1', section_id: S1, kind: 'voice', body: '', voice: { path: `${READ}/${BEN}/c1.m4a`, mime: 'audio/mp4', duration_ms: 2_000, peaks: [1] } }))
+    await buddy.openThread(READ, S1)
+    // Loading the thread, reading its row, drawing it: nothing is signed.
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ kind: 'voice', voice: { path: `${READ}/${BEN}/c1.m4a` } })
+    expect(server.signs).toEqual([])
+    const first = await buddy.voiceUrl(`${READ}/${BEN}/c1.m4a`)
+    expect(first).toEqual({ data: `https://storage.test/sign/${READ}/${BEN}/c1.m4a?token=t1`, error: null })
+    expect(server.signs).toEqual([{ path: `${READ}/${BEN}/c1.m4a`, seconds: 300 }])
+    // The same URL while it lives; a new one after four minutes.
+    expect((await buddy.voiceUrl(`${READ}/${BEN}/c1.m4a`)).data).toContain('token=t1')
+    expect(server.signs).toHaveLength(1)
+    const now = Date.now()
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now + 241_000)
+    expect((await buddy.voiceUrl(`${READ}/${BEN}/c1.m4a`)).data).toContain('token=t2')
+    expect(server.signs).toHaveLength(2)
+    clock.mockRestore()
+  })
+
+  it('takes a voice message that arrives live: the name worked out from the ids, no URL', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    await buddy.openThread(READ, S1)
+    await buddy.retain(READ)
+    await settle()
+    const message = liveMessage({ section_id: S1 })
+    const event = message as Extract<BuddyLiveEvent, { type: 'message' }>
+    emit({ ...event, message: { ...event.message, kind: 'voice', body: '', voice: { path: `${READ}/${BEN}/${event.message.clientId}.webm`, mime: 'audio/webm', durationMs: 2_000, peaks: [3] } } })
+    expect(buddy.messagesOf(READ, S1)[0]).toMatchObject({ kind: 'voice', state: 'sent', voice: { mime: 'audio/webm' } })
+    expect(server.signs).toEqual([])
+  })
+
+  it('forgets the recordings it held and their copies when she signs out', async () => {
+    const buddy = await store()
+    await buddy.load(READ)
+    await buddy.openThread(READ, S1)
+    const revoke = vi.spyOn(URL, 'revokeObjectURL')
+    server.mode = 'silent'
+    const sent = (await buddy.sendVoice(READ, S1, recording())) as { clientId: string }
+    await settle()
+    expect(buddy.previewOf(sent.clientId)).not.toBeNull()
+    await buddy.reset()
+    expect(buddy.previewOf(sent.clientId)).toBeNull()
+    expect(revoke).toHaveBeenCalled()
+    revoke.mockRestore()
   })
 })

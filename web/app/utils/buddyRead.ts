@@ -1,6 +1,7 @@
 import type { SendJob } from '#layers/chat/app/types/adapter'
 import { byCreated, insertMessage, sameMessage } from '#layers/chat/app/utils/thread'
 import type { BuddyErrorCode, BuddyMessage, BuddyRead, BuddyReaction } from '~/data/buddyReads'
+import { voicePath, type VoiceJobMedia, type VoiceMime } from '~/data/buddyVoice'
 
 /**
  * Buddy reads, the glue between the repository (data/buddyReads.ts), the chat layer (`@fabkho/chat`) and the store (stores/buddyRead.ts):
@@ -19,20 +20,38 @@ export type BuddyBubble = BuddyMessage & { state: 'sent' | 'sending' | 'failed';
 
 export const sentBubble = (message: BuddyMessage): BuddyBubble => ({ ...message, state: 'sent', error: null })
 
+/** The send of a recording: a queue job of kind `voice` whose `media` is the recording's type, length and waveform (the sound is stored before the job is made). */
+export function voiceJob(
+  base: { conversationId: string; threadId: string | null; clientId: string; replyTo: string | null; spoiler: boolean; createdAt: string },
+  media: VoiceJobMedia,
+): SendJob {
+  return { ...base, kind: 'voice', body: '', media }
+}
+
+/** What a queue job carries of a recording, or null for a text (and for a stored job that is not shaped like one: it is sent as nothing). */
+export function voiceOfJob(job: SendJob): VoiceJobMedia | null {
+  const media = job.kind === 'voice' ? (job.media as Partial<VoiceJobMedia> | null | undefined) : null
+  const mime = media?.mime
+  if (!media || (mime !== 'audio/mp4' && mime !== 'audio/webm' && mime !== 'audio/ogg') || typeof media.durationMs !== 'number' || !Array.isArray(media.peaks)) return null
+  return { mime: mime as VoiceMime, durationMs: media.durationMs, peaks: media.peaks }
+}
+
 /** What she wrote, shown at once while the queue sends it: the id is the client id's, the time her device's, until the stored row replaces it. */
 export function pendingBubble(job: SendJob, me: string, name: string | null): BuddyBubble {
+  const voice = voiceOfJob(job)
   return {
     id: `local:${job.clientId}`,
     conversationId: job.conversationId,
     threadId: job.threadId,
     senderId: me,
     clientId: job.clientId,
-    kind: 'text',
-    body: job.body,
+    kind: voice ? 'voice' : 'text',
+    body: voice ? '' : job.body,
     createdAt: job.createdAt,
     replyTo: job.replyTo,
     spoiler: job.spoiler,
-    media: null,
+    media: voice ? { kind: 'voice', path: voicePath(job.conversationId, me, job.clientId, voice.mime), url: null, width: 1, height: 1 } : null,
+    voice: voice ? { path: voicePath(job.conversationId, me, job.clientId, voice.mime), mime: voice.mime, durationMs: voice.durationMs, peaks: voice.peaks } : null,
     authorName: name,
     deletedAt: null,
     reactions: [],
@@ -64,8 +83,8 @@ export function mergeBubble(list: BuddyBubble[], incoming: BuddyBubble, { live =
   return !seen
 }
 
-/** A message that became a tombstone: no body, no picture, no reactions; it reads as text, as the database says. */
-export const tombstoneOf = (bubble: BuddyBubble, at: string): BuddyBubble => ({ ...bubble, kind: 'text', body: '', media: null, reactions: [], deletedAt: bubble.deletedAt ?? at })
+/** A message that became a tombstone: no body, no picture, no sound, no reactions; it reads as text, as the database says. */
+export const tombstoneOf = (bubble: BuddyBubble, at: string): BuddyBubble => ({ ...bubble, kind: 'text', body: '', media: null, voice: null, reactions: [], deletedAt: bubble.deletedAt ?? at })
 
 /** Her reaction at once, before the database says: `emoji` replaces the one she had (null takes it back; the same one again takes it back too, as the database does). */
 export function reactedBy(reactions: readonly BuddyReaction[], emoji: string | null): BuddyReaction[] {
