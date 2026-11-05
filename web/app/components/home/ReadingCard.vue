@@ -1,9 +1,8 @@
 <script setup lang="ts">
 // A Book being read, on Home (D's home card): large, lit by its cover's light.
-// Cover with its glow, serif title, author; the pace as a quiet line ("18 a day
-// · 22 days", issue #68), or, until the read has a day of progress, since when
-// and which day of the read it is (the two-week chart lives on the book page
-// only); a thin progress bar with how far, and a quiet Update that opens the
+// Cover with its glow, serif title, author; how far as a percent ("42 %", left out for a
+// page without a page count: never a page shown as a percent), the pace as a quiet line
+// ("18 a day · 22 days", issue #68; the two-week chart lives on the book page only); a thin progress bar with how far, and a quiet Update that opens the
 // Update progress sheet (issue #68, design round #65 direction D): nothing on
 // the card edits by itself. Right after a save the line says what changed
 // ("+24") and Update gives way to Undo for 5 s. At the last page the line reads
@@ -28,7 +27,6 @@ const emit = defineEmits<{ together: [entry: LibraryEntry] }>()
 const { t, n } = useI18n()
 // Buddy reads: the "..." (Read together) is on a card of a Catalogue Book; a Manual book cannot be read together.
 const together = computed(() => canReadTogether(props.entry.book))
-const { formatDay, dayOfRead } = useDays()
 const books = useBookStore()
 const reading = useReadingStore()
 // Updating and finishing work offline too: they wait to sync (#93).
@@ -40,10 +38,10 @@ const words = computed(() => text(progress.value, pageCount.value))
 const atEnd = computed(() => progressReachedEnd(progress.value, pageCount.value))
 const authorLine = computed(() => formatAuthors(props.entry.book.authors, t('common.etAl')))
 const readingDays = useReadingDays(() => props.entry)
-const since = computed(() => {
-  const startedOn = props.entry.latestSession?.startedOn
-  return startedOn ? t('book.since', { date: formatDay(startedOn), day: dayOfRead(startedOn) }) : ''
-})
+// A whole percent, from the same progress the card has; null when it cannot be known (a page without a page count).
+const percentText = computed(() => (words.value.percent === null ? null : t('book.progress.percent', { percent: words.value.percent })))
+// What the bar says to a screen reader: the percent first, then the place when it is a page.
+const barValue = computed(() => (percentText.value && !('percent' in (progress.value ?? {})) ? `${percentText.value} · ${words.value.value}` : words.value.value))
 
 // This card's last save, while Undo is on offer.
 const undo = computed(() => (reading.progressUndo?.entryId === props.entry.id ? reading.progressUndo : null))
@@ -111,16 +109,16 @@ function act() {
           <span class="truncate text-body text-ink-muted">{{ authorLine }}</span>
           <EbooksMark :entry="entry" testid="home.ebookMark" />
         </span>
-        <span v-if="!readingDays.hasHistory.value" class="figures mt-xs text-meta text-ink-faint" data-testid="home.entrySince">{{ since }}</span>
+        <span v-if="percentText" class="figures mt-xs text-meta text-ink-muted" data-testid="home.entryPercent">{{ percentText }}</span>
       </UiPressLink>
-      <div v-if="readingDays.hasHistory.value" class="mt-sm flex items-end gap-sm" data-testid="home.days">
-        <span class="figures text-meta text-ink-faint wrap-anywhere" data-testid="home.pace">{{ readingDays.paceLine.value ?? since }}</span>
+      <div v-if="readingDays.hasHistory.value && readingDays.paceLine.value" class="mt-sm flex items-end gap-sm" data-testid="home.days">
+        <span class="figures text-meta text-ink-faint wrap-anywhere" data-testid="home.pace">{{ readingDays.paceLine.value }}</span>
       </div>
       <div class="mt-auto pt-md">
         <UiProgress
           :fraction="progressFraction(progress, pageCount)"
           :label="t('book.progress.label')"
-          :value-text="words.value"
+          :value-text="barValue"
           data-testid="home.progressBar"
         />
       </div>

@@ -233,3 +233,27 @@ export function readFeed(storage: DeviceStorage, memberId: string, now: Date): F
   }
   return null
 }
+
+/** Where the last answer to "how many people does she follow" is kept, for the first frame of an empty feed. */
+export const DEVICE_FEED_FOLLOWING_KEY = `${LOCAL_DATA_PREFIX}feedFollowing`
+
+/** Keeps how many people this member follows (asked after an empty feed), or forgets it (`null`: the feed has entries). */
+export function saveFollowing(storage: DeviceStorage, memberId: string, following: number | null): void {
+  try {
+    if (following === null) storage.removeItem(DEVICE_FEED_FOLLOWING_KEY)
+    else storage.setItem(DEVICE_FEED_FOLLOWING_KEY, JSON.stringify({ memberId, following }))
+  } catch {
+    // Full or switched off: the page then waits for the answer, as it did.
+  }
+}
+
+/** The kept count, when it is this member's; else null. */
+export function readFollowing(storage: DeviceStorage, memberId: string): number | null {
+  try {
+    const raw = storage.getItem(DEVICE_FEED_FOLLOWING_KEY)
+    const saved = raw ? (JSON.parse(raw) as { memberId?: unknown; following?: unknown }) : null
+    return saved?.memberId === memberId && typeof saved.following === 'number' && saved.following >= 0 ? saved.following : null
+  } catch {
+    return null
+  }
+}

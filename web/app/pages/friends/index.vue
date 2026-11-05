@@ -113,7 +113,7 @@ watch(
 </script>
 
 <template>
-  <div class="relative min-h-dvh" :class="!pushed && '-mx-screen'" data-testid="friends">
+  <div class="relative" :class="!pushed && '-mx-screen'" data-testid="friends">
     <!-- As a tab the layout's main has the side margins already: the page keeps its own (as pushed) and steps out of them. -->
     <template v-if="pushed">
       <UiTopBar :back-label="t('member.back')" back-testid="friends.back" @back="back">
@@ -155,20 +155,21 @@ watch(
     </div>
 
     <!-- The first answer on its way: rows of a feed entry's height under a day's eyebrow, so nothing moves when it comes. -->
-    <div v-else-if="!feed.loaded && feed.loading" class="px-screen pt-sm" aria-busy="true" data-testid="friends.loading">
+    <div v-else-if="(!feed.loaded && !feed.loadError) || feed.emptyUnknown" class="px-screen pt-sm" aria-busy="true" data-testid="friends.loading">
       <section class="pt-md" aria-hidden="true">
         <FriendsRowPlaceholder kind="day" />
         <FriendsRowPlaceholder v-for="i in 4" :key="i" kind="feed" :wave="i * 0.08" />
       </section>
     </div>
 
-    <div v-else-if="feed.emptyState === 'nobody'" class="px-screen pt-lg" data-testid="friends.empty">
+    <div v-else-if="feed.emptyState === 'nobody'" class="empty-in px-screen pt-lg" data-testid="friends.empty">
       <UiEmptyState screen="friendsEmpty" :title="t('feed.emptyTitle')" :text="t('feed.empty')">
+        <template #art><FriendsLampArt /></template>
         <UiButton class="self-center" data-testid="friends.emptyShare" @click="linkOpen = true">{{ t('feed.emptyShare') }}</UiButton>
       </UiEmptyState>
     </div>
 
-    <div v-else-if="feed.emptyState === 'quiet'" class="px-screen pt-lg" data-testid="friends.quiet">
+    <div v-else-if="feed.emptyState === 'quiet'" class="empty-in px-screen pt-lg" data-testid="friends.quiet">
       <UiEmptyState screen="friendsQuiet" :title="t('feed.quietTitle')" :text="t('feed.quiet')" />
     </div>
 
@@ -184,3 +185,18 @@ watch(
     <FriendsLinkSheet v-model:open="linkOpen" />
   </div>
 </template>
+
+<style scoped>
+/* Decided before the first frame, shown with a fade (no move, so nothing jumps): Reduce Motion cuts it. */
+.empty-in {
+  animation: empty-in 0.4s ease-out both;
+}
+@keyframes empty-in {
+  from { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .empty-in {
+    animation: none;
+  }
+}
+</style>
