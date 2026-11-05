@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.38.0](https://github.com/fabkho/libellus/compare/v1.37.0...v1.38.0) (2026-11-05)
+
+
+### Features
+
+* **web:** firmer haptics when recording a voice message ([#506](https://github.com/fabkho/libellus/issues/506)) ([70eef0f](https://github.com/fabkho/libellus/commit/70eef0f572a5bc29b7e3e8bff74f611d50b9323d))
+
 ## [1.37.0](https://github.com/fabkho/libellus/compare/v1.36.0...v1.37.0) (2026-11-05)
 
 
