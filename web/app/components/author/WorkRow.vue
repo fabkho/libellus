@@ -12,6 +12,7 @@
 // knows of her Library, so a Start or an add elsewhere shows here at once.
 import { isNotFinished } from '~/data/library'
 import type { WorkCard } from '~/data/enrich'
+import type { SeriesLine } from '~/utils/enrich'
 import { useBookStore } from '~/stores/book'
 import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
@@ -31,7 +32,9 @@ const props = withDefaults(defineProps<{
   year?: boolean
   /** The author's name, for the search "Find" opens. */
   author?: string | null
-}>(), { place: null, year: true, author: null })
+  /** Where it stands in its series, structured (Home's "Next in your series"): what the Book's page shows of it before it has read the Book. */
+  series?: SeriesLine | null
+}>(), { place: null, year: true, author: null, series: null })
 
 const { t } = useI18n()
 const books = useBookStore()
@@ -71,6 +74,8 @@ function press() {
   const k = key.value
   if (!k) return
   books.seedCover(k, workCover(props.work))
+  // What this row knows of the Book is the page's first frame (utils/bookPreview.ts): its title and cover at once, the rest behind skeletons.
+  rememberPreview(k, previewFromWork(props.work, props.series))
   books.prefetch(k)
 }
 
@@ -82,6 +87,7 @@ async function want() {
   opening.value = true
   try {
     books.seedCover(k, workCover(props.work))
+    rememberPreview(k, previewFromWork(props.work, props.series))
     await books.load(k)
     const found = books.page(k)
     if (found?.book && !found.entry) library.openAdd(found.book)

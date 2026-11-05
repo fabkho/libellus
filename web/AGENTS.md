@@ -43,6 +43,10 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
     (`stranded-viewport`, `tests/viewport-pan.test.ts`); use `float-bottom` or `screen-bottom` for a new one.
   - A link that flies a cover (`UiPressLink` to a book page) gets the flight from the app: `v-on="flightOf(path)"`
     (`composables/useBookFlight.ts`).
+  - A link to a Book page that may open a Book the device has not read yet (a friend's tile, a work of a series) hands the
+    page what the card shows on the touch-down: `@press="books.prefetch(book.id, book)"`, or `rememberPreview(key, ...)`
+    (`utils/bookPreview.ts`), so the page's hero is drawn in the first frame and the rest waits in placeholders of its size
+    (docs/MOTION.md, "A book opens at once"). A Book in her Library needs none.
 - **The shared chat package** (fabkho/chat, a Nuxt layer of chat logic; `@fabkho/chat` pinned to a tag in `package.json`,
   never a branch; its README: `node_modules/@fabkho/chat/README.md`) is the send queue, threads and chapters, the spoiler
   veil, photo and GIF helpers and a Realtime core, framework-free behind an adapter. Taken in `chat.config.ts`

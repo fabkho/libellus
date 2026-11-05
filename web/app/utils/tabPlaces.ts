@@ -103,3 +103,48 @@ export function untilReachable(place: ScrollPlace, page: PageWatch, patience = P
   })
   return { reached, cancel: () => end('cancelled') }
 }
+
+// ---------------------------------------------------------- keeping it there
+
+/** How long a page that has landed on its place holds it against content that comes in after (ms). */
+export const KEEP_PATIENCE = 1500
+
+/** How far a page may stand from its place before `keepPlace` puts it back (px): a sub-pixel scroll is not a loss. */
+export const KEEP_TOLERANCE = 2
+
+/** What `keepPlace` needs of the page: `untilReachable`'s, and where the page is now and a way to put it back. */
+export interface HeldPage extends PageWatch {
+  /** How far down the page is scrolled now. */
+  top(): number
+  /** Scrolls the page to `top` at once. */
+  scrollTo(top: number): void
+}
+
+/**
+ * A page that has landed on its place keeps it for a moment. Rows that come in after it landed (Home's
+ * sections arrive once their data does) can make the document shorter for a frame before it is taller again,
+ * and a document that is shorter than the place clamps the scroll to its end: the member, coming back
+ * from a Book, then finds the page at the top, or well above where she left it, with the rows in place
+ * again. Whenever the page's size changes and it stands above its place (more than `KEEP_TOLERANCE`) while the
+ * place is within reach again, the page is put back. Only upwards, for the clamp: a page pushed down by
+ * rows that came in above it (the browser's own scroll anchoring) is not pulled back. Ends when the member
+ * scrolls, taps or types herself, after `patience`, or at `cancel` (a newer navigation took over).
+ */
+export function keepPlace(place: ScrollPlace, page: HeldPage, patience = KEEP_PATIENCE) {
+  const stops: (() => void)[] = []
+  let done = false
+  const end = () => {
+    if (done) return
+    done = true
+    for (const stop of stops) stop()
+  }
+  const check = () => {
+    if (done) return
+    if (place.top <= page.maxTop() && page.top() < place.top - KEEP_TOLERANCE) page.scrollTo(place.top)
+  }
+  const timer = setTimeout(end, patience)
+  stops.push(() => clearTimeout(timer))
+  stops.push(page.onMember(end))
+  stops.push(page.onResize(check))
+  return end
+}

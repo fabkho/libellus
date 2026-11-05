@@ -77,7 +77,7 @@ async function unfold() {
       tabindex="-1"
       aria-hidden="true"
       data-testid="home.friendsFeature.cover"
-      @press="books.prefetch(book.id)"
+      @press="books.prefetch(book.id, book)"
     >
       <UiCover decorative :title="book.title" :authors="book.authors" v-bind="coverImage(book, 'lg', coverHosts)" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="onFallback" />
     </UiPressLink>
@@ -100,7 +100,7 @@ async function unfold() {
         v-on="flightOf(bookPath)"
         class="reach book-title text-callout"
         data-testid="home.friendsFeature.title"
-        @press="books.prefetch(book.id)"
+        @press="books.prefetch(book.id, book)"
       >{{ book.title }}</UiPressLink>
       <span v-else class="book-title text-callout" data-testid="home.friendsFeature.title">{{ book.title }}</span>
 

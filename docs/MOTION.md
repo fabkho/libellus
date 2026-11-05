@@ -333,6 +333,33 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   still loading) is waited for a frame or so, at most `standard`, and the cover then fades where
   it is. What goes wrong, and what the flight does instead, is listed under *How the push to a
   book is built*.
+- **A book opens at once** (a Book this device has not read yet: a work of a series, an author's page, a
+  friend's shelf). The page used to show only the flying cover (landed on a stand-in) until the Book's own read
+  came back, a second or two on a slow line. Now the link that opens it hands the page what it knows, on the
+  touch-down (`rememberPreview`, `utils/bookPreview.ts`: its title, its cover as the row shows it, the authors and
+  the page count where the card has them, and where it stands in its series: Home's "Book 2 of 9 · The Expanse"),
+  and the page reads it once in its setup, so the first frame has the hero: the cover, the title, the series line.
+  A card that carries the Book whole (a Library row, the Currently reading card) needs no preview: the page is
+  hers from the first frame (`stores/book.ts`, `page`). What the page cannot know waits in placeholders of the
+  size of what comes (the Profile's `skeleton wave`, still under Reduce Motion): the author's line, the facts, her
+  state and its one action (a line and a full-width button, the commonest, a Book not in her Library), the
+  description (four lines). The Book's own answer replaces the preview in place: the same title and cover (a
+  Placeholder cover keeps its identity through the swap, so it is not started afresh), the authors and the rest
+  arrive where their placeholders were (`arrive`), and nothing above the fold moves (`e2e/book-open*.spec.ts` measures
+  the title, the series line, the facts and the action before and after). Nothing in a preview is given as the
+  Book's data: no action works on it (no Add, no options) until the Book is there, and a year the card has is the
+  *work's* first year, so it is left out. A Book that turns out missing drops the hero and says so; one that fails
+  to load keeps it with Retry. Opened cold (an address, a reload) nothing is known: the page's shape in
+  placeholders, with the stand-in at the cover's place for a cover that flies in. With the hero there from the
+  first frame, Back during the load flies the cover home like any other (the hero is the cover it flies from).
+- **Home keeps its place** on the way back. The tab pages are kept alive (their DOM stays) and the router restores
+  the place the browser saved for the entry (`router.options.ts`), once the page is tall enough for it
+  (`untilReachable`). A page that has landed then holds it for `KEEP_PATIENCE` (1.5 s): rows that come in after the
+  landing can make the document shorter for a frame before it is taller again, which clamps the scroll to the
+  document's end, and the member found Home at the top (`keepPlace`, `utils/tabPlaces.ts`: put back only upwards, only
+  when the place is within reach again, never against a member who scrolls or taps, never against the browser's own
+  scroll anchoring pushing the page down). `e2e/book-open*.spec.ts` shrinks Home right after it landed and checks it is
+  back at its place (WebKit and Chromium), `tests/tab-places.test.ts` holds the rule.
 - **Tab bar away.** On every page (Home, Library, Friends, the Profile, a book, Collections, a Collection, Import) the tab bar
   slides down past the screen edge and fade out while the member scrolls down, and
   come back on a short scroll up — away over `exit` with the `exit` curve, back over `standard` —
@@ -643,7 +670,8 @@ flows"); the flight's geometry is `tests/flight.test.ts`.
 
 | What happens | Without care | What the flight does |
 |---|---|---|
-| The Book's page is still loading (a Book this device has not seen: an author's work, the next of a series) | No hero to aim at: the cover waited `standard`, then faded where it was. The second time (the page cached) it flew, so it looked as if it worked only sometimes | The page's loading box is a stand-in at the hero cover's place (`data-flight-stand-in`): the cover flies there and lands, waits on it (the hero's image if it came, else the thumbhash), and moves into the hero once that is drawn, staying until the hero's image is in (`wait`, `keep`) |
+| The Book's page is still loading (a Book this device has not seen: an author's work, the next of a series) | No hero to aim at: the cover waited `standard`, then faded where it was. The second time (the page cached) it flew, so it looked as if it worked only sometimes. The page showed only that cover for as long as the read took, and **Back during the load had no hero to fly from: no flight at all** | The link hands the page what it knows (`utils/bookPreview.ts`, "A book opens at once"): the hero is drawn from the first frame, the cover flies into it as into any hero and Back flies from it. Opened cold (nothing known), the page's loading box is a stand-in at the hero cover's place (`data-flight-stand-in`): the cover flies there and lands, waits on it (the hero's image if it came, else the thumbhash), and moves into the hero once that is drawn, staying until the hero's image is in (`wait`, `keep`) |
+| Home's sections give way for a moment after it is back (the document gets shorter than the place) | The browser clamps the scroll to the end of the shorter document; when the rows are back it stays there: Home at the top, or well above where she left it | The place is held for 1.5 s after it landed and put back when it is within reach again (`keepPlace`) |
 | The Book turns out missing or fails to load | — | The waiting copy fades out over `quick` |
 | A page with neither hero nor stand-in (a public Book card loading) | — | The cover waits up to `standard`, then fades where it is |
 | The same Book twice on a page (Home: Want to read and Next in your series) | Back flew into the first one in the page, not the one tapped | The push remembers the cover it left from (`Origin.cover`, a weak reference: the tab page is kept alive); Back flies into that one while it is on screen |

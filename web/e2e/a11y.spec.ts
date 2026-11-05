@@ -5,6 +5,7 @@ import { addDays, isoDay } from '../app/utils/dates'
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
+import { seedHome } from './bookOpenSeed'
 import { endFromBook, expectAccessible, goto, openProfile, recordedApple, signedIn, untilStill } from './support'
 
 /**
@@ -224,6 +225,40 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await expectAccessible(page, 'a Book not in the Library')
     await openSheet(page, 'book.add', 'add')
     await expectAccessible(page, 'Add')
+  })
+
+  test('a Book that is still being read: its hero from the card that opened it, the rest in placeholders', async ({ page }) => {
+    // Two scans, each in both rooms, of a page that waits for its Book: longer than a usual flow.
+    test.slow()
+    await recordedApple(page)
+    const member = await signedIn(page)
+    const [next] = await seedHome(member.client, { series: 1, reading: 1, wanted: 1 })
+    await page.reload()
+    await expect(page.getByTestId('home.nextLink')).toHaveCount(1)
+    await untilStill(page)
+
+    // The page's own read is held until the scans are done: the page is what it is while it waits.
+    let release = () => {}
+    const held = new Promise<void>((resolve) => (release = resolve))
+    await page.route(/\/rest\/v1\//, async (route) => {
+      await held
+      await route.continue().catch(() => {})
+    })
+    // From Home: the card's title, cover and series are the hero; authors, facts, the action and the description wait.
+    await page.getByTestId('home.nextLink').first().click()
+    await expect(page.getByTestId('book.title')).toHaveText(next!.next)
+    await expect(page.getByTestId('book.actionsLoading')).toBeVisible()
+    await expect(page.getByTestId('book.loadingStatus')).toHaveText('Loading the book…')
+    await expectAccessible(page, 'a Book opening from its card')
+
+    // Opened cold: nothing known of it, the page's shape in placeholders.
+    await page.goto(`/book/isbn-${next!.isbn13}`)
+    await expect(page.getByTestId('book.loading')).toBeVisible()
+    await expect(page.getByTestId('book.actionsLoading')).toBeVisible()
+    await expectAccessible(page, 'a Book opened cold, still loading')
+    release()
+    await expect(page.getByTestId('book.title')).toHaveText(next!.next)
+    await expect(page.getByTestId('book.add')).toBeVisible()
   })
 
   test('the Profile, where she signs out and deletes her account', async ({ page }) => {

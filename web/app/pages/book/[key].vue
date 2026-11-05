@@ -25,6 +25,7 @@ import { useReaderStore } from '~/stores/reader'
 import { useReadingStore } from '~/stores/reading'
 import { bookPageKey, followEdition } from '~/utils/bookPageKey'
 import { onIdle } from '~/utils/idle'
+import { previewOf } from '~/utils/bookPreview'
 import { afterMotion } from '#layers/ui/app/utils/motion'
 import { loadReader, prefetchReader } from '~/utils/readerChunks'
 
@@ -63,6 +64,34 @@ const page = computed(() => books.page(key.value))
 const viewed = computed(() => edition.viewOf(routeKey.value))
 const book = computed(() => viewed.value ?? page.value?.book ?? null)
 const entry = computed(() => page.value?.entry ?? null)
+
+// A book opens at once (docs/MOTION.md, "A book opens at once"): while the Book is still being read (a work of a
+// series, an author's page, a friend's shelf: a Book this device has not got), the hero shows what the link that
+// opened the page already knew of it, handed over on the touch-down (utils/bookPreview.ts). Read once, here, in the
+// page's setup, so the first frame has it; the page's own Book replaces it in place (the cover keeps its identity) and
+// everything else waits behind skeletons the size of what comes.
+const preview = book.value ? null : previewOf(routeKey.value)
+/** The hero's title, authors and cover: the Book's, or until it is there the preview's. */
+const heroBook = computed(() => book.value ?? (page.value?.phase === 'missing' ? null : preview))
+/** The Book is still being read (and nothing says otherwise): its page is a skeleton wherever the preview has not filled it. */
+const loading = computed(() => !book.value && page.value?.phase !== 'missing' && page.value?.phase !== 'error')
+/** A Placeholder cover's identity stays the preview's through the swap to the Book, so the cover is not started afresh (a flicker). */
+const identityOf = (b: NonNullable<typeof book.value>) => b.isbn13 ?? ('id' in b ? b.id : b.title)
+const previewIdentity = preview ? (preview.identity ?? preview.title) : null
+const identityAlias = shallowRef<{ from: string; to: string } | null>(null)
+watch(
+  book,
+  (now) => {
+    if (now && previewIdentity && !identityAlias.value) identityAlias.value = { from: identityOf(now), to: previewIdentity }
+  },
+  { immediate: true, flush: 'sync' },
+)
+const heroIdentity = computed(() => {
+  const b = book.value
+  if (!b) return previewIdentity ?? undefined
+  const own = identityOf(b)
+  return identityAlias.value?.from === own ? identityAlias.value.to : own
+})
 
 watch(key, (value) => books.load(value), { immediate: true })
 
@@ -118,13 +147,14 @@ watch(
   { flush: 'pre' },
 )
 
-useHead({ title: () => (book.value ? `${book.value.title} · ${t('app.name')}` : t('app.name')) })
+useHead({ title: () => (heroBook.value ? `${heroBook.value.title} · ${t('app.name')}` : t('app.name')) })
 
 /** The Book's id in the Catalogue (none yet for a search result): what its authors and series are asked by. */
 const catalogueId = computed(() => (book.value && 'id' in book.value ? book.value.id : null))
 const facts = computed(() => {
   const b = book.value
-  if (!b) return []
+  // Until the Book is there, only the one fact a list may have carried of this very edition (its page count).
+  if (!b) return preview?.pageCount ? [t('book.pages', { count: preview.pageCount })] : []
   // The format that counts: her own word on her edition, else what its source said.
   const format = formatOf(b, entry.value?.formatOverride)
   return [
@@ -182,7 +212,7 @@ function toggleTitle() {
 // Measured once the cover has landed (`afterMotion`): it lays out the whole page, which in the tap's
 // task held up the flight's start. Being cut only makes the title a control, so nothing moves meanwhile.
 const measureTitleLater = () => void afterMotion().then(measureTitle)
-watch([key, () => book.value?.title], () => {
+watch([key, () => heroBook.value?.title], () => {
   titleOpen.value = false
   void nextTick(measureTitleLater)
 })
@@ -193,7 +223,7 @@ onMounted(() => {
 
 // Whether the cover shows the Placeholder: then the page's light is its cloth's.
 const coverFallback = ref(false)
-const clothColor = computed(() => (book.value ? `var(--color-cloth${clothOf(book.value.title)})` : null))
+const clothColor = computed(() => (heroBook.value ? `var(--color-cloth${clothOf(heroBook.value.title)})` : null))
 
 const optionsOpen = ref(false)
 
@@ -240,8 +270,10 @@ function back() {
 </script>
 
 <template>
-  <div ref="pageEl" class="relative min-h-dvh">
-    <UiAmbient :colors="book?.coverColors ?? null" :cloth="coverFallback ? clothColor : null" />
+  <div ref="pageEl" class="relative min-h-dvh" :aria-busy="loading || undefined">
+    <UiAmbient :colors="heroBook?.coverColors ?? null" :cloth="coverFallback ? clothColor : null" />
+    <!-- What comes after the first frame is said once, politely: the Book is on its way. -->
+    <p class="sr-only" role="status" data-testid="book.loadingStatus">{{ loading ? t('book.loading') : '' }}</p>
     <!-- What the old edition was about, over the new text while a change of edition plays. -->
     <div ref="pageWas" class="pointer-events-none absolute inset-0" aria-hidden="true" inert />
     <UiTopBar :back-label="t('book.back')" back-testid="book.back" @back="back">
@@ -250,15 +282,15 @@ function back() {
       </template>
     </UiTopBar>
 
-    <section v-if="book" ref="heroEl" class="relative flex flex-col items-center px-xl pt-sm text-center" data-flight="hero" data-testid="book.hero">
+    <section v-if="heroBook" ref="heroEl" class="relative flex flex-col items-center px-xl pt-sm text-center" data-flight="hero" data-testid="book.hero">
       <UiCover
         decorative
-        :title="book.title"
-        :authors="book.authors"
-        v-bind="coverImage(book, 'xl', coverHosts)"
-        :identity="book.isbn13 ?? ('id' in book ? book.id : book.title)"
-        :thumbhash="book.coverThumbhash"
-        :colors="book.coverColors"
+        :title="heroBook.title"
+        :authors="heroBook.authors"
+        v-bind="coverImage(heroBook, 'xl', coverHosts)"
+        :identity="heroIdentity"
+        :thumbhash="heroBook.coverThumbhash"
+        :colors="heroBook.coverColors"
         size="xl"
         glow
         eager
@@ -270,21 +302,24 @@ function back() {
         ref="titleEl"
         class="book-title mt-ml max-w-full text-headline text-balance wrap-anywhere"
         :class="[!titleOpen && 'line-clamp-3', (titleCut || titleOpen) && 'cursor-pointer']"
-        :title="book.title"
+        :title="heroBook.title"
         data-testid="book.title"
         v-on="titleCut || titleOpen ? { click: toggleTitle } : {}"
       >
-        {{ book.title }}
+        {{ heroBook.title }}
       </h1>
-      <!-- The author line, each linked author a link to her page, and the series line under it (#167). -->
+      <!-- The author line, each linked author a link to her page, and the series line under it (#167). A preview that did
+           not carry the authors (a work of a series) holds the line's place in a placeholder until the Book comes. -->
       <AuthorLine
+        v-if="heroBook.authors.length || !loading"
         class="mt-xs max-w-full"
-        :names="book.authors"
+        :names="heroBook.authors"
         :book-id="catalogueId"
-        :work-key="book.openLibraryWorkKey"
-        :author-keys="book.authorKeys"
+        :work-key="book?.openLibraryWorkKey"
+        :author-keys="book?.authorKeys"
       />
-      <SeriesLine :book-id="catalogueId" :entry="entry" />
+      <span v-else class="line body-line mt-xs w-1/2" aria-hidden="true" data-testid="book.authorsLoading"><span class="skeleton wave w-full" :style="{ '--wave': 0.1 }" /></span>
+      <SeriesLine :book-id="catalogueId" :entry="entry" :preview="preview?.series ?? null" />
       <p v-if="facts.length" class="eyebrow mt-sm flex items-center gap-sm" data-testid="book.facts">
         <!-- Drawn with dots between them; assistive tech reads them as one phrase with commas, or they run
              together ("2012240 pages") or, split up, make TalkBack stop on every piece. -->
@@ -293,15 +328,31 @@ function back() {
           <span v-if="i" class="dot" aria-hidden="true" /><span aria-hidden="true">{{ fact }}</span>
         </template>
       </p>
-      <!-- Its genres, up to three, and the way to set them (#168). -->
-      <BookGenres :book="book" :entry="entry" />
-      <!-- Goodreads' rating, once known (#69). -->
-      <BookGoodreads :book="book" />
-      <!-- Book links, the instance's and the member's own (#116). -->
-      <BookLinks :book="book" />
+      <span v-else-if="loading" class="line eyebrow-line mt-sm w-1/3" aria-hidden="true" data-testid="book.factsLoading"><span class="skeleton wave w-full" :style="{ '--wave': 0.2 }" /></span>
+      <template v-if="book">
+        <!-- Its genres, up to three, and the way to set them (#168). -->
+        <BookGenres :book="book" :entry="entry" />
+        <!-- Goodreads' rating, once known (#69). -->
+        <BookGoodreads :book="book" />
+        <!-- Book links, the instance's and the member's own (#116). -->
+        <BookLinks :book="book" />
+      </template>
       <!-- The old edition, over the new one while a change of edition plays. -->
       <div ref="heroWas" class="pointer-events-none absolute inset-0" data-edition-was aria-hidden="true" inert />
     </section>
+
+    <!-- Nothing known of the Book yet (a link, a reload, a work no list described): the hero's shape in placeholders. The
+         box at the cover's place is where a cover flying in lands and waits for the hero (composables/useBookFlight.ts). -->
+    <div v-else-if="loading" class="relative flex flex-col items-center px-xl pt-sm text-center" data-testid="book.loading">
+      <span class="placeholder relative rounded-cover-lg bg-fill" aria-hidden="true" data-flight-stand-in />
+      <!-- The page's one heading while the title is not known: the title's place, read as what is happening. -->
+      <h1 class="line headline-line relative mt-ml w-2/3" data-testid="book.loadingTitle">
+        <span class="sr-only">{{ t('book.loading') }}</span>
+        <span class="skeleton wave w-full" aria-hidden="true" :style="{ '--wave': 0.1 }" />
+      </h1>
+      <span class="line body-line mt-xs w-1/2" aria-hidden="true"><span class="skeleton wave w-full" :style="{ '--wave': 0.2 }" /></span>
+      <span class="line eyebrow-line mt-sm w-1/3" aria-hidden="true"><span class="skeleton wave w-full" :style="{ '--wave': 0.3 }" /></span>
+    </div>
 
     <div v-if="book" class="relative px-ml" data-testid="book.actions">
       <!-- The Book's state (D's status line), then the one action it asks for. -->
@@ -361,6 +412,12 @@ function back() {
       <!-- The reader's code could not be brought in (docs/perf/bundle.md F6): say so, where a tap used to do nothing. -->
       <p v-if="readFailed" class="mt-sm text-center text-caption text-error" role="alert" data-testid="book.readFailed">{{ t('book.readFailed') }}</p>
     </div>
+    <!-- Her state and the one action it asks for come with the Book: in the shape of the commonest (a Book not in her Library:
+         its line and a full-width button), so the page under them does not move when they do. -->
+    <div v-else-if="loading" class="relative px-ml" aria-hidden="true" data-testid="book.actionsLoading">
+      <span class="line caption-line mt-ms mb-md mx-auto w-1/3"><span class="skeleton wave w-full" :style="{ '--wave': 0.4 }" /></span>
+      <span class="skeleton wave block h-(--size-button) w-full rounded-pill" :style="{ '--wave': 0.5 }" />
+    </div>
 
     <BookProgressLog v-if="entry?.status === 'reading'" :entry="entry" />
     <CollectionsBookRow v-if="book" :book="book" :entry="entry" :book-key="key" />
@@ -387,19 +444,17 @@ function back() {
         {{ t('book.more') }}
       </button>
     </section>
+    <section v-else-if="loading" class="relative px-ml pt-xl" aria-hidden="true" data-testid="book.aboutLoading">
+      <span class="line eyebrow-line mb-ms w-1/4"><span class="skeleton wave w-full" :style="{ '--wave': 0.6 }" /></span>
+      <span v-for="i in 4" :key="i" class="line subhead-line" :class="i === 4 ? 'w-2/3' : 'w-full'"><span class="skeleton wave w-full" :style="{ '--wave': 0.6 + i * 0.1 }" /></span>
+    </section>
 
     <!-- In your friends (social v2a, §1.5): the people she follows who have this Book, under its description and right above More from the author. -->
     <BookReaders v-if="book" :book="book" />
 
     <BookMoreFromAuthor v-if="book" :book="book" :book-key="key" />
 
-    <div v-if="!book && page?.phase !== 'missing' && page?.phase !== 'error'" class="relative flex flex-col items-center px-xl pt-sm" data-testid="book.loading">
-      <!-- At the hero cover's place and size: a cover flying in lands here and waits for the hero (composables/useBookFlight.ts). -->
-      <span class="placeholder relative rounded-cover-lg bg-fill" aria-hidden="true" data-flight-stand-in />
-      <span class="sr-only">{{ t('book.loading') }}</span>
-    </div>
-
-    <div v-else-if="!book" class="relative px-ml pt-xxl text-center" data-testid="book.missing">
+    <div v-if="!book && !loading" class="relative px-ml pt-xxl text-center" data-testid="book.missing">
       <p class="book-title text-headline">{{ t(page?.phase === 'error' ? 'book.errorTitle' : 'book.missingTitle') }}</p>
       <p class="mt-sm text-subhead text-ink-muted">{{ t(page?.phase === 'error' ? 'book.error' : 'book.missing') }}</p>
       <div class="mt-lg flex justify-center">
@@ -438,5 +493,29 @@ function back() {
 .placeholder {
   width: var(--size-cover-xl);
   aspect-ratio: 2 / 3;
+}
+
+/* A placeholder line at the height of the text it stands for (as the author page's). */
+.line {
+  display: flex;
+  align-items: center;
+}
+.line > * {
+  height: 62%;
+}
+.headline-line {
+  height: var(--text-headline--line-height);
+}
+.body-line {
+  height: var(--text-body--line-height);
+}
+.subhead-line {
+  height: var(--text-subhead--line-height);
+}
+.caption-line {
+  height: var(--text-caption--line-height);
+}
+.eyebrow-line {
+  height: var(--text-eyebrow--line-height);
 }
 </style>
