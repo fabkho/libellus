@@ -330,9 +330,22 @@ export async function enrichBook(
     else if (index === 0) linked.push({ position: 1, author: { name } })
   })
 
+  // 4b. Google Books ------------------------------------------------------
+  // Only for a Book the sources above left without a genre, and only by its ISBN: one question to the `google-books`
+  // function, which answers from its cache or its daily budget (and says nothing while its key is not set). What
+  // comes back is already the app's genres (`googleGenres`): the raw categories are never kept (`signals` holds ids).
+  if (book.isbn13 && sources.googleGenres && !mapGenres(signals).length) {
+    try {
+      for (const genre of await sources.googleGenres(book.isbn13)) signals.push({ source: 'google', value: genre })
+      if (signals.some((signal) => signal.source === 'google')) used.add('google')
+    } catch {
+      // Optional: a source that did not answer leaves the Book as the others had it.
+    }
+  }
+
   // 5. Genres ------------------------------------------------------------
   const ranked = mapGenres(signals)
-  const workGenres = mapGenres(signals.filter((s) => s.source !== 'apple')).map((g) => g.genre)
+  const workGenres = mapGenres(signals.filter((s) => s.source !== 'apple' && s.source !== 'google')).map((g) => g.genre)
 
   // 6. The work, and the authors to fetch --------------------------------
   let workPayload: WorkPayload | null = null

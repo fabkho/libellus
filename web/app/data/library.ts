@@ -472,8 +472,8 @@ export function bookToRow(book: BookSnapshot): Omit<BookRow, 'id' | 'created_at'
     cover_thumbhash: book.coverThumbhash,
     cover_dominant: book.coverColors?.dominant ?? null,
     cover_secondary: book.coverColors?.secondary ?? null,
-    // The National Library's edition is written as `import` (`book_source` has no `dnb`), as the `dnb-lookup` function writes it.
-    source: book.source === 'dnb' ? 'import' : book.source,
+    // The National Library's and Google's editions are written as `import` (`book_source` has neither), as the `dnb-lookup` and `google-books` functions write them.
+    source: book.source === 'dnb' || book.source === 'google' ? 'import' : book.source,
     apple_id: book.appleId,
     openlibrary_edition_key: book.openLibraryEditionKey,
     openlibrary_work_key: book.openLibraryWorkKey,
@@ -829,14 +829,16 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
    * be made (the function is not answering, or no longer finds the ISBN).
    */
   async function catalogued(book: BookSnapshot): Promise<Book | BookSnapshot | null> {
-    if ((book.source !== 'import' && book.source !== 'dnb') || 'id' in book || !book.isbn13) return book
+    if ((book.source !== 'import' && book.source !== 'dnb' && book.source !== 'google') || 'id' in book || !book.isbn13) return book
     try {
-      const { data, error } = await client.functions.invoke('dnb-lookup', {
+      // A Google edition: the `google-books` function makes the Book from what Google says about the ISBN (its
+      // linked cover included: nothing the app sends); everything else the National Library's way.
+      const { data, error } = await client.functions.invoke(book.source === 'google' ? 'google-books' : 'dnb-lookup', {
         body: {
           action: 'book',
           isbn13: book.isbn13,
           // The cover the app resolved (a thumbhash and colours): the Book is made once, with it.
-          ...(book.coverUrl ? { cover: { coverUrl: book.coverUrl, coverThumbhash: book.coverThumbhash, coverColors: book.coverColors } } : {}),
+          ...(book.source !== 'google' && book.coverUrl ? { cover: { coverUrl: book.coverUrl, coverThumbhash: book.coverThumbhash, coverColors: book.coverColors } } : {}),
         },
       })
       const answer = data as { status?: string; book?: BookRow } | null
@@ -873,8 +875,8 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
     if (!queue || book.source === 'manual') return null
     // A search result is shown as a Book under its page key until the database gives it its id.
     const provisional = !('id' in book)
-    // A DNB edition has to be made a Catalogue Book first: that needs the network.
-    if (provisional && (book.source === 'import' || book.source === 'dnb')) return null
+    // A DNB or Google edition has to be made a Catalogue Book first: that needs the network.
+    if (provisional && (book.source === 'import' || book.source === 'dnb' || book.source === 'google')) return null
     if (provisional && !optimistic) return null
     let known: Book
     if (provisional) {

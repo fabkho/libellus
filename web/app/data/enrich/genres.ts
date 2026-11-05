@@ -71,12 +71,13 @@ export function compareGenres(a: GenreId, b: GenreId): number {
 
 // ------------------------------------------------------------------ signals
 
-export type GenreSource = 'wikidata' | 'apple' | 'openlibrary'
+export type GenreSource = 'wikidata' | 'apple' | 'openlibrary' | 'google'
 
 /**
  * One thing a source said about a Book. `value` is the source's own word: an
  * Apple genre name, a Wikidata genre item's English label, an Open Library
- * subject; `id` is the Wikidata item (Q-id) when there is one.
+ * subject, a Google signal's value is already one of the app's genre ids (`googleGenres`: the raw categories are never kept);
+ * `id` is the Wikidata item (Q-id) when there is one.
  */
 export type GenreSignal = { source: GenreSource; value: string; id?: string }
 
@@ -97,6 +98,9 @@ const WEIGHT: Record<GenreSource, { each: number; cap: number }> = {
   // Open Library's subjects gather every edition's, translations and comic
   // adaptations included: one subject is a hint, two agreeing ones a genre.
   openlibrary: { each: 0.25, cap: 0.75 },
+  // Google's categories are the publisher's BISAC subject headings: coarse but deliberate. One passes the threshold on
+  // its own, so the signal is only asked for a Book the other sources left without a genre (supabase/functions/enrich).
+  google: { each: 0.6, cap: 0.9 },
 }
 
 /** A genre needs this much before it is shown. */
@@ -340,6 +344,83 @@ export const KEYWORD_RULES: readonly Rule[] = [
 /** Subjects that only look like genres: awards, reading levels, collections, places. */
 const SUBJECT_NOISE = /^(award:|nyt:|accessible book|protected daisy|in library|lending library|open library|long now|reading level|large type books|fiction in english|english fiction|fiction)$|^(award|nyt|series):/
 
+// ------------------------------------------------------------------ Google
+
+/**
+ * Google Books' `categories` are BISAC subject headings, a path in one string: `Fiction / Romance / General`,
+ * `Juvenile Fiction / Fantasy / Epic`, `Biography & Autobiography / Women`. `googleGenres` splits one at the
+ * slashes and looks each part up here (`normalize`d, `&` as `and`). Small and explicit on purpose: a part not
+ * listed maps to nothing and is dropped (`General`, `Fiction`, `Humor`, `Business and Economics`, every place and
+ * every school subject); nothing is guessed from keywords. Parts that only say it is a story map to `[]` too, so
+ * the entry shows the decision.
+ */
+export const GOOGLE_CATEGORY_GENRES: Readonly<Record<string, readonly GenreId[]>> = {
+  // forms and umbrellas: nothing to say
+  'fiction': [],
+  'general': [],
+  'action and adventure': [],
+  'coming of age': [],
+  'contemporary women': [],
+  'family life': [],
+  'humorous': [],
+  'war and military': [],
+  'media tie-in': [],
+  'erotica': [],
+  'literary collections': [],
+  // fiction genres
+  'science fiction': ['sci-fi'],
+  'fantasy': ['fantasy'],
+  'horror': ['horror'],
+  'mystery and detective': ['crime'],
+  'crime': ['crime'],
+  'police procedural': ['crime'],
+  'thrillers': ['thriller'],
+  'suspense': ['thriller'],
+  'espionage': ['thriller'],
+  'romance': ['romance'],
+  'literary': ['literary'],
+  'historical': ['historical'],
+  'classics': ['classics'],
+  'short stories (single author)': ['short-stories'],
+  'anthologies (multiple authors)': ['short-stories'],
+  'juvenile fiction': ['ya'],
+  'young adult fiction': ['ya'],
+  'comics and graphic novels': ['graphic'],
+  'graphic novels': ['graphic'],
+  'poetry': ['poetry'],
+  // non-fiction
+  'biography and autobiography': ['biography'],
+  'history': ['history'],
+  'science': ['science'],
+  'philosophy': ['philosophy'],
+  'self-help': ['self-help'],
+  'essays': ['essays'],
+  'true crime': ['nonfiction'],
+  'juvenile nonfiction': [],
+  // German-language headings some German volumes carry instead
+  'belletristik': [],
+  'krimi': ['crime'],
+  'kriminalromane': ['crime'],
+  'liebesromane': ['romance'],
+  'historische romane': ['historical'],
+}
+
+/**
+ * The app's genres a volume's Google `categories` name, in the order they are named, each once, at most
+ * `MAX_GENRES`. Pure: the table above and nothing else.
+ */
+export function googleGenres(categories: readonly string[]): GenreId[] {
+  const found: GenreId[] = []
+  for (const category of categories) {
+    for (const part of category.split('/')) {
+      for (const genre of GOOGLE_CATEGORY_GENRES[normalize(part).replace(/&/g, 'and').replace(/\s+/g, ' ')] ?? []) {
+        if (!found.includes(genre)) found.push(genre)
+      }
+    }
+  }
+  return found.slice(0, MAX_GENRES)
+}
+
 // ----------------------------------------------------------------- mapping
 
 /** Lower case, one kind of dash, "&" spelled out, no stray punctuation or spaces. */
@@ -382,6 +463,7 @@ export function genresOfSignal(signal: GenreSignal): GenreId[] {
     const known = signal.id ? WIKIDATA_GENRES[signal.id] : undefined
     return known ? [...known] : keywordGenres(signal.value)
   }
+  if (signal.source === 'google') return isGenreId(signal.value) ? [signal.value] : []
   return keywordGenres(signal.value)
 }
 

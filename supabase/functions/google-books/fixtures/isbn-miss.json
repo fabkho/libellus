@@ -1,0 +1,5 @@
+{
+  "_fixture": "Hand-built from the documented shape of the Google Books volumes response (the keyless quota was spent when this was written, so nothing could be recorded); every title, name and ISBN is invented. Only `volumeInfo` fields the function reads matter.",
+  "kind": "books#volumes",
+  "totalItems": 0
+}

@@ -137,3 +137,11 @@ Deno.test('a Hardcover cover (inside the app only) is not read into the entry, n
   assertEquals([other.book.coverUrl, other.book.coverColors], ['https://covers.openlibrary.org/b/id/1-L.jpg', { dominant: '#1a2b3c', secondary: '#f0e0d0' }])
   assertEquals(entryFromRow(withCover('https://assets.hardcover.app.evil.example/a.jpg')).book.coverUrl, 'https://assets.hardcover.app.evil.example/a.jpg')
 })
+
+Deno.test('a Google Books cover (linked, inside the app only) is not read into the public shelf\'s entry either', () => {
+  const [row] = entryRows()
+  const withCover = (url: string): EntryRow => ({ ...row!, book: { ...row!.book, cover_url: url, cover_dominant: '#1a2b3c', cover_secondary: '#f0e0d0' } })
+  const google = entryFromRow(withCover('https://books.google.com/books/content?id=ZZhit0001AAA&printsec=frontcover&img=1&zoom=1&source=gbs_api'))
+  assertEquals([google.book.coverUrl, google.book.coverColors], [null, null])
+  assertEquals(entryFromRow(withCover('https://books.google.com.evil.example/books/content?id=a')).book.coverUrl, 'https://books.google.com.evil.example/books/content?id=a')
+})

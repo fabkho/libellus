@@ -10,6 +10,7 @@
  * a member (only `book` and `author`); anything else is refused.
  */
 import { createClient } from '@supabase/supabase-js'
+import { isGenreId } from '../../../web/app/data/enrich/genres.ts'
 import { type Caller, createHandler, MEMBER_LIMIT, MEMBER_WINDOW_SECONDS } from './handler.ts'
 import { createHttp, userAgent } from './http.ts'
 import { sameSecret } from './secret.ts'
@@ -36,7 +37,20 @@ const http = createHttp({
 
 const handler = createHandler({
   store: createSupabaseStore(supabase),
-  sources: createSources(http, languages.length ? languages : ['en']),
+  sources: createSources(http, languages.length ? languages : ['en'], {
+    // The `google-books` function as the service role (its key, cache and daily budget are its own); nothing while it has no key.
+    async googleGenres(isbn13) {
+      const response = await fetch(`${url}/functions/v1/google-books`, {
+        method: 'POST',
+        headers: { apikey: serviceKey, 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'isbn', isbn13 }),
+        signal: AbortSignal.timeout(8000),
+      })
+      if (!response.ok) return []
+      const answer = (await response.json()) as { status?: string; volume?: { genres?: unknown } }
+      return answer.status === 'found' && Array.isArray(answer.volume?.genres) ? answer.volume.genres.filter(isGenreId) : []
+    },
+  }),
   async authorize(request): Promise<Caller> {
     const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
     if (!token) return null

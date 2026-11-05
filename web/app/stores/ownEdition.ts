@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { formatOf, isbnParts, type Book, type BookFormat, type BookSnapshot } from '~/data/books'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
 import { createDnb } from '~/data/dnb'
+import { createGoogleBooks } from '~/data/googleBooks'
 import { createEditions, type Editions } from '~/data/editions'
 import { isAbort } from '~/data/fetching'
 import type { LibraryEntry, LibraryErrorCode } from '~/data/library'
@@ -48,6 +49,7 @@ export const useOwnEditionStore = defineStore('ownEdition', () => {
       catalogue: backend ? createCatalogueSearch(backend) : undefined,
       // German editions Apple Books and Open Library do not know (the library's data, CC0).
       dnb: backend ? createDnb(backend, { online: () => isOnline() }) : undefined,
+      google: backend ? createGoogleBooks(backend, { online: () => isOnline() }) : undefined,
     })
     return source
   }

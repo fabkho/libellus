@@ -90,6 +90,7 @@ jobs:
       tokens: ${{ steps.decide.outputs.tokens }}
       goodreads: ${{ steps.decide.outputs.goodreads }}
       dnb: ${{ steps.decide.outputs.dnb }}
+      google: ${{ steps.decide.outputs.google }}
       openlibrary: ${{ steps.decide.outputs.openlibrary }}
       regal: ${{ steps.decide.outputs.regal }}
       og: ${{ steps.decide.outputs.og }}
@@ -142,6 +143,14 @@ jobs:
               - 'supabase/functions/dnb-lookup/**'
               - 'supabase/functions/_shared/**'
               - 'web/app/data/dnbRecord.ts'
+            google:
+              - *ci
+              - 'supabase/functions/google-books/**'
+              - 'supabase/functions/_shared/**'
+              - 'web/app/data/googleBooksRecord.ts'
+              - 'web/app/data/googleCover.ts'
+              - 'web/app/data/dnbRecord.ts'
+              - 'web/app/data/enrich/genres.ts'
             openlibrary:
               - *ci
               - 'supabase/functions/openlibrary/**'
@@ -192,6 +201,7 @@ jobs:
           FILTER_TOKENS: ${{ steps.filter.outputs.tokens }}
           FILTER_GOODREADS: ${{ steps.filter.outputs.goodreads }}
           FILTER_DNB: ${{ steps.filter.outputs.dnb }}
+          FILTER_GOOGLE: ${{ steps.filter.outputs.google }}
           FILTER_OPENLIBRARY: ${{ steps.filter.outputs.openlibrary }}
           FILTER_REGAL: ${{ steps.filter.outputs.regal }}
           FILTER_OG: ${{ steps.filter.outputs.og }}
@@ -213,6 +223,7 @@ jobs:
           tokens=$(on "$FILTER_TOKENS")
           goodreads=$(on "$FILTER_GOODREADS")
           dnb=$(on "$FILTER_DNB")
+          google=$(on "$FILTER_GOOGLE")
           openlibrary=$(on "$FILTER_OPENLIBRARY")
           regal=$(on "$FILTER_REGAL")
           og=$(on "$FILTER_OG")
@@ -232,12 +243,12 @@ jobs:
           shards=$(seq -s, 1 "$INPUT_SHARDS" | sed 's/^/[/; s/$/]/')
 
           statics=false
-          for v in "$web" "$tokens" "$goodreads" "$dnb" "$regal" "$og" "$enrich" "$invite" "$importjob" "$coverstore" "$voicesweep"; do [ "$v" = true ] && statics=true; done
+          for v in "$web" "$tokens" "$goodreads" "$dnb" "$google" "$regal" "$og" "$enrich" "$invite" "$importjob" "$coverstore" "$voicesweep"; do [ "$v" = true ] && statics=true; done
 
           {
             echo "backend=$backend"; echo "e2e=$e2e"; echo "shards=$shards"
             echo "statics=$statics"; echo "web=$web"; echo "tokens=$tokens"
-            echo "goodreads=$goodreads"; echo "dnb=$dnb"; echo "openlibrary=$openlibrary"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"; echo "invite=$invite"; echo "importjob=$importjob"; echo "coverstore=$coverstore"; echo "voicesweep=$voicesweep"
+            echo "goodreads=$goodreads"; echo "dnb=$dnb"; echo "google=$google"; echo "openlibrary=$openlibrary"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"; echo "invite=$invite"; echo "importjob=$importjob"; echo "coverstore=$coverstore"; echo "voicesweep=$voicesweep"
           } | tee -a "$GITHUB_OUTPUT"
 
   # Database rules (pgTAP), the web data layer (Vitest) and the backup round trip
@@ -441,14 +452,14 @@ jobs:
           ! grep -q 'libellus-shelf' .output/public/sw.js
 
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
-        if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.dnb == 'true' || needs.changes.outputs.openlibrary == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true' || needs.changes.outputs.enrich == 'true' || needs.changes.outputs.invite == 'true' || needs.changes.outputs.importjob == 'true' || needs.changes.outputs.coverstore == 'true' || needs.changes.outputs.voicesweep == 'true'
+        if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.dnb == 'true' || needs.changes.outputs.google == 'true' || needs.changes.outputs.openlibrary == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true' || needs.changes.outputs.enrich == 'true' || needs.changes.outputs.invite == 'true' || needs.changes.outputs.importjob == 'true' || needs.changes.outputs.coverstore == 'true' || needs.changes.outputs.voicesweep == 'true'
         with:
           deno-version: v2.x
 
       # The edge functions' shared modules: who is calling (caller.ts: the service-role key on `apikey`, production's
       # `sb_secret_…` key, or as the bearer token; a member's access token) and the shared pace (pace.ts).
       - name: shared function modules (Deno lint, check, test)
-        if: ${{ !cancelled() && (needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.dnb == 'true' || needs.changes.outputs.openlibrary == 'true') }}
+        if: ${{ !cancelled() && (needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.dnb == 'true' || needs.changes.outputs.google == 'true' || needs.changes.outputs.openlibrary == 'true') }}
         working-directory: supabase/functions/_shared
         run: deno lint && deno check *.ts && deno task test
 
@@ -459,6 +470,13 @@ jobs:
         if: ${{ !cancelled() && needs.changes.outputs.goodreads == 'true' }}
         working-directory: supabase/functions/goodreads-rating
         run: deno lint && deno check *.ts && deno test --allow-read=.
+
+      # The google-books edge function (#305): Google Books as the last book source, on recorded answers (no live call, no key).
+      # It imports web/app/data/googleBooksRecord.ts and enrich/genres.ts (the category table), so this also checks they stay runnable by Deno.
+      - name: google-books function (Deno lint, check, test)
+        if: ${{ !cancelled() && needs.changes.outputs.google == 'true' }}
+        working-directory: supabase/functions/google-books
+        run: deno lint && deno check *.ts && deno task test
 
       # The dnb-lookup edge function: German editions from the German National Library for the
       # scan and the edition picker, on recorded SRU answers (no live call). It imports

@@ -163,3 +163,46 @@ Deno.test('Williams, The Dragonbone Chair, part 1: its work keeps no place in th
   // Nor does Open Library's series text put it back.
   assertEquals(payload.series, [])
 })
+
+// Google Books (issue #305): the genres of a Book the other sources left without any, by its ISBN, from the function.
+import { isbnUrl } from './openlibrary.ts'
+
+async function runWithGoogle(googleGenres: (isbn13: string) => Promise<readonly string[]>, base: ScenarioName = 'no-data') {
+  const book = { ...SCENARIOS[base], isbn13: '9791034567898' }
+  const notFound = { [isbnUrl(book.isbn13)]: () => new Response('{}', { status: 404 }) }
+  const recorded = recordedFetch([base], notFound)
+  const sources = createSources(createHttp({ fetch: recorded.fetch, userAgent: 'test', clock: fakeClock().clock }), LANGUAGES, {
+    googleGenres: googleGenres as never,
+  })
+  const payload = await enrichBook(book, { sources, authorFresh: () => Promise.resolve(true), seriesFresh: () => Promise.resolve(true) }, [])
+  return payload
+}
+
+Deno.test('Google Books gives a Book nobody else could place its genres, as ids; the raw categories are never kept', async () => {
+  const asked: string[] = []
+  const payload = await runWithGoogle((isbn13) => (asked.push(isbn13), Promise.resolve(['crime', 'thriller'])))
+  assertEquals(asked, ['9791034567898'])
+  const book = payload.book!
+  assertEquals(book.status, 'enriched')
+  assertEquals(book.sources, ['google'])
+  assertEquals(book.signals, [{ source: 'google', value: 'crime' }, { source: 'google', value: 'thriller' }])
+  assertEquals(book.genres.map((genre) => [genre.genre, genre.source]), [['crime', 'google'], ['thriller', 'google']])
+  assertEquals(book.work, null, 'a volume\'s categories say nothing of the work')
+})
+
+Deno.test('Google Books is not asked when the other sources placed the Book, and failing or silent it changes nothing', async () => {
+  let asked = 0
+  const placed = await run('pratchett-small-gods')
+  assertEquals(placed.payload.book!.genres[0]!.genre, 'fantasy')
+  const sources = createSources(createHttp({ fetch: recordedFetch(['pratchett-small-gods']).fetch, userAgent: 'test', clock: fakeClock().clock }), LANGUAGES, {
+    googleGenres: () => (asked++, Promise.resolve(['crime'])),
+  })
+  const book = SCENARIOS['pratchett-small-gods']
+  await enrichBook(book, { sources, authorFresh: () => Promise.resolve(true), seriesFresh: () => Promise.resolve(true) }, await appleGenres([book], sources).then((m) => m.get(book.id) ?? []))
+  assertEquals(asked, 0)
+
+  const failed = await runWithGoogle(() => Promise.reject(new Error('function down')))
+  assertEquals([failed.book!.status, failed.book!.sources, failed.book!.signals], ['not_found', [], []])
+  const silent = await runWithGoogle(() => Promise.resolve([]))
+  assertEquals([silent.book!.status, silent.book!.sources], ['not_found', []])
+})

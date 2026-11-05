@@ -581,6 +581,54 @@ recomputed from its stored signals, no source is asked. Members' own genres are 
 **In the backup**: everything (`public` and `private`), the queue included; not the Vault secret
 `enrich_token` (set it again after a restore, Restoring above).
 
+## Google Books (the last book source)
+
+The `google-books` edge function (issue #305, `supabase/functions/google-books/README.md`) asks the Google Books API for what the
+Catalogue, Apple Books, Open Library and the National Library do not know: an ISBN nobody has, a search the others leave nearly empty,
+the import's unfound rows, the editions of a book and the genres of a Catalogue Book that has none. The browser never talks to Google.
+
+**The key (set once, by the owner).** The API key is the function secret `GOOGLE_BOOKS_API_KEY`; it is in no file of the repository and no log.
+
+1. Google Cloud console → a project → *APIs & Services* → enable **Books API** → *Credentials* → *Create credentials* → *API key*;
+   restrict the key to the Books API (it cannot be restricted by referrer or address: the caller is the Supabase function).
+2. `supabase secrets set GOOGLE_BOOKS_API_KEY=<the key>` (production; the next request reads it, no deploy). `supabase secrets unset
+   GOOGLE_BOOKS_API_KEY` turns the source off again.
+
+**Until it is set** the function answers `unavailable` (`not_configured`), asks Google nothing and counts nothing, and the app goes on with
+its other sources with no error anywhere: shipping the release before the key exists is safe. (Keyless, Google answered every request with
+`429 Quota exceeded … Queries per day`, which is why a key is needed at all.)
+
+**The quota and the budget.** The default quota is about **1,000 requests a day for the whole project**. The function counts every request it
+makes (`google_books_budget_take`, one row a day in `public.google_books_budget`, by Google's day: Pacific time) and refuses beyond **900**
+(answers `unavailable`, reason `budget`, one log line `google_books_budget_spent` a day and instance), so the last hundred stay for the owner's
+own checks. What it spends is small by design: ISBN lookups first, a title search only when the rest miss, a cache, a miss kept six hours.
+A big import costs about one request per row the other sources did not find (709 rows, 166 of them unfound before: well inside a day).
+
+- **See the budget** (SQL editor, service role): `select day, used from public.google_books_budget order by day desc limit 7;`
+  Today's row is Google's day (Pacific). The cache: `select cache_key, status, expires_at from public.google_books_cache order by expires_at desc limit 20;`
+  (a free-words key is what a member typed: do not copy it anywhere).
+- **Raise the quota**: Google Cloud console → *APIs & Services* → *Books API* → *Quotas & System Limits* → *Queries per day* → *Edit
+  quota* / *Request increase* (docs: https://cloud.google.com/docs/quotas/help/request_increase; billing may have to be on for a higher tier). Then
+  raise the function's own limit so it follows: `DAILY_BUDGET` in `supabase/functions/google-books/handler.ts` (keep it about 10 % under the
+  quota) and deploy. Nothing else reads the number.
+- **A refusal** from Google (400 bad key, 401, 403 API off or key restricted wrongly, 429 quota) opens a ten-minute breaker and writes one log
+  line `google_books_blocked {"status":…}` (Supabase → Edge Functions → `google-books` → Logs; alert on it). The function never logs the key or
+  an address with it: the key travels in the `x-goog-api-key` header.
+
+**What is stored, and for how long** (the terms: docs/THIRD-PARTY.md, "Google Books"). `public.google_books_cache` holds Google's answers as
+parsed volumes (no description, no raw categories), each row with an `expires_at` of at most a day (the table refuses more); an expired row is
+never answered and `private.purge_google_books()` (pg_cron `purge-google-books`, hourly) deletes it, and the budget days older than 30. An answer's
+own `Cache-Control` decides: `no-store` is kept not at all, `max-age=N` N seconds (at most a day); one that states no lifetime is kept
+`GOOGLE_BOOKS_CACHE_FALLBACK_SECONDS` seconds (default 3600; set it to 0 to keep nothing of those: `supabase secrets set GOOGLE_BOOKS_CACHE_FALLBACK_SECONDS=0`).
+**To check what Google's header says** once there is a key: `curl -si -H "x-goog-api-key: $KEY" "https://www.googleapis.com/books/v1/volumes?q=isbn:9783499267017&maxResults=1" | grep -i '^cache-control'`
+(the answer could not be read when this was written: the keyless quota was spent). The cover of a book only Google knew is **linked**,
+never copied: `private.cover_allowed` knows the host, `private.cover_storable` keeps it out of the cover store and `private.cover_shown` off every
+public surface (docs/covers.md, "Google Books covers").
+
+**To take the source down**: unset the secret (nothing else changes), or delete the function and the `google` lines in `createSearch`, `createEditions`,
+`Lookups` and `enrich`; Books already added keep their facts, and their Google cover addresses keep loading from Google (clear one with
+`update public.books set cover_url = null where cover_url like 'https://books.google.com/%'`).
+
 ## The import queue and the shared pace
 
 Two small tables keep the import and its upstreams from running into their limits (`supabase/migrations/20261030010000_edge_pace.sql`, `20261030020000_import_queue.sql`):

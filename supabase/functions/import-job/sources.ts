@@ -1,7 +1,7 @@
 /**
  * The job's sources, wired the way the app wires them (web/app/stores/import.ts `importer`), so the job asks the same
  * questions in the same order through the same code (web/app/data: `createSearch`, `createCatalogueSearch`,
- * `createDnb`): the Catalogue first, Open Library, the National Library. The differences are where the requests go
+ * `createDnb`, `createGoogleBooks`): the Catalogue first, Open Library, the National Library, Google Books last. The differences are where the requests go
  * out from:
  *
  * - **Open Library** directly, identified (`OPENLIBRARY_CONTACT`) and on the pace every instance and member shares
@@ -9,6 +9,9 @@
  *   `openlibrary` function does for the app);
  * - the **National Library** through its function (`dnb-lookup`) with the service role: its own pace, breaker and
  *   Catalogue writes, unchanged;
+ * - **Google Books** through its function (`google-books`) with the service role: its key, cache and daily budget stay
+ *   there, and it is asked only for an ISBN none of the others has and for a row nothing else found (`createSearch`,
+ *   `findEdition`); while its key is not set it answers nothing, and no row is unsure because of it;
  * - the **Catalogue** as the member sees it (`import_job_search_books`, store.ts);
  * - **Apple never** (owner decision 2026-10-19: Apple's per-address limit cannot be shared by a server; its one-time
  *   upgrade runs on her device after the job, #374). Its own empty answer comes back for any Apple address, so no
@@ -20,6 +23,7 @@ import type { Lookups } from '../../../web/app/data/bookImport.ts'
 import { createCatalogueSearch } from '../../../web/app/data/catalogueSearch.ts'
 import { createDnb, DNB_IMPORT_GAP_MS } from '../../../web/app/data/dnb.ts'
 import type { FetchLike } from '../../../web/app/data/fetching.ts'
+import { createGoogleBooks, GOOGLE_IMPORT_GAP_MS } from '../../../web/app/data/googleBooks.ts'
 import type { FunctionsClient } from '../../../web/app/data/goodreads.ts'
 import { createSearch, type Search } from '../../../web/app/data/search.ts'
 import { PaceBusy } from '../_shared/pace.ts'
@@ -107,11 +111,14 @@ export function jobSources(options: {
   const catalogue = createCatalogueSearch(options.catalogueClient as SupabaseClient)
   // The National Library on the import's own budget (`purpose`) and pace (`gapMs`), as on the device.
   const dnb = createDnb(options.functions, { purpose: 'import', gapMs: DNB_IMPORT_GAP_MS })
-  const search = createSearch({ fetch: options.fetch, languages: options.languages.length ? options.languages : ['de-DE', 'en-US'], catalogue, dnb })
+  const languages = options.languages.length ? options.languages : ['de-DE', 'en-US']
+  const google = createGoogleBooks(options.functions, { purpose: 'import', gapMs: GOOGLE_IMPORT_GAP_MS, languages: () => languages })
+  const search = createSearch({ fetch: options.fetch, languages, catalogue, dnb, google })
   const lookups: Lookups = {
     catalogue,
     search,
     dnb,
+    google,
     // Nothing is paced on this side that the second pass would wait out: the shared pace waits its turn itself.
     busyFor: () => 0,
   }

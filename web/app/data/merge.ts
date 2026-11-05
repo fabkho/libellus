@@ -2,18 +2,19 @@ import { isbn10To13, isValidIsbn10, type Book, type BookSnapshot } from './books
 import type { LibraryEntry } from './library.ts'
 
 /**
- * One list out of three sources (issue #1, Search): the own Catalogue, Apple
- * Books and OpenLibrary each answer a query; this merges their answers,
+ * One list out of the sources (issue #1, Search): the own Catalogue, Apple
+ * Books and OpenLibrary each answer a query, the National Library and Google Books
+ * the last resorts (data/dnb.ts, data/googleBooks.ts); this merges their answers,
  * removes duplicates, ranks what is left and tells the member which Books she
  * already has. Pure and framework-free: the search tests pin it, and a native
  * port copies it line for line. The member never sees which source a result
  * came from; `source` stays internal.
  */
 
-export type SourceName = 'catalogue' | 'apple' | 'openlibrary' | 'dnb'
+export type SourceName = 'catalogue' | 'apple' | 'openlibrary' | 'dnb' | 'google'
 
 /** The order sources rank in when nothing else decides: the Catalogue first. */
-export const SOURCE_ORDER: readonly SourceName[] = ['catalogue', 'apple', 'openlibrary', 'dnb']
+export const SOURCE_ORDER: readonly SourceName[] = ['catalogue', 'apple', 'openlibrary', 'dnb', 'google']
 
 /** One Book one source found. `popularity`: whatever count of readers or ratings the source has (0 if none). */
 export type Found = { book: BookSnapshot | Book; source: SourceName; popularity: number }

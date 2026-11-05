@@ -1,0 +1,151 @@
+{
+  "_fixture": "Hand-built from the documented shape of the Google Books volumes response (the keyless quota was spent when this was written, so nothing could be recorded); every title, name and ISBN is invented. Only `volumeInfo` fields the function reads matter.",
+  "kind": "books#volumes",
+  "totalItems": 5,
+  "items": [
+    {
+      "kind": "books#volume",
+      "id": "ZZde000001",
+      "etag": "x",
+      "selfLink": "https://www.googleapis.com/books/v1/volumes/ZZde000001",
+      "volumeInfo": {
+        "title": "Der stille Hafen",
+        "authors": [
+          "Ida Beispiel"
+        ],
+        "publisher": "Musterverlag",
+        "publishedDate": "2021-09-01",
+        "description": "A publisher blurb the function never asks for and never keeps.",
+        "industryIdentifiers": [
+          {
+            "type": "ISBN_13",
+            "identifier": "9791034567904"
+          }
+        ],
+        "pageCount": 320,
+        "printType": "BOOK",
+        "categories": [
+          "Fiction / Romance / Contemporary",
+          "Fiction / General"
+        ],
+        "language": "de",
+        "imageLinks": {
+          "smallThumbnail": "http://books.google.com/books/content?id=ZZde000001&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+          "thumbnail": "http://books.google.com/books/content?id=ZZde000001&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+        }
+      }
+    },
+    {
+      "kind": "books#volume",
+      "id": "ZZen000001",
+      "etag": "x",
+      "selfLink": "https://www.googleapis.com/books/v1/volumes/ZZen000001",
+      "volumeInfo": {
+        "title": "The Quiet Harbour",
+        "authors": [
+          "Ida Beispiel"
+        ],
+        "publisher": "Example Press",
+        "publishedDate": "2022",
+        "description": "A publisher blurb the function never asks for and never keeps.",
+        "industryIdentifiers": [
+          {
+            "type": "ISBN_13",
+            "identifier": "9791034567911"
+          }
+        ],
+        "pageCount": 352,
+        "printType": "BOOK",
+        "categories": [
+          "Fiction / Romance / General"
+        ],
+        "language": "en",
+        "imageLinks": {
+          "smallThumbnail": "http://books.google.com/books/content?id=ZZen000001&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+          "thumbnail": "http://books.google.com/books/content?id=ZZen000001&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+        }
+      }
+    },
+    {
+      "kind": "books#volume",
+      "id": "ZZnoisbn01",
+      "etag": "x",
+      "selfLink": "https://www.googleapis.com/books/v1/volumes/ZZnoisbn01",
+      "volumeInfo": {
+        "title": "Der stille Hafen (Leseprobe)",
+        "authors": [
+          "Ida Beispiel"
+        ],
+        "description": "A publisher blurb the function never asks for and never keeps.",
+        "printType": "BOOK",
+        "categories": [
+          "Fiction / General"
+        ],
+        "language": "de",
+        "imageLinks": {
+          "smallThumbnail": "http://books.google.com/books/content?id=ZZnoisbn01&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+          "thumbnail": "http://books.google.com/books/content?id=ZZnoisbn01&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+        }
+      }
+    },
+    {
+      "kind": "books#volume",
+      "id": "ZZnoauth01",
+      "etag": "x",
+      "selfLink": "https://www.googleapis.com/books/v1/volumes/ZZnoauth01",
+      "volumeInfo": {
+        "title": "Hafenlichter",
+        "publishedDate": "2020-05-05",
+        "description": "A publisher blurb the function never asks for and never keeps.",
+        "industryIdentifiers": [
+          {
+            "type": "ISBN_13",
+            "identifier": "9791034567928"
+          }
+        ],
+        "pageCount": 200,
+        "printType": "BOOK",
+        "categories": [
+          "Poetry / German"
+        ],
+        "language": "de",
+        "imageLinks": {
+          "smallThumbnail": "http://books.google.com/books/content?id=ZZnoauth01&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+          "thumbnail": "http://books.google.com/books/content?id=ZZnoauth01&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+        }
+      }
+    },
+    {
+      "kind": "books#volume",
+      "id": "ZZfr000001",
+      "etag": "x",
+      "selfLink": "https://www.googleapis.com/books/v1/volumes/ZZfr000001",
+      "volumeInfo": {
+        "title": "Le Port silencieux",
+        "authors": [
+          "Ida Beispiel"
+        ],
+        "publishedDate": "2023-01-10",
+        "description": "A publisher blurb the function never asks for and never keeps.",
+        "industryIdentifiers": [
+          {
+            "type": "ISBN_13",
+            "identifier": "9791034567935"
+          }
+        ],
+        "pageCount": 300,
+        "printType": "BOOK",
+        "categories": [
+          "Juvenile Fiction / Historical / General",
+          "Biography & Autobiography / Women",
+          "Business & Economics / Marketing"
+        ],
+        "language": "fr",
+        "imageLinks": {
+          "smallThumbnail": "http://books.google.com/books/content?id=ZZfr000001&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+          "thumbnail": "http://books.google.com/books/content?id=ZZfr000001&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+        }
+      }
+    }
+  ]
+}

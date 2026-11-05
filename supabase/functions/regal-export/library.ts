@@ -8,6 +8,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { RegalExportEntry, RegalExportSession } from '../../../web/app/data/export/regal.ts'
+import { isGoogleCover } from '../../../web/app/data/googleCover.ts'
 import { isHardcoverCover } from '../../../web/app/data/hardcoverCover.ts'
 
 export type BookRow = {
@@ -70,9 +71,9 @@ export function sortSessions(sessions: readonly Session[]): Session[] {
 
 export function entryFromRow(row: EntryRow): RegalExportEntry {
   const { book } = row
-  // The file feeds a public shelf, and this read has the service role, which `private.cover_shown` does not bind: a Hardcover
-  // cover (inside the app only, owner decision of 31 Oct 2026) goes out with neither its address nor the colours taken from it.
-  const hidden = isHardcoverCover(book.cover_url?.trim())
+  // The file feeds a public shelf, and this read has the service role, which `private.cover_shown` does not bind: a Hardcover or Google Books
+  // cover (inside the app only, owner decision of 31 Oct 2026 and the Google terms) goes out with neither its address nor the colours taken from it.
+  const hidden = isHardcoverCover(book.cover_url?.trim()) || isGoogleCover(book.cover_url?.trim())
   return {
     addedAt: row.added_at,
     pageCountOverride: row.page_count_override ?? null,

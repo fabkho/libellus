@@ -16,7 +16,7 @@ alter table public.book_genres add constraint book_genres_map_version_positive C
 alter table public.book_genres add constraint book_genres_pkey PRIMARY KEY (book_id, genre_id);
 alter table public.book_genres add constraint book_genres_rank_range CHECK (((rank >= 1) AND (rank <= 3)));
 alter table public.book_genres add constraint book_genres_rank_unique UNIQUE (book_id, rank);
-alter table public.book_genres add constraint book_genres_source CHECK ((source = ANY (ARRAY['wikidata'::text, 'apple'::text, 'openlibrary'::text])));
+alter table public.book_genres add constraint book_genres_source CHECK ((source = ANY (ARRAY['wikidata'::text, 'apple'::text, 'openlibrary'::text, 'google'::text])));
 
 -- indexes
 CREATE INDEX book_genres_genre ON public.book_genres USING btree (genre_id);
