@@ -297,7 +297,10 @@ jobs:
           fi
 
           # pg-delta: a shadow built from supabase/migrations against production.
-          if timeout 600 supabase db diff --linked --use-pg-delta > "$RUNNER_TEMP/drift-pgdelta.sql" 2> "$RUNNER_TEMP/drift-pgdelta.err"; then
+          # pg-delta answers a JSON object; pgdelta-filter.mjs prints the SQL of it minus the objects that
+          # live only in production on purpose (its IGNORED_ROLES, each with the reason), nothing when none is left.
+          if timeout 600 supabase db diff --linked --use-pg-delta > "$RUNNER_TEMP/drift-pgdelta.raw" 2> "$RUNNER_TEMP/drift-pgdelta.err" \
+            && node scripts/schema-snapshot/pgdelta-filter.mjs < "$RUNNER_TEMP/drift-pgdelta.raw" > "$RUNNER_TEMP/drift-pgdelta.sql"; then
             if [ -s "$RUNNER_TEMP/drift-pgdelta.sql" ]; then
               drift=true
               {

@@ -524,6 +524,11 @@ object from the dashboard and pass the file.
    Member ids are the same, so `NUXT_PUBLIC_SHELF_OWNER_ID` stays.
 5. Members sign in again with a code: sessions are not restored, and the new project signs with its own keys.
 
+**The role `libellus_backup`** exists in production only, on purpose: a login role in `pg_read_all_data`,
+`BYPASSRLS`, `default_transaction_read_only = on`, created in the SQL editor with its own password (a password
+cannot live in a migration). No migration creates it, so the release job's drift check ignores it
+(`scripts/schema-snapshot/pgdelta-filter.mjs`, `IGNORED_ROLES`); a role of another name still shows up as drift.
+
 **To read a backup** without touching any project: `--mode full` restores schema and data into an empty
 database, e.g. a scratch database on the local stack (on Postgres without Supabase the policies' roles are
 missing):

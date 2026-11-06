@@ -604,6 +604,11 @@ right after "Migrations", diffs it with the snapshot of the tag and adds
 run by hand against production (`--linked`) when it landed: the two differences it found were the platform's, not
 drift, and the query now leaves them out (below). Nothing runs against production in a pull request.
 
+pg-delta also sees cluster roles, which no migration creates. `scripts/schema-snapshot/pgdelta-filter.mjs` drops the
+statements about the roles in its `IGNORED_ROLES` (each with the reason) before the job decides: today only
+`libellus_backup`, the read-only login role of the nightly dump, made by hand with a password
+(`web/tests/pgdelta-filter.test.ts`). Anything not on the list still warns.
+
 What the snapshot leaves out, on purpose: `auth` and `storage` tables, `realtime`, `extensions`, `graphql_public`
 and the other platform schemas; versions, OIDs, timestamps and data. From `storage` only what is ours — the policies
 on `storage.objects`, and any trigger of ours on it — never the storage image's own grants, which differ between the
