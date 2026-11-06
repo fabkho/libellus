@@ -256,7 +256,7 @@ const alone = computed(() => read.value?.status === 'active' && (read.value.memb
     <TogetherInviteSheet v-model:open="inviteOpen" :read-id="id" />
     <TogetherMembersSheet v-model:open="membersOpen" :read-id="id" @left="leftTheRead" />
 
-    <TogetherShowAnyway v-model:open="confirmOpen" :number="asking?.number ?? ''" :end="asking?.kind === 'end'" @show="showAnyway" />
+    <RoomShowAnyway v-model:open="confirmOpen" :number="asking?.number ?? ''" :end="asking?.kind === 'end'" @show="showAnyway" />
   </div>
 </template>
 

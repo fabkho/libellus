@@ -1,25 +1,28 @@
 <script setup lang="ts">
-// Report a message (docs/plans/buddy-read-shared.md part 4.3, D3): one reason and an optional note go to the instance's owner as a
+// Report a message of a room, buddy read or notes (docs/plans/buddy-read-shared.md part 4.3, D3; docs/plans/book-notes.md part 5.1): one reason and an optional note go to the instance's owner as a
 // `report` in the Feedback inbox (`report_buddy_message`: the database keeps the message's id, its Section and a short excerpt, and
 // refuses a report of one's own message, a second report of the same message is no new row). Reasons are a radio group (APG). The
 // answer stays in the sheet: sent ("Thanks, I'll look at it"), or refused with the reason worded (`buddyRead.error.<code>`, a rate
 // limit says so). Nothing is sent without a reason, and nothing while she is offline (the button says Offline).
-import { REPORT_REASONS, type BuddyErrorCode } from '~/data/buddyReads'
-import { buddyErrorKey } from '~/utils/buddyRead'
-import { REPORT_NOTE_MAX, reportInput } from '~/utils/buddyThread'
-import { useBuddyReadStore } from '~/stores/buddyRead'
+// The call itself is the page's: `send` hands the report to the buddy store or the notes store and answers the refusal's code (null: sent);
+// `errorKey` says which message-file key words a code (`buddyRead.error.<code>`, `notes.error.<code>`).
+import { REPORT_REASONS, type ReportReason } from '~/data/buddyReads'
+import { REPORT_NOTE_MAX, reportInput } from '~/utils/roomThread'
 
-const props = defineProps<{ messageId: string | null }>()
+const props = defineProps<{
+  messageId: string | null
+  send: (messageId: string, reason: ReportReason, note: string | null) => Promise<string | null>
+  errorKey: (code: string) => string
+}>()
 const open = defineModel<boolean>('open', { required: true })
 
 const { t } = useI18n()
-const store = useBuddyReadStore()
 const online = useOnline()
 
 const reason = ref<string | null>(null)
 const note = ref('')
 const busy = ref(false)
-const error = ref<BuddyErrorCode | null>(null)
+const error = ref<string | null>(null)
 const sent = ref(false)
 
 watch(open, (now) => {
@@ -33,13 +36,13 @@ watch(open, (now) => {
 
 const input = computed(() => reportInput(reason.value, note.value))
 
-async function send() {
+async function submit() {
   if (!props.messageId || !input.value || busy.value) return
   busy.value = true
   error.value = null
-  const answer = await store.report(props.messageId, input.value.reason, input.value.note)
+  const failed = await props.send(props.messageId, input.value.reason, input.value.note)
   busy.value = false
-  if (answer.error) error.value = answer.error
+  if (failed) error.value = failed
   else sent.value = true
 }
 </script>
@@ -51,7 +54,7 @@ async function send() {
     :action="sent ? undefined : busy ? t('together.report.sending') : t('together.report.send')"
     :action-disabled="!input || busy || !online"
     testid="together.report"
-    @action="send"
+    @action="submit"
   >
     <div v-if="sent" class="flex flex-col items-center gap-sm px-xl pt-md pb-xl text-center" data-testid="together.report.done">
       <p class="book-title text-callout">{{ t('together.report.doneTitle') }}</p>
@@ -83,7 +86,7 @@ async function send() {
       <UiTextArea id="together-report-note" v-model="note" :label="t('together.report.noteLabel')" :hint="t('together.report.optional')" :maxlength="REPORT_NOTE_MAX" data-testid="together.report.note" />
 
       <p v-if="!online" class="text-footnote text-ink-faint" data-testid="together.report.offline">{{ t('common.offline') }}</p>
-      <p v-if="error" class="text-footnote text-error" role="alert" data-testid="together.report.error">{{ t(buddyErrorKey(error)) }}</p>
+      <p v-if="error" class="text-footnote text-error" role="alert" data-testid="together.report.error">{{ t(errorKey(error)) }}</p>
     </div>
   </UiSheet>
 </template>
