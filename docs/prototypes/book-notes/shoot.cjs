@@ -11,6 +11,8 @@ const SHOTS = [
   ['3-notes-light-de-360', 'notes.html', 'light', 'de', 360],
   ['4-chapter-light-en', 'chapter.html', 'light', 'en', 390],
   ['4-chapter-dark-de', 'chapter.html', 'dark', 'de', 390],
+  ['4b-composer-public-light-en', 'composer-public.html', 'light', 'en', 390],
+  ['4b-composer-public-dark-de-360', 'composer-public.html', 'dark', 'de', 360],
   ['5-buddy-dark-en', 'buddy.html', 'dark', 'en', 390],
   ['5-buddy-light-de', 'buddy.html', 'light', 'de', 390],
   // Appendix B (all members, later): kept for that phase only.

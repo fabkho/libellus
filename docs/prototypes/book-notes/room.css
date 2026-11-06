@@ -98,3 +98,16 @@
 
 .cover.md { width: 72px; border-radius: 3px; padding: 7px; }
 .cover.md .t { font-size: 10px; } .cover.md .a { font-size: 4.5px; }
+
+/* Notes visibility (book-notes v3): the three-way control in the composer, the marks in the thread */
+.vis { display: inline-flex; margin-left: auto; padding: 2px; border-radius: 999px; background: var(--color-fill-strong); }
+.vis span { position: relative; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px; border-radius: 999px; font-size: 13px; color: var(--color-ink-muted); white-space: nowrap; }
+.vis span::after { content: ''; position: absolute; inset: 50% 0 auto; height: 44px; transform: translateY(-50%); }
+.vis span.on { background: var(--color-surface-raised); color: var(--color-ink); box-shadow: var(--shadow-raised); font-weight: 500; }
+.vis .ico { width: 14px; height: 14px; }
+.composer .chips { display: flex; align-items: center; }
+.vhint { display: flex; gap: 6px; align-items: flex-start; margin: 0 6px 8px; font-size: 12.5px; line-height: 16px; color: var(--color-ink-muted); }
+.vhint .ico { width: 14px; height: 14px; margin-top: 1px; color: var(--color-ink-faint); }
+.mark { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--color-ink-faint); }
+.mark .ico { width: 12px; height: 12px; }
+.msg.mine .meta-mine { display: flex; justify-content: flex-end; gap: 6px; padding: 4px 4px 0; }
