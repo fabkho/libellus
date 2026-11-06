@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Book notes 2: the Notes page before anyone set the chapters</title>
+<link rel="stylesheet" href="base.css" />
+<link rel="stylesheet" href="room.css" />
+<style>
+  .hero { position: relative; display: flex; gap: 16px; align-items: flex-end; padding: 108px 20px 0; }
+  .hero h1 { font-size: 22px; line-height: 27px; }
+  .ask { margin: 44px 20px 0; text-align: center; }
+  .ask .serif { font-size: 21px; line-height: 27px; }
+  .count { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 22px; }
+  .count .step { width: 48px; height: 48px; border-radius: 999px; background: var(--color-fill-strong); display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--color-ink-muted); }
+  .count .n { min-width: 120px; padding-bottom: 6px; border-bottom: 1.5px solid var(--color-accent); font: 500 44px/52px var(--font-mono); text-align: center; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="glow"></div>
+  <div class="status-bar"><span>9:41</span><span class="mono" style="font-size:12px;letter-spacing:2px">▪▪▪ ▮</span></div>
+  <div class="round" style="left:20px"><svg viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></div>
+
+  <div class="hero">
+    <div class="cover md c3"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div>
+    <div>
+      <p class="eyebrow" data-en="Notes" data-de="Notizen"></p>
+      <h1 class="serif" style="margin-top:6px">The Salt Orchard</h1>
+      <p class="caption muted" style="margin-top:2px">Ilse Varga</p>
+    </div>
+  </div>
+
+  <div class="ask">
+    <p class="serif" data-en="How many chapters does this book have?" data-de="Wie viele Kapitel hat dieses Buch?"></p>
+    <p class="caption muted" style="margin-top:8px" data-en="Each chapter gets its own page for notes." data-de="Jedes Kapitel bekommt eine eigene Seite für Notizen."></p>
+    <div class="count"><span class="step">−</span><span class="n">43</span><span class="step">+</span></div>
+    <div class="btn primary" style="margin-top:30px" data-en="Make 43 chapters" data-de="43 Kapitel anlegen"></div>
+    <p class="footnote faint" style="margin-top:12px" data-en="Everyone with this book shares the chapter list. You can add chapters later." data-de="Alle mit diesem Buch teilen die Kapitelliste. Du kannst später Kapitel hinzufügen."></p>
+  </div>
+</div>
+<script src="mock.js"></script>
+</body>
+</html>
