@@ -1,4 +1,4 @@
-/* Static mock-ups for docs/plans/public-book-rooms.md. Not app code: the tokens are a copy (tokens.css), the
+/* Static mock-ups for docs/plans/book-notes.md. Not app code: the tokens are a copy (tokens.css), the
    classes below imitate the app's components (UiSheet, UiPill, the Book page's chip row) closely
    enough to judge layout, density and copy at 390 and 360 px. */
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,500;1,6..72,400&display=block');

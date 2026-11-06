@@ -2,8 +2,8 @@
 
 **Status: plan for the owner, documentation only. Draft PR, DO NOT MERGE.** Written 6 November 2026 against `origin/main`
 `ee6893ce` (1.40.0). Measured the same day on production with read-only `SELECT`s that return counts only (Appendix C).
-Mock-ups: `docs/prototypes/public-book-rooms/` (static HTML on the app's real tokens, copied from
-`web/app/assets/css/tokens.generated.css`), shots in `docs/images/public-book-rooms/`. The file keeps the name of the first
+Mock-ups: `docs/prototypes/book-notes/` (static HTML on the app's real tokens, copied from
+`web/app/assets/css/tokens.generated.css`), shots in `docs/images/book-notes/`. The file keeps the name of the first
 brief ("public book rooms"); the owner's steering of 5 November re-centred it, and the public version is now Appendix B.
 
 **The owner's case, in his words:** "I am reading a book, he has not read it; I take notes per chapter so he can react later
@@ -246,13 +246,13 @@ functions; forward-only as `AGENTS.md` requires, `pnpm schema:snapshot` committe
 | A thread | Unchanged; the composer says "A note on chapter 3" for her, "Reply to Anna's notes" for him | 4, 7 |
 | Home | *Reading together* lists notes rooms like reads ("Anna's notes", unread pill); when his reading opens a Section with notes, its count shows there by itself | (as today) |
 
-![The friend's Book page](../images/public-book-rooms/1-book-friend-light-en.jpg)
-![Starting notes](../images/public-book-rooms/2-start-light-en.jpg)
-![Anna's notes as Ben sees them](../images/public-book-rooms/3-room-dark-en.jpg)
-![A chapter's thread, weeks apart](../images/public-book-rooms/4-thread-light-en.jpg)
-![The first open](../images/public-book-rooms/5-join-dark-en.jpg)
-![A friend's profile](../images/public-book-rooms/6-profile-light-en.jpg)
-![Her first note](../images/public-book-rooms/7-empty-dark-en.jpg)
+![The friend's Book page](../images/book-notes/1-book-friend-light-en.jpg)
+![Starting notes](../images/book-notes/2-start-light-en.jpg)
+![Anna's notes as Ben sees them](../images/book-notes/3-room-dark-en.jpg)
+![A chapter's thread, weeks apart](../images/book-notes/4-thread-light-en.jpg)
+![The first open](../images/book-notes/5-join-dark-en.jpg)
+![A friend's profile](../images/book-notes/6-profile-light-en.jpg)
+![Her first note](../images/book-notes/7-empty-dark-en.jpg)
 
 German and 360 px shots are in the same folder (`*-de*.jpg`, `3-room-light-de-360.jpg`).
 
@@ -370,9 +370,9 @@ feature into user-generated content shown to strangers. That brings, in this ord
 | Strangers learn who reads what | medium | privacy | short names, photo off, no positions, no profile from a room |
 | Minors meet strangers | low (16+ by notice, unchecked) | serious | an age line at sign-up (WP-24) before opening |
 
-Mock-ups kept for that phase: [first-use sheet](../images/public-book-rooms/later-1-first-use-light-en.jpg),
-[the mini card](../images/public-book-rooms/later-2-member-dark-en.jpg),
-[the report sheet](../images/public-book-rooms/later-3-report-light-de.jpg).
+Mock-ups kept for that phase: [first-use sheet](../images/book-notes/later-1-first-use-light-en.jpg),
+[the mini card](../images/book-notes/later-2-member-dark-en.jpg),
+[the report sheet](../images/book-notes/later-3-report-light-de.jpg).
 
 ## Appendix C: method, queries, what I could not verify
 

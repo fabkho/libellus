@@ -1,5 +1,5 @@
 // Screenshots of the static mock-ups: node shoot.cjs [only]   (PLAYWRIGHT=<path to a playwright package> if not installed here)
-// Writes docs/images/public-book-rooms/<name>.jpg at 2x, WebKit at iPhone size like web/scripts/readme-shots.ts.
+// Writes docs/images/book-notes/<name>.jpg at 2x, WebKit at iPhone size like web/scripts/readme-shots.ts.
 const path = require('node:path')
 const { webkit } = require(process.env.PLAYWRIGHT || 'playwright')
 const SHOTS = [
@@ -25,7 +25,7 @@ const SHOTS = [
 ;(async () => {
   const only = process.argv[2]
   const browser = await webkit.launch()
-  const out = path.resolve(__dirname, '../../images/public-book-rooms')
+  const out = path.resolve(__dirname, '../../images/book-notes')
   require('node:fs').mkdirSync(out, { recursive: true })
   for (const [name, file, theme, lang, w] of SHOTS) {
     if (only && !name.startsWith(only)) continue
