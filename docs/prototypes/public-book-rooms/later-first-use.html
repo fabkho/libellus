@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Public book rooms 2: the first-use sheet</title>
+<link rel="stylesheet" href="base.css" />
+<link rel="stylesheet" href="room.css" />
+<style>
+  .under { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; padding-top: 100px; }
+  .preview .name { font-size: 15px; font-weight: 500; }
+  .preview .edit { margin-left: auto; font-size: 14px; color: var(--color-accent-ink); }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar"><span>9:41</span><span class="mono" style="font-size:12px;letter-spacing:2px">▪▪▪ ▮</span></div>
+  <div class="under"><div class="cover xl c3"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+  <div class="scrim"></div>
+
+  <section class="sheet" style="top:64px">
+    <div class="grabber"></div>
+    <div class="head">
+      <button class="cancel" data-en="Not now" data-de="Nicht jetzt"></button>
+      <span class="title" data-en="Book discussion" data-de="Buchgespräch"></span>
+      <span></span>
+    </div>
+
+    <div class="body" style="padding-top:10px">
+      <p class="serif callout" style="font-size:20px;line-height:26px" data-en="Talk about this book with everyone who reads it." data-de="Sprich mit allen, die dieses Buch lesen, darüber."></p>
+
+      <ul class="bullets" style="margin-top:16px">
+        <li><svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><circle cx="16.5" cy="10" r="2.5"/><path d="M3.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5M14 14.6c.8-.4 1.6-.6 2.5-.6 2.2 0 4 1.6 4.5 4"/></svg>
+          <span data-en-html="<b>Members you don't know</b> read what you write here, not only your friends." data-de-html="<b>Mitglieder, die du nicht kennst</b>, lesen, was du hier schreibst, nicht nur deine Freunde."></span></li>
+        <li><svg class="ico" viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.5"/></svg>
+          <span data-en-html="They see <b>your name below</b> and what you write. Never your Library, your progress or your profile." data-de-html="Sie sehen <b>deinen Namen unten</b> und was du schreibst. Nie deine Bibliothek, deinen Fortschritt oder dein Profil."></span></li>
+        <li><svg class="ico" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <span data-en-html="Parts you haven't read <b>stay closed</b>, so nobody spoils the book for you." data-de-html="Teile, die du noch nicht gelesen hast, <b>bleiben zu</b>, damit dir niemand das Buch verdirbt."></span></li>
+      </ul>
+
+      <h3 class="eyebrow" style="margin:22px 0 8px" data-en="How you appear" data-de="So erscheinst du"></h3>
+      <div class="preview">
+        <span class="av">AS</span>
+        <span class="name">Anna S.</span>
+        <span class="edit" data-en="Change" data-de="Ändern"></span>
+      </div>
+      <div class="rowgroup" style="margin-top:8px">
+        <div class="row"><span data-en="Show my photo" data-de="Mein Foto zeigen"></span><span class="switch"></span></div>
+      </div>
+
+      <div class="pinned" style="margin:18px 0 0">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M5 4v16M5 5h11l-2 4 2 4H5"/></svg>
+        <span data-en-html="Be kind, mark spoilers, no ads or links. <a>Community rules</a>" data-de-html="Sei freundlich, markiere Spoiler, keine Werbung, keine Links. <a>Gemeinschaftsregeln</a>"></span>
+      </div>
+
+      <div class="btn primary" style="margin-top:20px" data-en="Join the discussion" data-de="Mitreden"></div>
+      <p class="footnote faint" style="text-align:center;margin-top:10px" data-en="You can leave any time and delete what you wrote." data-de="Du kannst jederzeit gehen und löschen, was du geschrieben hast."></p>
+    </div>
+  </section>
+</div>
+<script src="mock.js"></script>
+</body>
+</html>

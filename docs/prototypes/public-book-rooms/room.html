@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Notes on a Book 3: Anna's notes, as Ben sees them</title>
+<link rel="stylesheet" href="base.css" />
+<link rel="stylesheet" href="room.css" />
+<style>
+  .hero { position: relative; display: flex; gap: 16px; align-items: flex-end; padding: 108px 20px 0; }
+  .hero h1 { font-size: 22px; line-height: 27px; }
+  .track { position: relative; margin: 26px 28px 0; height: 2px; background: var(--color-hairline-strong); }
+  .track i { position: absolute; top: -4px; width: 1px; height: 10px; background: var(--color-hairline-strong); }
+  .track .av { position: absolute; top: -15px; width: 30px; height: 30px; font-size: 10px; transform: translateX(-50%); }
+  .you { display: flex; align-items: center; justify-content: space-between; margin: 26px 20px 0; font-size: 13.5px; color: var(--color-ink-muted); }
+  .you a { color: var(--color-accent-ink); font-weight: 500; }
+  .rows { margin: 12px 16px 0; }
+  .hint { margin: 10px 20px 0; font-size: 12.5px; line-height: 16px; color: var(--color-ink-faint); }
+  .eye { width: 16px; height: 16px; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="glow"></div>
+  <div class="status-bar"><span>9:41</span><span class="mono" style="font-size:12px;letter-spacing:2px">▪▪▪ ▮</span></div>
+  <div class="round" style="left:20px"><svg viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></div>
+  <div class="round" style="right:20px"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r=".8"/><circle cx="12" cy="12" r=".8"/><circle cx="18" cy="12" r=".8"/></svg></div>
+
+  <div class="hero">
+    <div class="cover md c3"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div>
+    <div>
+      <p class="eyebrow" data-en="Anna's notes" data-de="Annas Notizen"></p>
+      <h1 class="serif" style="margin-top:6px">The Salt Orchard</h1>
+      <p class="caption muted" style="margin-top:2px">Ilse Varga</p>
+      <p class="caption faint" style="margin-top:6px" data-en="Anna wrote 14 notes · read it in October" data-de="Anna schrieb 14 Notizen · gelesen im Oktober"></p>
+    </div>
+  </div>
+
+  <!-- the buddy read's track, unchanged: a tick per part, each member's face in her part -->
+  <div class="track">
+    <i style="left:16%"></i><i style="left:33%"></i><i style="left:50%"></i><i style="left:66%"></i><i style="left:83%"></i>
+    <span class="av ring photo2" style="left:8%">B</span>
+    <span class="av photo" style="left:100%">AS</span>
+  </div>
+
+  <div class="you">
+    <span data-en="You: chapter 1" data-de="Du: Kapitel 1"></span>
+    <a data-en="Where are you?" data-de="Wo bist du?"></a>
+  </div>
+
+  <div class="rowgroup rows">
+    <div class="trow"><span class="n">–</span><span class="t" data-en="Before you start" data-de="Bevor du anfängst"></span><span class="c">2</span><span class="chev">›</span></div>
+    <div class="trow"><span class="n">1</span><span class="t" data-en="Chapter 1 · The well" data-de="Kapitel 1 · Der Brunnen"></span><span class="c">3</span><span class="dot"></span><span class="chev">›</span></div>
+    <div class="trow veiled"><span class="n">2</span><span class="t"><svg class="ico eye" viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6c1.6 0 3 .5 4.2 1.2M21 12s-3.5 6-9 6c-1.6 0-3-.5-4.2-1.2M4 4l16 16"/></svg></span><span class="c">2</span><span class="chev">›</span></div>
+    <div class="trow veiled"><span class="n">3</span><span class="t"><svg class="ico eye" viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6c1.6 0 3 .5 4.2 1.2M21 12s-3.5 6-9 6c-1.6 0-3-.5-4.2-1.2M4 4l16 16"/></svg></span><span class="c">4</span><span class="chev">›</span></div>
+    <div class="trow veiled"><span class="n">4</span><span class="t"><svg class="ico eye" viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6c1.6 0 3 .5 4.2 1.2M21 12s-3.5 6-9 6c-1.6 0-3-.5-4.2-1.2M4 4l16 16"/></svg></span><span class="c">1</span><span class="chev">›</span></div>
+    <div class="trow veiled"><span class="n">5</span><span class="t"><svg class="ico eye" viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6c1.6 0 3 .5 4.2 1.2M21 12s-3.5 6-9 6c-1.6 0-3-.5-4.2-1.2M4 4l16 16"/></svg></span><span class="c">0</span><span class="chev">›</span></div>
+    <div class="trow veiled"><span class="n">✓</span><span class="t"><svg class="ico eye" viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6c1.6 0 3 .5 4.2 1.2M21 12s-3.5 6-9 6c-1.6 0-3-.5-4.2-1.2M4 4l16 16"/></svg></span><span class="c">2</span><span class="chev">›</span></div>
+  </div>
+  <p class="hint" data-en="Anna's notes on later chapters open as your reading reaches them. Tap one to open it early." data-de="Annas Notizen zu späteren Kapiteln öffnen sich, wenn dein Lesen dort ankommt. Tippe, um eins früher zu öffnen."></p>
+
+  <nav class="tabbar">
+    <svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"/></svg>
+    <svg viewBox="0 0 24 24" style="color:var(--color-ink)"><path d="M5 4h3v16H5zM10 4h3v16h-3zM15 5l3-1 3 15-3 1z"/></svg>
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg>
+  </nav>
+</div>
+<script src="mock.js"></script>
+</body>
+</html>

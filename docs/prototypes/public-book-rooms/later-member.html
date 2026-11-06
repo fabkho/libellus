@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Public book rooms 5: tapping a stranger (the mini card)</title>
+<link rel="stylesheet" href="base.css" />
+<link rel="stylesheet" href="room.css" />
+<style>
+  .card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px 0 18px; text-align: center; }
+  .card .name { font-size: 19px; font-weight: 500; letter-spacing: -0.01em; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar"><span>9:41</span><span class="mono" style="font-size:12px;letter-spacing:2px">▪▪▪ ▮</span></div>
+  <div class="topbar">
+    <div class="round"><svg viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></div>
+    <div class="mid"><h1 data-en="First quarter" data-de="Erstes Viertel"></h1><p class="range">The Salt Orchard · 0–25 %</p></div><div></div>
+  </div>
+  <div class="msgs" style="justify-content:flex-start;padding-top:20px">
+    <div class="msg"><p class="who">Mira K.</p><div class="line"><span class="av">MK</span><div class="bub" data-en="The orchard chapter is doing so much quiet work. Did anyone else read the salt as grief?" data-de="Das Obstgarten-Kapitel leistet so viel leise Arbeit. Hat noch jemand das Salz als Trauer gelesen?"></div></div></div>
+  </div>
+  <div class="scrim"></div>
+
+  <section class="sheet">
+    <div class="grabber"></div>
+    <div class="head"><span></span><span class="title"></span><button class="action" data-en="Done" data-de="Fertig"></button></div>
+    <div class="card">
+      <span class="av lg">MK</span>
+      <span class="name">Mira K.</span>
+      <span class="caption faint" data-en="A reader of this book. Profiles stay private here." data-de="Liest dieses Buch. Profile bleiben hier privat."></span>
+    </div>
+    <div class="rowgroup">
+      <div class="action"><svg class="ico" viewBox="0 0 24 24"><path d="M5 4v16M5 5h11l-2 4 2 4H5"/></svg><span data-en="Report this post" data-de="Diesen Beitrag melden"></span></div>
+      <div class="action"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.5"/><path d="M5 20c.8-3.6 3.6-6 7-6s6.2 2.4 7 6"/></svg><span data-en="Report her name or photo" data-de="Namen oder Foto melden"></span></div>
+    </div>
+    <div class="rowgroup" style="margin-top:12px">
+      <div class="action danger"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="m6.5 6.5 11 11"/></svg><span data-en="Block Mira K." data-de="Mira K. blockieren"></span></div>
+    </div>
+    <p class="footnote faint" style="margin-top:10px;padding:0 4px" data-en="Blocking is silent. You won't see each other's posts in any discussion or buddy read, and she can't follow you." data-de="Blockieren ist still. Ihr seht eure Beiträge in keinem Gespräch und keinem Buddy-Read mehr, und sie kann dir nicht folgen."></p>
+  </section>
+</div>
+<script src="mock.js"></script>
+</body>
+</html>

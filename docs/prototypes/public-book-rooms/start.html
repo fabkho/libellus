@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Notes on a Book 2: starting notes (her side)</title>
+<link rel="stylesheet" href="base.css" />
+<link rel="stylesheet" href="room.css" />
+<style>
+  .under { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; padding-top: 100px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 3px; border-radius: 12px; background: var(--color-fill-strong); font-size: 14px; text-align: center; }
+  .seg span { padding: 7px 0; border-radius: 9px; color: var(--color-ink-muted); }
+  .seg .on { background: var(--color-surface-raised); color: var(--color-ink); box-shadow: var(--shadow-raised); font-weight: 500; }
+  .faces { display: flex; margin-left: auto; } .faces .av { width: 28px; height: 28px; font-size: 9px; letter-spacing: 0; margin-left: -6px; box-shadow: 0 0 0 2px var(--color-surface-sheet); }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar"><span>9:41</span><span class="mono" style="font-size:12px;letter-spacing:2px">▪▪▪ ▮</span></div>
+  <div class="under"><div class="cover xl c3"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+  <div class="scrim"></div>
+
+  <section class="sheet" style="top:72px">
+    <div class="grabber"></div>
+    <div class="head">
+      <button class="cancel" data-en="Cancel" data-de="Abbrechen"></button>
+      <span class="title" data-en="Read together" data-de="Gemeinsam lesen"></span>
+      <span></span>
+    </div>
+    <div class="body" style="padding-top:8px">
+      <div class="seg" style="grid-template-columns:1fr 1fr"><span data-en="With friends now" data-de="Jetzt mit Freunden"></span><span class="on" data-en="Notes for later" data-de="Notizen für später"></span></div>
+      <p class="caption muted" style="margin:12px 2px 0" data-en="Write as you read. Your friends find your notes on this book and read each part when they get there." data-de="Schreib beim Lesen. Deine Freunde finden deine Notizen bei diesem Buch und lesen jeden Teil, wenn sie dort angekommen sind."></p>
+
+      <h3 class="eyebrow" style="margin:20px 0 8px" data-en="Parts" data-de="Teile"></h3>
+      <div class="seg"><span class="on" data-en="Chapters" data-de="Kapitel"></span><span data-en="Equal parts" data-de="Gleiche Teile"></span><span data-en="Pages" data-de="Seiten"></span></div>
+      <div class="rowgroup" style="margin-top:8px">
+        <div class="row"><span data-en="Chapters so far" data-de="Kapitel bisher"></span><span class="v mono">6</span><span class="chev">›</span></div>
+      </div>
+      <p class="footnote faint" style="margin:6px 2px 0" data-en="Add chapters as you go. The whole book always comes last." data-de="Füge Kapitel beim Lesen hinzu. Das ganze Buch kommt immer zuletzt."></p>
+
+      <h3 class="eyebrow" style="margin:20px 0 8px" data-en="Who can read them" data-de="Wer sie lesen kann"></h3>
+      <div class="rowgroup">
+        <div class="radio"><span data-en="Your friends" data-de="Deine Freunde"></span><span class="faces"><span class="av photo2">B</span><span class="av">M</span><span class="av">J</span></span><span class="chk">✓</span></div>
+        <div class="radio"><span data-en="People you choose" data-de="Personen, die du wählst"></span></div>
+      </div>
+      <p class="footnote faint" style="margin:6px 2px 0" data-en="Friends: you follow each other. They'll see you're reading this book." data-de="Freunde: ihr folgt euch gegenseitig. Sie sehen, dass du dieses Buch liest."></p>
+
+      <div class="btn primary" style="margin-top:20px" data-en="Start notes" data-de="Notizen beginnen"></div>
+    </div>
+  </section>
+</div>
+<script src="mock.js"></script>
+</body>
+</html>
