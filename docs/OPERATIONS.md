@@ -654,6 +654,36 @@ Two small tables keep the import and its upstreams from running into their limit
   `next_at` far in the future (an upstream's `Retry-After`, capped at a minute in the function) clears itself; to clear it by
   hand: `update edge_pace set next_at = now();`.
 
+## Notes
+
+Notes on a Book (docs/plans/book-notes.md): a thread per chapter, each note at its own level, Only me (`private`),
+Friends (`friends`, members who follow each other) or Everyone (`public`, every signed-in member, never anyone signed out).
+Who sees a note is one function, `private.can_see_note`; the rules and their tests are
+`supabase/migrations/20261116010000_book_notes.sql`, `supabase/tests/book_notes_test.sql` and
+`supabase/tests/book_notes_rules_test.sql`.
+
+**The switch for Everyone** (`private.notes_settings.public_enabled`, on since the migration). Off, nobody can post at
+Everyone or widen a note to it, and every public note counts as a friends note for every reader (its author still sees
+it marked Everyone). On again, they are public again. **Turn it off before sign-up opens (#331)**, unless reports alert the
+owner by then. In the dashboard's SQL editor (it runs as `postgres`):
+
+```sql
+update private.notes_settings set public_enabled = false, updated_at = now();   -- or true
+```
+
+`public.owner_set_notes_public(boolean)` does the same for a signed-in owner (`not_owner` for anyone else), for an owner
+screen later; `public.notes_config()` tells the app the state.
+
+**Reports and removals.** A member reports a note she can see; it arrives in the Feedback inbox as `kind = 'report'`,
+body `Notes report: <reason>`, context `{room, chapter, section, note, author, visibility, excerpt}`. The owner removes a
+note with `public.owner_remove_note(note, reason)`, signed in as her (the inbox's *Remove note*, N2): the note becomes "Removed by the moderator" for
+everyone, its reactions go, and its text, level and the reason are kept in `private.note_moderation_log` for 12 months
+(pg_cron `purge-note-moderation-log`, at 03:40 on the 1st of each month; with her account, the author's records go at once).
+
+**Limits** (all `rate_limited`): notes 30 a minute and 300 a day a member, 30 of them at Everyone a day (posted or widened);
+chapter changes (set, add, remove) 20 a day; reactions 60 a minute; reports by the feedback limiter (5 an hour, 20 a day).
+The ledger of chapter changes and reactions is `private.note_calls`; each call clears that member's rows older than the window.
+
 ## Realtime
 
 Buddy reads go live over Realtime Broadcast, one **private** channel per member: topic `member:<her id>`
