@@ -20,7 +20,7 @@ begin
   end if;
 
   with v as materialized (
-    select n.author_id, n.visibility, n.created_at, s.position
+    select n.author_id, n.visibility, n.created_at, s.position, s.kind
       from private.visible_notes(v_caller, v_room) n
       join public.room_sections s on s.id = n.section_id
      where n.deleted_at is null and n.author_id <> v_caller
@@ -42,8 +42,9 @@ begin
       'authors', coalesce((select jsonb_agg(private.member_card(v_caller, x.author_id) order by x.last desc, x.author_id)
                              from (select * from fr_authors order by last desc, author_id limit 3) x), '[]'::jsonb),
       'authorCount', (select count(*)::integer from fr_authors),
-      'firstChapter', (select min(position) from fr),
-      'lastChapter', (select max(position) from fr)),
+      -- The numbered chapters only: The whole book (kind 'end', position n + 1) is not chapter n + 1.
+      'firstChapter', (select min(position) from fr where kind = 'part'),
+      'lastChapter', (select max(position) from fr where kind = 'part')),
     'public', jsonb_build_object(
       'count', (select count(*)::integer from pub),
       'authorCount', (select count(distinct author_id)::integer from pub)))

@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION public.note_messages(p_room uuid, p_section uuid, p_before timestamp with time zone DEFAULT NULL::timestamp with time zone, p_limit integer DEFAULT 50)
+CREATE OR REPLACE FUNCTION public.note_messages(p_room uuid, p_section uuid, p_before timestamp with time zone DEFAULT NULL::timestamp with time zone, p_limit integer DEFAULT 50, p_before_id uuid DEFAULT NULL::uuid)
  RETURNS jsonb
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
@@ -21,7 +21,9 @@ begin
       from (select n.*
               from private.visible_notes(v_caller, p_room) n
              where n.section_id = p_section
-               and (p_before is null or n.created_at < p_before)
+               and (p_before is null
+                    or n.created_at < p_before
+                    or (p_before_id is not null and n.created_at = p_before and n.id < p_before_id))
              order by n.created_at desc, n.id desc
              limit least(greatest(coalesce(p_limit, 50), 1), 100)) m
   ), '[]'::jsonb);
