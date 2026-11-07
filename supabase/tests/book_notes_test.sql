@@ -16,7 +16,7 @@
 -- about rows this test made, never counts of a table.
 
 begin;
-select plan(184);
+select plan(198);
 
 create schema if not exists tests;
 
@@ -76,6 +76,11 @@ returns void language sql security definer as $$
   insert into public.follows (follower_id, followee_id, accepted_at)
   values (p_follower, p_followee, case when p_accepted then now() end)
   on conflict (follower_id, followee_id) do update set accepted_at = excluded.accepted_at, declined_at = null
+$$;
+create or replace function tests.decline(p_follower uuid, p_followee uuid)
+returns void language sql security definer as $$
+  insert into public.follows (follower_id, followee_id, accepted_at, declined_at) values (p_follower, p_followee, null, now())
+  on conflict (follower_id, followee_id) do update set accepted_at = null, declined_at = now()
 $$;
 create or replace function tests.block(p_blocker uuid, p_blocked uuid)
 returns void language sql security definer as $$
@@ -165,6 +170,10 @@ select tests.follow(:'p', :'a', false);
 select tests.block(:'a', :'b1');
 select tests.block(:'b2', :'a');
 select tests.follow(:'a', :'jo'), tests.follow(:'jo', :'a');
+-- Dec: A follows Dec (accepted), Dec's request to A was declined.
+select tests.member('dec@notes.test', 'Dec D') as dec \gset
+select tests.follow(:'a', :'dec');
+select tests.decline(:'dec', :'a');
 
 -- A has the Book; it is tied to its Work by Open Library. Ten chapters.
 select tests.act_as(:'a');
@@ -183,6 +192,10 @@ reset role;
 select tests.act_as(x), public.set_note_chapter(:'room', 10)
   from unnest(array[:'a', :'f', :'o1', :'o2', :'p', :'s', :'b1', :'b2', :'jo', :'mira']::uuid[]) x;
 reset role;
+
+-- Everyone is off after the migration (safe by default); the owner turns it on. Both are covered below.
+select is(private.notes_public_enabled(), false, 'Everyone is off after the migration');
+select tests.switch(true);
 
 -- A's three notes in chapter 1.
 select tests.act_as(:'a');
@@ -243,8 +256,7 @@ $$;
 
 -- ------------------------------------------------------------------------- 1. the matrix
 
--- Everyone on (the owner's decision 21).
-select is(private.notes_public_enabled(), true, 'Everyone is on after the migration');
+-- Everyone on (set in the fixture).
 select is(private.can_see_note(tests.id(v), tests.id(l)), tests.expect(l, v, true),
           format('Everyone on: %s sees A''s %s note: %s', v, l, tests.expect(l, v, true)))
   from unnest(array['A', 'F', 'O1', 'O2', 'P', 'S', 'B1', 'B2']) v
@@ -254,6 +266,15 @@ select is(private.can_see_note(null, tests.id(l)), false, format('Everyone on: n
 select is(tests.view(v), tests.expected(v, true),
           format('Everyone on: %s gets the same notes from note_messages, book_notes (count, faces) and notes_summary', v))
   from unnest(array['A', 'F', 'O1', 'O2', 'P', 'S', 'B1', 'B2']) v;
+
+-- Friends means both follows accepted: one-way, pending and declined are not friends.
+select is(private.mutual_friends(:'a', :'f'), true, 'friends: A and F follow each other, both accepted');
+select is(private.mutual_friends(:'a', :'o1'), false, 'one way (A follows O1) is not friends');
+select is(private.mutual_friends(:'a', :'o2'), false, 'one way (O2 follows A) is not friends');
+select is(private.mutual_friends(:'a', :'p'), false, 'a pending request is not friends');
+select is(private.mutual_friends(:'a', :'dec'), false, 'a declined request is not friends, though A follows Dec');
+select is(private.can_see_note(:'dec', :'n_fr'), false, 'Dec does not see A''s friends note');
+select is(private.can_see_note(:'dec', :'n_pub'), true, 'only her public one');
 
 -- Everyone off: public notes count as friends notes.
 select tests.switch(false);
@@ -616,6 +637,36 @@ select tests.act_as(:'f');
 select is((public.book_notes(:'book') ->> 'canWrite')::boolean, true, 'and canWrite true for F, who has it');
 reset role;
 
+-- A blocked member's replies: S's public note in chapter 8, Mira answers it at Everyone. Once A blocks Mira,
+-- her reply leaves A's count, faces and Book page line, and stays for S.
+select tests.sec(:'room', 8) as ch8 \gset
+select tests.act_as(:'s');
+select tests.note(:'room', :'ch8', 'S: chapter 8', 'public') as s8 \gset
+select tests.act_as(:'mira');
+select tests.note(:'room', :'ch8', 'Mira answers S', 'public', :'s8') as mira8 \gset
+reset role;
+create or replace function tests.summary_of(p_viewer uuid)
+returns jsonb language plpgsql as $$
+declare v jsonb;
+begin
+  perform tests.act_as(p_viewer);
+  v := public.notes_summary(tests.id('book'));
+  reset role;
+  return v;
+end;
+$$;
+select (tests.summary_of(:'a') -> 'public' ->> 'count')::int as a_pub_before \gset
+select is(tests.row_of(:'a', 8) ->> 'count', '2', 'before the block, A counts S''s note and Mira''s reply');
+select is(tests.sorted(tests.ids(tests.row_of(:'a', 8) -> 'faces')), tests.sorted(array[:'s', :'mira']::uuid[]), 'and shows both faces');
+select tests.block(:'a', :'mira');
+select is(tests.row_of(:'a', 8) ->> 'count', '1', 'A blocked Mira: her reply leaves A''s chapter count');
+select is(tests.ids(tests.row_of(:'a', 8) -> 'faces'), array[:'s']::uuid[], 'and her face');
+select is((tests.summary_of(:'a') -> 'public' ->> 'count')::int, :'a_pub_before'::int - 2,
+  'and A''s Public line on the Book page loses Mira''s two live public notes (this reply and her note in chapter 2)');
+select is(tests.page_ids(:'a', :'room', :'ch8'), array[:'s8']::uuid[], 'and A''s thread');
+select is(tests.row_of(:'s', 8) ->> 'count', '2', 'S still counts both');
+select tests.unblock(:'a', :'mira');
+
 -- ------------------------------------------------------------------------- visible_notes = can_see_note
 
 -- Every fixture note of this file, every member of it, Everyone on and off: the set and the function agree.
@@ -642,7 +693,7 @@ select is(
   (select count(*)::int from unnest(array[
      'public.notes_config()', 'public.book_notes(uuid)', 'public.notes_summary(uuid)',
      'public.set_book_chapters(uuid, integer)', 'public.add_book_chapters(uuid, integer)',
-     'public.remove_book_chapters(uuid, integer)', 'public.set_note_chapter(uuid, integer, boolean)',
+     'public.owner_set_chapter_count(uuid, integer)', 'public.set_note_chapter(uuid, integer, boolean)',
      'public.note_messages(uuid, uuid, timestamptz, integer)',
      'public.post_note(uuid, uuid, uuid, text, text, uuid, boolean)', 'public.set_note_visibility(uuid, text)',
      'public.react_to_note(uuid, text)', 'public.delete_note(uuid)', 'public.report_note(uuid, text, text)',
@@ -656,27 +707,29 @@ select is(
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.proname in ('notes_config', 'book_notes', 'notes_summary', 'set_book_chapters',
-            'add_book_chapters', 'remove_book_chapters', 'set_note_chapter', 'note_messages', 'post_note',
+            'add_book_chapters', 'owner_set_chapter_count', 'set_note_chapter', 'note_messages', 'post_note',
             'set_note_visibility', 'react_to_note', 'delete_note', 'report_note', 'mark_notes_read',
             'owner_set_notes_public', 'owner_remove_note')),
   16, 'and no other overload of them');
 select is(
-  (select count(*)::int from unnest(array['private.can_see_note(uuid, uuid)', 'private.notes_public_enabled()']) f
+  (select count(*)::int from unnest(array['private.can_see_note(uuid, uuid)', 'private.notes_public_enabled()',
+       'private.note_author_seen(uuid, uuid)', 'private.note_photo_seen(uuid, uuid)', 'private.room_messages_check()',
+       'private.room_messages_replies_check()', 'private.room_sections_order()']) f
     where not (select prosecdef from pg_proc where oid = f::regprocedure)
        or (select proconfig from pg_proc where oid = f::regprocedure) is distinct from array['search_path=""']),
-  0, 'can_see_note and notes_public_enabled: security definer, search_path empty');
+  0, 'can_see_note, notes_public_enabled, note_author_seen, note_photo_seen and the three triggers: security definer, search_path empty');
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'private'
       and p.proname in ('note_level', 'book_work_key', 'work_books', 'notes_room_for', 'has_work', 'mutual_friends',
                         'notes_public_enabled', 'can_see_note', 'visible_notes', 'note_chapter', 'note_quote',
-                        'note_json', 'notes_page', 'notes_lock', 'note_rate', 'note_author_seen',
+                        'note_json', 'notes_page', 'notes_lock', 'note_rate', 'note_author_seen', 'note_photo_seen',
                         'purge_note_moderation_log', 'room_messages_check', 'room_messages_replies_check',
                         'room_sections_order')
       and (p.proconfig is null
            or has_function_privilege('anon', p.oid, 'execute')
            or has_function_privilege('authenticated', p.oid, 'execute'))),
-  0, 'the 20 helpers: search path pinned, nobody else may execute them');
+  0, 'the 21 helpers: search path pinned, nobody else may execute them');
 select is(
   (select count(*)::int from unnest(array['public.rooms', 'public.room_sections', 'public.room_messages',
        'public.room_reactions', 'public.room_cursors', 'public.note_positions']) t

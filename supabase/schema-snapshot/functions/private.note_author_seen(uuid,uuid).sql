@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION private.note_author_seen(p_caller uuid, p_target uuid)
  RETURNS boolean
  LANGUAGE sql
- STABLE
+ STABLE SECURITY DEFINER
  SET search_path TO ''
 AS $function$
   select p_caller is not null and p_target is not null and p_caller <> p_target

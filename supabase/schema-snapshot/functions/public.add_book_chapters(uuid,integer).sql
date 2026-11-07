@@ -19,7 +19,8 @@ begin
   if not private.has_work(v_caller, v_room.work_key) then
     raise exception 'notes_need_book' using errcode = 'PT403';
   end if;
-  if p_count is null or p_count < 1 then
+  -- Bounded before any arithmetic: a huge count is invalid_count, never an integer overflow.
+  if p_count is null or p_count not between 1 and 300 then
     raise exception 'invalid_count' using errcode = '22023';
   end if;
 

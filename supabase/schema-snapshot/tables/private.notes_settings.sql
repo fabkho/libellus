@@ -1,6 +1,6 @@
 create table private.notes_settings (
   id boolean default true not null,
-  public_enabled boolean default true not null,
+  public_enabled boolean default false not null,
   updated_at timestamp with time zone default now() not null
 );
 

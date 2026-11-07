@@ -109,6 +109,11 @@ export async function sweepRun() {
   await sql('delete from auth.users where email like $1', [runEmailPattern()])
   // Addresses the flows left on the waitlist (#171), and the limits they counted against.
   await sql('delete from private.waitlist where email::text like $1', [runEmailPattern()])
+  // The Notes rooms made on them (a room holds its Book: on delete restrict), with their chapters and notes.
+  await sql(
+    `delete from public.rooms r using public.books b where r.book_id = b.id and b.publisher = $1 and b.title like $2`,
+    [TEST_PUBLISHER, `% [${runTag()}]`],
+  )
   await sql(
     `delete from public.books b where b.publisher = $1 and b.title like $2
        and not exists (select 1 from public.library_entries e where e.book_id = b.id)`,
@@ -144,6 +149,10 @@ export async function sweepAbandonedRuns() {
     [`%@${TEST_DOMAIN}`],
   )
   await sql(`delete from private.waitlist where email::text like $1 and created_at < now() - interval '1 day'`, [`%@${TEST_DOMAIN}`])
+  await sql(
+    `delete from public.rooms r using public.books b where r.book_id = b.id and b.publisher = $1 and b.created_at < now() - interval '1 day'`,
+    [TEST_PUBLISHER],
+  )
   await sql(
     `delete from public.books b where b.publisher = $1 and b.created_at < now() - interval '1 day'
        and not exists (select 1 from public.library_entries e where e.book_id = b.id)`,

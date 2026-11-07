@@ -64,15 +64,16 @@ begin
     end if;
   end if;
 
-  -- 30 a minute and 300 a day over all Books; 30 public a day. Under her member lock.
+  -- 30 a minute and 300 a day over all Books. Under her member lock.
   if (select count(*) from public.room_messages m
        where m.author_id = v_caller and m.created_at > clock_timestamp() - interval '1 minute') >= 30
      or (select count(*) from public.room_messages m
-          where m.author_id = v_caller and m.created_at > clock_timestamp() - interval '1 day') >= 300
-     or (p_visibility = 'public' and (select count(*) from public.room_messages m
-          where m.author_id = v_caller and m.visibility = 'public'
-            and m.created_at > clock_timestamp() - interval '1 day') >= 30) then
+          where m.author_id = v_caller and m.created_at > clock_timestamp() - interval '1 day') >= 300 then
     raise exception 'rate_limited' using errcode = 'PT429';
+  end if;
+  -- Every move to Everyone is one use of her 30 a day (a post here, a widening in set_note_visibility).
+  if p_visibility = 'public' then
+    perform private.note_rate(v_caller, 'public', 30, interval '24 hours');
   end if;
 
   insert into public.room_messages (room_id, section_id, author_id, client_id, body, reply_to, spoiler,

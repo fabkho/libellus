@@ -13,7 +13,7 @@
 -- What this migration adds (nothing it does alters or drops an existing table, column, index or policy):
 --   tables   public.rooms, public.room_sections, public.room_messages, public.room_reactions,
 --            public.room_cursors, public.note_positions; private.notes_settings (one row, inserted here:
---            public_enabled = true, the owner's decision 21), private.note_moderation_log,
+--            public_enabled = false: Everyone is off at release, safe by default), private.note_moderation_log,
 --            private.note_calls.
 --            RLS on, no policies, nothing granted to anon or authenticated (the default privileges of this
 --            project grant every new public table to both, so the revoke is explicit): every read and
@@ -22,16 +22,21 @@
 --            visibility, the chapter is the room's, a reply stays in its parent's thread and is never wider
 --            than its parent), private.room_messages_replies_check (a deferred constraint trigger: a note
 --            is never narrower than one of its replies at commit), private.room_sections_order (a
---            deferred constraint trigger: positions 1..n, one `end`, last).
+--            deferred constraint trigger: positions 1..n, one `end`, last). All three are security definer
+--            with an empty search_path: a deferred trigger fires at COMMIT, after the RPC has returned, as
+--            the caller's role (authenticated), which may read none of these tables.
 --   helpers  private.book_work_key, private.work_books, private.notes_room_for, private.has_work,
 --            private.mutual_friends, private.notes_public_enabled, private.note_level,
 --            private.can_see_note, private.visible_notes, private.note_chapter, private.note_quote,
 --            private.note_json, private.notes_page, private.notes_lock, private.note_rate,
 --            private.note_author_seen, private.purge_note_moderation_log.
 --   RPCs     notes_config, book_notes, notes_summary, set_book_chapters, add_book_chapters,
---            remove_book_chapters, set_note_chapter, note_messages, post_note, set_note_visibility,
---            react_to_note, delete_note, report_note, mark_notes_read, owner_set_notes_public,
---            owner_remove_note.
+--            set_note_chapter, note_messages, post_note, set_note_visibility, react_to_note, delete_note,
+--            report_note, mark_notes_read, owner_set_notes_public, owner_remove_note,
+--            owner_set_chapter_count. There is no member function that removes chapters: whether a
+--            chapter holds a note depends on notes a member may not see, so a refusal would tell her one
+--            exists. A wrong count is mended by adding chapters, or by the owner (owner_set_chapter_count,
+--            logged, never below the highest chapter holding a note).
 --   changes  two shipped functions, additively (create or replace, same signature, owner, security,
 --            search_path and grants; one clause each, the rest of the body copied unchanged):
 --            public.block() also accepts a member whose live note the caller can see
@@ -39,7 +44,7 @@
 --            friend; private.can_see_photo also answers true for the author of a live public note the
 --            caller can see while Everyone is on (decision 22), which private.member_card and the avatars
 --            bucket's read policy (public.can_see_member_folder / _file) use as they are.
---   cron     purge-note-moderation-log, monthly: the owner's removal records older than 12 months go.
+--   cron     purge-note-moderation-log, monthly: the owner's records older than 12 months go.
 --
 -- Not here: any change to a buddy_* table or function (N3 moves buddy reads onto these tables), Realtime,
 -- storage, voice (N4), the screens (N2), chapter names.
@@ -78,23 +83,25 @@
 -- body_empty, body_too_long, client_id_required, reply_not_visible, note_wider_than_parent,
 -- invalid_emoji, invalid_reason, report_text_too_long, report_self, invalid_value.
 --
--- Limits: notes 30 a minute and 300 a day a member, public notes 30 a day (posted or widened to it),
--- counted on room_messages by author_id (a deleted note still counts); chapter changes (set, add,
--- remove) 20 a day and reactions 60 a minute, counted in private.note_calls (the private.buddy_calls
--- pattern); reports by the feedback limiter (5 an hour, 20 a day), one row per reporter and note.
+-- Limits: notes 30 a minute and 300 a day a member, counted on room_messages by author_id (a deleted
+-- note still counts); every move to Everyone (a post at Everyone, a widening to it) is one use of 30 in
+-- 24 hours, counted in private.note_calls (kind 'public'), so narrowing and widening again, or deleting
+-- and posting again, never frees one; chapter changes (set, add) 20 a day and reactions 60 a minute, in
+-- private.note_calls too (the private.buddy_calls pattern); reports by the feedback limiter (5 an hour,
+-- 20 a day), one row per reporter and note.
 --
 -- Lock order (advisory, transaction scoped; always in this order, never back):
 --   1. the member's lock   hashtextextended('notes:' || member, 0)        her client ids, her limits, her
 --                                                                         reports;
 --   2. the room's lock     hashtextextended('notes_room:' || room, 0)     posts (their order in a thread),
---                                                                         visibility changes, adding and
---                                                                         removing chapters;
+--                                                                         visibility changes, adding
+--                                                                         chapters, the owner's count;
 --      or the Work's lock  hashtextextended('notes_work:' || work key, 0) making a room (set_book_chapters);
 --   3. row locks;
 --   4. leaf locks, holding nothing after them: private.note_rate's
 --      hashtextextended('notes_rate:' || member || ':' || kind, 0) and the feedback trigger's.
--- A post and a removal of chapters queue on 2, so a note never lands in a chapter that is being removed
--- (the removal sees it and refuses, or the post finds no chapter). A note's created_at is
+-- A post and the owner's change of the count queue on 2, so a note never lands in a chapter that is being
+-- removed (the change sees it and refuses, or the post finds no chapter). A note's created_at is
 -- greatest(clock_timestamp(), the thread's newest + 1 us), worked out under 2: a thread pages by time.
 --
 -- Live database: this migration runs in one transaction on a database with members in it. It creates
@@ -231,27 +238,31 @@ comment on table public.note_positions is
 
 create table private.notes_settings (
   id             boolean primary key default true check (id),
-  public_enabled boolean not null default true,
+  public_enabled boolean not null default false,
   updated_at     timestamptz not null default now()
 );
 
-insert into private.notes_settings (id, public_enabled) values (true, true) on conflict (id) do nothing;
+-- Off at release (safe by default); the owner turns it on when the screens ship (docs/OPERATIONS.md, "Notes").
+insert into private.notes_settings (id, public_enabled) values (true, false) on conflict (id) do nothing;
 
 comment on table private.notes_settings is
-  'Notes: one row. public_enabled = the switch for Everyone (decision 21: on now; off before open sign-up '
-  'unless moderation has grown). Off: posting or widening to public is refused and every public note counts '
-  'as a friends note for every reader. public.owner_set_notes_public flips it.';
+  'Notes: one row. public_enabled = the switch for Everyone (off at release; the owner turns it on with '
+  'public.owner_set_notes_public(true); off again before open sign-up unless moderation has grown). Off: '
+  'posting or widening to public is refused and every public note counts as a friends note for every reader.';
 
 create table private.note_moderation_log (
   id         uuid primary key default gen_random_uuid(),
-  message_id uuid not null,
+  action     text not null default 'remove_note' check (action in ('remove_note', 'chapter_count')),
+  message_id uuid,
   room_id    uuid not null,
   author_id  uuid references auth.users (id) on delete cascade,
   removed_by uuid references auth.users (id) on delete set null,
   reason     text not null,
-  body       text not null,
-  visibility text not null,
-  removed_at timestamptz not null default now()
+  body       text,
+  visibility text,
+  removed_at timestamptz not null default now(),
+  -- A removed note keeps its id, text and level; a change of the chapter count says it in `reason`.
+  check (action <> 'remove_note' or (message_id is not null and body is not null and visibility is not null))
 );
 
 create index note_moderation_log_author on private.note_moderation_log (author_id);
@@ -259,9 +270,10 @@ create index note_moderation_log_removed_by on private.note_moderation_log (remo
 create index note_moderation_log_removed_at on private.note_moderation_log (removed_at);
 
 comment on table private.note_moderation_log is
-  'Notes: the owner''s removals (owner_remove_note): the text, its level and the reason, kept 12 months to '
-  'answer a complaint (pg_cron purge-note-moderation-log), and with the author''s account no longer. No '
-  'foreign key on message_id: the record outlives a deleted message.';
+  'Notes: what the owner did. remove_note (owner_remove_note): the text, its level and the reason, kept 12 '
+  'months to answer a complaint (pg_cron purge-note-moderation-log), and with the author''s account no '
+  'longer. chapter_count (owner_set_chapter_count): the old and the new count in reason. No foreign key on '
+  'message_id or room_id: the record outlives what it is about.';
 
 create table private.note_calls (
   member_id uuid not null references auth.users (id) on delete cascade,
@@ -558,7 +570,7 @@ as $$
         (select r.emoji from public.room_reactions r where r.message_id = p_note.id and r.member_id = p_viewer) end)
 $$;
 
--- The Notes page of a Work for this viewer (book_notes' answer, and set/add/remove_book_chapters').
+-- The Notes page of a Work for this viewer (book_notes' answer, and set/add_book_chapters').
 create or replace function private.notes_page(p_viewer uuid, p_work_key text, p_room uuid)
 returns jsonb
 language plpgsql
@@ -661,17 +673,37 @@ begin
 end;
 $$;
 
--- The target has a live note the caller can see: what lets her block its author (public.block).
+-- The target has a live note the caller can see: what lets her block its author (public.block). Security
+-- definer, so it reads room_messages whoever calls it.
 create or replace function private.note_author_seen(p_caller uuid, p_target uuid)
 returns boolean
 language sql
 stable
+security definer
 set search_path = ''
 as $$
   select p_caller is not null and p_target is not null and p_caller <> p_target
      and not private.blocked_either(p_caller, p_target)
      and exists (select 1 from public.room_messages m
                   where m.author_id = p_target and m.deleted_at is null
+                    and private.can_see_note(p_caller, m.id))
+$$;
+
+-- While Everyone is on, the owner has a live public note the caller can see (and neither blocked the
+-- other): what shows her photo to its readers (private.can_see_photo, decision 22). Security definer, so
+-- can_see_photo, which runs as whoever calls it, never reads room_messages itself.
+create or replace function private.note_photo_seen(p_caller uuid, p_owner uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select p_caller is not null and p_owner is not null
+     and private.notes_public_enabled()
+     and not private.blocked_either(p_caller, p_owner)
+     and exists (select 1 from public.room_messages m
+                  where m.author_id = p_owner and m.visibility = 'public' and m.deleted_at is null
                     and private.can_see_note(p_caller, m.id))
 $$;
 
@@ -698,6 +730,7 @@ comment on function private.purge_note_moderation_log() is
 create or replace function private.room_messages_check()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $$
 declare
@@ -748,6 +781,7 @@ create trigger room_messages_check
 create or replace function private.room_messages_replies_check()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $$
 begin
@@ -770,6 +804,7 @@ create constraint trigger room_messages_replies_check
 create or replace function private.room_sections_order()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $$
 declare
@@ -968,7 +1003,8 @@ begin
   if not private.has_work(v_caller, v_room.work_key) then
     raise exception 'notes_need_book' using errcode = 'PT403';
   end if;
-  if p_count is null or p_count < 1 then
+  -- Bounded before any arithmetic: a huge count is invalid_count, never an integer overflow.
+  if p_count is null or p_count not between 1 and 300 then
     raise exception 'invalid_count' using errcode = '22023';
   end if;
 
@@ -988,9 +1024,10 @@ begin
 end;
 $$;
 
--- Remove the last p_count chapters, only while no message (deleted or not, from anyone) is in them, and
--- at least one chapter stays.
-create or replace function public.remove_book_chapters(p_room uuid, p_count integer)
+-- The owner mends a wrong chapter count: p_count chapters (1..300), added or removed at the end, never
+-- below the highest chapter that holds a note (deleted or not, anyone's). Logged. Only the owner may ask,
+-- so the answer about notes she may not see tells no member anything.
+create or replace function public.owner_set_chapter_count(p_room uuid, p_count integer)
 returns jsonb
 language plpgsql
 security definer
@@ -1000,38 +1037,46 @@ declare
   v_caller uuid := auth.uid();
   v_room   public.rooms;
   v_parts  integer;
+  v_used   integer;
 begin
   if v_caller is null then
     raise exception 'not_signed_in' using errcode = '42501';
+  end if;
+  if not private.is_instance_owner() then
+    raise exception 'not_owner' using errcode = '42501';
+  end if;
+  if p_count is null or p_count not between 1 and 300 then
+    raise exception 'invalid_count' using errcode = '22023';
   end if;
   select * into v_room from public.rooms r where r.id = p_room and r.kind = 'notes';
   if not found then
     raise exception 'not_found' using errcode = 'PT404';
   end if;
-  if not private.has_work(v_caller, v_room.work_key) then
-    raise exception 'notes_need_book' using errcode = 'PT403';
-  end if;
-  if p_count is null or p_count < 1 then
-    raise exception 'invalid_count' using errcode = '22023';
-  end if;
 
   perform private.notes_lock('notes_room', p_room::text);
   select count(*)::integer into v_parts from public.room_sections s where s.room_id = p_room and s.kind = 'part';
-  if v_parts - p_count < 1 then
-    raise exception 'invalid_count' using errcode = '22023';
-  end if;
-  if exists (select 1 from public.room_messages m
-               join public.room_sections s on s.id = m.section_id
-              where s.room_id = p_room and s.kind = 'part' and s.position > v_parts - p_count) then
+  select coalesce(max(s.position), 0)::integer into v_used
+    from public.room_messages m
+    join public.room_sections s on s.id = m.section_id
+   where s.room_id = p_room and s.kind = 'part';
+  if p_count < v_used then
     raise exception 'chapter_has_notes' using errcode = 'PT409';
   end if;
-  perform private.note_rate(v_caller, 'chapters', 20, interval '1 day');
 
-  delete from public.room_sections where room_id = p_room and kind = 'part' and position > v_parts - p_count;
-  update public.room_sections set position = (v_parts - p_count + 1)::smallint
-   where room_id = p_room and kind = 'end';
+  if p_count > v_parts then
+    update public.room_sections set position = (p_count + 1)::smallint where room_id = p_room and kind = 'end';
+    insert into public.room_sections (room_id, position, kind)
+    select p_room, k::smallint, 'part' from generate_series(v_parts + 1, p_count) k;
+  elsif p_count < v_parts then
+    delete from public.room_sections where room_id = p_room and kind = 'part' and position > p_count;
+    update public.room_sections set position = (p_count + 1)::smallint where room_id = p_room and kind = 'end';
+  end if;
+  if p_count <> v_parts then
+    insert into private.note_moderation_log (action, room_id, removed_by, reason)
+    values ('chapter_count', p_room, v_caller, format('chapters %s -> %s', v_parts, p_count));
+  end if;
 
-  return private.notes_page(v_caller, v_room.work_key, p_room);
+  return jsonb_build_object('chapterCount', p_count, 'was', v_parts);
 end;
 $$;
 
@@ -1175,15 +1220,16 @@ begin
     end if;
   end if;
 
-  -- 30 a minute and 300 a day over all Books; 30 public a day. Under her member lock.
+  -- 30 a minute and 300 a day over all Books. Under her member lock.
   if (select count(*) from public.room_messages m
        where m.author_id = v_caller and m.created_at > clock_timestamp() - interval '1 minute') >= 30
      or (select count(*) from public.room_messages m
-          where m.author_id = v_caller and m.created_at > clock_timestamp() - interval '1 day') >= 300
-     or (p_visibility = 'public' and (select count(*) from public.room_messages m
-          where m.author_id = v_caller and m.visibility = 'public'
-            and m.created_at > clock_timestamp() - interval '1 day') >= 30) then
+          where m.author_id = v_caller and m.created_at > clock_timestamp() - interval '1 day') >= 300 then
     raise exception 'rate_limited' using errcode = 'PT429';
+  end if;
+  -- Every move to Everyone is one use of her 30 a day (a post here, a widening in set_note_visibility).
+  if p_visibility = 'public' then
+    perform private.note_rate(v_caller, 'public', 30, interval '24 hours');
   end if;
 
   insert into public.room_messages (room_id, section_id, author_id, client_id, body, reply_to, spoiler,
@@ -1249,10 +1295,10 @@ begin
     if v_parent is not null and v_level > private.note_level(v_parent) then
       raise exception 'note_wider_than_parent' using errcode = '22023';
     end if;
-    if p_visibility = 'public' and (select count(*) from public.room_messages m
-          where m.author_id = v_caller and m.visibility = 'public'
-            and m.created_at > clock_timestamp() - interval '1 day') >= 30 then
-      raise exception 'rate_limited' using errcode = 'PT429';
+    -- Every move to Everyone is one use of her 30 a day, whenever the note was written: narrowing and
+    -- widening again uses another.
+    if p_visibility = 'public' then
+      perform private.note_rate(v_caller, 'public', 30, interval '24 hours');
     end if;
   end if;
 
@@ -1523,8 +1569,9 @@ begin
 end;
 $$;
 
--- private.can_see_photo: the body of 20261113010000_buddy_reads.sql, gaining "or, while Everyone is on, the
--- owner has a live public note the caller can see" (decision 22; blocks through private.can_see_note).
+-- private.can_see_photo: the body of 20261113010000_buddy_reads.sql, gaining "or private.note_photo_seen":
+-- while Everyone is on, the owner has a live public note the caller can see (decision 22; blocks through
+-- private.can_see_note).
 create or replace function private.can_see_photo(p_caller uuid, p_owner uuid)
 returns boolean
 language sql
@@ -1535,11 +1582,7 @@ as $$
      and (p_caller = p_owner
           or private.reachable(p_caller, p_owner)
           or private.buddy_co_members(p_caller, p_owner)
-          or (private.notes_public_enabled()
-              and not private.blocked_either(p_caller, p_owner)
-              and exists (select 1 from public.room_messages m
-                           where m.author_id = p_owner and m.visibility = 'public' and m.deleted_at is null
-                             and private.can_see_note(p_caller, m.id))))
+          or private.note_photo_seen(p_caller, p_owner))
 $$;
 
 -- -------------------------------------------------------------------------- grants
@@ -1561,6 +1604,7 @@ revoke all on function private.notes_page(uuid, text, uuid) from public, anon, a
 revoke all on function private.notes_lock(text, text) from public, anon, authenticated;
 revoke all on function private.note_rate(uuid, text, integer, interval) from public, anon, authenticated;
 revoke all on function private.note_author_seen(uuid, uuid) from public, anon, authenticated;
+revoke all on function private.note_photo_seen(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.purge_note_moderation_log() from public, anon, authenticated;
 revoke all on function private.room_messages_check() from public, anon, authenticated;
 revoke all on function private.room_messages_replies_check() from public, anon, authenticated;
@@ -1572,7 +1616,7 @@ revoke all on function public.book_notes(uuid) from public, anon;
 revoke all on function public.notes_summary(uuid) from public, anon;
 revoke all on function public.set_book_chapters(uuid, integer) from public, anon;
 revoke all on function public.add_book_chapters(uuid, integer) from public, anon;
-revoke all on function public.remove_book_chapters(uuid, integer) from public, anon;
+revoke all on function public.owner_set_chapter_count(uuid, integer) from public, anon;
 revoke all on function public.set_note_chapter(uuid, integer, boolean) from public, anon;
 revoke all on function public.note_messages(uuid, uuid, timestamptz, integer) from public, anon;
 revoke all on function public.post_note(uuid, uuid, uuid, text, text, uuid, boolean) from public, anon;
@@ -1588,7 +1632,7 @@ grant execute on function public.book_notes(uuid) to authenticated;
 grant execute on function public.notes_summary(uuid) to authenticated;
 grant execute on function public.set_book_chapters(uuid, integer) to authenticated;
 grant execute on function public.add_book_chapters(uuid, integer) to authenticated;
-grant execute on function public.remove_book_chapters(uuid, integer) to authenticated;
+grant execute on function public.owner_set_chapter_count(uuid, integer) to authenticated;
 grant execute on function public.set_note_chapter(uuid, integer, boolean) to authenticated;
 grant execute on function public.note_messages(uuid, uuid, timestamptz, integer) to authenticated;
 grant execute on function public.post_note(uuid, uuid, uuid, text, text, uuid, boolean) to authenticated;

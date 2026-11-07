@@ -46,10 +46,10 @@ begin
     if v_parent is not null and v_level > private.note_level(v_parent) then
       raise exception 'note_wider_than_parent' using errcode = '22023';
     end if;
-    if p_visibility = 'public' and (select count(*) from public.room_messages m
-          where m.author_id = v_caller and m.visibility = 'public'
-            and m.created_at > clock_timestamp() - interval '1 day') >= 30 then
-      raise exception 'rate_limited' using errcode = 'PT429';
+    -- Every move to Everyone is one use of her 30 a day, whenever the note was written: narrowing and
+    -- widening again uses another.
+    if p_visibility = 'public' then
+      perform private.note_rate(v_caller, 'public', 30, interval '24 hours');
     end if;
   end if;
 

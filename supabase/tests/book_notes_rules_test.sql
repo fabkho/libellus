@@ -13,7 +13,7 @@
 -- Assertions ask about rows this test made, never counts of a table.
 
 begin;
-select plan(112);
+select plan(127);
 
 create schema if not exists tests;
 
@@ -160,6 +160,10 @@ grant execute on all functions in schema tests to authenticated;
 
 select (now() at time zone 'utc')::date as today \gset
 
+-- Everyone is off at release; this file runs with it on, and turns it off where it says so.
+select is(private.notes_public_enabled(), false, 'Everyone is off after the migration (safe by default)');
+select tests.switch(true);
+
 -- ------------------------------------------------------------------------- 5. chapters
 
 select tests.member('x@rules.test', 'Xenia X') as x \gset
@@ -229,7 +233,6 @@ reset role;
 select tests.section_ids(:'room') as ids_before \gset
 select tests.act_as(:'n');
 select is(tests.outcome(format('select public.add_book_chapters(%L, 1)', :'room')), 'PT403 notes_need_book', 'adding needs the Book');
-select is(tests.outcome(format('select public.remove_book_chapters(%L, 1)', :'room')), 'PT403 notes_need_book', 'removing too');
 select tests.act_as(:'q');
 select is((public.add_book_chapters(:'room', 2) -> 'room' ->> 'chapterCount')::int, 45, 'Q (another edition) adds 2: 45 chapters');
 reset role;
@@ -240,24 +243,59 @@ select tests.act_as(:'q');
 select is(tests.outcome(format('select public.add_book_chapters(%L, 256)', :'room')), '22023 invalid_count', 'never past 300');
 select is(tests.outcome(format('select public.add_book_chapters(%L, 0)', :'room')), '22023 invalid_count', 'adding 0: invalid_count');
 select is(tests.outcome(format('select public.add_book_chapters(%L, 1)', gen_random_uuid())), 'PT404 not_found', 'no such room');
+select is(tests.outcome(format('select public.add_book_chapters(%L, 2147483647)', :'room')), '22023 invalid_count',
+  'a huge count is invalid_count, not an integer overflow');
 
--- Removing: only empty chapters at the end; a tombstone counts as a note.
-select tests.note(:'room', 44, 'in 44, soon deleted', 'private') as in44 \gset
-select public.delete_note(:'in44');
-select is(tests.outcome(format('select public.remove_book_chapters(%L, 2)', :'room')), 'PT409 chapter_has_notes',
-  'a chapter holding a note (deleted or not, anyone''s) is not removed');
-select is((public.remove_book_chapters(:'room', 1) -> 'room' ->> 'chapterCount')::int, 44, 'the empty last one is');
+-- No member function's answer depends on notes she cannot see: there is no member removal of chapters, and
+-- adding answers the same with a hidden note in the last chapter.
 reset role;
-select is(tests.end_of(:'room') ->> 'position', '45', 'The whole book moves down');
+select is(to_regprocedure('public.remove_book_chapters(uuid, integer)'), null::regprocedure, 'there is no remove_book_chapters');
+select is((select array_agg(p.proname::text order by p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public' and p.prosrc like '%chapter_has_notes%'),
+  array['owner_set_chapter_count'], 'the only function whose refusal depends on the notes in a chapter is the owner''s');
+select tests.act_as(:'x');
+select tests.note(:'room', 45, 'X, hidden in the last chapter', 'private') as hidden45 \gset
 select tests.act_as(:'q');
-select is(tests.outcome(format('select public.remove_book_chapters(%L, 1)', :'room')), 'PT409 chapter_has_notes', 'and 44 stays');
-select is(tests.outcome(format('select public.remove_book_chapters(%L, 44)', :'room')), '22023 invalid_count',
-  'at least one chapter stays');
+select is((select c ->> 'count' from jsonb_array_elements(public.book_notes(:'e2') -> 'room' -> 'chapters') c
+            where (c ->> 'position')::int = 45), '0', 'Q sees nothing in chapter 45');
+select is((public.add_book_chapters(:'room', 1) -> 'room' ->> 'chapterCount')::int, 46,
+  'and adding a chapter after it answers as it would without the hidden note');
 reset role;
+
+-- The owner mends the count: never below the highest chapter holding a note (a tombstone counts), logged.
+select tests.member('boss@rules.test', 'Boss') as boss \gset
+select tests.name_owner(:'boss');
+select tests.act_as(:'q');
+select is(tests.outcome(format('select public.owner_set_chapter_count(%L, 44)', :'room')), '42501 not_owner',
+  'owner_set_chapter_count: not_owner for a member');
+select is(tests.outcome(format('select public.owner_set_chapter_count(%L, 44)', gen_random_uuid())), '42501 not_owner',
+  'the same answer for a room that does not exist');
+select tests.act_as(:'x');
+select public.delete_note(:'hidden45');
+select tests.act_as(:'boss');
+select is(tests.outcome(format('select public.owner_set_chapter_count(%L, 44)', :'room')), 'PT409 chapter_has_notes',
+  'the owner cannot go below a chapter holding a note, deleted or not, anyone''s');
+select is(tests.outcome(format('select public.owner_set_chapter_count(%L, 0)', :'room')), '22023 invalid_count', 'at least 1');
+select is(tests.outcome(format('select public.owner_set_chapter_count(%L, 2147483647)', :'room')), '22023 invalid_count',
+  'at most 300, no overflow');
+select is(tests.outcome(format('select public.owner_set_chapter_count(%L, 5)', gen_random_uuid())), 'PT404 not_found',
+  'no such room');
+select is(public.owner_set_chapter_count(:'room', 45), '{"chapterCount": 45, "was": 46}'::jsonb, 'the owner removes the empty 46th');
+reset role;
+select is(tests.end_of(:'room') ->> 'position', '46', 'The whole book moves down');
+select is((tests.section_ids(:'room'))[1:43], (:'ids_before'::uuid[])[1:43], 'the chapters keep their ids');
+select is((select reason from private.note_moderation_log where action = 'chapter_count' and room_id = :'room'::uuid),
+  'chapters 46 -> 45', 'the change is in the owner''s record');
+select is((select removed_by from private.note_moderation_log where action = 'chapter_count' and room_id = :'room'::uuid),
+  :'boss'::uuid, 'with who made it');
+select tests.act_as(:'boss');
+select is(public.owner_set_chapter_count(:'room', 50) ->> 'chapterCount', '50', 'and can add chapters too');
+reset role;
+select is(tests.end_of(:'room') ->> 'position', '51', '(The whole book after them)');
 
 -- The deferred backstop on the order: a part after the end fails at commit.
 select is(tests.outcome(format(
-  $$insert into public.room_sections (room_id, position, kind) values (%L, 46, 'part'); set constraints public.room_sections_order immediate$$, :'room')),
+  $$insert into public.room_sections (room_id, position, kind) values (%L, 52, 'part'); set constraints public.room_sections_order immediate$$, :'room')),
   '23514 room_sections_invalid: positions 1..n, one end, last', 'constraint trigger: a part after The whole book fails');
 set constraints all deferred;
 
@@ -386,15 +424,36 @@ select tests.member('l3@rules.test', 'Lin') as l3 \gset
 select tests.act_as(:'l3');
 select public.add_to_library(tests.snap('Chapter Book', 384));
 reset role;
-select tests.fill_notes(:'croom', :'l3', 30, interval '2 hours', 'public');
+-- Every move to Everyone is one use of 30 in 24 hours: widening old notes uses it, narrowing frees nothing.
+create or replace function tests.old_note(p_room uuid, p_author uuid, p_body text)
+returns uuid language sql security definer as $$
+  insert into public.room_messages (room_id, section_id, author_id, client_id, body, visibility, created_at)
+  values (p_room, tests.sec(p_room, 1), p_author, gen_random_uuid(), p_body, 'friends', now() - interval '3 days')
+  returning id
+$$;
+create or replace function tests.calls_of(p_member uuid, p_kind text)
+returns integer language sql security definer as $$
+  select count(*)::integer from private.note_calls where member_id = p_member and kind = p_kind
+$$;
+select array_agg(tests.old_note(:'croom', :'l3', 'old note ' || k)) as l3_old from generate_series(1, 6) k \gset
+select tests.act_as(:'l3');
+select public.set_note_visibility(x, 'public') from unnest(:'l3_old'::uuid[]) with ordinality u(x, o) where o <= 5;
+reset role;
+select is(tests.calls_of(:'l3', 'public'), 5, 'widening five notes written days ago uses five of the 30');
+select tests.act_as(:'l3');
+select public.set_note_visibility((:'l3_old'::uuid[])[1], 'friends');
+select public.set_note_visibility((:'l3_old'::uuid[])[1], 'public');
+reset role;
+select is(tests.calls_of(:'l3', 'public'), 6, 'narrowing frees none: widening it again uses another');
+select tests.fill_calls(:'l3', 'public', 24);
 select tests.act_as(:'l3');
 select is(tests.outcome(format('select tests.note(%L, 2, %L, %L)', :'croom', 'one more', 'public')), 'PT429 rate_limited',
-  '30 public notes a day');
+  '30 moves to Everyone a day: the 31st post is refused');
+select is(tests.outcome(format('select public.set_note_visibility(%L, %L)', (:'l3_old'::uuid[])[6], 'public')), 'PT429 rate_limited',
+  'and so is the 31st widening');
 select is(tests.outcome(format('select tests.note(%L, 2, %L, %L)', :'croom', 'friends one', 'friends')), 'ok',
   'a friends note is still fine');
-select tests.note(:'croom', 2, 'friends to widen', 'friends') as l3_fr \gset
-select is(tests.outcome(format('select public.set_note_visibility(%L, %L)', :'l3_fr', 'public')), 'PT429 rate_limited',
-  'widening to Everyone counts against the 30 a day');
+select tests.note(:'croom', 2, 'friends to react', 'friends') as l3_fr \gset
 reset role;
 select tests.fill_calls(:'l3', 'react', 60);
 select tests.act_as(:'l3');
@@ -459,7 +518,7 @@ select is(public.owner_remove_note(:'bad', 'Spam, reported'), '{"removed": true}
 select is(tests.outcome(format('select public.owner_remove_note(%L, %L)', :'bad', 'again')), 'PT404 not_found', 'once');
 reset role;
 select is(tests.log_of(:'bad') - 'id' - 'removed_at',
-  jsonb_build_object('message_id', :'bad', 'room_id', :'croom', 'author_id', :'r1', 'removed_by', :'own',
+  jsonb_build_object('action', 'remove_note', 'message_id', :'bad', 'room_id', :'croom', 'author_id', :'r1', 'removed_by', :'own',
                      'reason', 'Spam, reported', 'body', repeat('Rita says something worth reporting. ', 20),
                      'visibility', 'public'),
   'the record: its text, its level, the reason, who removed it');
@@ -553,8 +612,8 @@ select public.react_to_note(:'g_reply', '🔥');
 select tests.act_as(:'own');
 select public.owner_remove_note(:'d_removed', 'test');
 reset role;
-select is(tests.of_member(:'d'), '{"notes": 2, "reactions": 1, "positions": 1, "cursors": 1, "log": 1, "calls": 2}'::jsonb,
-  'Dora has notes, a reaction, a hand, a cursor, a moderation record and two limited calls (chapters, a reaction)');
+select is(tests.of_member(:'d'), '{"notes": 2, "reactions": 1, "positions": 1, "cursors": 1, "log": 1, "calls": 3}'::jsonb,
+  'Dora has notes, a reaction, a hand, a cursor, a moderation record and three limited calls (chapters, a reaction, Everyone)');
 select tests.act_as(:'d');
 select public.delete_my_account();
 reset role;

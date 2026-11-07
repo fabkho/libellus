@@ -1,6 +1,7 @@
 CREATE OR REPLACE FUNCTION private.room_messages_replies_check()
  RETURNS trigger
  LANGUAGE plpgsql
+ SECURITY DEFINER
  SET search_path TO ''
 AS $function$
 begin
