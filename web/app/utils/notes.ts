@@ -90,9 +90,21 @@ export function pendingNote(job: SendJob, me: string, name: string | null, quote
   }
 }
 
+/**
+ * The database's order of a thread, oldest first: the instant, then the id (`order by created_at, id`). Notes that share an instant (an import of
+ * second-resolution times does that) keep one order whatever order their pages arrived in, so the oldest stored note is the one the next page's cursor names.
+ */
+export const byInstantThenId = (a: { createdAt: string; id: string }, b: { createdAt: string; id: string }): number => byCreated(a, b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+
+/** The cursor of the page before a thread's oldest stored note: its `createdAt` and id, or null while nothing is stored. */
+export function pageCursor(list: readonly NoteBubble[]): { before: string; beforeId: string } | null {
+  const oldest = list.find((b) => b.state === 'sent')
+  return oldest ? { before: oldest.createdAt, beforeId: oldest.id } : null
+}
+
 /** The thread in the order it is drawn: stored rows by the server's time, then what is still on its way, in the order it was sent. */
 export function settleNotes(list: NoteBubble[]): void {
-  const sent = list.filter((b) => b.state === 'sent').sort(byCreated)
+  const sent = list.filter((b) => b.state === 'sent').sort(byInstantThenId)
   const rest = list.filter((b) => b.state !== 'sent')
   list.splice(0, list.length, ...sent, ...rest)
 }

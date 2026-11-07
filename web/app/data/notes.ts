@@ -268,10 +268,16 @@ export function createNotes(client: SupabaseClient, { online = () => true }: Not
     /** Her chapter by hand (`chapter`), or *I've finished* (`finished`), or null for Automatic. */
     setChapter: (roomId: string, chapter: number | null, finished = false) =>
       call<MeJson, NoteMe>('set_note_chapter', { p_room: roomId, p_chapter: chapter, p_finished: finished }, meFromJson),
-    /** The notes of one chapter she may see, newest first on the wire and oldest first here; `before` pages back in time. */
-    messages: (roomId: string, sectionId: string, { before = null, limit }: { before?: string | null; limit?: number } = {}) => {
+    /**
+     * The notes of one chapter she may see, newest first on the wire and oldest first here. `before` and `beforeId` are the cursor of the page before: the
+     * `createdAt` **and the id** of its oldest note, the keyset the thread is ordered by (notes that share an instant, as an import makes them, would otherwise
+     * be lost at a page edge). `beforeId` is sent only with a cursor, so the first page asks for exactly what it always did.
+     */
+    messages: (roomId: string, sectionId: string, { before = null, beforeId = null, limit }: { before?: string | null; beforeId?: string | null; limit?: number } = {}) => {
       const size = clampPage(limit)
-      return call<NoteJson[], NotesPageOfMessages>('note_messages', { p_room: roomId, p_section: sectionId, p_before: before, p_limit: size }, (rows) => ({
+      const args: Record<string, unknown> = { p_room: roomId, p_section: sectionId, p_before: before, p_limit: size }
+      if (before !== null && beforeId !== null) args.p_before_id = beforeId
+      return call<NoteJson[], NotesPageOfMessages>('note_messages', args, (rows) => ({
         items: (rows ?? []).map((row) => noteFromJson(roomId, row)).reverse(),
         more: (rows ?? []).length >= size,
       }))

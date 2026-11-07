@@ -142,6 +142,24 @@ describe('who sees a note', () => {
     expect(mo_.public.count).toBe(0)
   })
 
+  it('tells the Book page the chapters it counts: a 12-chapter book reads 12, not 13 (The whole book is no chapter)', async () => {
+    const r = await room(12)
+    await writeNote(ida, r.room, r.chapter(2), 'in chapter two', 'friends')
+    await writeNote(ida, r.room, r.chapter(12), 'in the last chapter', 'friends')
+    const whole = r.room.chapters.find((c) => c.kind === 'end')!
+    await writeNote(ida, r.room, whole.id, 'about the whole book', 'friends')
+    expect(whole.position).toBe(13)
+    const summary = (await notesOf(anna).summary(r.bookId)).data!
+    expect(summary.friends).toMatchObject({ count: 3, firstChapter: 2, lastChapter: 12 })
+  })
+
+  it('has no chapter range for a note on the whole book alone', async () => {
+    const r = await room(12)
+    await writeNote(ida, r.room, r.room.chapters.find((c) => c.kind === 'end')!.id, 'only the whole book', 'friends')
+    const summary = (await notesOf(anna).summary(r.bookId)).data!
+    expect(summary.friends).toMatchObject({ count: 1, firstChapter: null, lastChapter: null })
+  })
+
   it('shows a quote only to a reader of the note it answers: the hidden and the removed shapes carry no words', async () => {
     const r = await room()
     const chapter = r.chapter(1)
@@ -217,6 +235,28 @@ describe('writing and reading', () => {
     expect(older.items.map((i) => i.body)).toEqual(['note 1', 'note 2'])
     expect(older.more).toBe(false)
     expect(NOTES_PAGE).toBe(50)
+  })
+
+  it('pages notes that share one instant by (createdAt, id): none is lost at the edge of a page', async () => {
+    const r = await room()
+    const chapter = r.chapter(1)
+    // An import of second-resolution times makes ties; a live post never does. 12 notes at one instant, pages of 5.
+    await sql(
+      `insert into public.room_messages (room_id, section_id, author_id, client_id, body, visibility, created_at)
+       select $1, $2, $3, gen_random_uuid(), 'tied ' || k, 'friends', '2026-11-01T10:00:00Z' from generate_series(1, 12) k`,
+      [r.room.id, chapter, ida.id],
+    )
+    const seen: string[] = []
+    let cursor: { before: string; beforeId: string } | null = null
+    for (let pages = 0; pages < 10; pages++) {
+      const page = (await notesOf(anna).messages(r.room.id, chapter, { ...(cursor ?? {}), limit: 5 })).data!
+      seen.unshift(...page.items.map((i) => i.id))
+      if (!page.more) break
+      cursor = { before: page.items[0]!.createdAt, beforeId: page.items[0]!.id }
+    }
+    expect(seen).toHaveLength(12)
+    expect(new Set(seen).size).toBe(12)
+    expect(seen).toEqual([...seen].sort())
   })
 
   it('reacts once a note, counts without names, and takes it back; reading marks the cursor', async () => {

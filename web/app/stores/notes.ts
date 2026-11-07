@@ -20,7 +20,7 @@ import {
 import type { ReportReason } from '~/data/buddyReads'
 import { useSessionStore } from '~/stores/session'
 import { notesPeekKey, notesQueueKey } from '~/utils/notesStorage'
-import { mergeNote, noteJob, noteSendKey, pendingNote, reactedNote, sentNote, tombstoneNote, type NoteBubble } from '~/utils/notes'
+import { byInstantThenId, mergeNote, noteJob, pageCursor, noteSendKey, pendingNote, reactedNote, sentNote, tombstoneNote, type NoteBubble } from '~/utils/notes'
 import { rememberedLevel, rememberLevel } from '~/utils/noteVisibility'
 
 /**
@@ -279,10 +279,10 @@ export const useNotesStore = defineStore('notes', () => {
     t.loading = false
     if (answer.error) return answer.error
     // What the database no longer shows her (narrowed, blocked, removed) goes: the stored rows newer than the page's oldest are the page's.
-    const oldest = answer.data.items[0]?.createdAt
+    const oldest = answer.data.items[0]
     const kept = new Set(answer.data.items.map((i) => i.id))
     // A page that came back short holds everything she may see: what it lacks is gone for her. A full one holds the newest 50: older rows she paged back to stay.
-    if (t.loaded) t.messages = t.messages.filter((m) => m.state !== 'sent' || kept.has(m.id) || (answer.data.more && oldest !== undefined && m.createdAt < oldest))
+    if (t.loaded) t.messages = t.messages.filter((m) => m.state !== 'sent' || kept.has(m.id) || (answer.data.more && oldest !== undefined && byInstantThenId(m, oldest) < 0))
     takePage(roomId, sectionId, answer.data.items)
     if (!t.loaded) t.more = answer.data.more
     t.loaded = true
@@ -303,11 +303,12 @@ export const useNotesStore = defineStore('notes', () => {
   async function loadOlder(roomId: string, sectionId: string): Promise<NoteErrorCode | null> {
     const r = repo()
     const t = thread(roomId, sectionId)
-    const oldest = t.messages.find((m) => m.state === 'sent')
-    if (!r || !oldest || t.loading || !t.more || !view(roomId, sectionId)?.open) return null
+    const cursor = pageCursor(t.messages)
+    if (!r || !cursor || t.loading || !t.more || !view(roomId, sectionId)?.open) return null
     const since = epoch
     t.loading = true
-    const answer = await r.messages(roomId, sectionId, { before: oldest.createdAt, limit: NOTES_PAGE })
+    // The cursor is the oldest stored note's (createdAt, id): the keyset the database orders by, so notes that share an instant are not lost at the edge.
+    const answer = await r.messages(roomId, sectionId, { ...cursor, limit: NOTES_PAGE })
     if (stale(since)) return 'not_signed_in'
     t.loading = false
     if (answer.error) return answer.error

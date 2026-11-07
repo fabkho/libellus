@@ -694,7 +694,7 @@ select is(
      'public.notes_config()', 'public.book_notes(uuid)', 'public.notes_summary(uuid)',
      'public.set_book_chapters(uuid, integer)', 'public.add_book_chapters(uuid, integer)',
      'public.owner_set_chapter_count(uuid, integer)', 'public.set_note_chapter(uuid, integer, boolean)',
-     'public.note_messages(uuid, uuid, timestamptz, integer)',
+     'public.note_messages(uuid, uuid, timestamptz, integer, uuid)',
      'public.post_note(uuid, uuid, uuid, text, text, uuid, boolean)', 'public.set_note_visibility(uuid, text)',
      'public.react_to_note(uuid, text)', 'public.delete_note(uuid)', 'public.report_note(uuid, text, text)',
      'public.mark_notes_read(uuid, uuid, timestamptz)', 'public.owner_set_notes_public(boolean)',
