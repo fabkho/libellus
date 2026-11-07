@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Notes and buddy-read composer: three versions</title>
+<link rel="stylesheet" href="composer.css" />
+</head>
+<body>
+<main class="cmp">
+  <h1>The Notes and buddy-read composer: three versions</h1>
+  <p class="lead">Static mock-ups on the app's real tokens, for <a href="../../plans/notes-composer.md" style="color:#ffd9a0">docs/plans/notes-composer.md</a>. Each phone below is live: tap the field and a faux 291 px keyboard comes up, tap Done or drag the thread and it goes. Open a version in its own page for every switch (reply, Everyone, big text, finger targets, today's bug).</p>
+  <div class="bar" id="bar"></div>
+  <div class="cols" id="cols"></div>
+  <footer>
+    <p><b>Today, fixed</b> keeps the layout and fixes the bugs and the sizes. <b>In the capsule</b> moves scope and Spoiler inside the field's capsule. <b>Send as</b> puts the audience on the send button. All three keep Friends as the default and show a note's audience before it is sent.</p>
+  </footer>
+</main>
+<script>
+  const Q = new URLSearchParams(location.search)
+  const S = { theme: Q.get('theme') === 'dark' ? 'dark' : 'light', lang: Q.get('lang') === 'de' ? 'de' : 'en', w: Q.get('w') === '360' ? '360' : '390', ctx: Q.get('ctx') === 'buddy' ? 'buddy' : 'notes' }
+  const BAR = [['Theme', 'theme', [['light', 'Light'], ['dark', 'Dark']]], ['Language', 'lang', [['en', 'EN'], ['de', 'DE']]], ['Phone', 'w', [['360', '360×640'], ['390', '390×844']]], ['Context', 'ctx', [['notes', 'Notes: scope + Spoiler'], ['buddy', 'Buddy read: Spoiler']]]]
+  const COLS = [
+    [1, 'V1', 'Today, fixed', 'The chip row stays above the capsule, never folds; Spoiler and the three-way scope are one shape (36 px, 44 px finger).'],
+    [2, 'V2', 'In the capsule', 'Scope and Spoiler are icon buttons inside the capsule; a note that is not plain Friends says so in the capsule’s header line.'],
+    [3, 'V3', 'Send as', 'The send button is split: tap sends in the current scope, the tab beside it opens Send as + Spoiler; its colour is the cue.'],
+  ]
+  function draw() {
+    document.documentElement.dataset.theme = S.theme
+    document.getElementById('bar').innerHTML = BAR.map(([label, key, opts]) => `<div class="grp"><b>${label}</b>${opts.map(([v, n]) => `<button type="button" data-k="${key}" data-v="${v}" aria-pressed="${S[key] === v}">${n}</button>`).join('')}</div>`).join('')
+    const h = S.w === '360' ? 640 : 844
+    const qs = new URLSearchParams({ ...S, embed: '1' })
+    document.getElementById('cols').innerHTML = COLS.map(([n, tag, name, one]) => `<section class="col" style="width:${S.w}px"><h2><span>${tag}</span>${name}</h2><p>${one}</p><iframe title="${name}" src="v${n}.html?${qs}" width="${S.w}" height="${h}"></iframe><p><a href="v${n}.html?${new URLSearchParams(S)}">Open ${tag} with every switch →</a></p></section>`).join('')
+    history.replaceState(null, '', `?${new URLSearchParams(S)}`)
+  }
+  document.getElementById('bar').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; S[b.dataset.k] = b.dataset.v; draw() })
+  draw()
+</script>
+</body>
+</html>
