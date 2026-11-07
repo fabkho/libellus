@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.41.0](https://github.com/fabkho/libellus/compare/v1.40.0...v1.41.0) (2026-11-07)
+
+
+### Features
+
+* **notes:** notes on a Book, per chapter, for friends or everyone ([#520](https://github.com/fabkho/libellus/issues/520)) ([ae8d7a4](https://github.com/fabkho/libellus/commit/ae8d7a4439258549e4e5162c569d37930f87a7ca))
+* **notes:** the rules for notes on a Book's chapters (Only me, Friends, Everyone) ([#519](https://github.com/fabkho/libellus/issues/519)) ([0ab6056](https://github.com/fabkho/libellus/commit/0ab6056b7e04b473c670a04d37e4de520a2ceead))
+
+
+### Fixes
+
+* **ci:** the drift check ignores the backup role and says what else differs ([#515](https://github.com/fabkho/libellus/issues/515)) ([ee6893c](https://github.com/fabkho/libellus/commit/ee6893ce115c2cd0f75cf9e4c1a0247296b8d68d))
+
 ## [1.40.0](https://github.com/fabkho/libellus/compare/v1.39.0...v1.40.0) (2026-11-05)
 
 
