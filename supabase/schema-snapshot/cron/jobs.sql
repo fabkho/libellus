@@ -34,6 +34,9 @@ select cron.schedule('purge-cron-log', '15 3 * * *', $job$select private.purge_c
 -- purge-google-books
 select cron.schedule('purge-google-books', '25 * * * *', $job$select private.purge_google_books()$job$);
 
+-- purge-note-moderation-log
+select cron.schedule('purge-note-moderation-log', '40 3 1 * *', $job$select private.purge_note_moderation_log()$job$);
+
 -- purge-synced-writes
 select cron.schedule('purge-synced-writes', '30 3 * * *', $job$select public.purge_synced_writes()$job$);
 

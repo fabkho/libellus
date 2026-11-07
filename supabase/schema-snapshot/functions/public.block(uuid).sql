@@ -15,6 +15,7 @@ begin
   end if;
   if private.reachable(v_caller, p_member) is not true
      and private.buddy_co_members(v_caller, p_member) is not true
+     and private.note_author_seen(v_caller, p_member) is not true
      and not exists (select 1 from public.blocks where blocker_id = v_caller and blocked_id = p_member) then
     raise exception 'not_found' using errcode = 'PT404';
   end if;
