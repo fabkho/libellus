@@ -7,6 +7,7 @@
 //   creates the read, and the line under the action and the sheet say so; nothing is added if she cancels;
 // - a Manual book (her own record: it has no work to read together): the action disabled, with the one line why.
 // The setup sheet (and with it the big store and the chat layer) is built when she first presses the action, not with the page.
+// *Notes* (components/notes/BookButton.vue) stands beside it in the same row: two quiet half-width buttons, and what each says under them is full width.
 //
 // Props: `book` (the page's Book), `entry` (her Library entry of it, or null). Test ids: `book.together` (the block), `book.together.start`, `book.together.open`,
 // `book.together.summary`, `book.together.hint`, `book.together.adds`, `book.together.unavailable`, and the sheet's own (`buddySetup`).
@@ -46,28 +47,31 @@ onMounted(() => void invites.load({ force: true }))
 
 <template>
   <div class="mt-sm" data-testid="book.together">
-    <template v-if="action?.kind === 'open' && read">
-      <UiButton :to="roomPath(read.id)" tone="quiet" block data-testid="book.together.open">
+    <!-- *Notes* (components/notes/BookButton.vue) and *Read together* side by side, two quiet half-width buttons; what is said under them is full width. -->
+    <div class="grid grid-cols-2 gap-sm">
+      <NotesBookButton :book="book" />
+      <UiButton v-if="action?.kind === 'open' && read" :to="roomPath(read.id)" tone="quiet" block data-testid="book.together.open">
         <UiIcon name="chat" :size="18" />{{ t('together.entry.openRoom') }}
         <TogetherUnreadBadge :count="read.unread" :label="t('together.entry.unread', { count: read.unread })" />
       </UiButton>
+      <UiButton v-else-if="action?.kind === 'start'" tone="quiet" block aria-haspopup="dialog" data-testid="book.together.start" @click="start">
+        <UiIcon name="chat" :size="18" />{{ t('together.entry.start') }}
+      </UiButton>
+      <UiButton v-else-if="action?.kind === 'unavailable'" tone="quiet" block disabled aria-describedby="book-together-why" data-testid="book.together.start">
+        <UiIcon name="chat" :size="18" />{{ t('together.entry.start') }}
+      </UiButton>
+    </div>
+    <NotesBookButton :book="book" line />
+    <template v-if="action?.kind === 'open' && read">
       <p class="mt-xs text-center text-caption text-ink-muted wrap-anywhere" data-testid="book.together.summary">
         {{ readers }}<span aria-hidden="true"> · </span><span class="sr-only">, </span>{{ whereText }}
       </p>
     </template>
     <template v-else-if="action?.kind === 'start'">
-      <UiButton tone="quiet" block aria-haspopup="dialog" data-testid="book.together.start" @click="start">
-        <UiIcon name="chat" :size="18" />{{ t('together.entry.start') }}
-      </UiButton>
       <p class="mt-xs text-center text-caption text-ink-muted" data-testid="book.together.hint">{{ t('together.entry.hint') }}</p>
       <p v-if="action.adds" class="mt-xxs text-center text-caption text-ink-muted" data-testid="book.together.adds">{{ t('together.entry.adds') }}</p>
     </template>
-    <template v-else-if="action?.kind === 'unavailable'">
-      <UiButton tone="quiet" block disabled aria-describedby="book-together-why" data-testid="book.together.start">
-        <UiIcon name="chat" :size="18" />{{ t('together.entry.start') }}
-      </UiButton>
-      <p id="book-together-why" class="mt-xs text-center text-caption text-ink-muted" data-testid="book.together.unavailable">{{ t('together.entry.unavailable') }}</p>
-    </template>
+    <p v-else-if="action?.kind === 'unavailable'" id="book-together-why" class="mt-xs text-center text-caption text-ink-muted" data-testid="book.together.unavailable">{{ t('together.entry.unavailable') }}</p>
     <LazyTogetherSetupSheet v-if="asked" v-model:open="open" :entry="entry" :book="book" :friend="friend" />
   </div>
 </template>

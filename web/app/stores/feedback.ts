@@ -154,7 +154,34 @@ export const useFeedbackStore = defineStore('feedback', () => {
     return true
   }
 
+  /** The notes the owner removed from this inbox this session: their report no longer offers the button. */
+  const removedNotes = ref<Set<string>>(new Set())
+  const removeError = ref<string | null>(null)
+
+  /**
+   * A report of a note (`context.note`): the owner removes the note (`owner_remove_note`: "Removed by the moderator" for everyone, its words kept in the database's moderation
+   * log for 12 months) with a reason, and the report is handled with it. The notes repository is loaded here, the first time, not with the page. Resolves whether it was removed;
+   * `removeError` holds the refusal's code otherwise.
+   */
+  async function removeNote(feedbackId: string, noteId: string, reason: string): Promise<boolean> {
+    if (!isOwner.value || !backend) return false
+    const member = session.member?.id
+    removeError.value = null
+    const { createNotes } = await import('~/data/notes')
+    const result = await createNotes(backend, { online: isOnline }).ownerRemove(noteId, reason)
+    if (member !== session.member?.id) return false
+    if (result.error) {
+      removeError.value = result.error
+      return false
+    }
+    removedNotes.value = new Set([...removedNotes.value, noteId])
+    await markHandled(feedbackId, true)
+    return true
+  }
+
   function reset() {
+    removedNotes.value = new Set()
+    removeError.value = null
     kind.value = 'bug'
     text.value = ''
     sent.value = false
@@ -191,6 +218,9 @@ export const useFeedbackStore = defineStore('feedback', () => {
     load,
     loadMore,
     markHandled,
+    removedNotes,
+    removeError,
+    removeNote,
     reset,
   }
 })

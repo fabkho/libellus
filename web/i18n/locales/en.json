@@ -1362,7 +1362,18 @@
     "loadError": "The messages could not be loaded.",
     "writeError": "That could not be saved. Try again.",
     "offline": "You’re offline. This works once you’re back.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "removeNote": {
+      "action": "Remove note",
+      "title": "Remove this note?",
+      "text": "It will read “Removed by the moderator” for everyone. Its words are kept in a log for 12 months, in case someone complains.",
+      "reason": "Reason",
+      "reasonHint": "Kept with the log.",
+      "removing": "Removing…",
+      "done": "Note removed.",
+      "error": "That could not be removed. Try again.",
+      "level": "The note was visible to: {level}"
+    }
   },
   "ownerErrors": {
     "row": "Errors",
@@ -2467,6 +2478,170 @@
       "save": "Save",
       "skip": "Not now",
       "pages": "{count} page | {count} pages"
+    }
+  },
+  "notes": {
+    "title": "Notes",
+    "back": "Back to the book",
+    "done": "Done",
+    "chapter": "Chapter {n}",
+    "wholeBook": "The whole book",
+    "unavailable": "A book you added yourself has no notes.",
+    "missingTitle": "No notes here",
+    "missingText": "This book has no notes for you, or it isn’t available.",
+    "toBook": "To the book",
+    "toNotes": "To the chapters",
+    "offline": "You’re offline. The notes show once you’re back.",
+    "retry": "Try again",
+    "hereNow": "Notes from {names}",
+    "section": {
+      "friends": "From friends",
+      "public": "Public",
+      "notes": "{count} note | {count} notes",
+      "members": "{count} member | {count} members",
+      "publicLine": "{notes} from {members}",
+      "chapter": "chapter {n}",
+      "chapters": "chapters {from}–{to}",
+      "dot": " · "
+    },
+    "page": {
+      "sub": "Yours, your friends’ and public · {count} chapter | Yours, your friends’ and public · {count} chapters",
+      "noChapters": "No chapters yet.",
+      "youreOn": "You’re on chapter {n}",
+      "notStarted": "You haven’t started this book yet.",
+      "finishedLine": "You’ve finished this book.",
+      "change": "Change",
+      "chapters": "Chapters",
+      "hidden": "Your friends see your notes on this book, and everyone sees your public ones.",
+      "veilHint": "Chapters after yours stay closed until you choose to show them."
+    },
+    "count": {
+      "title": "How many chapters does this book have?",
+      "label": "Number of chapters",
+      "less": "One chapter fewer",
+      "more": "One chapter more",
+      "make": "Make {n} chapter | Make {n} chapters",
+      "makeNone": "Make chapters",
+      "shared": "Everyone with this book shares the chapter list. You can add chapters later.",
+      "prologue": "Count the prologue and epilogue too."
+    },
+    "add": {
+      "title": "Add chapters",
+      "intro": "They come after the last chapter, before “The whole book”. The notes in your chapters stay where they are.",
+      "label": "How many more?",
+      "hint": "Up to {n} more.",
+      "action": "Add",
+      "adding": "Adding…"
+    },
+    "menu": {
+      "label": "Notes options",
+      "title": "Notes",
+      "add": "Add chapters"
+    },
+    "chapterSheet": {
+      "title": "Which chapter are you on?",
+      "hint": "Only you see this. “Automatic” follows your reading in your Library. A chapter you set here wins, either way. Chapters after yours stay closed until you show them.",
+      "noAuto": "Your reading can’t be followed yet, so no chapter is open. Set it by hand.",
+      "auto": "Automatic",
+      "autoHint": "Follows your reading",
+      "finished": "I’ve finished it",
+      "saved": "Saved: {where}"
+    },
+    "level": {
+      "label": "Who can see this",
+      "private": "Only me",
+      "friends": "Friends",
+      "public": "Everyone",
+      "privateHint": "Just you: your notebook for this chapter.",
+      "friendsHint": "Members you follow who follow you back.",
+      "publicHint": "Every member of BetterReads, with your name and photo.",
+      "publicNotice": "Visible to all members of BetterReads, with your name and photo. Just this note.",
+      "paused": "Everyone · paused",
+      "heldBack": "Can’t be wider than the note you answer."
+    },
+    "visibilitySheet": {
+      "title": "Who can see this",
+      "makePublic": "Make visible to everyone",
+      "saved": "Saved: {level}"
+    },
+    "showAnyway": {
+      "title": "Show chapter {n} anyway?",
+      "titleEnd": "Show the whole book anyway?",
+      "text": "It may spoil the book for you. Your own chapter stays where it is, and this stays open on this device.",
+      "action": "Show anyway",
+      "cancel": "Not yet"
+    },
+    "report": {
+      "title": "Report a note",
+      "intro": "Tell me what’s wrong. Your report goes only to the person who runs this app, with a short excerpt of the note.",
+      "reasonLabel": "Why are you reporting it?",
+      "reason": {
+        "harassment": "Harassment or bullying",
+        "spam": "Spam",
+        "inappropriate": "Not appropriate here",
+        "other": "Something else"
+      },
+      "noteLabel": "Anything to add?",
+      "optional": "Optional",
+      "send": "Send",
+      "sending": "Sending…",
+      "doneTitle": "Thanks, got it.",
+      "doneText": "I’ll take a look."
+    },
+    "thread": {
+      "label": "{title}, notes",
+      "back": "Back to the chapters",
+      "refresh": "Refresh",
+      "removed": "Note removed",
+      "moderated": "Removed by the moderator",
+      "hiddenQuote": "A note you can’t see",
+      "empty": "No notes on chapter {n} yet.",
+      "emptyEnd": "No notes on the whole book yet.",
+      "placeholder": "A note on chapter {n}",
+      "placeholderEnd": "A note on the whole book",
+      "composerLabel": "Your note",
+      "spoiler": "Spoiler",
+      "report": "Report",
+      "block": "Block {name}",
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "deleteTitle": "Delete this note?",
+      "deleteText": "It will read “Note removed” for everyone who could see it. This can’t be undone.",
+      "retry": "Try again",
+      "discard": "Delete",
+      "discardLabel": "Delete this unsent note",
+      "notSentFinal": "It can’t be sent.",
+      "veiledTitle": "Chapter {n} is hidden",
+      "veiledEnd": "The whole book is hidden",
+      "veiledText": "It may spoil what you haven’t read yet, so it stays closed until you choose to show it."
+    },
+    "error": {
+      "not_signed_in": "Please sign in again.",
+      "not_found": "This note or chapter isn’t available to you anymore.",
+      "not_owner": "Only the owner can do that.",
+      "notes_unavailable": "A book you added yourself has no notes.",
+      "notes_need_book": "Add this book to your Library to write notes.",
+      "notes_public_off": "Everyone is paused right now. Pick Friends or Only me.",
+      "chapters_already_set": "Somebody already made the chapters. Here they are.",
+      "invalid_count": "A book has 1 to 300 chapters.",
+      "invalid_chapter": "That chapter doesn’t exist.",
+      "invalid_visibility": "That choice isn’t available.",
+      "invalid_reason": "Pick a reason for the report.",
+      "invalid_emoji": "That reaction isn’t available.",
+      "invalid_value": "That didn’t go through. Try again.",
+      "note_wider_than_parent": "Can’t be wider than the note you answer.",
+      "reply_not_visible": "The note you answered is gone.",
+      "body_empty": "Write something, up to 2,000 characters.",
+      "body_too_long": "Write something, up to 2,000 characters.",
+      "client_id_required": "That didn’t go through. Try again.",
+      "client_id_reused": "That didn’t go through. Try again.",
+      "report_self": "You can’t report your own note.",
+      "report_text_too_long": "That text is too long.",
+      "rate_limited": "That’s a lot of notes for now. Please try again in a moment.",
+      "follow_self": "That didn’t go through. Try again.",
+      "offline": "You’re offline.",
+      "busy": "Busy right now. Try again in a moment.",
+      "unknown": "That didn’t go through. Try again."
     }
   },
   "uiText": {

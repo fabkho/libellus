@@ -419,6 +419,9 @@ function back() {
       <span class="skeleton wave block h-(--size-button) w-full rounded-pill" :style="{ '--wave': 0.5 }" />
     </div>
 
+    <!-- Notes (docs/parity.md, *Notes, the Book page section*): what her friends and the public wrote on this Book, when there is something. -->
+    <NotesBookSection v-if="book" :book="book" />
+
     <BookProgressLog v-if="entry?.status === 'reading'" :entry="entry" />
     <CollectionsBookRow v-if="book" :book="book" :entry="entry" :book-key="key" />
 

@@ -31,7 +31,7 @@
 import type { BarAction } from '#layers/ui/app/components/ui/ReactionBar.vue'
 import { threadKey } from '#layers/chat/app/utils/thread'
 import { mayLoadMedia } from '#layers/chat/app/utils/veil'
-import { BUDDY_EMOJI, type BuddyErrorCode } from '~/data/buddyReads'
+import { BUDDY_EMOJI, type BuddyErrorCode, type ReportReason } from '~/data/buddyReads'
 import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
 import { isReadId, isSectionSegment, roomPath, sectionOfSegment } from '~/utils/buddyRoute'
 import { buddyErrorKey } from '~/utils/buddyRead'
@@ -275,6 +275,8 @@ const deleteText = computed(() => {
   if (deleting.value?.voice) return t(host ? 'together.thread.deleteTextVoiceHost' : 'together.thread.deleteTextVoice')
   return t(host ? 'together.thread.deleteTextHost' : 'together.thread.deleteText')
 })
+/** The report sheet's call (components/room/ReportSheet.vue): the buddy store's, answered with the refusal's code. */
+const reportMessage = async (messageId: string, reason: ReportReason, note: string | null) => (await store.report(messageId, reason, note)).error
 const reportId = ref<string | null>(null)
 const reportOpen = ref(false)
 
@@ -414,7 +416,7 @@ function back() {
     <FriendsNote heading :title="chapter?.kind === 'end' ? t('together.thread.veiledEnd') : t('together.thread.veiledTitle', { n: chapter?.position ?? '' })" :text="t('together.thread.veiledText')">
       <UiButton tone="secondary" size="md" data-testid="together.thread.showAnyway" @click="showOpen = true">{{ t('together.showAnyway.action') }}</UiButton>
     </FriendsNote>
-    <TogetherShowAnyway v-model:open="showOpen" :number="chapter?.position ?? ''" :end="chapter?.kind === 'end'" @show="showAnyway" />
+    <RoomShowAnyway v-model:open="showOpen" :number="chapter?.position ?? ''" :end="chapter?.kind === 'end'" @show="showAnyway" />
   </div>
 
   <UiChatThread
@@ -556,7 +558,7 @@ function back() {
       testid="together.thread.delete"
       @confirm="confirmDelete"
     />
-    <TogetherReportSheet v-model:open="reportOpen" :message-id="reportId" />
+    <RoomReportSheet v-model:open="reportOpen" :message-id="reportId" :send="reportMessage" :error-key="(code) => buddyErrorKey(code as BuddyErrorCode)" />
   </UiChatThread>
 </template>
 

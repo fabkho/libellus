@@ -1362,7 +1362,18 @@
     "loadError": "Die Nachrichten konnten nicht geladen werden.",
     "writeError": "Das konnte nicht gespeichert werden. Versuch es nochmal.",
     "offline": "Du bist offline. Funktioniert wieder, sobald du online bist.",
-    "retry": "Nochmal versuchen"
+    "retry": "Nochmal versuchen",
+    "removeNote": {
+      "action": "Notiz entfernen",
+      "title": "Diese Notiz entfernen?",
+      "text": "Für alle steht dort dann „Von der Moderation entfernt“. Ihr Text wird 12 Monate in einem Protokoll aufbewahrt, falls sich jemand beschwert.",
+      "reason": "Grund",
+      "reasonHint": "Wird mit dem Protokoll aufbewahrt.",
+      "removing": "Entferne …",
+      "done": "Notiz entfernt.",
+      "error": "Das konnte nicht entfernt werden. Versuch es nochmal.",
+      "level": "Die Notiz war sichtbar für: {level}"
+    }
   },
   "ownerErrors": {
     "row": "Fehler",
@@ -2467,6 +2478,170 @@
       "save": "Speichern",
       "skip": "Nicht jetzt",
       "pages": "{count} Seite | {count} Seiten"
+    }
+  },
+  "notes": {
+    "title": "Notizen",
+    "back": "Zurück zum Buch",
+    "done": "Fertig",
+    "chapter": "Kapitel {n}",
+    "wholeBook": "Das ganze Buch",
+    "unavailable": "Zu einem selbst hinzugefügten Buch gibt es keine Notizen.",
+    "missingTitle": "Hier gibt es keine Notizen",
+    "missingText": "Zu diesem Buch gibt es keine Notizen für dich, oder es ist nicht verfügbar.",
+    "toBook": "Zum Buch",
+    "toNotes": "Zu den Kapiteln",
+    "offline": "Du bist offline. Die Notizen erscheinen, sobald du wieder online bist.",
+    "retry": "Nochmal versuchen",
+    "hereNow": "Notizen von {names}",
+    "section": {
+      "friends": "Von Freunden",
+      "public": "Öffentlich",
+      "notes": "{count} Notiz | {count} Notizen",
+      "members": "{count} Mitglied | {count} Mitgliedern",
+      "publicLine": "{notes} von {members}",
+      "chapter": "Kapitel {n}",
+      "chapters": "Kapitel {from}–{to}",
+      "dot": " · "
+    },
+    "page": {
+      "sub": "Deine, die deiner Freunde und öffentliche · {count} Kapitel | Deine, die deiner Freunde und öffentliche · {count} Kapitel",
+      "noChapters": "Noch keine Kapitel.",
+      "youreOn": "Du bist bei Kapitel {n}",
+      "notStarted": "Du hast dieses Buch noch nicht begonnen.",
+      "finishedLine": "Du hast dieses Buch zu Ende gelesen.",
+      "change": "Ändern",
+      "chapters": "Kapitel",
+      "hidden": "Deine Freunde sehen deine Notizen zu diesem Buch, und alle sehen deine öffentlichen.",
+      "veilHint": "Kapitel nach deinem bleiben zu, bis du sie öffnest."
+    },
+    "count": {
+      "title": "Wie viele Kapitel hat dieses Buch?",
+      "label": "Anzahl der Kapitel",
+      "less": "Ein Kapitel weniger",
+      "more": "Ein Kapitel mehr",
+      "make": "{n} Kapitel anlegen | {n} Kapitel anlegen",
+      "makeNone": "Kapitel anlegen",
+      "shared": "Alle mit diesem Buch teilen die Kapitelliste. Du kannst später Kapitel hinzufügen.",
+      "prologue": "Zähl Prolog und Epilog mit."
+    },
+    "add": {
+      "title": "Kapitel hinzufügen",
+      "intro": "Sie kommen nach dem letzten Kapitel, vor „Das ganze Buch“. Die Notizen in deinen Kapiteln bleiben, wo sie sind.",
+      "label": "Wie viele mehr?",
+      "hint": "Bis zu {n} weitere.",
+      "action": "Hinzufügen",
+      "adding": "Füge hinzu …"
+    },
+    "menu": {
+      "label": "Optionen für Notizen",
+      "title": "Notizen",
+      "add": "Kapitel hinzufügen"
+    },
+    "chapterSheet": {
+      "title": "Bei welchem Kapitel bist du?",
+      "hint": "Das siehst nur du. „Automatisch“ folgt deinem Lesefortschritt in deiner Bibliothek. Ein Kapitel, das du hier wählst, gilt immer. Spätere Kapitel bleiben zu, bis du sie öffnest.",
+      "noAuto": "Dein Lesefortschritt lässt sich noch nicht verfolgen, deshalb ist kein Kapitel offen. Stell es von Hand ein.",
+      "auto": "Automatisch",
+      "autoHint": "Folgt deinem Lesefortschritt",
+      "finished": "Ich bin durch",
+      "saved": "Gespeichert: {where}"
+    },
+    "level": {
+      "label": "Wer das sehen kann",
+      "private": "Nur ich",
+      "friends": "Freunde",
+      "public": "Alle",
+      "privateHint": "Nur du: dein Notizbuch zu diesem Kapitel.",
+      "friendsHint": "Mitglieder, denen du folgst und die dir folgen.",
+      "publicHint": "Alle Mitglieder von BetterReads, mit deinem Namen und Foto.",
+      "publicNotice": "Für alle Mitglieder von BetterReads sichtbar, mit deinem Namen und Foto. Nur diese Notiz.",
+      "paused": "Alle · pausiert",
+      "heldBack": "Kann nicht weiter sichtbar sein als die Notiz, auf die du antwortest."
+    },
+    "visibilitySheet": {
+      "title": "Wer das sehen kann",
+      "makePublic": "Für alle sichtbar machen",
+      "saved": "Gespeichert: {level}"
+    },
+    "showAnyway": {
+      "title": "Kapitel {n} trotzdem öffnen?",
+      "titleEnd": "Das ganze Buch trotzdem öffnen?",
+      "text": "Das könnte dir etwas verraten. Dein eigenes Kapitel bleibt, wo es ist, und dieses bleibt auf diesem Gerät geöffnet.",
+      "action": "Trotzdem öffnen",
+      "cancel": "Noch nicht"
+    },
+    "report": {
+      "title": "Notiz melden",
+      "intro": "Sag mir, was los ist. Deine Meldung geht nur an die Person, die diese App betreibt – zusammen mit einem kurzen Auszug der Notiz.",
+      "reasonLabel": "Warum meldest du das?",
+      "reason": {
+        "harassment": "Belästigung oder Mobbing",
+        "spam": "Spam",
+        "inappropriate": "Hier unpassend",
+        "other": "Etwas anderes"
+      },
+      "noteLabel": "Möchtest du noch etwas hinzufügen?",
+      "optional": "Optional",
+      "send": "Senden",
+      "sending": "Sende …",
+      "doneTitle": "Danke, angekommen.",
+      "doneText": "Ich sehe es mir an."
+    },
+    "thread": {
+      "label": "{title}, Notizen",
+      "back": "Zurück zu den Kapiteln",
+      "refresh": "Aktualisieren",
+      "removed": "Notiz entfernt",
+      "moderated": "Von der Moderation entfernt",
+      "hiddenQuote": "Eine Notiz, die du nicht sehen kannst",
+      "empty": "Noch keine Notizen zu Kapitel {n}.",
+      "emptyEnd": "Noch keine Notizen zum ganzen Buch.",
+      "placeholder": "Eine Notiz zu Kapitel {n}",
+      "placeholderEnd": "Eine Notiz zum ganzen Buch",
+      "composerLabel": "Deine Notiz",
+      "spoiler": "Spoiler",
+      "report": "Melden",
+      "block": "{name} blockieren",
+      "delete": "Löschen",
+      "deleting": "Lösche …",
+      "deleteTitle": "Diese Notiz löschen?",
+      "deleteText": "Für alle, die sie sehen konnten, steht dort dann „Notiz entfernt“. Das lässt sich nicht rückgängig machen.",
+      "retry": "Nochmal versuchen",
+      "discard": "Löschen",
+      "discardLabel": "Nicht gesendete Notiz löschen",
+      "notSentFinal": "Kann nicht gesendet werden.",
+      "veiledTitle": "Kapitel {n} ist verborgen",
+      "veiledEnd": "Das ganze Buch ist verborgen",
+      "veiledText": "Es könnte verraten, was du noch nicht gelesen hast. Es bleibt zu, bis du es öffnest."
+    },
+    "error": {
+      "not_signed_in": "Bitte melde dich neu an.",
+      "not_found": "Diese Notiz oder dieses Kapitel ist für dich nicht mehr verfügbar.",
+      "not_owner": "Das kann nur der Inhaber.",
+      "notes_unavailable": "Zu einem selbst hinzugefügten Buch gibt es keine Notizen.",
+      "notes_need_book": "Füge dieses Buch zu deiner Bibliothek hinzu, um Notizen zu schreiben.",
+      "notes_public_off": "„Alle“ ist gerade pausiert. Wähl „Freunde“ oder „Nur ich“.",
+      "chapters_already_set": "Jemand hat die Kapitel schon angelegt. Hier sind sie.",
+      "invalid_count": "Ein Buch hat 1 bis 300 Kapitel.",
+      "invalid_chapter": "Dieses Kapitel gibt es nicht.",
+      "invalid_visibility": "Diese Auswahl ist nicht möglich.",
+      "invalid_reason": "Wähl einen Grund für die Meldung.",
+      "invalid_emoji": "Diese Reaktion gibt es nicht.",
+      "invalid_value": "Das hat nicht geklappt. Versuch es nochmal.",
+      "note_wider_than_parent": "Kann nicht weiter sichtbar sein als die Notiz, auf die du antwortest.",
+      "reply_not_visible": "Die Notiz, auf die du geantwortet hast, ist weg.",
+      "body_empty": "Schreib etwas, bis zu 2.000 Zeichen.",
+      "body_too_long": "Schreib etwas, bis zu 2.000 Zeichen.",
+      "client_id_required": "Das hat nicht geklappt. Versuch es nochmal.",
+      "client_id_reused": "Das hat nicht geklappt. Versuch es nochmal.",
+      "report_self": "Du kannst deine eigene Notiz nicht melden.",
+      "report_text_too_long": "Der Text ist zu lang.",
+      "rate_limited": "Das sind gerade viele Notizen. Versuch es gleich nochmal.",
+      "follow_self": "Das hat nicht geklappt. Versuch es nochmal.",
+      "offline": "Du bist offline.",
+      "busy": "Gerade beschäftigt. Versuch es gleich nochmal.",
+      "unknown": "Das hat nicht geklappt. Versuch es nochmal."
     }
   },
   "uiText": {
