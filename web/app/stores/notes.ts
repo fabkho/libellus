@@ -18,9 +18,11 @@ import {
   type Notes,
 } from '~/data/notes'
 import type { ReportReason } from '~/data/buddyReads'
+import { prepareVoice, VOICE_QUEUE_MAX_AGE_MS, VOICE_URL_REUSE_MS, type PreparedVoice } from '~/data/buddyVoice'
+import { notePath, type VoiceMime } from '~/data/noteVoice'
 import { useSessionStore } from '~/stores/session'
 import { notesPeekKey, notesQueueKey } from '~/utils/notesStorage'
-import { byInstantThenId, mergeNote, noteJob, pageCursor, noteSendKey, pendingNote, reactedNote, sentNote, tombstoneNote, type NoteBubble } from '~/utils/notes'
+import { byInstantThenId, mergeNote, noteJob, noteVoiceJob, noteVoiceOfJob, pageCursor, noteSendKey, pendingNote, reactedNote, sentNote, tombstoneNote, type NoteBubble } from '~/utils/notes'
 import { rememberedLevel, rememberLevel } from '~/utils/noteVisibility'
 
 /**
@@ -34,6 +36,11 @@ import { rememberedLevel, rememberLevel } from '~/utils/noteVisibility'
  *   neither is **never asked for**: `openThread` refuses it before any call, so nothing of what was said in it reaches the device.
  * - **Sending is optimistic and queued** (the layer's `createSaveQueue`, as a buddy read's): a note shows at once as a bubble the queue sends in order, kept in
  *   `localStorage` across a reload; the stored row replaces the bubble by its client id; a refusal is handed back on the bubble for the screen to word.
+ * - **A voice note** (only ever Only me) is a send too, in two steps, exactly as a buddy read's voice message: the recording is stored in the private bucket
+ *   `note-voice` first (`sendVoice`: a bubble at once, playable from the device's own copy; no connection or a refusal makes it a failed bubble she can send
+ *   again or delete: a recording is held in memory, not in the line, so a reload loses one that was not stored), then its post (`post_note_voice`, private, no
+ *   level to give) joins the same queue as a text (retried with a pause, kept across a reload, a refusal handed back on the bubble). Nothing is signed or
+ *   fetched for a recording until she presses play (`voiceUrl`: a URL of five minutes, kept for four).
  */
 
 type Thread = { messages: NoteBubble[]; loaded: boolean; more: boolean; loading: boolean; marked: string | null }
@@ -353,16 +360,29 @@ export const useNotesStore = defineStore('notes', () => {
     if (!r) return { ok: false, retry: true, error: 'offline' }
     const since = epoch
     // The line is the member's whose it was made for: a send under another session would be posted as somebody else.
-    if (!me.value || me.value !== queueFor) return { ok: false, retry: true, error: 'offline' }
-    const answer = await r.post({
-      roomId: job.conversationId,
-      sectionId: job.threadId!,
-      clientId: job.clientId,
-      body: job.body,
-      visibility: (job.payload as { visibility?: NoteVisibility } | null)?.visibility ?? 'friends',
-      replyTo: job.replyTo,
-      spoiler: job.spoiler,
-    })
+    const member = me.value
+    if (!member || member !== queueFor) return { ok: false, retry: true, error: 'offline' }
+    const voice = noteVoiceOfJob(job)
+    // A recording that waited too long is not sent: its object may be swept already (`VOICE_QUEUE_MAX_AGE_MS`); she records it again.
+    if (voice && Date.now() - Date.parse(job.createdAt) > VOICE_QUEUE_MAX_AGE_MS) return { ok: false, retry: false, error: 'voice_missing', field: null }
+    const answer = voice
+      ? await r.sendVoice({
+          roomId: job.conversationId,
+          sectionId: job.threadId!,
+          clientId: job.clientId,
+          path: notePath(member, job.conversationId, job.clientId, voice.mime),
+          media: voice,
+          replyTo: job.replyTo,
+        })
+      : await r.post({
+          roomId: job.conversationId,
+          sectionId: job.threadId!,
+          clientId: job.clientId,
+          body: job.body,
+          visibility: (job.payload as { visibility?: NoteVisibility } | null)?.visibility ?? 'friends',
+          replyTo: job.replyTo,
+          spoiler: job.spoiler,
+        })
     // She was gone in the meantime: nothing of the answer is shown to the next member (the line itself is stopped).
     if (stale(since)) return { ok: false, retry: true, error: 'offline' }
     if (answer.error) {
@@ -495,8 +515,107 @@ export const useNotesStore = defineStore('notes', () => {
     return { ok: true, clientId: job.clientId }
   }
 
+  // ---- voice (hers alone: Only me)
+
+  /** A recording that is not stored yet: its bytes (in memory only) and the send it will become. */
+  type VoiceUpload = { blob: Blob; mime: VoiceMime; job: SendJob }
+  const uploads = new Map<string, VoiceUpload>()
+  /** The device's own copy of a recording she sent, by client id (a `blob:` URL): she plays it from here, nothing is signed for it. */
+  const previews = ref<Record<string, string>>({})
+  const previewOf = (clientId: string | null): string | null => (clientId ? (previews.value[clientId] ?? null) : null)
+  /** The URL a recording was signed for, by object name: reused while it lives (`VOICE_URL_REUSE_MS`). */
+  const signed = new Map<string, { url: string; at: number }>()
+
+  function dropPreview(clientId: string) {
+    const url = previews.value[clientId]
+    if (url) URL.revokeObjectURL(url)
+    delete previews.value[clientId]
+  }
+
+  /**
+   * Sends a finished recording (the composer's `voice`), **as a private note**: refused here when it is too short, too big or of a type the bucket does not take;
+   * otherwise a bubble at once, the sound stored (`uploadVoice`) and its post queued. It has no level: the screen offers the microphone only at Only me and the database
+   * posts nothing else.
+   */
+  async function sendVoice(
+    roomId: string,
+    sectionId: string,
+    voice: PreparedVoice,
+    { replyTo = null, quote = null }: { replyTo?: string | null; quote?: NoteBubble['quote'] } = {},
+  ): Promise<NoteSend> {
+    const member = me.value
+    if (!member) return { ok: false, error: 'not_signed_in' }
+    const prepared = prepareVoice(voice)
+    if (!prepared.ok) return { ok: false, error: prepared.reason === 'short' ? 'voice_short' : prepared.reason === 'large' ? 'voice_large' : 'voice_type' }
+    const since = epoch
+    await ensureQueue()
+    if (stale(since) || !queue) return { ok: false, error: 'not_signed_in' }
+    const clientId = newId()
+    const job = noteVoiceJob({ roomId, sectionId, clientId, replyTo, createdAt: new Date().toISOString() }, { mime: prepared.mime, durationMs: prepared.durationMs, peaks: prepared.peaks })
+    previews.value[clientId] = URL.createObjectURL(voice.blob)
+    uploads.set(clientId, { blob: voice.blob, mime: prepared.mime, job })
+    mergeNote(thread(roomId, sectionId).messages, pendingNote(job, member, nameOf(), quote))
+    void uploadVoice(clientId)
+    return { ok: true, clientId }
+  }
+
+  /** Stores the recording; once it is there its post joins the line. A refusal (offline included) makes the bubble a failed one, for a tap to send again. */
+  async function uploadVoice(clientId: string) {
+    const entry = uploads.get(clientId)
+    const member = me.value
+    const r = repo()
+    if (!entry || !member) return
+    const { job } = entry
+    const bubble = () => thread(job.conversationId, job.threadId!).messages.find((m) => m.clientId === clientId && m.state !== 'sent')
+    if (!r) {
+      const b = bubble()
+      if (b) Object.assign(b, { state: 'failed', error: 'offline' })
+      return
+    }
+    const since = epoch
+    const answer = await r.uploadVoice(job.conversationId, member, clientId, entry.blob, entry.mime)
+    if (stale(since) || uploads.get(clientId) !== entry) return
+    const b = bubble()
+    if (answer.error) {
+      if (b) Object.assign(b, { state: 'failed', error: answer.error })
+      return
+    }
+    uploads.delete(clientId)
+    await ensureQueue()
+    if (stale(since) || !queue) return
+    queue.enqueue(noteSendKey(clientId), job)
+  }
+
+  /**
+   * The short-lived URL of a recording, signed when she presses play (never when a thread loads): the one signed a moment ago again, else a new one.
+   * An error when it is not hers to hear (the note was deleted, she signed out) or there is no connection.
+   */
+  async function voiceUrl(path: string): Promise<NoteResult<string>> {
+    const hit = signed.get(path)
+    if (hit && Date.now() - hit.at < VOICE_URL_REUSE_MS) return { data: hit.url, error: null }
+    const r = repo()
+    if (!r) return unavailable()
+    const since = epoch
+    const answer = await r.voiceUrl(path)
+    if (stale(since)) return { data: null, error: 'not_signed_in' }
+    if (answer.error) signed.delete(path)
+    else signed.set(path, { url: answer.data, at: Date.now() })
+    return answer
+  }
+
   /** Sends a refused note again (the refusal is forgotten, the bubble is on its way). */
   async function retry(roomId: string, sectionId: string, clientId: string) {
+    // A recording that was not stored: stored again from the copy in memory, then posted.
+    const pending = uploads.get(clientId)
+    if (pending) {
+      const bubble = messagesOf(roomId, sectionId).find((m) => m.clientId === clientId && m.state === 'failed')
+      if (bubble && isRetryableNoteError(bubble.error ?? 'unknown')) {
+        bubble.state = 'sending'
+        bubble.error = null
+        void uploadVoice(clientId)
+      }
+      return
+    }
     await ensureQueue()
     const refusal = queue?.snapshot().refusals.find((r) => r.payload.clientId === clientId)
     const bubble = messagesOf(roomId, sectionId).find((m) => m.clientId === clientId)
@@ -510,6 +629,8 @@ export const useNotesStore = defineStore('notes', () => {
 
   /** A note that was refused (or still waits) is given up: the bubble goes, and the refusal the device kept with it. */
   function discard(roomId: string, sectionId: string, clientId: string) {
+    uploads.delete(clientId)
+    dropPreview(clientId)
     queue?.remove(noteSendKey(clientId))
     queue?.dismissRefusal(noteSendKey(clientId))
     const list = thread(roomId, sectionId).messages
@@ -545,7 +666,11 @@ export const useNotesStore = defineStore('notes', () => {
     const list = thread(roomId, sectionId).messages
     const at = list.findIndex((m) => m.id === noteId)
     if (at >= 0 && !list[at]!.deletedAt) {
-      list[at] = tombstoneNote(list[at]!, new Date().toISOString())
+      // A voice note's sound goes with it: the copy on this device and the URL signed for it.
+      const gone = list[at]!
+      if (gone.voice?.path) signed.delete(gone.voice.path)
+      if (gone.clientId) dropPreview(gone.clientId)
+      list[at] = tombstoneNote(gone, new Date().toISOString())
       const chapter = roomById(roomId)?.room.chapters.find((c) => c.id === sectionId)
       if (chapter) chapter.count = Math.max(0, chapter.count - 1)
     }
@@ -588,6 +713,9 @@ export const useNotesStore = defineStore('notes', () => {
     waiting.value = 0
     publicEnabled.value = false
     configLoaded.value = false
+    uploads.clear()
+    for (const clientId of Object.keys(previews.value)) dropPreview(clientId)
+    signed.clear()
     peekMemo = null
     remembered.value = rememberedLevel(deviceStorage())
     for (const key of Object.keys(viewing)) delete viewing[key]
@@ -636,6 +764,9 @@ export const useNotesStore = defineStore('notes', () => {
     loadOlder,
     markThread,
     send,
+    sendVoice,
+    previewOf,
+    voiceUrl,
     retry,
     discard,
     kick,

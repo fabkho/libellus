@@ -68,6 +68,10 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
     sound are the base's (`UiComposer` `voiceMaxMs`, `UiVoiceBubble`, `@fabkho/ui/pure/voice`); the sound is an object in the private bucket `buddy-voice` and **nothing is signed or fetched
     when a thread loads**: the page takes the play button's press first (`voicePress`, capture phase on the thread's root) and asks `voiceUrl` for a URL of five minutes. The recorder and the
     player are in the thread page's lazy chunk, never the entry (`perf:bundle`). A deleted message's sound is removed by the Edge Function `buddy-voice-sweep` (docs/OPERATIONS.md, "Voice messages").
+  - **Voice notes in Notes** (`data/noteVoice.ts`, the voice calls of `data/notes.ts`, the store's `sendVoice` and `voiceUrl`): **only for her own private notes**. The microphone is passed to the composer
+    (`voiceMaxMs`) only at Only me (and only when she is not answering somebody else's note); at Friends or Everyone it is not offered, and the database refuses a voice note at any other level (`voice_private_only`).
+    The sound is an object in the private bucket `note-voice` that only its author can read; the thread JSON carries the object's name to its author alone; **nothing is signed or fetched when a chapter loads**
+    (the page's `voicePress`, as a buddy read's). Never add a path that shows a voice note, its count, its length or its name to anyone else: every read goes through `private.can_see_note` / `visible_notes`.
   - `entry-guard.config.ts` fails a production build if any chunk the entry loads statically holds
     `@supabase/realtime-js` (the stub is fine; `tests/entry-guard.test.ts`).
 - **Portable by default** (rules: the base README): a component that could ever be generic is written so it moves to

@@ -418,7 +418,7 @@ the same: a cron that stops leaves no red run behind, only a gap in Actions → 
 | | `pg_cron` jobs and `pg_net`'s queue: the migrations schedule the jobs again |
 | | `public.google_books_cache` (the schema is in it, the rows are not): Google's terms let an answer be kept a day at most and a backup lives 35 days, and its keys are search words members typed (`NO_DATA` in `scripts/backup-db.sh`) |
 
-**Voice recordings are not in the backup** either (the private bucket `buddy-voice`: a restored database has the messages, with their lengths and waveforms, and no sound; docs/OPERATIONS.md, "Voice messages").
+**Voice recordings are not in the backup** either (the private buckets `buddy-voice` and `note-voice`: a restored database has the messages and notes, with their lengths and waveforms, and no sound; docs/OPERATIONS.md, "Voice messages").
 
 **Profile photos are not in the backup.** They live in Supabase Storage (the private bucket `avatars`,
 created by `supabase/migrations/20261009120000_avatars.sql`), and a database dump holds only the rows
@@ -712,6 +712,20 @@ open). A missed event costs nothing: the app reads the state again after a recon
 
 ## Voice messages
 
+**Two buckets, one sweep.** Voice lives in two private buckets: `buddy-voice` (a buddy read's voice messages, below) and `note-voice` (the
+**private voice notes** of Notes: a member's own spoken notebook per chapter, at Only me and never anywhere else, object
+`<author id>/<room id>/<client id>.<m4a|webm|ogg>`, readable and writable by its author alone: `note_voice_select_author` and
+`note_voice_insert_own`, `supabase/migrations/20261118010000_notes_private_voice.sql`, `supabase/tests/notes_private_voice_test.sql`; the screen:
+docs/parity.md, "Notes, a chapter"). The same queue (`private.buddy_voice_trash`, now with a `bucket` column), the same kick, the same two
+pg_cron jobs and the **same Edge Function `buddy-voice-sweep`** serve both: the function asks `public.voice_sweep_batch` for `[{bucket, path}]`,
+removes each bucket's objects through the Storage API and reports `public.voice_sweep_done`. Nothing to set up for `note-voice` that `buddy-voice`
+has not already (the token, the address, the Vault secret: steps 1 to 6 below); **deploy the function (it is the same one) in the release that
+carries the migration**. A function of the earlier version keeps working for `buddy-voice` meanwhile (`buddy_voice_sweep_batch` / `_done` look at
+that bucket's rows only), and a note's audio waits in the queue until the new function runs; nothing is lost and nothing is removed from the wrong
+bucket. Look at both: `select bucket, path, attempts, queued_at from private.buddy_voice_trash where attempts >= 20;`. The limits of a note's
+recording are a buddy message's: 10 voice notes a minute and 100 a day (on top of the 30 a minute and 300 a day of every note), at most **20 uploads an
+hour**, 3 MB; an upload no note points at is swept after 6 hours, an object a note points at never. **Not in a backup**, like the others.
+
 A member records up to two minutes in a buddy read's thread; the sound is an object in the **private** bucket `buddy-voice`
 (3 MB an object; `audio/mp4`, `audio/webm`, `audio/ogg`), named `<read id>/<author id>/<client id>.<m4a|webm|ogg>`. Who may
 hear it is the bucket's policy (`buddy_voice_select_members`: a member joined to that read, the author not blocked with her
@@ -763,7 +777,7 @@ or hourly job, or the check below). So set it up **before the release that carri
    on the other kind of device, delete both, and see the objects leave the bucket (Storage, `buddy-voice`) and the queue empty,
    **before announcing the feature**.
 
-**Watch** (Storage page): the size of `buddy-voice` (a two-minute recording is about 0.7 MB; Free: 1 GB for all of Storage, covers
+**Watch** (Storage page): the size of `buddy-voice` and `note-voice` (a two-minute recording is about 0.7 MB; Free: 1 GB for all of Storage, covers
 excluded) and its egress (a play downloads the recording; Free: 5 GB a month). The limits that keep it small: 10 voice messages
 a minute and 100 a day a member (on top of the 30 a minute and 600 a day of every message), at most 20 uploads an hour, 3 MB an
 object (so the most a member can leave unsent for the sweep is 60 MB). **Not in a backup** (the nightly dump is the database; like

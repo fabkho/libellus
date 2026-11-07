@@ -4,6 +4,8 @@ grant execute on function private.cover_allowed(text) to service_role;
 grant execute on function private.cover_artwork(text) to service_role;
 grant execute on function private.cover_storable(text) to service_role;
 grant execute on function private.member_topic(uuid) to authenticated;
+grant execute on function private.note_voice_readable(text) to authenticated;
+grant execute on function private.note_voice_writable(text) to authenticated;
 grant execute on function public."like"(uuid) to authenticated;
 grant execute on function public."like"(uuid) to service_role;
 grant execute on function public.abandon_reading(uuid,date,text) to authenticated;
@@ -274,6 +276,8 @@ grant execute on function public.post_buddy_message(uuid,uuid,uuid,text,text,uui
 grant execute on function public.post_buddy_message(uuid,uuid,uuid,text,text,uuid,boolean,jsonb) to service_role;
 grant execute on function public.post_note(uuid,uuid,uuid,text,text,uuid,boolean) to authenticated;
 grant execute on function public.post_note(uuid,uuid,uuid,text,text,uuid,boolean) to service_role;
+grant execute on function public.post_note_voice(uuid,uuid,uuid,text,text,integer,smallint[],uuid) to authenticated;
+grant execute on function public.post_note_voice(uuid,uuid,uuid,text,text,integer,smallint[],uuid) to service_role;
 grant execute on function public.profile_links_of(uuid) to authenticated;
 grant execute on function public.profile_links_of(uuid) to service_role;
 grant execute on function public.progress_page_fits(integer,integer) to authenticated;
@@ -404,6 +408,8 @@ grant execute on function public.update_session(uuid,date,date,integer,text,text
 grant execute on function public.update_session(uuid,date,date,integer,text,text,boolean) to service_role;
 grant execute on function public.use_own_edition(uuid,jsonb) to authenticated;
 grant execute on function public.use_own_edition(uuid,jsonb) to service_role;
+grant execute on function public.voice_sweep_batch(integer,interval,boolean) to service_role;
+grant execute on function public.voice_sweep_done(jsonb) to service_role;
 grant execute on function public.withdraw_request(uuid) to authenticated;
 grant execute on function public.withdraw_request(uuid) to service_role;
 grant execute on function public.work_card(uuid,text,numeric) to authenticated;

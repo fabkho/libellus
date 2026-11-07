@@ -21,6 +21,9 @@ begin
   if not found then
     raise exception 'not_found' using errcode = 'PT404';
   end if;
+  if v_row.kind = 'voice' and p_visibility <> 'private' then
+    raise exception 'voice_private_only' using errcode = '22023';
+  end if;
 
   perform private.notes_lock('notes_room', v_row.room_id::text);
   select m.* into v_row from public.room_messages m where m.id = p_note for update;

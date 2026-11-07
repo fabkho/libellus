@@ -19,7 +19,9 @@ begin
   end if;
   if v_row.deleted_at is null then
     delete from public.room_reactions where message_id = p_note;
-    update public.room_messages set body = '', deleted_at = clock_timestamp(), deleted_by = v_caller
+    update public.room_messages
+       set body = '', voice_object = null, voice_mime = null, voice_duration_ms = null, voice_peaks = null,
+           deleted_at = clock_timestamp(), deleted_by = v_caller
      where id = p_note
     returning * into v_row;
   end if;

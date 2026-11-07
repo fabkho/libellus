@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { VOICE_BUCKET, VOICE_MAX_BYTES, VOICE_URL_SECONDS, voicePath } from '@/data/buddyVoice'
-import { removedNames, sweep } from '../../supabase/functions/buddy-voice-sweep/sweep'
+import { itemsOf, removeFromBuckets, sweep } from '../../supabase/functions/buddy-voice-sweep/sweep'
 import { buddyOf, joinRead, startRead } from './support/buddy'
 import { signUpMember, type TestMember } from './support/member'
 import { serviceRoleKey, sql, stack } from './support/stack'
@@ -28,12 +28,12 @@ let outsider: TestMember
 let read: { id: string; linkToken: string | null }
 let section: string
 
-/** The service role's sweep, as the Edge Function runs it: the database names the objects, Storage removes them. */
+/** The service role's sweep, as the Edge Function runs it: the database names the objects (of both buckets), Storage removes them. */
 async function runSweep() {
   return sweep({
-    batch: async (limit) => ((await service.rpc('buddy_voice_sweep_batch', { p_limit: limit })).data as string[] | null) ?? [],
-    remove: async (paths) => removedNames((await service.storage.from(VOICE_BUCKET).remove(paths)).data),
-    done: async (paths) => void (await service.rpc('buddy_voice_sweep_done', { p_paths: paths })),
+    batch: async (limit) => itemsOf((await service.rpc('voice_sweep_batch', { p_limit: limit })).data),
+    remove: (items) => removeFromBuckets(items, async (bucket, paths) => await service.storage.from(bucket).remove(paths)),
+    done: async (items) => void (await service.rpc('voice_sweep_done', { p_items: items })),
   })
 }
 

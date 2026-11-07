@@ -170,6 +170,11 @@ shimmer stops, the tab bar stays.
   always have a single-pointer alternative: a tap, Enter or Space on the microphone (and VoiceOver's or Switch Control's activation) records
   hands-free in the panel with ✕ and Send as ordinary 44 px buttons; the microphone's description names both ways (`uiText.chat.voice.recordHint`) and
   locking, discarding and a too-short hold are announced politely (`e2e/buddy-voice-hold.spec.ts`).
+  **Voice notes** in a Notes chapter (the same microphone, only at Only me): the microphone is a labelled button with the same description and the same single-pointer
+  alternative as above; while a recording runs the audience control is not on the screen (so a radio group never changes under it) and the status line says
+  "Recording"; the bubble's play button, length and waveform are the base's `UiVoiceBubble` (named, 44 px, `aria-live` on the play state); the lock and "Only me"
+  under it are text, not colour. The quote of a voice note reads "Voice message" for a screen reader. `e2e/notes-voice.spec.ts` scans the thread with a voice
+  note and a thread while recording in both colour schemes. VoiceOver and TalkBack on a real phone were not tried in this change.
   **Notes** (the Notes page, a chapter, the Book page's section, the Remove note dialog): `e2e/a11y.spec.ts` ("accessibility, notes") scans the page, a chapter,
   a veiled chapter and the sheets she opens from them in both colour schemes, and checks that the audience control is a labelled `radiogroup` of 44 px
   segments with one tab stop (a level held back by the note she answers is `aria-disabled`, not removed); `e2e/book-notes.spec.ts` scans the chapter in

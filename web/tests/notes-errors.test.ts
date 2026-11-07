@@ -7,7 +7,7 @@ import { noteErrorKey } from '@/utils/notes'
 const en = JSON.parse(readFileSync(new URL('../i18n/locales/en.json', import.meta.url), 'utf8')) as { notes: { error: Record<string, string> } }
 
 describe('notes refusals have words', () => {
-  const codes: NoteErrorCode[] = [...NOTE_ERROR_CODES, 'offline', 'busy', 'unknown']
+  const codes: NoteErrorCode[] = [...NOTE_ERROR_CODES, 'offline', 'busy', 'unknown', 'voice_short', 'voice_large', 'voice_type']
 
   it.each(codes)('%s has a sentence under its key', (code) => {
     expect(noteErrorKey(code)).toBe(`notes.error.${code}`)
