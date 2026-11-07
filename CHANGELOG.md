@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.41.1](https://github.com/fabkho/libellus/compare/v1.41.0...v1.41.1) (2026-11-07)
+
+
+### Fixes
+
+* **notes:** no note lost at a page edge, and the right chapter count ([#521](https://github.com/fabkho/libellus/issues/521)) ([6a265ce](https://github.com/fabkho/libellus/commit/6a265cebb84ecaa538f5f78a2dbe37d2b1359816))
+
 ## [1.41.0](https://github.com/fabkho/libellus/compare/v1.40.0...v1.41.0) (2026-11-07)
 
 
