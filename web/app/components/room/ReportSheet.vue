@@ -9,11 +9,13 @@
 import { REPORT_REASONS, type ReportReason } from '~/data/buddyReads'
 import { REPORT_NOTE_MAX, reportInput } from '~/utils/roomThread'
 
-const props = defineProps<{
+// `prefix` names the message keys the words are under (`together.report`: a buddy read's messages; `notes.report`: a Book's notes), which is also the test id.
+const props = withDefaults(defineProps<{
+  prefix?: string
   messageId: string | null
   send: (messageId: string, reason: ReportReason, note: string | null) => Promise<string | null>
   errorKey: (code: string) => string
-}>()
+}>(), { prefix: 'together.report' })
 const open = defineModel<boolean>('open', { required: true })
 
 const { t } = useI18n()
@@ -50,23 +52,23 @@ async function submit() {
 <template>
   <UiSheet
     v-model:open="open"
-    :title="t('together.report.title')"
-    :action="sent ? undefined : busy ? t('together.report.sending') : t('together.report.send')"
+    :title="t(`${prefix}.title`)"
+    :action="sent ? undefined : busy ? t(`${prefix}.sending`) : t(`${prefix}.send`)"
     :action-disabled="!input || busy || !online"
-    testid="together.report"
+    :testid="prefix"
     @action="submit"
   >
-    <div v-if="sent" class="flex flex-col items-center gap-sm px-xl pt-md pb-xl text-center" data-testid="together.report.done">
-      <p class="book-title text-callout">{{ t('together.report.doneTitle') }}</p>
-      <p class="text-subhead text-ink-muted" role="status">{{ t('together.report.doneText') }}</p>
-      <UiButton tone="secondary" size="md" class="mt-ms" data-testid="together.report.close" @click="open = false">{{ t('together.done') }}</UiButton>
+    <div v-if="sent" class="flex flex-col items-center gap-sm px-xl pt-md pb-xl text-center" :data-testid="`${prefix}.done`">
+      <p class="book-title text-callout">{{ t(`${prefix}.doneTitle`) }}</p>
+      <p class="text-subhead text-ink-muted" role="status">{{ t(`${prefix}.doneText`) }}</p>
+      <UiButton tone="secondary" size="md" class="mt-ms" :data-testid="`${prefix}.close`" @click="open = false">{{ t('together.done') }}</UiButton>
     </div>
 
     <div v-else class="flex flex-col gap-md pt-xs pb-lg">
-      <p class="text-subhead text-ink-muted">{{ t('together.report.intro') }}</p>
+      <p class="text-subhead text-ink-muted">{{ t(`${prefix}.intro`) }}</p>
 
       <UiRowGroup>
-        <div role="radiogroup" :aria-label="t('together.report.reasonLabel')">
+        <div role="radiogroup" :aria-label="t(`${prefix}.reasonLabel`)">
           <button
             v-for="r in REPORT_REASONS"
             :key="r"
@@ -74,19 +76,19 @@ async function submit() {
             role="radio"
             :aria-checked="reason === r"
             class="flex min-h-(--size-row) w-full items-center gap-ms border-hairline px-inset text-left text-body not-first:border-t active:bg-fill-strong focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
-            :data-testid="`together.report.reason.${r}`"
+            :data-testid="`${prefix}.reason.${r}`"
             @click="reason = r"
           >
-            <span class="min-w-0 flex-1">{{ t(`together.report.reason.${r}`) }}</span>
+            <span class="min-w-0 flex-1">{{ t(`${prefix}.reason.${r}`) }}</span>
             <UiIcon v-if="reason === r" name="check" :size="18" class="text-accent-ink" />
           </button>
         </div>
       </UiRowGroup>
 
-      <UiTextArea id="together-report-note" v-model="note" :label="t('together.report.noteLabel')" :hint="t('together.report.optional')" :maxlength="REPORT_NOTE_MAX" data-testid="together.report.note" />
+      <UiTextArea :id="`${prefix.replace(/\./g, '-')}-note`" v-model="note" :label="t(`${prefix}.noteLabel`)" :hint="t(`${prefix}.optional`)" :maxlength="REPORT_NOTE_MAX" :data-testid="`${prefix}.note`" />
 
-      <p v-if="!online" class="text-footnote text-ink-faint" data-testid="together.report.offline">{{ t('common.offline') }}</p>
-      <p v-if="error" class="text-footnote text-error" role="alert" data-testid="together.report.error">{{ t(errorKey(error)) }}</p>
+      <p v-if="!online" class="text-footnote text-ink-faint" :data-testid="`${prefix}.offline`">{{ t('common.offline') }}</p>
+      <p v-if="error" class="text-footnote text-error" role="alert" :data-testid="`${prefix}.error`">{{ t(errorKey(error)) }}</p>
     </div>
   </UiSheet>
 </template>

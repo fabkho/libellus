@@ -59,6 +59,36 @@ function details(item: FeedbackItem): string[] {
   return Object.entries(item.context).map(([key, value]) => `${key.slice(0, 40)}: ${String(typeof value === 'object' ? JSON.stringify(value) : value).slice(0, 300)}`)
 }
 
+/** A report of a note: its id, and the level the note had (the database put both in the report's context). */
+const noteOf = (item: FeedbackItem): string | null => (item.kind === 'report' && typeof item.context.note === 'string' ? item.context.note : null)
+const levelOf = (item: FeedbackItem): 'private' | 'friends' | 'public' | null => {
+  const level = item.context.visibility
+  return level === 'private' || level === 'friends' || level === 'public' ? level : null
+}
+
+const removing = ref<FeedbackItem | null>(null)
+const removeOpen = ref(false)
+const removeReason = ref('')
+const removeBusy = ref(false)
+const removeFailed = ref<string | null>(null)
+const askRemove = (item: FeedbackItem) => {
+  removing.value = item
+  removeReason.value = ''
+  removeFailed.value = null
+  removeOpen.value = true
+}
+async function confirmRemove() {
+  const item = removing.value
+  const note = item ? noteOf(item) : null
+  if (!item || !note || removeBusy.value) return
+  removeBusy.value = true
+  removeFailed.value = null
+  const done = await store.removeNote(item.id, note, removeReason.value.trim())
+  removeBusy.value = false
+  if (done) removeOpen.value = false
+  else removeFailed.value = store.removeError === 'offline' ? t('feedback.offline') : t('feedback.removeNote.error')
+}
+
 const busy = ref<string | null>(null)
 async function toggle(item: FeedbackItem) {
   if (busy.value) return
@@ -102,13 +132,14 @@ async function toggle(item: FeedbackItem) {
             </div>
             <p class="text-footnote wrap-anywhere text-ink-muted" data-testid="feedback.who">{{ who(item) }}</p>
             <p class="text-body wrap-anywhere whitespace-pre-wrap" :class="item.handledAt ? 'text-ink-muted' : 'text-ink'" data-testid="feedback.text">{{ item.text }}</p>
+            <p v-if="noteOf(item) && levelOf(item)" class="text-footnote text-ink-muted" data-testid="feedback.noteLevel">{{ t('feedback.removeNote.level', { level: t(`notes.level.${levelOf(item)}`) }) }}</p>
             <details class="text-footnote text-ink-muted" data-testid="feedback.details">
               <summary class="min-h-(--size-touch) cursor-pointer py-sm" data-testid="feedback.detailsToggle">{{ t('feedback.details') }}</summary>
               <ul class="figures flex flex-col gap-xxs pb-sm text-meta wrap-anywhere text-ink-faint">
                 <li v-for="line in details(item)" :key="line">{{ line }}</li>
               </ul>
             </details>
-            <div>
+            <div class="flex flex-wrap gap-sm">
               <UiButton
                 :tone="item.handledAt ? 'quiet' : 'secondary'"
                 size="sm"
@@ -119,6 +150,10 @@ async function toggle(item: FeedbackItem) {
               >
                 <UiIcon v-if="item.handledAt" name="check" :size="14" />{{ item.handledAt ? t('feedback.handled') : t('feedback.markHandled') }}
               </UiButton>
+              <UiButton v-if="noteOf(item) && !store.removedNotes.has(noteOf(item)!)" tone="secondary" size="sm" :offline="!online" data-testid="feedback.removeNote" @click="askRemove(item)">
+                <UiIcon name="trash" :size="14" />{{ t('feedback.removeNote.action') }}
+              </UiButton>
+              <p v-else-if="noteOf(item)" class="self-center text-footnote text-ink-muted" role="status" data-testid="feedback.noteRemoved">{{ t('feedback.removeNote.done') }}</p>
             </div>
           </li>
         </ul>
@@ -139,6 +174,21 @@ async function toggle(item: FeedbackItem) {
         <UiButton tone="secondary" size="md" :offline="!online" data-testid="feedback.retry" @click="store.load()">{{ t('feedback.retry') }}</UiButton>
       </div>
     </div>
+
+    <!-- The owner removes a reported note: "Removed by the moderator" for everyone, its words kept in the moderation log for 12 months (docs/plans/book-notes.md part 5.1). -->
+    <UiConfirm
+      v-model:open="removeOpen"
+      :title="t('feedback.removeNote.title')"
+      :text="t('feedback.removeNote.text')"
+      :action="removeBusy ? t('feedback.removeNote.removing') : t('feedback.removeNote.action')"
+      :busy="removeBusy"
+      :error="removeFailed"
+      :offline="!online"
+      testid="feedback.removeNote.confirm"
+      @confirm="confirmRemove"
+    >
+      <UiField id="feedback-remove-reason" v-model="removeReason" :label="t('feedback.removeNote.reason')" :hint="t('feedback.removeNote.reasonHint')" autocomplete="off" data-testid="feedback.removeNote.reason" />
+    </UiConfirm>
   </div>
 </template>
 

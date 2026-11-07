@@ -82,6 +82,13 @@ The notice says these; confirm each, or change the text (and the version date) w
   retention) saying the one thing about her reading a co-member sees is her Section, never a page, a percent or a date, only
   while she is a member of that read. Its date is the release that carries the feature; check it against the plan
   (`docs/plans/buddy-read-shared.md`, part 5.5) when the feature changes what a co-member sees or what is kept.
+- **Notes on books** (7 November 2026): the notice has a *Notes on books (only if you write one)* bullet beside *Buddy reads* under "What data I
+  process" (the audience of a note, name and photo shown to its readers, her chapter used only to keep later chapters closed for her, the shared
+  chapter count without her name), a clause in the photo bullet ("and to the readers of your public notes"), in "what you show to others" ("a note for
+  friends or everyone"), in *Other members*, and a line in *How long I keep data* (her notes until she deletes them or her account; a note the owner
+  removes after a report keeps its text, the reason and the date for 12 months, then the monthly job `purge-note-moderation-log` deletes the record).
+  Check it against the plan (`docs/plans/book-notes.md`, part 4) when Notes changes what a member sees or what is kept; **when sign-up opens, turn
+  Everyone off first** (docs/OPERATIONS.md, "Notes").
 - **Voice messages** (5 November 2026): the notice has a *Voice messages (only if you record one)* bullet under "What data I process" and
   lines in *Who receives data* (Supabase: voice message storage), *How long I keep data* (a voice recording goes with its message, with a
   member who leaves choosing to delete her messages, with her account and with a deleted room, shortly after, normally within the hour; an upload that was never sent within hours; not part

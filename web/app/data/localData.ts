@@ -93,6 +93,8 @@ export function openLocalDatabase(factory: IDBFactory, { name = LOCAL_DATABASE, 
  * carry that file: tests/device-data.test.ts keeps the two equal). A session that ended keeps what starts with it.
  */
 export const BUDDY_QUEUE_PREFIX = 'libellus.buddyRead.queue.'
+/** The same for a Book's notes (utils/notesStorage.ts owns it; tests/notes-entry.test.ts keeps the two equal): a note waiting to be sent survives a session that ended. */
+export const NOTES_QUEUE_PREFIX = 'libellus.notes.queue.'
 
 export const MEMBER_KEYS_OUTSIDE_PREFIX: readonly string[] = ['libellus-import-hint', 'libellus-library-view']
 
@@ -258,8 +260,8 @@ export async function forgetMemberData(
 ): Promise<void> {
   clearLocalData(storage, {
     keep: accountDeleted ? keep : sessionEnded ? [...keep, CODE_SENT_KEY] : [CODE_SENT_KEY, ...keepForNext],
-    // A dead session keeps the messages she had not sent yet (a buddy read's send queue, keyed by her id and sent only for her), as it keeps the outbox.
-    keepPrefixes: sessionEnded && !accountDeleted ? [BUDDY_QUEUE_PREFIX] : [],
+    // A dead session keeps the messages she had not sent yet (a buddy read's or a Book's notes' send queue, keyed by her id and sent only for her), as it keeps the outbox.
+    keepPrefixes: sessionEnded && !accountDeleted ? [BUDDY_QUEUE_PREFIX, NOTES_QUEUE_PREFIX] : [],
   })
   if (indexedDB) await clearLocalDatabase(indexedDB, LOCAL_DATABASE, { keep: sessionEnded ? ['outbox'] : [] })
   await clearLocalFiles({ storage: files, caches, databases: indexedDB })

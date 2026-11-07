@@ -3,6 +3,8 @@ import type { BookSnapshot } from '../app/data/books'
 import { createLibrary } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
 import { signUpMember } from '../tests/support/member'
+import { befriend, makeChapters, notesOf, sharedBook, shelveBook, writeNote } from '../tests/support/notes'
+import en from '../i18n/locales/en.json' with { type: 'json' }
 import { emailCooldown, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
 import { seedHome } from './bookOpenSeed'
@@ -501,5 +503,79 @@ test.describe('accessibility, the keyboard', { tag: '@full' }, () => {
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('abandon')).toBeHidden()
     await expect(update).toBeFocused()
+  })
+})
+
+// Notes on a Book (docs/plans/book-notes.md; docs/ACCESSIBILITY.md, "Notes"): the Notes page, a chapter, its veiled screen and the sheets she opens from them, in both rooms.
+test.describe('accessibility, notes', { tag: '@full' }, () => {
+  test.use({ colorScheme: 'dark', viewport: { width: 412, height: 915 } })
+
+  test('the Notes page, a chapter, a veiled chapter and their sheets pass axe, and the control is a labelled radio group of 44 px targets', async ({ page }) => {
+    test.slow()
+    const member = await signedIn(page)
+    const friend = await signUpMember()
+    const snapshot = sharedBook('Accessible Notes')
+    const bookId = await shelveBook(member, snapshot, 'reading')
+    await shelveBook(friend, snapshot, 'reading')
+    await befriend(member, friend)
+    const room = await makeChapters(member, bookId, 12)
+    const chapterOf = (n: number) => room.chapters.find((c) => c.position === n)!.id
+    await notesOf(member).setChapter(room.id, 3)
+    await writeNote(friend, room, chapterOf(3), 'A friend’s note for the scan', 'friends')
+    await writeNote(member, room, chapterOf(3), 'Only mine, for the scan', 'private')
+
+    await goto(page, `/notes/${bookId}`)
+    await expect(page.getByTestId('notes.chapter.row')).toHaveCount(13)
+    await expectAccessible(page, 'the Notes page')
+    await page.getByTestId('notes.change').click()
+    await expect(page.getByTestId('notes.chapterSheet')).toBeVisible()
+    await expectAccessible(page, 'the chapter sheet')
+    await page.getByTestId('notes.chapterSheet.action').click()
+    await page.getByTestId('notes.more').click()
+    await expect(page.getByTestId('notes.menu')).toBeVisible()
+    await page.getByTestId('notes.menu.add').click()
+    await expect(page.getByTestId('notes.add')).toBeVisible()
+    await expectAccessible(page, 'the add chapters sheet')
+    await page.getByTestId('notes.add.cancel').click()
+
+    // A chapter after hers: the quiet hidden screen and its confirmation.
+    await goto(page, `/notes/${bookId}/9`)
+    await expect(page.getByTestId('notes.thread.veiled')).toBeVisible()
+    await expectAccessible(page, 'a veiled chapter')
+    await page.getByTestId('notes.thread.showAnyway').click()
+    await expect(page.getByTestId('notes.showAnyway')).toBeVisible()
+    await expectAccessible(page, 'the Show anyway question')
+    await page.getByTestId('notes.showAnyway.cancel').click()
+
+    // Her chapter: the thread, the control (a named radio group, one tab stop, every segment 44 px), the action bar's sheets.
+    await goto(page, `/notes/${bookId}/3`)
+    await expect(page.getByTestId('notesThread.bubble').filter({ hasText: 'A friend’s note' })).toBeVisible()
+    await expectAccessible(page, 'a chapter')
+    const group = page.getByTestId('notesThread.level')
+    await expect(group).toHaveAttribute('role', 'radiogroup')
+    await expect(group).toHaveAttribute('aria-label', en.notes.level.label)
+    // Two segments while the owner's switch for Everyone is off (the migration's default), three while it is on: either way each is 44 px.
+    const segments = group.locator('[role=radio]')
+    expect([2, 3]).toContain(await segments.count())
+    for (const box of await segments.evaluateAll((els) => els.map((el) => { const r = el.getBoundingClientRect(); return { w: r.width, h: r.height } }))) {
+      expect(box.h).toBeGreaterThanOrEqual(44)
+      expect(box.w).toBeGreaterThanOrEqual(44)
+    }
+    expect(await group.locator('[role=radio][tabindex="0"]').count()).toBe(1)
+    await page.getByTestId('notesThread.bubble').filter({ hasText: 'A friend’s note' }).click({ button: 'right' })
+    await page.getByTestId('notesThread.reactionAction.report').click()
+    await expect(page.getByTestId('notes.report')).toBeVisible()
+    await expectAccessible(page, 'the report sheet')
+    await page.getByTestId('notes.report.cancel').click()
+    await page.getByTestId('notesThread.bubble').filter({ hasText: 'Only mine' }).click({ button: 'right' })
+    await page.getByTestId('notesThread.reactionAction.visibility').click()
+    await expect(page.getByTestId('notes.visibilitySheet')).toBeVisible()
+    await expectAccessible(page, 'the visibility sheet')
+    await page.getByTestId('notes.visibilitySheet.action').click()
+
+    // The Book page's section (the friend's note is counted there for her).
+    await goto(page, `/book/${bookId}`)
+    await expect(page.getByTestId('book.notes.section')).toBeVisible()
+    await expectAccessible(page, 'the Book page with its Notes section')
   })
 })

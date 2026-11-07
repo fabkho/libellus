@@ -59,6 +59,9 @@ are stored and enforced is in [SPEC.md](SPEC.md) and issue #1.
 - **Buddy read** — one Book read together by 2 to 12 Members in a room of its own, divided into Sections, with
   a thread for each (German: *Buddy-Read*). A Member joins by an invitation from the Host or by the read's link;
   she can leave at any time. Not a Follow: a co-member need not follow her, and sees only what the room shows.
+- **Notes** — what a Member writes on a Book, chapter by chapter, for herself, her friends or everyone: one Notes page a Book (shared by every edition of its Work), not a Buddy read and with no members of its own (German: *Notizen*).
+- **Chapter** — one of the numbered parts of a Book's Notes, then *The whole book* (German: *Kapitel*). Whoever has the Book makes the list once and anyone with it adds at the end. Which chapter a Member is on is worked out from her reading or set by her, keeps later chapters closed for her, and nobody else sees it.
+- **Only me / Friends / Everyone** — the audience of one note, chosen when she writes it: only she (*Nur ich*), the Members she follows who follow her back (*Freunde*, the default), every signed-in Member of the app with her name and photo (*Alle*). Everyone can be switched off by the owner; a public note then reads as a friends' note.
 - **Host** — the Member who started a Buddy read, or the one it passed to: she invites, turns the link on or off,
   removes members (who stay out until she invites them again), changes the Sections, finishes and archives
   it. When she leaves, the Member who joined earliest becomes Host; when the last one leaves, the Buddy read

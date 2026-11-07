@@ -3,7 +3,8 @@
 // It says what the veil is for and that her own Section does not move; the answer is remembered on this device as a peek
 // (stores/buddyRead.ts `peek`, the layer's `createPeeks`), so the row is open from then on. Not a way to the words: nothing of the
 // Section is loaded until she has said yes. `number` is only a number; a veiled Section's own title is never spoken here.
-const props = defineProps<{ number: number | string; end?: boolean }>()
+// `prefix` names the message keys the words are under (`together.showAnyway`: a buddy read's Sections; `notes.showAnyway`: a Book's chapters), which is also the test id.
+const props = withDefaults(defineProps<{ number: number | string; end?: boolean; prefix?: string }>(), { end: false, prefix: 'together.showAnyway' })
 const open = defineModel<boolean>('open', { required: true })
 const emit = defineEmits<{ show: [] }>()
 
@@ -27,11 +28,11 @@ function confirm() {
   <UiConfirm
     v-model:open="open"
     tone="primary"
-    :title="isEnd ? t('together.showAnyway.titleEnd') : t('together.showAnyway.title', { n: shown })"
-    :text="t('together.showAnyway.text')"
-    :action="t('together.showAnyway.action')"
-    :cancel-label="t('together.showAnyway.cancel')"
-    testid="together.showAnyway"
+    :title="isEnd ? t(`${prefix}.titleEnd`) : t(`${prefix}.title`, { n: shown })"
+    :text="t(`${prefix}.text`)"
+    :action="t(`${prefix}.action`)"
+    :cancel-label="t(`${prefix}.cancel`)"
+    :testid="prefix"
     @confirm="confirm"
   />
 </template>
