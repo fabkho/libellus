@@ -1,17 +1,16 @@
 import { sameSide, type BubbleMessage, type BubbleQuote } from '#layers/ui/app/utils/chat/message'
-import { messageVeiled } from '#layers/chat/app/utils/veil'
 import { REPORT_REASONS, type ReportReason } from '~/data/buddyReads'
 import type { VoiceInfo } from '~/data/buddyVoice'
 
 /**
  * A room's thread as its screen draws it, the parts a buddy read (pages/together/[id]/[section].vue, utils/buddyThread.ts) and a Book's notes
  * (pages/notes/[book]/[chapter].vue, utils/noteThread.ts) both use: the stored bubbles of a store turned into what the base's `UiChatThread` and `UiBubble` take (`BubbleMessage`), plus what only a buddy
- * read adds: who wrote it, the message it answers, the spoiler mark and the tombstone. Pure functions on plain data, so Vitest
+ * read adds: who wrote it, the message it answers and the tombstone. Pure functions on plain data, so Vitest
  * drives them in Node.
  *
  * **The veil lives here**: a Section that is not open to her (her marker has not reached it and she has not opened it anyway:
  * the layer's `chapterView`) has no items at all, whatever the store holds, so nothing of what was said in it can be drawn,
- * measured or read by a screen reader; a message marked **Spoiler** is veiled for her until she taps it. The database gives
+ * measured or read by a screen reader. (There are no spoiler marks on single messages: a chapter is opened to be read.) The database gives
  * every member every message of the read (the veil is the app's, plan part 5.4): this is the one place the rule is applied.
  */
 
@@ -23,24 +22,19 @@ export type ThreadItem = BubbleMessage & {
   author: string | null
   /** The message it answers. */
   replyTo: string | null
-  spoiler: boolean
   /** It was deleted: a tombstone (`kind: 'system'`, no words, no reactions), drawn as a quiet line, never as a bubble. */
   removed: boolean
-  /** A spoiler she has not tapped: the bubble keeps its size but shows no word (`UiBubble` `veiled`). */
-  veiled: boolean
-  /** A voice message (its sound is the bubble's, drawn by `UiVoiceBubble`; veiled or not, its words are none: the quote says "Voice message"). */
+  /** A voice message (its sound is the bubble's, drawn by `UiVoiceBubble`; its words are none: the quote says "Voice message"). */
   voice: boolean
   /** It was refused for a reason a second try cannot change (removed, blocked, archived, invalid): no "Try again", only "Delete". */
   permanent: boolean
 }
 
-/** What the thread needs of the screen: who she is, whether the Section is open to her, the spoilers she tapped, the words. */
+/** What the thread needs of the screen: who she is, whether the Section is open to her, the words. */
 export type RoomThreadContext = {
   me: string | null
   /** The Section is open to her (the store's `view(...).open`; the room always is). */
   open: boolean
-  /** The ids of the spoilers she tapped on this screen (not kept: a reload veils them again). */
-  revealed: ReadonlySet<string>
   /** A member's name among the read's members, or null. */
   nameOf: (memberId: string | null) => string | null
   /** The sentence a refusal is worded with (`buddyRead.error.<code>`, `notes.error.<code>`). */
@@ -49,8 +43,6 @@ export type RoomThreadContext = {
   retryable: (code: string) => boolean
   /** The device's own copy of a recording she sent in this session (a `blob:` URL), by client id; null for every other message. */
   previewOf?: (clientId: string | null) => string | null
-  /** What a veiled voice message is drawn as (its size is a text bubble's; "Voice message"): the one phrase of the message file's. */
-  voiceLabel?: string
 }
 
 /**
@@ -69,7 +61,6 @@ export type RoomBubble = {
   body: string
   createdAt: string
   replyTo: string | null
-  spoiler: boolean
   authorName: string | null
   deletedAt: string | null
   reactions: readonly { emoji: string; count: number; mine: boolean }[]
@@ -83,7 +74,7 @@ export const bubbleKey = (bubble: Pick<RoomBubble, 'clientId' | 'id'>): string =
 
 /**
  * The messages the screen draws, oldest first. A Section that is not open has none. A tombstone becomes a system line (the base
- * breaks a run at it and the screen draws "Message removed"); her own spoiler is never veiled from her (she knows what she wrote).
+ * breaks a run at it and the screen draws "Message removed").
  */
 export function roomItems(bubbles: readonly RoomBubble[], ctx: RoomThreadContext): ThreadItem[] {
   if (!ctx.open) return []
@@ -91,17 +82,15 @@ export function roomItems(bubbles: readonly RoomBubble[], ctx: RoomThreadContext
     const removed = bubble.deletedAt !== null
     const mine = ctx.me !== null && bubble.senderId === ctx.me
     const reaction = bubble.reactions.find((r) => r.mine)
-    const veiled = !removed && !mine && messageVeiled(bubble, ctx.revealed.has(bubbleKey(bubble)))
     const voice = !removed && bubble.kind === 'voice' ? bubble.voice : null
-    // A voice message under the veil is a veiled text bubble (the same size, no words, no play button): nothing of it is signed or played.
-    const playable = voice && !veiled
+    const playable = voice
     return {
       key: bubbleKey(bubble),
       // Null while it is on its way or refused: it cannot be reacted to or answered yet.
       id: bubble.state === 'sent' ? bubble.id : null,
       mine,
       kind: removed ? 'system' : playable ? 'media' : 'text',
-      body: removed ? '' : voice ? (veiled ? (ctx.voiceLabel ?? '') : '') : bubble.body,
+      body: removed ? '' : voice ? '' : bubble.body,
       createdAt: bubble.createdAt,
       delivery: bubble.state,
       error: bubble.state === 'failed' && bubble.error ? ctx.errorWord(bubble.error) : null,
@@ -124,9 +113,7 @@ export function roomItems(bubbles: readonly RoomBubble[], ctx: RoomThreadContext
       authorId: bubble.senderId,
       author: bubble.authorName ?? ctx.nameOf(bubble.senderId),
       replyTo: bubble.replyTo,
-      spoiler: bubble.spoiler,
       removed,
-      veiled,
       voice: voice !== null,
       permanent: bubble.state === 'failed' && !!bubble.error && !ctx.retryable(bubble.error),
     }
@@ -145,17 +132,17 @@ export function sameAuthorRun(before: Pick<ThreadItem, 'mine' | 'kind' | 'author
 }
 
 /** The words a quote needs that are the app's. */
-export type QuoteWords = { deleted: string; spoiler: string; someone: string; you: string; voice?: string }
+export type QuoteWords = { deleted: string; someone: string; you: string; voice?: string }
 
 /**
  * The message `replyTo` names, as a quote over a bubble or the composer: who wrote it and its first words. A tombstone says it is
- * gone, a voice message is "Voice message" (it has no words) and a spoiler she has not tapped gives none of its words away. null when it answers nothing.
+ * gone, a voice message is "Voice message" (it has no words). null when it answers nothing.
  */
 export function quoteOf(items: readonly ThreadItem[], replyTo: string | null, words: QuoteWords): BubbleQuote | null {
   if (!replyTo) return null
   const original = items.find((item) => item.id === replyTo)
   if (!original) return { id: null, mine: false, name: words.someone, preview: words.deleted }
-  const preview = original.removed ? words.deleted : original.veiled ? words.spoiler : original.voice ? (words.voice ?? '') : original.body.replace(/\s+/g, ' ').trim().slice(0, 120)
+  const preview = original.removed ? words.deleted : original.voice ? (words.voice ?? '') : original.body.replace(/\s+/g, ' ').trim().slice(0, 120)
   return { id: original.removed ? null : original.id, mine: original.mine, name: original.mine ? words.you : (original.author ?? words.someone), preview }
 }
 

@@ -67,11 +67,33 @@ export function levelStates(publicEnabled: boolean, parent: NoteLevel | null): L
   return offeredLevels(publicEnabled).map((level) => ({ level, disabled: parent !== null && levelRank(level) > levelRank(parent) }))
 }
 
-/** Whether a reply is held back by the note it answers: some level on offer is off. */
-export const anyHeldBack = (states: readonly LevelState[]): boolean => states.some((s) => s.disabled)
-
 /** The level a choice becomes once a parent is quoted (or the switch changed): never wider than the parent, never one that is not on offer. */
 export function settleLevel(level: NoteLevel, publicEnabled: boolean, parent: NoteLevel | null): NoteLevel {
   const offered = clampToOffer(level, publicEnabled)
   return parent ? narrower(offered, parent) : offered
+}
+
+/** What the split send button's menu says of each audience (the screen's words: `notes.level.*`) and why a wider one is off. */
+export type SendAsWords = { levels: Record<NoteLevel, { label: string; hint: string }>; heldBack: string }
+
+/** The base's `SendOption` for a note's audience (`UiComposer` `sendOptions`): the glyph on the tab, the tone that colours the send button, the line in the menu. */
+export type NoteSendOption = { value: NoteLevel; label: string; hint: string; icon: 'lock' | 'people' | 'globe'; tone: 'quiet' | 'neutral' | 'accent'; disabled: boolean }
+
+const SEND_ICON: Record<NoteLevel, NoteSendOption['icon']> = { private: 'lock', friends: 'people', public: 'globe' }
+/** Friends is the plain ink button (nothing to read); Only me is the calm one, Everyone the lamp amber: the audience is seen on the button before anything is sent. */
+const SEND_TONE: Record<NoteLevel, NoteSendOption['tone']> = { private: 'quiet', friends: 'neutral', public: 'accent' }
+
+/**
+ * The menu of the split send button: Only me, Friends and, while the owner's switch is on, Everyone. A level wider than the note being answered is in the menu but
+ * off, and its line says why (a reply is never wider than its parent). A reply to a private note leaves only Only me.
+ */
+export function noteSendOptions(publicEnabled: boolean, parent: NoteLevel | null, words: SendAsWords): NoteSendOption[] {
+  return levelStates(publicEnabled, parent).map(({ level, disabled }) => ({
+    value: level,
+    label: words.levels[level].label,
+    hint: disabled ? words.heldBack : words.levels[level].hint,
+    icon: SEND_ICON[level],
+    tone: SEND_TONE[level],
+    disabled,
+  }))
 }

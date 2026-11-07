@@ -7,8 +7,8 @@
 //
 // **The veil** (part 5.4): a Section her marker has not reached, and she has not opened anyway, is not read at all: this page shows the
 // quiet "hidden" screen with "Show anyway", and only her yes (a peek, kept on this device; her Section does not move) loads it. An open
-// Section she reads ahead of her marker carries a banner that says so. A comment marked Spoiler is veiled for everybody else until
-// they tap it (`UiBubble` `veiled`); a deleted one reads "Message removed". Archived: read-only, said in the composer's place.
+// Section she reads ahead of her marker carries a banner that says so. There are no spoiler marks on single comments (a Section is opened to be read);
+// a deleted one reads "Message removed". Archived: read-only, said in the composer's place.
 //
 // **The gestures** (the base's `UiBubble`, as Trappist's chat has them): a double tap (a double click) on another member's message puts the
 // first reaction of the bar, ❤️, on it and takes it back the second time; a long press (a right click, or the bubble's own React button, which is
@@ -20,8 +20,7 @@
 // the same line as a text); a voice row is the base's `UiVoiceBubble` (play, waveform, time). **Nothing is signed or fetched when the thread
 // loads**: the play button's press is taken here first (`voicePress`, in the capture phase) and asks the store for a URL of five minutes the first
 // time she plays that message; the base's own press runs for her own recording (played from the device's copy), a failed send and the double tap
-// on the card. One voice at a time (the base's player), and leaving the thread silences it. A voice message marked Spoiler is veiled like a text
-// until she taps it: it is a veiled bubble with no play button, so nothing of it is signed.
+// on the card. One voice at a time (the base's player), and leaving the thread silences it.
 //
 // Accessibility: the base's thread is a labelled list with a polite status for a message that arrives (not for the first load, not for
 // her own), which stands in for `role="log"` (a log with a status says everything twice); every long press has the bubble's own React
@@ -30,7 +29,6 @@
 // chat screen is fixed to the viewport).
 import type { BarAction } from '#layers/ui/app/components/ui/ReactionBar.vue'
 import { threadKey } from '#layers/chat/app/utils/thread'
-import { mayLoadMedia } from '#layers/chat/app/utils/veil'
 import { BUDDY_EMOJI, type BuddyErrorCode, type ReportReason } from '~/data/buddyReads'
 import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
 import { isReadId, isSectionSegment, roomPath, sectionOfSegment } from '~/utils/buddyRoute'
@@ -132,17 +130,14 @@ useFocusHeading(() => missing.value || status.value === 'ready' || view.value?.v
 
 // ------------------------------------------------------------------ the messages
 
-const revealed = ref<ReadonlySet<string>>(new Set())
 const nameOf = (memberId: string | null) => read.value?.members.find((m) => m.id === memberId)?.name?.trim() || null
 const items = computed<ThreadItem[]>(() =>
   threadItems(store.messagesOf(readId.value, sectionId.value), {
     me: me.value,
     open: view.value?.open === true,
-    revealed: revealed.value,
     nameOf,
     errorWord: (code) => t(buddyErrorKey(code)),
     previewOf: store.previewOf,
-    voiceLabel: t('uiText.chat.reply.voice'),
   }),
 )
 
@@ -171,7 +166,7 @@ async function loadOlder(): Promise<boolean> {
 }
 
 const sectionWords = { whole: () => t('together.wholeBook'), label: (n: string) => t('together.sectionLabel', { n }) }
-const quoteWords = computed(() => ({ deleted: t('uiText.chat.reply.deleted'), spoiler: t('uiText.chat.veiled.label'), someone: t('member.someone'), you: t('uiText.chat.reply.you'), voice: t('uiText.chat.reply.voice') }))
+const quoteWords = computed(() => ({ deleted: t('uiText.chat.reply.deleted'), someone: t('member.someone'), you: t('uiText.chat.reply.you'), voice: t('uiText.chat.reply.voice') }))
 const quoteFor = (item: ThreadItem) => quoteOf(items.value, item.replyTo, quoteWords.value)
 
 // ------------------------------------------------------------------ title and banners
@@ -195,7 +190,6 @@ const ahead = computed(() => view.value?.open === true && view.value.peeked && !
 // ------------------------------------------------------------------ writing
 
 const text = ref('')
-const spoiler = ref(false)
 const replyTo = ref<ThreadItem | null>(null)
 const notice = ref<string | null>(null)
 const chat = useTemplateRef<{ jumpTo: (id: string) => Promise<void>; toNewest: () => void }>('chat')
@@ -209,27 +203,25 @@ async function send() {
   const body = text.value
   if (!body.trim()) return
   notice.value = null
-  const sent = await store.send(readId.value, sectionId.value, body, { replyTo: replyTo.value?.id ?? null, spoiler: sectionId.value !== null && spoiler.value })
+  const sent = await store.send(readId.value, sectionId.value, body, { replyTo: replyTo.value?.id ?? null })
   if (!sent.ok) {
     notice.value = t(buddyErrorKey(sent.error))
     return
   }
   text.value = ''
   replyTo.value = null
-  spoiler.value = false
   chat.value?.toNewest()
 }
 
 /** A finished recording from the composer: a bubble at once, stored, then posted (`store.sendVoice`). A refusal (too short, too big) is said above the thread. */
 async function sendVoice(voice: PreparedVoice) {
   notice.value = null
-  const sent = await store.sendVoice(readId.value, sectionId.value, voice, { replyTo: replyTo.value?.id ?? null, spoiler: sectionId.value !== null && spoiler.value })
+  const sent = await store.sendVoice(readId.value, sectionId.value, voice, { replyTo: replyTo.value?.id ?? null })
   if (!sent.ok) {
     notice.value = t(buddyErrorKey(sent.error))
     return
   }
   replyTo.value = null
-  spoiler.value = false
   chat.value?.toNewest()
 }
 
@@ -247,10 +239,6 @@ function discard(key: string) {
 async function react(messageId: string, emoji: string) {
   const failed = await store.react(readId.value, sectionId.value, messageId, emoji)
   notice.value = failed ? t(buddyErrorKey(failed)) : null
-}
-
-function reveal(key: string) {
-  revealed.value = new Set([...revealed.value, key])
 }
 
 // Reaction bar: the database's six (`react_to_buddy_message`: ❤️ 😂 😮 😢 🔥 📚; ❤️ is also what a double tap puts on a message), then Reply, Copy (a text) and the
@@ -335,7 +323,7 @@ function voicePress(event: MouseEvent) {
   if (!item?.voice || item.delivery !== 'sent' || !item.media?.path || store.previewOf(item.key)) return
   event.stopPropagation()
   event.preventDefault()
-  if (!mayLoadMedia(item, view.value?.open === true, revealed.value.has(item.key))) return
+  if (view.value?.open !== true) return
   const now = Date.now()
   const before = lastPress.get(item.key)
   const canLike = !archived.value && !!item.id && event.detail > 0
@@ -481,7 +469,6 @@ function back() {
         :actions="actionsOf(item)"
         :reacting="reacting"
         :placement="placement"
-        :veiled="item.veiled"
         testid="buddyThread"
         @react-open="openReactions"
         @react-close="closeReactions"
@@ -489,7 +476,6 @@ function back() {
         @action="action"
         @reply="answer"
         @retry="retry"
-        @reveal="reveal"
         @quote-tap="(id: string) => chat?.jumpTo(id)"
       >
         <template #face>
@@ -538,13 +524,7 @@ function back() {
         @voice="sendVoice"
         @voice-error="notice = $event"
         @cancel-quote="replyTo = null"
-      >
-        <template v-if="sectionId !== null" #actions>
-          <UiComposerChip :aria-pressed="spoiler" :icon="spoiler ? 'check' : 'eyeOff'" data-testid="buddyThread.spoiler" @click="spoiler = !spoiler">
-            {{ t('together.thread.spoiler') }}
-          </UiComposerChip>
-        </template>
-      </UiComposer>
+      />
     </template>
 
     <UiConfirm

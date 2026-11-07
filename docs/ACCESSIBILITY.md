@@ -176,8 +176,8 @@ shimmer stops, the tab bar stays.
   under it are text, not colour. The quote of a voice note reads "Voice message" for a screen reader. `e2e/notes-voice.spec.ts` scans the thread with a voice
   note and a thread while recording in both colour schemes. VoiceOver and TalkBack on a real phone were not tried in this change.
   **Notes** (the Notes page, a chapter, the Book page's section, the Remove note dialog): `e2e/a11y.spec.ts` ("accessibility, notes") scans the page, a chapter,
-  a veiled chapter and the sheets she opens from them in both colour schemes, and checks that the audience control is a labelled `radiogroup` of 44 px
-  segments with one tab stop (a level held back by the note she answers is `aria-disabled`, not removed); `e2e/book-notes.spec.ts` scans the chapter in
+  a veiled chapter and the sheets she opens from them in both colour schemes, and checks that the audience control, the split send button, is a menu button (`aria-haspopup="menu"`) named "Send as: Friends" beside a send button named "Send · Friends", its menu
+  a `menu` of `menuitemradio`s of 44 px that the arrows move and Escape closes (a level held back by the note she answers is `aria-disabled`, not removed), and axe scans the open menu; `e2e/book-notes.spec.ts` scans the chapter in
   German at 360 px and checks nothing runs out of the screen. A veiled chapter's row is named "Chapter 9, 12 comments, hidden" and holds no word of it.
   A violation that cannot be fixed in BetterReads goes in `ALLOWED` in `e2e/support.ts` with its reason
   — never a rule switched off for a whole page.

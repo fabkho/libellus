@@ -98,7 +98,7 @@ test('Ida records a voice message in a Section thread; Ben gets it live and play
     await expect(ida.getByTestId('buddyThread.record')).toHaveCount(0)
     await ida.getByTestId('buddyThread.input').fill('')
 
-    // A tap starts: the capsule is the recording bar, the field and the Spoiler chip give way, the timer runs; ✕ throws it away and nothing is stored.
+    // A tap starts: the capsule is the recording bar, the field gives way, the timer runs; ✕ throws it away and nothing is stored.
     await ida.getByTestId('buddyThread.record').click()
     await expect(ida.getByTestId('buddyThread.recorder')).toBeVisible()
     await expect(ida.getByTestId('buddyThread.input')).toHaveCount(0)
@@ -238,13 +238,12 @@ test('Ida records a voice message in a Section thread; Ben gets it live and play
     // Hers is still there, and still plays for Ben.
     expect(await objectInBucket(`${path}${(await sql<{ client_id: string }>(`select client_id from public.buddy_messages where id = $1`, [row!.id]))[0]!.client_id}.${row!.voice_mime === 'audio/mp4' ? 'm4a' : 'webm'}`)).toBe(true)
 
-    // A voice message marked Spoiler is a veiled bubble with no play button until Ben taps it: nothing of it is signed or fetched before.
-    const spoiled = await seedVoice(idaMember, made.id, first!.id, { spoiler: true })
-    await expect(ben!.getByTestId('buddyThread.veil')).toHaveCount(1, { timeout: 15_000 })
-    await expect(voices(ben!)).toHaveCount(1)
+    // A voice message that was flagged Spoiler in the days when a message could be (the mark is gone from the app, the column is not) is a voice bubble like any other: no veil,
+    // nothing to tap but play, and nothing is signed or fetched before she does.
     const askedBefore = benAsked.length
-    await ben!.getByTestId('buddyThread.veil').click()
-    await expect(voices(ben!)).toHaveCount(2)
+    const spoiled = await seedVoice(idaMember, made.id, first!.id)
+    await sql(`update public.buddy_messages set spoiler = true where id = $1`, [spoiled.id])
+    await expect(voices(ben!)).toHaveCount(2, { timeout: 15_000 })
     await expect(ben!.getByTestId('buddyThread.veil')).toHaveCount(0)
     expect(benAsked.length).toBe(askedBefore)
     expect(await objectInBucket(spoiled.path)).toBe(true)
@@ -267,11 +266,11 @@ test('Ida records a voice message in a Section thread; Ben gets it live and play
     await cy!.getByTestId('together.thread.showAnyway').click()
     await cy!.getByTestId('together.showAnyway.confirm').click()
     await expect(cy!.getByTestId('buddyThread.screen')).toHaveAttribute('data-status', 'ready')
-    await expect(voices(cy!)).toHaveCount(1)
+    await expect(voices(cy!)).toHaveCount(2)
     await expect(cy!.getByTestId('buddyThread.voicePlay').first()).toBeEnabled()
     expect(cyAsked).toEqual([])
     await cy!.getByTestId('buddyThread.voicePlay').first().click()
-    await expect(voices(cy!)).toHaveAttribute('data-playing', 'true', { timeout: 10_000 })
+    await expect(voices(cy!).first()).toHaveAttribute('data-playing', 'true', { timeout: 10_000 })
     expect(cyAsked.some((asked) => asked.includes('/object/sign/buddy-voice/'))).toBe(true)
 
     // The scan, in the dark room: the thread with its voice bubbles, then a recording in progress.

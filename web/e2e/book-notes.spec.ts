@@ -52,7 +52,21 @@ async function bar(page: Page, words: string, action: 'visibility' | 'delete' | 
   await page.getByTestId(action === 'reply' ? 'notesThread.reactionReply' : `notesThread.reactionAction.${action}`).click()
 }
 
-/** Writes a note and lets go of the field: the composer folds its chips (Spoiler and the control) while the field has the keyboard, as the base's does. */
+/** Opens the menu of the split send button and chooses who sees the note: Only me, Friends or Everyone (the tab keeps the field's focus; the menu closes on the choice). */
+async function chooseLevel(page: Page, level: 'private' | 'friends' | 'public') {
+  await page.getByTestId('notesThread.sendAs').click()
+  await page.getByTestId(`notesThread.sendAs.${level}`).click()
+  await expect(page.getByTestId('notesThread.sendAsMenu')).toHaveCount(0)
+}
+
+/** The audience is on the button itself, before anything is sent: the tab ("Send as: Everyone") and the send button ("Send · Everyone") name it. */
+async function expectLevel(page: Page, level: 'private' | 'friends' | 'public', words: typeof en | typeof de = en) {
+  const name = words.notes.level[level]
+  await expect(page.getByTestId('notesThread.sendAs')).toHaveAttribute('aria-label', `${words.uiText.chat.composer.sendAs}: ${name}`)
+  await expect(page.getByTestId('notesThread.send')).toHaveAttribute('aria-label', `${words.uiText.chat.composer.send} · ${name}`)
+}
+
+/** Writes a note and lets go of the field (the audience lives in the send button, so there is nothing that folds with the keyboard). */
 async function write(page: Page, words: string) {
   await page.getByTestId('notesThread.input').fill(words)
   await page.getByTestId('notesThread.send').click()
@@ -106,7 +120,7 @@ test('Ida makes the chapters and writes to her friends, Anna sees them veiled un
     await row(ida, 5).click()
     await expect(ida).toHaveURL(new RegExp(`/notes/${bookId}/5$`))
     await expect(ida.getByTestId('notes.thread.empty')).toHaveText(en.notes.thread.empty.replace('{n}', '5'))
-    await expect(ida.getByTestId('notesThread.level.friends')).toHaveAttribute('aria-checked', 'true')
+    await expectLevel(ida, 'friends')
     await write(ida, 'Salt, then the pears, then the well')
     await expect(ida.getByTestId('notesThread.public')).toHaveCount(0)
     await expect(ida.getByTestId('notesThread.private')).toHaveCount(0)
@@ -170,7 +184,8 @@ test('Only me stays Ida’s, Everyone reaches a member she does not know, a quot
 
     // 3 · An Only me note: a lock under it for Ida; Anna sees neither the note nor a count of it.
     await goto(ida, `/notes/${bookId}/5`)
-    await ida.getByTestId('notesThread.level.private').click()
+    await chooseLevel(ida, 'private')
+    await expectLevel(ida, 'private')
     await write(ida, 'Note to self: count the pears')
     await expect(ida.getByTestId('notesThread.private')).toBeVisible()
     await goto(anna, `/notes/${bookId}`)
@@ -180,17 +195,18 @@ test('Only me stays Ida’s, Everyone reaches a member she does not know, a quot
     await expect(anna.getByTestId('notes.thread.empty')).toBeVisible()
     expect(await anna.content()).not.toContain('count the pears')
 
-    // The control stays on what Ida chose last (the device remembers Only me), and Everyone is one note's: after it is sent the control is back.
-    await expect(ida.getByTestId('notesThread.level.private')).toHaveAttribute('aria-checked', 'true')
-    await ida.getByTestId('notesThread.level.public').click()
+    // The button stays on what Ida chose last (the device remembers Only me), and Everyone is one note's: after it is sent the button is back.
+    await expectLevel(ida, 'private')
+    await chooseLevel(ida, 'public')
+    await expectLevel(ida, 'public')
     await expect(ida.getByTestId('notes.level.notice')).toHaveText(en.notes.level.publicNotice)
     await write(ida, 'The orchard map is the recipe')
-    await expect(ida.getByTestId('notesThread.level.private')).toHaveAttribute('aria-checked', 'true')
+    await expectLevel(ida, 'private')
     await expect(ida.getByTestId('notes.level.notice')).toHaveCount(0)
     await expect(bubble(ida, 'The orchard map').getByTestId('notesThread.public')).toHaveCount(0)
     await expect(ida.getByTestId('notesThread.message').filter({ hasText: 'The orchard map' }).getByTestId('notesThread.public')).toBeVisible()
     // Friends again for the next ones.
-    await ida.getByTestId('notesThread.level.friends').click()
+    await chooseLevel(ida, 'friends')
     await writeNote(annaMember!, room, five, 'Anna writes for friends', 'friends')
 
     // 4 · Mo: no relation. The Book page shows a Public row, his Notes page chapter 5 veiled; Show anyway: Ida's public note with a globe, nothing else.
@@ -234,7 +250,7 @@ test('Only me stays Ida’s, Everyone reaches a member she does not know, a quot
   }
 })
 
-test('with Everyone paused the control has two segments, a public note counts as Friends’ and the Public row is gone @full', { tag: '@full' }, async ({ page: ida, browser }) => {
+test('with Everyone paused the menu has two choices, a public note counts as Friends’ and the Public row is gone @full', { tag: '@full' }, async ({ page: ida, browser }) => {
   test.slow()
   const { context, idaMember, pages, members: [annaMember, moMember] } = await members(browser, ida, ['Anna', 'Mo'])
   const [anna, mo] = pages as [Page, Page]
@@ -251,17 +267,21 @@ test('with Everyone paused the control has two segments, a public note counts as
 
     // On: three segments, Mo sees the note and the Public row.
     await goto(ida, `/notes/${bookId}/2`)
-    await expect(ida.locator('[data-testid^="notesThread.level."]:not([data-testid="notesThread.level.held"])').filter({ has: ida.locator('svg') })).toHaveCount(3)
+    await ida.getByTestId('notesThread.sendAs').click()
+    await expect(ida.locator('[data-testid^="notesThread.sendAs."]')).toHaveCount(3)
+    await ida.keyboard.press('Escape')
     await goto(mo, `/book/${bookId}`)
     await expect(mo.getByTestId('book.notes.public')).toBeVisible()
 
     // The owner's switch goes off (the service role): Everyone leaves the control; her public note keeps its level but reads as a friends' note.
     await switchOn(false)
     await goto(ida, `/notes/${bookId}/2`)
-    await expect(ida.getByTestId('notesThread.level')).toBeVisible()
-    await expect(ida.getByTestId('notesThread.level.public')).toHaveCount(0)
-    await expect(ida.getByTestId('notesThread.level.private')).toBeVisible()
-    await expect(ida.getByTestId('notesThread.level.friends')).toBeVisible()
+    await expectLevel(ida, 'friends')
+    await ida.getByTestId('notesThread.sendAs').click()
+    await expect(ida.getByTestId('notesThread.sendAs.public')).toHaveCount(0)
+    await expect(ida.getByTestId('notesThread.sendAs.private')).toBeVisible()
+    await expect(ida.getByTestId('notesThread.sendAs.friends')).toBeVisible()
+    await ida.keyboard.press('Escape')
     await expect(ida.getByTestId('notesThread.public')).toHaveCount(0)
     await bar(ida, 'Said to everyone before the pause', 'visibility')
     await expect(ida.getByTestId('notes.visibilitySheet.public')).toHaveCount(0)
@@ -343,6 +363,104 @@ test('Mo reports a public note, the owner removes it from the inbox and it reads
   }
 })
 
+test('the audience lives in the send button: it is there and unchanged while the field has the keyboard and after it lets go, each choice is posted as chosen, a reply is never wider than its note @full', { tag: '@full' }, async ({ page: ida, browser }) => {
+  test.slow()
+  const { context, idaMember, pages, members: [annaMember] } = await members(browser, ida, ['Anna'])
+  const [anna] = pages as [Page]
+  try {
+    await befriend(idaMember, annaMember!)
+    const snapshot = sharedBook('The Button Flow')
+    const bookId = await shelveBook(idaMember, snapshot, 'reading')
+    await shelveBook(annaMember!, snapshot, 'reading')
+    const room = await makeChapters(idaMember, bookId, 6)
+    const three = room.chapters.find((c) => c.position === 3)!.id
+    for (const m of [idaMember, annaMember!]) await notesOf(m).setChapter(room.id, 4)
+    await writeNote(annaMember!, room, three, 'Anna says it to friends', 'friends')
+    const visibilityOf = async (words: string) => (await sql<{ visibility: string; spoiler: boolean }>('select visibility, spoiler from public.room_messages where body = $1', [words]))[0]
+
+    await goto(ida, `/notes/${bookId}/3`)
+    const tab = ida.getByTestId('notesThread.sendAs')
+    const input = ida.getByTestId('notesThread.input')
+    // The owner's bug: the control disappeared with the keyboard and stayed gone. It is in the button now: in the page at every moment (at rest, in the field, typing, after the field lets go), never folded, never hidden.
+    const always = async (when: string) => {
+      await expect(tab, when).toBeVisible()
+      await expect(ida.getByTestId('notesThread.send'), when).toBeVisible()
+      await expectLevel(ida, 'friends')
+      await expect(ida.getByTestId('notesThread.actions'), when).toHaveCount(0)
+    }
+    await always('at rest')
+    await input.focus()
+    await always('with the field focused')
+    await input.fill('Friends, by default')
+    await always('while typing')
+    await ida.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+    await always('after the field let go')
+    await input.focus()
+    await always('with the field focused again')
+
+    // A tap on the tab opens the menu (APG menu button), three choices with what each means, Friends the chosen one; Escape closes it and the focus goes back to the tab.
+    await tab.click()
+    await expect(tab).toHaveAttribute('aria-expanded', 'true')
+    const menu = ida.getByTestId('notesThread.sendAsMenu')
+    await expect(menu).toHaveAttribute('role', 'menu')
+    await expect(ida.locator('[data-testid^="notesThread.sendAs."]')).toHaveCount(3)
+    await expect(ida.getByTestId('notesThread.sendAs.friends')).toHaveAttribute('aria-checked', 'true')
+    await expect(ida.getByTestId('notesThread.sendAs.private')).toContainText(en.notes.level.privateHint)
+    await expect(ida.getByTestId('notesThread.sendAs.public')).toContainText(en.notes.level.publicHint)
+    await ida.keyboard.press('Escape')
+    await expect(menu).toHaveCount(0)
+    await expect(tab).toBeFocused()
+
+    // Each choice changes the button before anything is sent, and the note is posted as chosen (and never as a spoiler: that mark is gone).
+    await chooseLevel(ida, 'private')
+    await expectLevel(ida, 'private')
+    await expect(ida.getByTestId('notesThread.sendAsWord')).toHaveText(en.notes.level.private)
+    await write(ida, 'Only me, from the button')
+    await chooseLevel(ida, 'friends')
+    await expect(ida.getByTestId('notesThread.sendAsWord')).toHaveCount(0)
+    await write(ida, 'Friends, from the button')
+    await chooseLevel(ida, 'public')
+    await expectLevel(ida, 'public')
+    await expect(ida.getByTestId('notesThread.sendAsWord')).toHaveText(en.notes.level.public)
+    await expect(ida.getByTestId('notes.level.notice')).toHaveCount(1)
+    await write(ida, 'Everyone, from the button')
+    await expect(ida.getByTestId('notes.level.notice')).toHaveCount(0)
+    await expect.poll(() => visibilityOf('Only me, from the button')).toEqual({ visibility: 'private', spoiler: false })
+    await expect.poll(() => visibilityOf('Friends, from the button')).toEqual({ visibility: 'friends', spoiler: false })
+    await expect.poll(() => visibilityOf('Everyone, from the button')).toEqual({ visibility: 'public', spoiler: false })
+    // The marks in the thread say the same: a lock under the Only me note, a globe by the Everyone one, nothing for Friends.
+    await expect(ida.getByTestId('notesThread.message').filter({ hasText: 'Only me, from the button' }).getByTestId('notesThread.private')).toBeVisible()
+    await expect(ida.getByTestId('notesThread.message').filter({ hasText: 'Everyone, from the button' }).getByTestId('notesThread.public')).toBeVisible()
+    await expect(ida.getByTestId('notesThread.message').filter({ hasText: 'Friends, from the button' }).locator('[data-testid="notesThread.public"], [data-testid="notesThread.private"]')).toHaveCount(0)
+
+    // Answering Anna's Friends note: Everyone is in the menu but off, and says why; the button is on Friends; the note is posted at Friends.
+    await bar(ida, 'Anna says it to friends', 'reply')
+    await expect(ida.getByTestId('notesThread.quoteBar')).toBeVisible()
+    await expectLevel(ida, 'friends')
+    await tab.click()
+    await expect(ida.getByTestId('notesThread.sendAs.public')).toHaveAttribute('aria-disabled', 'true')
+    await expect(ida.getByTestId('notesThread.sendAs.public')).toContainText(en.notes.level.heldBack)
+    await ida.getByTestId('notesThread.sendAs.public').click({ force: true })
+    await expect(ida.getByTestId('notesThread.sendAsMenu')).toBeVisible()
+    await ida.keyboard.press('Escape')
+    await expectLevel(ida, 'friends')
+    await write(ida, 'An answer, no wider than hers')
+    await expect.poll(() => visibilityOf('An answer, no wider than hers')).toMatchObject({ visibility: 'friends' })
+
+    // Anna sees the Friends notes and not the Only me one; a flagged-as-spoiler message of the old days is a normal bubble.
+    await goto(anna, `/notes/${bookId}/3`)
+    await expect(bubble(anna, 'Friends, from the button')).toBeVisible()
+    await expect(bubble(anna, 'Everyone, from the button')).toBeVisible()
+    expect(await anna.content()).not.toContain('Only me, from the button')
+    await sql(`update public.room_messages set spoiler = true where body = 'Friends, from the button'`)
+    await goto(anna, `/notes/${bookId}/3`)
+    await expect(bubble(anna, 'Friends, from the button')).toBeVisible()
+    await expect(anna.getByTestId('notesThread.veil')).toHaveCount(0)
+  } finally {
+    await context.close()
+  }
+})
+
 test('the Notes page and a chapter pass axe in the dark room, and in German at 360 px nothing overflows @full', { tag: '@full' }, async ({ page: ida, browser }) => {
   test.slow()
   const { context, idaMember, pages, members: [annaMember] } = await members(browser, ida, ['Anna'])
@@ -368,23 +486,24 @@ test('the Notes page and a chapter pass axe in the dark room, and in German at 3
     await goto(ida, `/notes/${bookId}/5`)
     await expect(bubble(ida, 'Anna’s note for friends')).toBeVisible()
     await expectAccessible(ida, 'a chapter of the Notes')
-    await ida.getByTestId('notesThread.level.public').click()
+    await chooseLevel(ida, 'public')
     await expect(ida.getByTestId('notes.level.notice')).toBeVisible()
     await expectAccessible(ida, 'a chapter with Everyone chosen')
 
-    // German at 360 px: the control (Nur ich · Freunde · Alle), the rows and the notice do not run out of the screen.
+    // German at 360 px: the split send button (Nur ich · Freunde · Alle), the rows and the notice do not run out of the screen.
     await ida.addInitScript((key) => localStorage.setItem(key, 'de'), LOCALE_KEY)
     await ida.setViewportSize({ width: 360, height: 740 })
     await goto(ida, `/notes/${bookId}`)
     await expect(ida.getByTestId('notes.change')).toHaveText(de.notes.page.change)
     await expectNoSideScroll(ida, 'the Notes page in German')
     await goto(ida, `/notes/${bookId}/5`)
-    await expect(ida.getByTestId('notesThread.level.friends')).toHaveAttribute('aria-label', de.notes.level.friends)
+    await expectLevel(ida, 'friends', de)
     await expectNoSideScroll(ida, 'a chapter in German')
-    await ida.getByTestId('notesThread.level.public').click()
+    await chooseLevel(ida, 'public')
+    await expectLevel(ida, 'public', de)
     await expect(ida.getByTestId('notes.level.notice')).toHaveText(de.notes.level.publicNotice)
     await expectNoSideScroll(ida, 'a chapter in German with Everyone chosen')
-    const box = await ida.getByTestId('notesThread.level').boundingBox()
+    const box = await ida.getByTestId('notesThread.split').boundingBox()
     expect(box!.x).toBeGreaterThanOrEqual(0)
     expect(box!.x + box!.width).toBeLessThanOrEqual(360)
 

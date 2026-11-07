@@ -182,8 +182,8 @@ describe('talking', () => {
     // The same client id for another thread is a mix-up, not a retry.
     expect((await repo.post({ readId: made.id, sectionId: section, clientId, body: 'Elsewhere' })).error).toBe('message_client_id_reused')
 
-    const reply = await repo.post({ readId: made.id, sectionId: section, clientId: crypto.randomUUID(), body: 'Chapter one!', spoiler: true })
-    expect(reply.data).toMatchObject({ threadId: section, spoiler: true })
+    const reply = await repo.post({ readId: made.id, sectionId: section, clientId: crypto.randomUUID(), body: 'Chapter one!' })
+    expect(reply.data).toMatchObject({ threadId: section, spoiler: false })
     const answer = await buddyOf(ben).post({ readId: made.id, sectionId: section, clientId: crypto.randomUUID(), body: 'I agree', replyTo: reply.data!.id })
     expect(answer.data!.replyTo).toBe(reply.data!.id)
 
@@ -202,14 +202,13 @@ describe('talking', () => {
     expect(MESSAGES_PAGE).toBe(50)
   })
 
-  it('refuses what the database refuses: nothing to read, a spoiler in the room, a reply elsewhere, a stranger', async () => {
+  it('refuses what the database refuses: nothing to read, a reply elsewhere, a stranger', async () => {
     const ada = await host()
     const made = await startRead(ada, { title: 'Refused', parts: 2 })
     const section = (await buddyOf(ada).read(made.id)).data!.chapters[0]!.id
     const repo = buddyOf(ada)
     const post = (over: Record<string, unknown>) => repo.post({ readId: made.id, sectionId: null, clientId: crypto.randomUUID(), body: 'Hello', ...over } as never)
     expect((await post({ body: '   ' })).error).toBe('message_body_invalid')
-    expect((await post({ spoiler: true })).error).toBe('message_spoiler_unavailable')
     const roomMessage = (await post({})).data!
     expect((await post({ sectionId: section, replyTo: roomMessage.id })).error).toBe('message_reply_unavailable')
     expect((await buddyOf(outsider).post({ readId: made.id, sectionId: null, clientId: crypto.randomUUID(), body: 'Hi' })).error).toBe('not_found')

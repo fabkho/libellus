@@ -102,7 +102,7 @@ describe('the shapes of a read', () => {
   })
 
   it('maps a tombstone and a GIF row into the layer’s ChatRecord', () => {
-    const base = { id: 'm', section_id: null, author: { id: 'a', name: 'A' }, client_id: 'c', created_at: 'x', deleted_at: null, spoiler: false, reply_to: null, reactions: null }
+    const base = { id: 'm', section_id: null, author: { id: 'a', name: 'A' }, client_id: 'c', created_at: 'x', deleted_at: null, reply_to: null, reactions: null }
     expect(messageFromJson('r', { ...base, kind: 'gif', body: '', media_url: 'https://static.klipy.com/g', media_width: 4, media_height: 3 })).toMatchObject({ kind: 'gif', media: { kind: 'gif', url: 'https://static.klipy.com/g', width: 4, height: 3, path: null }, reactions: [] })
     expect(messageFromJson('r', { ...base, kind: 'text', body: null, media_url: null, media_width: null, media_height: null, deleted_at: 'y' })).toMatchObject({ body: '', media: null, deletedAt: 'y', threadId: null, conversationId: 'r' })
   })

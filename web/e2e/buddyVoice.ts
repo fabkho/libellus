@@ -25,14 +25,14 @@ export async function seedVoice(
   sender: TestMember,
   readId: string,
   sectionId: string | null,
-  { type = 'audio/webm', replyTo = null, spoiler = false }: { type?: 'audio/mp4' | 'audio/webm'; replyTo?: string | null; spoiler?: boolean } = {},
+  { type = 'audio/webm', replyTo = null }: { type?: 'audio/mp4' | 'audio/webm'; replyTo?: string | null } = {},
 ): Promise<{ id: string; path: string; clientId: string }> {
   const repo = buddyOf(sender)
   const clientId = crypto.randomUUID()
   const bytes = type === 'audio/mp4' ? VOICE_M4A : VOICE_WEBM
   const stored = await repo.uploadVoice(readId, sender.id, clientId, new Blob([new Uint8Array(bytes)], { type }), type)
   if (stored.error) throw new Error(`Seeding a recording failed: ${stored.error}`)
-  const sent = await repo.sendVoice({ readId, sectionId, clientId, media: { mime: type, durationMs: 2_000, peaks: SEEDED_PEAKS }, replyTo, spoiler })
+  const sent = await repo.sendVoice({ readId, sectionId, clientId, media: { mime: type, durationMs: 2_000, peaks: SEEDED_PEAKS }, replyTo })
   if (sent.error) throw new Error(`Seeding a voice message failed: ${sent.error}`)
   return { id: sent.data.id, path: stored.data, clientId }
 }

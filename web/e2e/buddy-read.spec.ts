@@ -150,6 +150,38 @@ test('Ida starts a buddy read, Anna joins, a message arrives live, a Section sta
  * Book is Currently reading and the Book page now says "Open the buddy read". Then Home: the ⋯ of a Currently reading card, the card "Reading together" with what is
  * new, and an invitation above it.
  */
+test('a Section has no Spoiler chip, and a comment flagged Spoiler in the old days is a normal bubble with its words @full', { tag: '@full' }, async ({ page: ida }) => {
+  const idaMember = await signedIn(ida)
+  const anna = await signUpMember()
+  await sql(`update auth.users set raw_user_meta_data = raw_user_meta_data || jsonb_build_object('name', $2::text) where id = $1`, [anna.id, 'Anna'])
+  await follows(idaMember, anna)
+  const made = await startRead(idaMember, { title: 'The Marks Flow', parts: 3, link: true })
+  await joinRead(anna, made.linkToken!)
+  const first = (await buddyOf(idaMember).read(made.id)).data!.chapters.find((c) => c.position === 1)!
+  const said = await buddyOf(anna).post({ readId: made.id, sectionId: first.id, clientId: crypto.randomUUID(), body: 'The twist is in the well' })
+  expect(said.error).toBeNull()
+  // The mark is gone from the app; the database column is not, and a handful of old messages carry it.
+  await sql(`update public.buddy_messages set spoiler = true where id = $1`, [said.data!.id])
+
+  // Section 1 is not open to Ida yet (her marker has read through none): "Show anyway" opens it. Its composer is the field and send (the microphone while it is empty), and nothing else.
+  await goto(ida, `/together/${made.id}/${first.id}`)
+  await ida.getByTestId('together.thread.showAnyway').click()
+  await ida.getByTestId('together.showAnyway.confirm').click()
+  await expect(ida.getByTestId('buddyThread.screen')).toHaveAttribute('data-status', 'ready')
+  const flagged = ida.getByTestId('buddyThread.bubble').filter({ hasText: 'The twist is in the well' })
+  await expect(flagged).toBeVisible()
+  await expect(ida.getByTestId('buddyThread.veil')).toHaveCount(0)
+  await expect(ida.getByTestId('buddyThread.spoiler')).toHaveCount(0)
+  await expect(ida.getByTestId('buddyThread.actions')).toHaveCount(0)
+  await expect(ida.getByTestId('buddyThread.record')).toBeVisible()
+  await ida.getByTestId('buddyThread.input').fill('Not a spoiler any more')
+  await expect(ida.getByTestId('buddyThread.send')).toBeVisible()
+  await ida.getByTestId('buddyThread.send').click()
+  await expect(ida.getByTestId('buddyThread.bubble').filter({ hasText: 'Not a spoiler any more' })).toBeVisible()
+  // What she wrote carries no mark: the app sends no `p_spoiler`, the column keeps its default.
+  expect(await sql<{ spoiler: boolean }>(`select spoiler from public.buddy_messages where body = 'Not a spoiler any more'`)).toEqual([{ spoiler: false }])
+})
+
 test('Read together on a Book that is not in her Library adds it as Currently reading when the read is made; Home lists the read and its invitation @full', { tag: '@full' }, async ({ page }) => {
   test.slow()
   const ida = await signedIn(page)

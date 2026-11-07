@@ -381,7 +381,6 @@ export const useNotesStore = defineStore('notes', () => {
           body: job.body,
           visibility: (job.payload as { visibility?: NoteVisibility } | null)?.visibility ?? 'friends',
           replyTo: job.replyTo,
-          spoiler: job.spoiler,
         })
     // She was gone in the meantime: nothing of the answer is shown to the next member (the line itself is stopped).
     if (stale(since)) return { ok: false, retry: true, error: 'offline' }
@@ -499,7 +498,7 @@ export const useNotesStore = defineStore('notes', () => {
     sectionId: string,
     body: string,
     visibility: NoteVisibility,
-    { replyTo = null, spoiler = false, quote = null }: { replyTo?: string | null; spoiler?: boolean; quote?: NoteBubble['quote'] } = {},
+    { replyTo = null, quote = null }: { replyTo?: string | null; quote?: NoteBubble['quote'] } = {},
   ): Promise<NoteSend> {
     const member = me.value
     if (!member) return { ok: false, error: 'not_signed_in' }
@@ -509,7 +508,7 @@ export const useNotesStore = defineStore('notes', () => {
     const since = epoch
     await ensureQueue()
     if (stale(since) || !queue) return { ok: false, error: 'not_signed_in' }
-    const job = noteJob({ roomId, sectionId, clientId: newId(), body, replyTo, spoiler, createdAt: new Date().toISOString() }, visibility)
+    const job = noteJob({ roomId, sectionId, clientId: newId(), body, replyTo, createdAt: new Date().toISOString() }, visibility)
     mergeNote(thread(roomId, sectionId).messages, pendingNote(job, member, nameOf(), quote))
     queue!.enqueue(noteSendKey(job.clientId), job)
     return { ok: true, clientId: job.clientId }

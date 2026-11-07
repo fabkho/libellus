@@ -40,12 +40,12 @@ async function runSweep() {
 const objectThere = async (path: string) => !(await service.storage.from(VOICE_BUCKET).download(path)).error
 
 /** Stores the fixture as the member and posts it; the stored message. */
-async function say(member: TestMember, over: { sectionId?: string | null; replyTo?: string | null; spoiler?: boolean } = {}) {
+async function say(member: TestMember, over: { sectionId?: string | null; replyTo?: string | null } = {}) {
   const repo = buddyOf(member)
   const clientId = crypto.randomUUID()
   const stored = await repo.uploadVoice(read.id, member.id, clientId, asBlob(M4A, 'audio/mp4'), 'audio/mp4')
   expect(stored.error).toBeNull()
-  const sent = await repo.sendVoice({ readId: read.id, sectionId: over.sectionId === undefined ? section : over.sectionId, clientId, media: { mime: 'audio/mp4', durationMs: 2_000, peaks: [10, 50, 100, 40] }, replyTo: over.replyTo, spoiler: over.spoiler })
+  const sent = await repo.sendVoice({ readId: read.id, sectionId: over.sectionId === undefined ? section : over.sectionId, clientId, media: { mime: 'audio/mp4', durationMs: 2_000, peaks: [10, 50, 100, 40] }, replyTo: over.replyTo })
   expect(sent.error).toBeNull()
   return { clientId, path: stored.data!, message: sent.data! }
 }
@@ -77,13 +77,13 @@ describe('sending a recording', () => {
     expect(twice).toEqual({ data: path, error: null })
   })
 
-  it('takes a webm recording as well, and an answer, and a Spoiler mark', async () => {
+  it('takes a webm recording as well, and an answer', async () => {
     const repo = buddyOf(ben)
     const first = await say(host)
     const clientId = crypto.randomUUID()
     expect((await repo.uploadVoice(read.id, ben.id, clientId, asBlob(WEBM, 'audio/webm'), 'audio/webm')).error).toBeNull()
-    const sent = await repo.sendVoice({ readId: read.id, sectionId: section, clientId, media: { mime: 'audio/webm', durationMs: 2_000, peaks: [] }, replyTo: first.message.id, spoiler: true })
-    expect(sent.data).toMatchObject({ kind: 'voice', replyTo: first.message.id, spoiler: true, voice: { mime: 'audio/webm', path: `${read.id}/${ben.id}/${clientId}.webm` } })
+    const sent = await repo.sendVoice({ readId: read.id, sectionId: section, clientId, media: { mime: 'audio/webm', durationMs: 2_000, peaks: [] }, replyTo: first.message.id })
+    expect(sent.data).toMatchObject({ kind: 'voice', replyTo: first.message.id, spoiler: false, voice: { mime: 'audio/webm', path: `${read.id}/${ben.id}/${clientId}.webm` } })
   })
 
   it('refuses what the database refuses: an object that is not there, a type that is not its object\'s, a Section of nowhere', async () => {

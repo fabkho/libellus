@@ -48,7 +48,6 @@ export type BuddyLiveEvent =
 
 type Json = Record<string, unknown>
 const text = (value: unknown): string | null => (typeof value === 'string' && value ? value : null)
-const bool = (value: unknown): boolean => value === true
 
 /**
  * The event of a broadcast, or null for one this app does not know (dropped). Defensive on purpose: a payload of another shape
@@ -79,7 +78,6 @@ export function parseBuddyEvent(event: string, payload: unknown): BuddyLiveEvent
           // A voice message: its type, length and waveform; no object name, which the app works out from the ids above (data/buddyVoice.ts).
           voice: p.voice && typeof p.voice === 'object' ? (p.voice as { mime?: string; duration_ms?: number; peaks?: number[] }) : null,
           reply_to: text(p.reply_to),
-          spoiler: bool(p.spoiler),
           created_at: createdAt,
           deleted_at: null,
           reactions: [],

@@ -22,10 +22,11 @@ export const sentBubble = (message: BuddyMessage): BuddyBubble => ({ ...message,
 
 /** The send of a recording: a queue job of kind `voice` whose `media` is the recording's type, length and waveform (the sound is stored before the job is made). */
 export function voiceJob(
-  base: { conversationId: string; threadId: string | null; clientId: string; replyTo: string | null; spoiler: boolean; createdAt: string },
+  base: { conversationId: string; threadId: string | null; clientId: string; replyTo: string | null; createdAt: string },
   media: VoiceJobMedia,
 ): SendJob {
-  return { ...base, kind: 'voice', body: '', media }
+  // The chat package's job still has the `spoiler` field; no chapter chat marks a message as a spoiler any more.
+  return { ...base, spoiler: false, kind: 'voice', body: '', media }
 }
 
 /** What a queue job carries of a recording, or null for a text (and for a stored job that is not shaped like one: it is sent as nothing). */
@@ -49,7 +50,7 @@ export function pendingBubble(job: SendJob, me: string, name: string | null): Bu
     body: voice ? '' : job.body,
     createdAt: job.createdAt,
     replyTo: job.replyTo,
-    spoiler: job.spoiler,
+    spoiler: false,
     media: voice ? { kind: 'voice', path: voicePath(job.conversationId, me, job.clientId, voice.mime), url: null, width: 1, height: 1 } : null,
     voice: voice ? { path: voicePath(job.conversationId, me, job.clientId, voice.mime), mime: voice.mime, durationMs: voice.durationMs, peaks: voice.peaks } : null,
     authorName: name,
