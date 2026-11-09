@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.42.1](https://github.com/fabkho/libellus/compare/v1.42.0...v1.42.1) (2026-11-09)
+
+
+### Fixes
+
+* **shell:** no background flash around the tab bar when the page goes back ([#533](https://github.com/fabkho/libellus/issues/533)) ([533f5af](https://github.com/fabkho/libellus/commit/533f5af41af6ee4a981530c1879a710be5ef485e))
+
 ## [1.42.0](https://github.com/fabkho/libellus/compare/v1.41.1...v1.42.0) (2026-11-09)
 
 
