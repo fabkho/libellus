@@ -1,6 +1,6 @@
 /**
- * The `buddy-voice-sweep` edge function's HTTP side: `POST` removes the objects of deleted voice messages (sweep.ts) and answers what
- * it did. The only caller is the database (pg_net, `private.buddy_voice_kick`: a deletion queued an object, or the pg_cron jobs
+ * The `buddy-voice-sweep` edge function's HTTP side: `POST` removes the objects of deleted voice messages and private voice notes (sweep.ts)
+ * and answers what it did. The only caller is the database (pg_net, `private.buddy_voice_kick`: a deletion queued an object, or the pg_cron jobs
  * `sweep-buddy-voice` (hourly) and `sweep-buddy-voice-queue` (every ten minutes)) with the Vault secret `buddy_voice_sweep_token`. **The function answers only a bearer equal to
  * `BUDDY_VOICE_SWEEP_TOKEN`** (not the service-role key: nothing else has a reason to start a sweep).
  *

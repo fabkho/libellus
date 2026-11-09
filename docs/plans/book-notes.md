@@ -50,7 +50,7 @@ directly."
    rate limits; the photo of a public note's author becomes visible to its readers.
 9. **Build: N1 database (Opus), N2 Notes page and Book page (Sonnet): about a week, then the owner uses it.** N3 re-bases the
    live buddy reads (1 read, 2 messages, 1 recording) on the shared tables; N4 polishes. Briefs for N1 and N2 are written.
-10. **Not in v1**: chapter names, voice in Notes, push, live updates in Notes, a forum for strangers outside the app's members,
+10. **Not in v1**: chapter names, voice in Friends and Everyone notes (a **private** voice note is the one exception, decision 10, shipped as `20261118010000_notes_private_voice.sql`), push, live updates in Notes, a forum for strangers outside the app's members,
     direct messages (never).
 
 ## The recommendation
@@ -86,7 +86,7 @@ directly."
 | Blocks hide messages between two members | `private.buddy_hidden`, `public.blocks` | **base** |
 | The veil and *Show anyway* (peeks kept on the device) | `utils/buddyThread.ts`, `components/together/ShowAnyway.vue` | **base** |
 | Rate limits (30 a minute, 600 a day; reactions 60 a minute) | `post_buddy_message`, `private.buddy_rate_window` | **base** |
-| Voice storage and the sweep | bucket `buddy-voice`, `private.buddy_voice_trash`, `buddy-voice-sweep` | **base machinery**, used by buddy reads; Notes later (N4) |
+| Voice storage and the sweep | buckets `buddy-voice` and `note-voice`, `private.buddy_voice_trash` (a `bucket` column), `buddy-voice-sweep` | **base machinery**, used by buddy reads and, for the author's own private voice notes, by Notes (`20261118010000`) |
 | A position: auto from progress plus a hand | `buddy_read_members.auto_through/hand_through/read_through`, `private.buddy_fraction`, `set_buddy_hand` | **split**: the base asks "which chapters are open for her"; the buddy read stores it per member for the timeline, Notes works it out per reader (part 2.5) |
 | Host, members, invitations, link, removal, leave, finish, archive, the 12 cap, the 10-active cap | `buddy_reads`, `buddy_read_members`, `private.buddy_invite`, `join_buddy_read`, … | **buddy only** |
 | The timeline (avatars in their Section) and *where everybody is* | `private.buddy_where`, `components/together/Track.vue` | **buddy only** |
@@ -137,7 +137,12 @@ Steps:
    and after and stops if they differ. Every public function keeps its name and arguments (installed apps call them), so the
    web app needs no change on the day. The recording stays where it is: its path is `<read id>/<author>/<client id>.m4a`, and
    the read id is kept.
-3. **N3b, one release later, drops the `*_retired` tables.** Forward-only as `AGENTS.md` requires; a mistake in N3 is
+3. **N3 must relax two voice rules of `room_messages` when it re-bases buddy voice** (`20261118010000_notes_private_voice.sql`):
+   `room_messages_voice_private` (a voice note is `private`, whoever writes it) and the refusal in `private.room_messages_check`
+   of a `kind = 'voice'` message in a buddy room (`visibility = 'members'`): a buddy read's voice message is voice at `members`,
+   which neither allows. N3 keeps the note side as it is (a Notes voice note stays private) and carves out the buddy room, with its own
+   pgTAP case (`supabase/tests/buddy_voice_test.sql`) and the Notes one (`notes_private_voice_test.sql`) still green.
+4. **N3b, one release later, drops the `*_retired` tables.** Forward-only as `AGENTS.md` requires; a mistake in N3 is
    corrected by the next migration, with the old rows still there to copy from.
 
 Why not rename the buddy tables in place first: a rename breaks every function body that names the table (plpgsql bodies are
@@ -458,7 +463,7 @@ edit here in the PR that changes it.
 | 7 | "You're on chapter 5" opens chapters 1 to 5 | decided (coordinator, delegated; can be overturned) |
 | 8 | No chapter names in v1; *The whole book* last, open once she has finished | decided (coordinator, delegated; can be overturned) |
 | 9 | Any member may read notes visible to her without the Book; setting chapters and writing need the Book in her Library | decided (coordinator, delegated; can be overturned) |
-| 10 | Text only in v1; voice in N4 | decided (coordinator, delegated; can be overturned) |
+| 10 | Text only in v1; voice in N4. **Updated 7 November 2026 (owner, decided):** Notes get voice notes, **only in the private scope** (Only me): a voice note is the author's own spoken notebook per chapter, never Friends or Everyone, and nobody but its author can hear it or know it exists (bucket `note-voice`, `post_note_voice`, `voice_private_only`) | decided (owner) |
 | 11 | No push, no Realtime, no Home card for Notes in v1 | decided (coordinator, delegated; can be overturned) |
 | 12 | A Book hidden from followers still allows notes, with one line on the Notes page | decided (coordinator, delegated; can be overturned) |
 | 13 | Re-base the live buddy reads in N3 (copy-and-switch, ids and public function names kept) | decided (coordinator, delegated; can be overturned) |

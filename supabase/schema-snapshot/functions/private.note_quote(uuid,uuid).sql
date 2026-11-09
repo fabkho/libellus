@@ -11,7 +11,8 @@ AS $function$
            else jsonb_build_object('id', m.id,
                                    'author', private.member_card(p_viewer, m.author_id),
                                    'excerpt', left(m.body, 140),
-                                   'spoiler', m.spoiler)
+                                   'spoiler', m.spoiler,
+                                   'voice', m.voice_object is not null)
          end
     from (select 1) one
     left join public.room_messages m on m.id = p_parent

@@ -19,3 +19,9 @@ create policy buddy_voice_insert_own on storage.objects as permissive for insert
 
 create policy buddy_voice_select_members on storage.objects as permissive for select to authenticated
   using (((bucket_id = 'buddy-voice'::text) AND private.buddy_voice_readable(name)));
+
+create policy note_voice_insert_own on storage.objects as permissive for insert to authenticated
+  with check (((bucket_id = 'note-voice'::text) AND private.note_voice_writable(name)));
+
+create policy note_voice_select_author on storage.objects as permissive for select to authenticated
+  using (((bucket_id = 'note-voice'::text) AND private.note_voice_readable(name)));

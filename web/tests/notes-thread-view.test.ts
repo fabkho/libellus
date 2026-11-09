@@ -92,7 +92,7 @@ describe('the veil in a chapter', () => {
 })
 
 describe('a quote', () => {
-  const words = { deleted: 'Message deleted', spoiler: 'Spoiler', someone: 'A reader', you: 'You', hidden: 'A note you can’t see' }
+  const words = { deleted: 'Message deleted', spoiler: 'Spoiler', someone: 'A reader', you: 'You', hidden: 'A note you can’t see', voice: 'Voice message' }
   const items = noteItems([bubble('1', { body: 'First words' })], ctx())
 
   it('says "A note you can’t see" for a note she may not read, with no name and no jump, and "removed" for a tombstone', () => {

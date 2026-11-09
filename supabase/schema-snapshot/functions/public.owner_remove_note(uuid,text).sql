@@ -26,10 +26,13 @@ begin
   end if;
 
   insert into private.note_moderation_log (message_id, room_id, author_id, removed_by, reason, body, visibility)
-  values (v_row.id, v_row.room_id, v_row.author_id, v_caller, v_reason, v_row.body, v_row.visibility);
+  values (v_row.id, v_row.room_id, v_row.author_id, v_caller, v_reason,
+          case when v_row.kind = 'voice' then '[voice note, ' || round(v_row.voice_duration_ms / 1000.0)::integer || ' s]' else v_row.body end,
+          v_row.visibility);
   delete from public.room_reactions where message_id = p_note;
   update public.room_messages
-     set body = '', deleted_at = clock_timestamp(), deleted_by = v_caller, moderated = true
+     set body = '', voice_object = null, voice_mime = null, voice_duration_ms = null, voice_peaks = null,
+         deleted_at = clock_timestamp(), deleted_by = v_caller, moderated = true
    where id = p_note;
   return jsonb_build_object('removed', true);
 end;

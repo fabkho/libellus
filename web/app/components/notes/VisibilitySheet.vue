@@ -3,19 +3,21 @@
 // bar. A small sheet she opens herself with the three levels as a radio group (APG), the current one checked. **Narrowing applies at once** (the replies wider than the new level
 // are narrowed with it, the thread is read again); **Everyone** shows the one quiet line ("Visible to all members of BetterReads, with your name and photo. Just this note.") and
 // waits for **Make visible to everyone**. Everyone is offered only while the owner's switch is on. A refusal (a reply cannot be wider than the note it answers) stays in the sheet, worded.
+// **A voice note** (`voice`) is only ever Only me (docs/parity.md, *Notes, a chapter*): the sheet shows that one level, checked, and one line why; there is nothing to widen to (the database refuses it too,
+// `voice_private_only`).
 import type { NoteErrorCode } from '~/data/notes'
 import { offeredLevels, type NoteLevel } from '~/utils/noteVisibility'
 import { noteErrorKey } from '~/utils/notes'
 import { useNotesStore } from '~/stores/notes'
 
-const props = defineProps<{ roomId: string; sectionId: string; noteId: string | null; visibility: NoteLevel }>()
+const props = defineProps<{ roomId: string; sectionId: string; noteId: string | null; visibility: NoteLevel; voice?: boolean }>()
 const open = defineModel<boolean>('open', { required: true })
 
 const { t } = useI18n()
 const store = useNotesStore()
 const online = useOnline()
 
-const levels = computed(() => offeredLevels(store.publicEnabled))
+const levels = computed<NoteLevel[]>(() => (props.voice ? ['private'] : offeredLevels(store.publicEnabled)))
 /** What she has picked and not confirmed: only Everyone waits for a second tap. */
 const choosing = ref<NoteLevel | null>(null)
 const busy = ref(false)
@@ -80,6 +82,8 @@ function pick(level: NoteLevel) {
           </button>
         </div>
       </UiRowGroup>
+
+      <p v-if="voice" class="text-footnote text-ink-muted" data-testid="notes.visibilitySheet.voiceOnly">{{ t('notes.visibilitySheet.voiceOnly') }}</p>
 
       <template v-if="choosing === 'public'">
         <p class="text-footnote text-ink-muted" data-testid="notes.visibilitySheet.notice">{{ t('notes.level.publicNotice') }}</p>

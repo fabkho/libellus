@@ -95,6 +95,11 @@ The notice says these; confirm each, or change the text (and the version date) w
   of the backups). It is true only while the sweep runs (the Edge Function `buddy-voice-sweep`, docs/OPERATIONS.md, "Voice messages"):
   **check the queue empties before the release that carries voice messages goes to members.**
 
+- **Private voice notes** (7 November 2026): the notice has a *Voice notes (only if you record one)* bullet under "What data I process" and extends
+  *Who receives data* (Supabase: voice storage) and *How long I keep data* (a voice note goes with the note, with the account, shortly after, normally within the
+  hour; not part of the backups). A voice note is only ever Only me and only its author can hear it. It is true only while the sweep runs (the same Edge Function
+  `buddy-voice-sweep`, docs/OPERATIONS.md, "Voice messages"): **check the queue empties after the release that carries it.**
+
 ## Whenever the app changes what it does with data
 
 A new third-party service, a new kind of stored data, a new log, a new place where something is shown to other people:

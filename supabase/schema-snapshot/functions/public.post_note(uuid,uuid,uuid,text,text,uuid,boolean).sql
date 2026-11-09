@@ -28,10 +28,10 @@ begin
 
   perform private.notes_lock('notes', v_caller::text);
 
-  -- A retry: the note it made (as she sees it now).
+  -- A retry: the note it made (as she sees it now). A voice note's client id is not a text's: post_note never answers (or makes) one.
   select * into v_row from public.room_messages m where m.author_id = v_caller and m.client_id = p_client_id;
   if found then
-    if v_row.room_id is distinct from p_room or v_row.section_id is distinct from p_section then
+    if v_row.room_id is distinct from p_room or v_row.section_id is distinct from p_section or v_row.kind <> 'text' then
       raise exception 'client_id_reused' using errcode = 'PT409';
     end if;
     return private.note_json(v_caller, v_row);

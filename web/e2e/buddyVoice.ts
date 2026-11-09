@@ -7,7 +7,7 @@ import { VOICE_BUCKET } from '../app/data/buddyVoice'
 import { buddyOf } from '../tests/support/buddy'
 import type { TestMember } from '../tests/support/member'
 import { serviceRoleKey, sql, stack } from '../tests/support/stack'
-import { removedNames, sweep } from '../../supabase/functions/buddy-voice-sweep/sweep'
+import { itemsOf, removeFromBuckets, sweep } from '../../supabase/functions/buddy-voice-sweep/sweep'
 
 /**
  * Voice messages in the flows (e2e/buddy-voice.spec.ts, e2e/buddy-gestures.spec.ts): a two-second tone as the phones record it (AAC in mp4, opus in webm:
@@ -37,19 +37,19 @@ export async function seedVoice(
   return { id: sent.data.id, path: stored.data, clientId }
 }
 
-/** The service role's sweep, as the Edge Function runs it. */
+/** The service role's sweep, as the Edge Function runs it (both voice buckets: a buddy read's and the private voice notes of Notes). */
 export async function runVoiceSweep() {
   const service = createClient(stack.url, serviceRoleKey(), { auth: { persistSession: false, autoRefreshToken: false } })
   return sweep({
-    batch: async (limit) => ((await service.rpc('buddy_voice_sweep_batch', { p_limit: limit })).data as string[] | null) ?? [],
-    remove: async (paths) => removedNames((await service.storage.from(VOICE_BUCKET).remove(paths)).data),
-    done: async (paths) => void (await service.rpc('buddy_voice_sweep_done', { p_paths: paths })),
+    batch: async (limit) => itemsOf((await service.rpc('voice_sweep_batch', { p_limit: limit })).data),
+    remove: (items) => removeFromBuckets(items, async (bucket, paths) => await service.storage.from(bucket).remove(paths)),
+    done: async (items) => void (await service.rpc('voice_sweep_done', { p_items: items })),
   })
 }
 
 /** Whether the object is in the bucket (past RLS). */
-export async function objectInBucket(path: string): Promise<boolean> {
-  const [row] = await sql<{ n: string }>(`select count(*) as n from storage.objects where bucket_id = $1 and name = $2`, [VOICE_BUCKET, path])
+export async function objectInBucket(path: string, bucket: string = VOICE_BUCKET): Promise<boolean> {
+  const [row] = await sql<{ n: string }>(`select count(*) as n from storage.objects where bucket_id = $1 and name = $2`, [bucket, path])
   return Number(row!.n) > 0
 }
 
@@ -57,11 +57,11 @@ export async function objectInBucket(path: string): Promise<boolean> {
  * What a page asks of the voice bucket from now on, as `<METHOD> <path>`: signing a URL and fetching the sound. A thread that only loads must show an empty list
  * (the sound is fetched when a member presses play, never before).
  */
-export function watchBucket(page: Page): string[] {
+export function watchBucket(page: Page, bucket: string = VOICE_BUCKET): string[] {
   const asked: string[] = []
   page.on('request', (request) => {
     const url = new URL(request.url())
-    if (url.pathname.includes(`/${VOICE_BUCKET}/`) || url.pathname.endsWith(`/${VOICE_BUCKET}`)) asked.push(`${request.method()} ${url.pathname}`)
+    if (url.pathname.includes(`/${bucket}/`) || url.pathname.endsWith(`/${bucket}`)) asked.push(`${request.method()} ${url.pathname}`)
   })
   return asked
 }
@@ -101,9 +101,9 @@ export const MIC = 'buddyThread.record'
 export type Finger = { down(): Promise<void>; move(dx: number, dy: number): Promise<void>; up(dx?: number, dy?: number): Promise<void> }
 
 /** One finger on the microphone: the pointer events of a touch pointer on its own element, which they keep after the panel has taken the button's place. */
-export async function finger(page: Page): Promise<Finger> {
-  const button = (await page.getByTestId(MIC).elementHandle()) as ElementHandle<HTMLElement>
-  const box = (await page.getByTestId(MIC).boundingBox())!
+export async function finger(page: Page, mic: string = MIC): Promise<Finger> {
+  const button = (await page.getByTestId(mic).elementHandle()) as ElementHandle<HTMLElement>
+  const box = (await page.getByTestId(mic).boundingBox())!
   const x = box.x + box.width / 2
   const y = box.y + box.height / 2
   const fire = (type: 'pointerdown' | 'pointermove' | 'pointerup', dx: number, dy: number) =>

@@ -2562,7 +2562,8 @@
     "visibilitySheet": {
       "title": "Who can see this",
       "makePublic": "Make visible to everyone",
-      "saved": "Saved: {level}"
+      "saved": "Saved: {level}",
+      "voiceOnly": "A voice note stays Only me: only you can ever hear it."
     },
     "showAnyway": {
       "title": "Show chapter {n} anyway?",
@@ -2613,7 +2614,9 @@
       "notSentFinal": "It can’t be sent.",
       "veiledTitle": "Chapter {n} is hidden",
       "veiledEnd": "The whole book is hidden",
-      "veiledText": "It may spoil what you haven’t read yet, so it stays closed until you choose to show it."
+      "veiledText": "It may spoil what you haven’t read yet, so it stays closed until you choose to show it.",
+      "voiceQuote": "Voice message",
+      "voicePlayFailed": "Couldn’t load this voice note. Check your connection and try again."
     },
     "error": {
       "not_signed_in": "Please sign in again.",
@@ -2641,7 +2644,14 @@
       "follow_self": "That didn’t go through. Try again.",
       "offline": "You’re offline.",
       "busy": "Busy right now. Try again in a moment.",
-      "unknown": "That didn’t go through. Try again."
+      "unknown": "That didn’t go through. Try again.",
+      "voice_invalid": "That recording can’t be sent. Try recording it again.",
+      "voice_missing": "That recording didn’t upload. Try recording it again.",
+      "voice_too_large": "That recording is too large to send. Keep it under two minutes.",
+      "voice_private_only": "A voice note is always just for you. It can’t be shared with others.",
+      "voice_short": "That recording was too short. Hold on a little longer.",
+      "voice_large": "That recording is too large to send. Keep it under two minutes.",
+      "voice_type": "This browser records in a format we can’t send."
     }
   },
   "uiText": {

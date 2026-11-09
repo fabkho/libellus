@@ -8,17 +8,24 @@
 //   remembers (Only me or Friends); Everyone is for one note, the control returns to the remembered level after it is sent, and the one quiet line "Visible to all members of BetterReads, with your
 //   name and photo. Just this note." stands under it while it is on Everyone. A reply starts at the narrower of its parent's level and the remembered one and cannot be wider than the note it answers.
 // - **the action bar**: the six reactions, Reply, Copy; on her note **Who can see this** and **Delete**; on another's **Report** (the sheet of the buddy read, to the owner) and **Block {name}**.
-// - **quotes**: the server's word: the author and first words, "A note you can't see" for a note she may not read, "Note removed" for a tombstone.
+// - **quotes**: the server's word: the author and first words, "A note you can't see" for a note she may not read, "Note removed" for a tombstone, "Voice message" for a voice note.
+// - **voice notes** (docs/parity.md, *Notes, a chapter*): the microphone is offered **only at Only me** (`voiceMaxMs`, gated by the audience: at Friends or Everyone it is gone, and the audience row is not
+//   there while the microphone is live, so it cannot be changed under a recording; a recording that reaches `sendVoice` at another audience is never posted, it is dropped with a word). A recording is a
+//   private note of its own, stored in the private bucket first and posted after (the same line, the same offline behaviour as a buddy read's voice message, stores/notes.ts); it is drawn by the base's
+//   `UiVoiceBubble` with the lock and "Only me" like her other private notes. **Nothing is signed or fetched when the thread loads**: the play button's press is taken here first (`voicePress`, capture
+//   phase) and asks the store for a URL of five minutes the first time; one voice at a time (the base's player); leaving the thread silences it. Nobody else can see a voice note, so this is only ever hers.
 // **The veil** (the app's, as in a buddy read): a chapter that is not open to her (her chapter has not reached it and she has not opened it anyway) is not read at all: this page shows the quiet
 // "hidden" screen with "Show anyway", and only her yes (a peek, kept on this device; her chapter does not move) asks the database for it. A note marked Spoiler is veiled until tapped.
 // Read when it opens, when the app comes back to the front and on Refresh: no Realtime (tests/notes-entry.test.ts).
 import type { BarAction } from '#layers/ui/app/components/ui/ReactionBar.vue'
 import { threadKey } from '#layers/chat/app/utils/thread'
+import { mayLoadMedia } from '#layers/chat/app/utils/veil'
 import { isRetryableNoteError, NOTE_EMOJI, type NoteErrorCode, type NoteQuote } from '~/data/notes'
 import type { ReportReason } from '~/data/buddyReads'
 import { isBookId, isChapterSegment } from '~/utils/notesRoute'
 import { chapterOfSegment, noteErrorKey, noteItems, noteQuoteOf, replyChipOf, notesPath, type NoteItem } from '~/utils/notes'
-import { sameAuthorRun } from '~/utils/roomThread'
+import { sameAuthorRun, VOICE_UNSIGNED } from '~/utils/roomThread'
+import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
 import { clampToOffer, settleLevel, startLevel, type NoteLevel } from '~/utils/noteVisibility'
 import { useBookStore } from '~/stores/book'
 import { useNotesStore } from '~/stores/notes'
@@ -122,6 +129,7 @@ const items = computed<NoteItem[]>(() =>
         open: view.value?.open === true,
         revealed: revealed.value,
         nameOf: () => null,
+        previewOf: store.previewOf,
         errorWord: (code) => t(noteErrorKey(code)),
         retryable: isRetryableNoteError,
       })
@@ -161,6 +169,7 @@ const quoteWords = computed(() => ({
   someone: t('member.someone'),
   you: t('uiText.chat.reply.you'),
   hidden: t('notes.thread.hiddenQuote'),
+  voice: t('notes.thread.voiceQuote'),
 }))
 const quoteFor = (item: NoteItem) => noteQuoteOf(item, items.value, me.value, quoteWords.value)
 
@@ -204,8 +213,9 @@ function quoteOfReply(item: NoteItem | null): NoteQuote | null {
     kind: 'note',
     id: item.id,
     author: { id: item.authorId ?? '', name: item.author, photo: null },
-    excerpt: item.veiled ? '' : item.body.replace(/\s+/g, ' ').trim().slice(0, 140),
+    excerpt: item.veiled || item.voice ? '' : item.body.replace(/\s+/g, ' ').trim().slice(0, 140),
     spoiler: item.spoiler,
+    voice: item.voice,
   }
 }
 
@@ -223,6 +233,27 @@ async function send() {
   spoiler.value = false
   // Everyone was for this note: the control is back on what the device remembers.
   level.value = clampToOffer(store.remembered, store.publicEnabled)
+  chat.value?.toNewest()
+}
+
+/** What a recording may answer: nothing, or her own private note (the database takes no other). */
+const voiceMaxMs = computed(() => (level.value === 'private' && (!replyTo.value || (replyTo.value.mine && replyTo.value.visibility === 'private')) ? VOICE_MAX_MS : undefined))
+
+/** A finished recording from the composer: a private voice note, a bubble at once (`store.sendVoice`). A refusal (too short, too big) is said above the thread. */
+async function sendVoice(voice: PreparedVoice) {
+  if (!room.value || !chapter.value) return
+  // Only me is the one audience of a recording: the microphone is not offered anywhere else, and one that arrives anyway is not posted.
+  if (level.value !== 'private') {
+    notice.value = t(noteErrorKey('voice_private_only'))
+    return
+  }
+  notice.value = null
+  const sent = await store.sendVoice(room.value.id, chapter.value.id, voice, { replyTo: replyTo.value?.id ?? null, quote: quoteOfReply(replyTo.value) })
+  if (!sent.ok) {
+    notice.value = t(noteErrorKey(sent.error))
+    return
+  }
+  replyTo.value = null
   chat.value?.toNewest()
 }
 
@@ -324,6 +355,69 @@ async function confirmBlock() {
   blockOpen.value = false
 }
 
+// ------------------------------------------------------------------ playing a voice note
+
+const voicePlayer = useVoicePlayer()
+// Leaving the thread silences the voice that is playing.
+onBeforeUnmount(() => voicePlayer.stop())
+
+/** The base's double-tap window (`UiBubble`): a second press inside it likes. */
+const DOUBLE_TAP_MS = 300
+type Press = { at: number; started: boolean; liked: boolean }
+const lastPress = new Map<string, Press>()
+
+/**
+ * The press on the play button of a **stored voice note**, taken before the base's own (the capture phase of the thread's root: the base would play the
+ * placeholder it was given, `VOICE_UNSIGNED`, because nothing was signed when the thread loaded). Here the first press asks for the URL (`store.voiceUrl`,
+ * five minutes, kept for four) and plays it; a second press inside the double-tap window likes the note, as on any bubble (and stops the sound the first one
+ * started). A press with the keyboard (no `detail`) only plays or pauses. A note still on its way, or refused, plays from the device's own copy: the base's.
+ */
+function voicePress(event: MouseEvent) {
+  const button = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-testid$=".voicePlay"]')
+  if (!button) return
+  const key = button.closest<HTMLElement>('[data-key]')?.dataset.key
+  const item = key ? items.value.find((i) => i.key === key) : undefined
+  if (!item?.voice || item.delivery !== 'sent' || !item.media?.path || store.previewOf(item.key)) return
+  event.stopPropagation()
+  event.preventDefault()
+  if (!mayLoadMedia(item, view.value?.open === true, revealed.value.has(item.key))) return
+  const now = Date.now()
+  const before = lastPress.get(item.key)
+  const canLike = !!item.id && event.detail > 0
+  if (canLike && before && now - before.at <= DOUBLE_TAP_MS) {
+    lastPress.delete(item.key)
+    // The first press may still be waiting for its URL: it is told not to play when it comes.
+    before.liked = true
+    if (before.started) voicePlayer.stop()
+    void react(item.id!, NOTE_EMOJI[0]!)
+    return
+  }
+  const press: Press = { at: now, started: false, liked: false }
+  lastPress.set(item.key, press)
+  void playVoice(item, press)
+}
+
+async function playVoice(item: NoteItem, press: Press) {
+  notice.value = null
+  const path = item.media!.path!
+  // Her press again on the one that is playing (or paused): the base's player pauses or resumes it, with no new URL.
+  if (voicePlayer.current.key === item.key && !voicePlayer.current.failed) {
+    const playing = voicePlayer.current.playing
+    voicePlayer.toggle(item.key, VOICE_UNSIGNED)
+    press.started = !playing
+    return
+  }
+  const answer = await store.voiceUrl(path)
+  if (answer.error) {
+    notice.value = answer.error === 'offline' ? t(noteErrorKey('offline')) : t('notes.thread.voicePlayFailed')
+    return
+  }
+  // A second press came while the URL was on its way: that was a double tap, which likes and does not play.
+  if (press.liked) return
+  voicePlayer.toggle(item.key, answer.data)
+  press.started = true
+}
+
 // ------------------------------------------------------------------ the veil
 
 const showOpen = ref(false)
@@ -388,6 +482,7 @@ function back() {
     class="notes-thread"
     testid="notesThread"
     landmark
+    @click.capture="voicePress"
   >
     <template #top>
       <UiRoundButton class="pointer-events-auto" icon="back" :label="t('notes.thread.back')" data-testid="notes.thread.back" @click="back" />
@@ -513,8 +608,11 @@ function back() {
         :label="t('notes.thread.composerLabel')"
         :max="2000"
         :quote="replyChip"
+        :voice-max-ms="voiceMaxMs"
         testid="notesThread"
         @send="send"
+        @voice="sendVoice"
+        @voice-error="notice = $event"
         @cancel-quote="replyTo = null"
       >
         <template #actions>
@@ -557,6 +655,7 @@ function back() {
       :section-id="chapter.id"
       :note-id="levelNote?.id ?? null"
       :visibility="levelNote?.visibility ?? 'friends'"
+      :voice="levelNote?.voice ?? false"
     />
   </UiChatThread>
 </template>

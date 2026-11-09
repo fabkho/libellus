@@ -1,7 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ChatRecord } from '#layers/chat/app/types/adapter'
 import { isNoAnswer } from './network'
+import { mapVoiceStorageError } from './buddyReads'
 import { cardFromJson, type MemberCard } from './socialShapes'
+import { NOTE_VOICE_BUCKET, notePath, type VoiceInfo, type VoiceJobMedia, type VoiceMime, voiceFromNoteJson, type NoteVoiceJson } from './noteVoice'
+import { VOICE_URL_SECONDS } from './buddyVoice'
 
 export { REPORT_REASONS, type ReportReason } from './buddyReads'
 
@@ -44,10 +47,18 @@ export const NOTE_ERROR_CODES = [
   'report_text_too_long',
   'rate_limited',
   'follow_self',
+  // Voice notes (20261118010000_notes_private_voice.sql): the database's.
+  'voice_invalid',
+  'voice_missing',
+  'voice_too_large',
+  'voice_private_only',
 ] as const
 
-/** What a refusal can be: the database's and the client's own (no connection, busy, unknown). */
-export type NoteErrorCode = (typeof NOTE_ERROR_CODES)[number] | 'offline' | 'busy' | 'unknown'
+/**
+ * What a refusal can be: the database's and the client's own (no connection, busy, unknown, and the three a recording is refused for before it is sent:
+ * `voice_short` a slip of the finger, `voice_large` over 3 MB, `voice_type` a type the bucket does not take).
+ */
+export type NoteErrorCode = (typeof NOTE_ERROR_CODES)[number] | 'offline' | 'busy' | 'unknown' | 'voice_short' | 'voice_large' | 'voice_type'
 
 export type NoteResult<T> = { data: T; error: null } | { data: null; error: NoteErrorCode }
 
@@ -84,7 +95,7 @@ export type NotesRoom = { id: string; chapterCount: number; me: NoteMe; chapters
 export type NotesPage = { workKey: string; canWrite: boolean; room: NotesRoom | null }
 
 /** The quote of the note a reply answers: its excerpt and author when she may see it, "hidden" when she may not, "removed" for a tombstone. Never words in the last two. */
-export type NoteQuote = { kind: 'note'; id: string; author: MemberCard; excerpt: string; spoiler: boolean } | { kind: 'hidden' } | { kind: 'removed' }
+export type NoteQuote = { kind: 'note'; id: string; author: MemberCard; excerpt: string; spoiler: boolean; /** The note is a voice note: no words, the app says "Voice message". */ voice: boolean } | { kind: 'hidden' } | { kind: 'removed' }
 
 /** The Book page's lines: what her friends wrote (the members she follows who follow her back, at Friends or Everyone) and what strangers made public. Her own never counts. */
 export type NotesSummary = {
@@ -99,7 +110,8 @@ export type NoteReaction = { emoji: string; count: number; mine: boolean }
  * app adds. A tombstone has `deletedAt`, an empty body and no reactions (`removed`: she deleted it, `moderated`: the owner did).
  */
 export type NoteMessage = ChatRecord & {
-  voice: null
+  /** A voice note's sound (kind `voice`: hers alone, always Only me); null for a text note. `path` is the object's name, never a URL. */
+  voice: VoiceInfo | null
   authorName: string | null
   author: MemberCard
   deletedAt: string | null
@@ -122,6 +134,18 @@ export type PostNote = {
   spoiler?: boolean
 }
 
+/** A recording that is stored (`uploadVoice`) and is to be posted (`sendVoice`): the same client id names both the object and the note. Always Only me. */
+export type PostNoteVoice = {
+  roomId: string
+  sectionId: string
+  clientId: string
+  /** The object's name (what `uploadVoice` answered): the database checks it is hers, in this room, for this client id and type. */
+  path: string
+  media: VoiceJobMedia
+  /** Her own private note of the chapter it answers. */
+  replyTo?: string | null
+}
+
 export type NotesPageOfMessages = { items: NoteMessage[]; /** The page came back full: older ones may be there. */ more: boolean }
 
 /** `note_messages` hands over at most this many, 50 when no limit is asked. */
@@ -140,7 +164,7 @@ type CardJson = Parameters<typeof cardFromJson>[0]
 type MeJson = { chapter: number; finished: boolean; hand: boolean; auto: { chapter: number; finished: boolean } }
 type ChapterJson = { id: string; position: number; kind: 'part' | 'end'; count: number; unread: number; open: boolean; faces: CardJson[] | null }
 type PageJson = { workKey: string; canWrite: boolean; room: null | { id: string; chapterCount: number; me: MeJson; chapters: ChapterJson[] } }
-type QuoteJson = { hidden: true } | { removed: true } | { id: string; author: CardJson; excerpt: string; spoiler: boolean }
+type QuoteJson = { hidden: true } | { removed: true } | { id: string; author: CardJson; excerpt: string; spoiler: boolean; voice?: boolean }
 type NoteJson = {
   id: string
   sectionId: string
@@ -156,6 +180,8 @@ type NoteJson = {
   quote: QuoteJson | null
   reactions: { emoji: string; count: number }[] | null
   myReaction: string | null
+  /** Only on a live voice note, and only in its author's answer. */
+  voice?: NoteVoiceJson | null
 }
 
 type SummaryJson = {
@@ -203,26 +229,27 @@ function quoteFromJson(json: QuoteJson | null | undefined): NoteQuote | null {
   if (!json) return null
   if ('hidden' in json) return { kind: 'hidden' }
   if ('removed' in json) return { kind: 'removed' }
-  return { kind: 'note', id: json.id, author: cardFromJson(json.author), excerpt: json.excerpt, spoiler: Boolean(json.spoiler) }
+  return { kind: 'note', id: json.id, author: cardFromJson(json.author), excerpt: json.excerpt, spoiler: Boolean(json.spoiler), voice: Boolean(json.voice) }
 }
 
 /** A note of a room as the layer's record and what the app adds. `roomId` is the room's id: a note's answer does not carry it. */
 export function noteFromJson(roomId: string, json: NoteJson): NoteMessage {
   const gone = json.kind !== 'note'
   const quote = quoteFromJson(json.quote)
+  const voice = gone ? null : voiceFromNoteJson(json.voice)
   return {
     id: json.id,
     conversationId: roomId,
     threadId: json.sectionId,
     senderId: json.author?.id ?? null,
     clientId: json.clientId ?? null,
-    kind: 'text',
+    kind: voice ? 'voice' : 'text',
     body: gone ? '' : (json.body ?? ''),
     createdAt: json.createdAt,
     replyTo: quote && quote.kind === 'note' ? quote.id : null,
     spoiler: Boolean(json.spoiler),
     media: null,
-    voice: null,
+    voice,
     author: cardFromJson(json.author),
     authorName: json.author?.name ?? null,
     deletedAt: gone ? json.createdAt : null,
@@ -237,6 +264,14 @@ export function noteFromJson(roomId: string, json: NoteJson): NoteMessage {
 // ------------------------------------------------------------------ the repository
 
 export type NotesOptions = { online?: () => boolean }
+
+type StorageFailure = { message?: string; statusCode?: string | number; status?: number; name?: string }
+
+/** A refusal of the Storage API for a recording, as a code: the buddy reads' mapping, in the notes' words. */
+export function mapNoteVoiceStorageError(failure: StorageFailure): NoteErrorCode {
+  const code = mapVoiceStorageError(failure)
+  return code === 'message_voice_too_large' ? 'voice_too_large' : code === 'message_voice_invalid' ? 'voice_invalid' : (code as NoteErrorCode)
+}
 
 /** The calls of every notes screen; one per database function. */
 export function createNotes(client: SupabaseClient, { online = () => true }: NotesOptions = {}) {
@@ -297,6 +332,53 @@ export function createNotes(client: SupabaseClient, { online = () => true }: Not
         },
         (row) => noteFromJson(input.roomId, row),
       ),
+    /**
+     * Stores a recording in the private bucket `note-voice`, in her own folder, under the name its note will have (`<her id>/<room>/<client id>.<ext>`).
+     * Not the note: `sendVoice` posts it (through the send queue). The same client id again finds the object there and is answered as stored, so a retry
+     * after a lost answer does not fail on "already exists". Refused offline before anything leaves.
+     */
+    async uploadVoice(roomId: string, authorId: string, clientId: string, blob: Blob, mime: VoiceMime): Promise<NoteResult<string>> {
+      if (!online()) return { data: null, error: 'offline' }
+      const path = notePath(authorId, roomId, clientId, mime)
+      // Storage keeps the type of the Blob it is given (storage-js ignores `contentType` for a Blob), and a recorder's blob says "audio/webm;codecs=opus":
+      // the sound is wrapped in a Blob of the bare type, which is what the database compares and what the bucket allows. `cacheControl` 0: a deleted
+      // recording must not stay in a browser's cache (the signed URL is the only way to it, and it is short-lived).
+      const audio = new Blob([blob], { type: mime })
+      const { error } = await Promise.resolve(client.storage.from(NOTE_VOICE_BUCKET).upload(path, audio, { contentType: mime, upsert: false, cacheControl: '0' })).catch(
+        () => ({ error: { name: 'StorageUnknownError', message: 'fetch failed' } as StorageFailure }),
+      )
+      if (!error) return { data: path, error: null }
+      // The object of this very send is already there (the answer of a first try was lost): as good as stored.
+      if (/already exists|duplicate/i.test((error as StorageFailure).message ?? '') || Number((error as StorageFailure).statusCode) === 409) return { data: path, error: null }
+      return { data: null, error: mapNoteVoiceStorageError(error as StorageFailure) }
+    },
+    /** Posts a stored recording as a voice note: private, always (there is no level to give); the one she sent before under `clientId` answers again. */
+    sendVoice: (input: PostNoteVoice) =>
+      call<NoteJson, NoteMessage>(
+        'post_note_voice',
+        {
+          p_room: input.roomId,
+          p_section: input.sectionId,
+          p_client_id: input.clientId,
+          p_object: input.path,
+          p_mime: input.media.mime,
+          p_duration_ms: Math.round(input.media.durationMs),
+          p_peaks: input.media.peaks.length > 0 ? input.media.peaks : null,
+          p_reply_to: input.replyTo ?? null,
+        },
+        (row) => noteFromJson(input.roomId, row),
+      ),
+    /**
+     * A short-lived URL (`VOICE_URL_SECONDS`) for one recording, signed by Storage when it checks the bucket's policy for her: it is hers, live and private.
+     * Asked for when she presses play, never when a thread loads. An error when it is not hers to hear (or gone).
+     */
+    async voiceUrl(path: string): Promise<NoteResult<string>> {
+      if (!online()) return { data: null, error: 'offline' }
+      const answer = await Promise.resolve(client.storage.from(NOTE_VOICE_BUCKET).createSignedUrl(path, VOICE_URL_SECONDS)).catch(() => null)
+      if (!answer) return { data: null, error: 'offline' }
+      if (answer.error || !answer.data?.signedUrl) return { data: null, error: answer.error ? mapNoteVoiceStorageError(answer.error as StorageFailure) : 'not_found' }
+      return { data: answer.data.signedUrl, error: null }
+    },
     /** Changes the level of her own note: narrowing is at once (and narrows the wider replies), widening only up to its parent and to Everyone while it is on. */
     setVisibility: (noteId: string, visibility: NoteVisibility) => call('set_note_visibility', { p_note: noteId, p_visibility: visibility }, nothing),
     /** Her reaction (one a note); null, or the same one again, takes it back. */

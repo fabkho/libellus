@@ -1,6 +1,7 @@
 import type { SendJob } from '#layers/chat/app/types/adapter'
 import type { BubbleQuote } from '#layers/ui/app/utils/chat/message'
 import { byCreated, insertMessage, sameMessage } from '#layers/chat/app/utils/thread'
+import { notePath, type VoiceJobMedia, type VoiceMime } from '~/data/noteVoice'
 import type { NoteErrorCode, NoteMessage, NoteQuote, NoteReaction, NotesChapter, NotesRoom, NoteVisibility, NotesSummary } from '~/data/notes'
 import { isNoteLevel } from '~/utils/noteVisibility'
 import { isChapterSegment, notesPath, WHOLE_SEGMENT } from '~/utils/notesRoute'
@@ -55,6 +56,33 @@ export const noteJob = (base: { roomId: string; sectionId: string; clientId: str
   createdAt: base.createdAt,
 })
 
+/**
+ * The send of a recording: a queue job of kind `voice` whose `media` is the recording's type, length and waveform (the sound is stored before the job is
+ * made). Its audience is Only me, always: the job says so and the database has no other to give it.
+ */
+export function noteVoiceJob(base: { roomId: string; sectionId: string; clientId: string; replyTo: string | null; createdAt: string }, media: VoiceJobMedia): SendJob {
+  return {
+    conversationId: base.roomId,
+    threadId: base.sectionId,
+    clientId: base.clientId,
+    kind: 'voice',
+    body: '',
+    replyTo: base.replyTo,
+    spoiler: false,
+    media,
+    payload: { visibility: 'private' },
+    createdAt: base.createdAt,
+  }
+}
+
+/** What a queue job carries of a recording, or null for a text (and for a stored job that is not shaped like one: it is sent as nothing). */
+export function noteVoiceOfJob(job: SendJob): VoiceJobMedia | null {
+  const media = job.kind === 'voice' ? (job.media as Partial<VoiceJobMedia> | null | undefined) : null
+  const mime = media?.mime
+  if (!media || (mime !== 'audio/mp4' && mime !== 'audio/webm' && mime !== 'audio/ogg') || typeof media.durationMs !== 'number' || !Array.isArray(media.peaks)) return null
+  return { mime: mime as VoiceMime, durationMs: media.durationMs, peaks: media.peaks }
+}
+
 /** The audience a stored job was made with (a job that is not shaped like one is sent at Friends: the safe middle, never wider). */
 export function visibilityOfJob(job: SendJob): NoteVisibility {
   const level = (job.payload as { visibility?: unknown } | null | undefined)?.visibility
@@ -63,20 +91,22 @@ export function visibilityOfJob(job: SendJob): NoteVisibility {
 
 /** What she wrote, shown at once while the queue sends it: the id is the client id's, the time her device's, until the stored row replaces it. */
 export function pendingNote(job: SendJob, me: string, name: string | null, quote: NoteQuote | null = null): NoteBubble {
-  const visibility = visibilityOfJob(job)
+  const media = noteVoiceOfJob(job)
+  // A voice note is Only me, whatever else a stored job says.
+  const visibility = media ? 'private' : visibilityOfJob(job)
   return {
     id: `local:${job.clientId}`,
     conversationId: job.conversationId,
     threadId: job.threadId,
     senderId: me,
     clientId: job.clientId,
-    kind: 'text',
-    body: job.body,
+    kind: media ? 'voice' : 'text',
+    body: media ? '' : job.body,
     createdAt: job.createdAt,
     replyTo: job.replyTo,
     spoiler: job.spoiler,
     media: null,
-    voice: null,
+    voice: media ? { path: notePath(me, job.conversationId, job.clientId, media.mime), mime: media.mime, durationMs: media.durationMs, peaks: media.peaks } : null,
     author: { id: me, name, photo: null },
     authorName: name,
     deletedAt: null,
@@ -121,7 +151,7 @@ export function mergeNote(list: NoteBubble[], incoming: NoteBubble): boolean {
 }
 
 /** A note that became a tombstone: no body, no reactions; its level stays (the database keeps it). */
-export const tombstoneNote = (bubble: NoteBubble, at: string): NoteBubble => ({ ...bubble, body: '', reactions: [], quote: bubble.quote, deletedAt: bubble.deletedAt ?? at })
+export const tombstoneNote = (bubble: NoteBubble, at: string): NoteBubble => ({ ...bubble, kind: 'text', body: '', voice: null, reactions: [], quote: bubble.quote, deletedAt: bubble.deletedAt ?? at })
 
 /** Her reaction at once, before the database says (the same rule as a buddy read's: another emoji replaces hers, the same one takes it back). */
 export function reactedNote(reactions: readonly NoteReaction[], emoji: string | null): NoteReaction[] {
@@ -171,7 +201,7 @@ export function noteItems(bubbles: readonly NoteBubble[], ctx: NoteThreadContext
 }
 
 /** The words a quote needs that are the app's. */
-export type NoteQuoteWords = { deleted: string; spoiler: string; someone: string; you: string; hidden: string }
+export type NoteQuoteWords = { deleted: string; spoiler: string; someone: string; you: string; hidden: string; voice: string }
 
 /**
  * The quote over a note, as the base draws it. A note she can read quotes its author and first words (a spoiler gives none away); the other two shapes
@@ -184,18 +214,18 @@ export function noteQuoteOf(item: Pick<NoteItem, 'quote' | 'replyTo'>, items: re
   if (quote?.kind === 'removed') return { id: null, mine: false, name: '', preview: words.deleted }
   if (quote?.kind === 'note') {
     const present = items.some((i) => i.id === quote.id)
-    return { id: present ? quote.id : null, mine: quote.author.id === me, name: quote.author.id === me ? words.you : (quote.author.name?.trim() || words.someone), preview: quote.spoiler ? words.spoiler : quote.excerpt }
+    return { id: present ? quote.id : null, mine: quote.author.id === me, name: quote.author.id === me ? words.you : (quote.author.name?.trim() || words.someone), preview: quote.spoiler ? words.spoiler : quote.voice ? words.voice : quote.excerpt }
   }
   if (!item.replyTo) return null
   const original = items.find((i) => i.id === item.replyTo)
   if (!original) return { id: null, mine: false, name: '', preview: words.hidden }
-  const preview = original.removed ? words.deleted : original.veiled ? words.spoiler : original.body.replace(/\s+/g, ' ').trim().slice(0, 120)
+  const preview = original.removed ? words.deleted : original.veiled ? words.spoiler : original.voice ? words.voice : original.body.replace(/\s+/g, ' ').trim().slice(0, 120)
   return { id: original.removed ? null : original.id, mine: original.mine, name: original.mine ? words.you : (original.author ?? words.someone), preview }
 }
 
 /** The quote shown in the composer while she answers `item`: who and the first words, never more than the base draws. */
-export function replyChipOf(item: NoteItem, words: Pick<NoteQuoteWords, 'spoiler' | 'someone' | 'you'>): { name: string; preview: string } {
-  return { name: item.mine ? words.you : (item.author ?? words.someone), preview: item.veiled ? words.spoiler : item.body.replace(/\s+/g, ' ').trim().slice(0, 120) }
+export function replyChipOf(item: NoteItem, words: Pick<NoteQuoteWords, 'spoiler' | 'someone' | 'you' | 'voice'>): { name: string; preview: string } {
+  return { name: item.mine ? words.you : (item.author ?? words.someone), preview: item.veiled ? words.spoiler : item.voice ? words.voice : item.body.replace(/\s+/g, ' ').trim().slice(0, 120) }
 }
 
 // ------------------------------------------------------------------ the chapter list

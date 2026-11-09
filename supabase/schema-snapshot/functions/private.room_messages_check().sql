@@ -10,6 +10,10 @@ declare
 begin
   select r.kind into v_kind from public.rooms r where r.id = new.room_id;
 
+  if tg_op = 'UPDATE' and new.kind is distinct from old.kind then
+    raise exception 'room_message_invalid: a note does not change its kind' using errcode = '23514';
+  end if;
+
   if v_kind = 'notes' then
     if new.visibility = 'members' then
       raise exception 'room_message_invalid: a note is private, friends or public' using errcode = '23514';
@@ -17,8 +21,13 @@ begin
     if new.section_id is null then
       raise exception 'room_message_invalid: a note is in a chapter' using errcode = '23514';
     end if;
+    if new.kind = 'voice' and new.visibility <> 'private' then
+      raise exception 'voice_private_only' using errcode = '23514';
+    end if;
   elsif new.visibility <> 'members' then
     raise exception 'room_message_invalid: a buddy message is for its members' using errcode = '23514';
+  elsif new.kind = 'voice' then
+    raise exception 'room_message_invalid: a buddy room''s voice is a buddy message' using errcode = '23514';
   end if;
 
   if new.section_id is not null

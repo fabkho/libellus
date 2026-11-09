@@ -14,7 +14,7 @@ A calm, mobile-first book tracker you install from the home screen: search a boo
 - **Progress** in pages or percent with a day-by-day chart, and **Collections**, your own shelves, in your order.
 - **Bring your history**: a Goodreads or Hardcover export (CSV, or Hardcover's zip) is told apart by its header; its shelves, lists, reads, ratings and reviews come along.
 - **Friends, by choice.** Your switches decide what followers see, your account is private until you let them in, and you can hide a single book or block someone.
-- **Buddy reads, by choice.** Read one Book with friends in Sections, with a thread per Section that stays veiled until you have read it, and messages that can be a voice recording only that read's members can hear. The only thing about your reading it shows is which Section you are in.
+- **Buddy reads, by choice.** Read one Book with friends in Sections, with a thread per Section that stays veiled until you have read it, and messages that can be a voice recording only that read's members can hear. The only thing about your reading it shows is which Section you are in. Your own private notes on a chapter can be spoken too: a voice note is only ever for you.
 - **Offline and installed**: the Library stays on the device, changes wait in an outbox, and the PWA runs full screen in light and dark. On Android there is also an installable app, a thin shell around the same site ([docs/ANDROID.md](docs/ANDROID.md)).
 
 ## Privacy
@@ -30,7 +30,7 @@ A calm, mobile-first book tracker you install from the home screen: search a boo
 
 | Service | What it holds or does |
 | --- | --- |
-| [Supabase](https://supabase.com), `eu-central-1` | The database, sign-in, profile photos, voice messages and the edge functions: everything you save, your email address, the waitlist and the error log |
+| [Supabase](https://supabase.com), `eu-central-1` | The database, sign-in, profile photos, voice messages and private voice notes and the edge functions: everything you save, your email address, the waitlist and the error log |
 | [Cloudflare Pages](https://pages.cloudflare.com) | Serves the app and the link previews of a shared reading page; its Web Analytics counts page loads |
 | [Cloudflare R2](https://developers.cloudflare.com/r2/) | Two private buckets: the nightly backup, encrypted before upload with a key only the owner holds and deleted after 35 days; and the covers of books in members' Libraries, under hashed names, deleted 30 days after no Library holds the book |
 | Resend (an email provider, over SMTP) | Sends the sign-in codes and the waitlist invites, so it sees the address it mails |

@@ -29,6 +29,13 @@ AS $function$
                    and (r.member_id = p_viewer or not private.blocked_either(p_viewer, r.member_id))
                  group by r.emoji) x), '[]'::jsonb) end,
     'myReaction', case when p_note.deleted_at is null then
-        (select r.emoji from public.room_reactions r where r.message_id = p_note.id and r.member_id = p_viewer) end)
+        (select r.emoji from public.room_reactions r where r.message_id = p_note.id and r.member_id = p_viewer) end
+  ) || case when p_note.deleted_at is null and p_note.voice_object is not null and p_note.author_id = p_viewer
+            then jsonb_build_object('voice', jsonb_build_object(
+                   'path', p_note.voice_object,
+                   'mime', p_note.voice_mime,
+                   'durationMs', p_note.voice_duration_ms,
+                   'peaks', to_jsonb(p_note.voice_peaks)))
+            else '{}'::jsonb end
 $function$
 ;
