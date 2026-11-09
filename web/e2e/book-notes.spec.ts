@@ -61,9 +61,10 @@ async function chooseLevel(page: Page, level: 'private' | 'friends' | 'public') 
 
 /** The audience is on the button itself, before anything is sent: the tab ("Send as: Everyone") and the send button ("Send · Everyone") name it. */
 async function expectLevel(page: Page, level: 'private' | 'friends' | 'public', words: typeof en | typeof de = en) {
-  const name = words.notes.level[level]
-  await expect(page.getByTestId('notesThread.sendAs')).toHaveAttribute('aria-label', `${words.uiText.chat.composer.sendAs}: ${name}`)
-  await expect(page.getByTestId('notesThread.send')).toHaveAttribute('aria-label', `${words.uiText.chat.composer.send} · ${name}`)
+  // The tab is always there; the send button says the audience too, but at Only me with an empty field the microphone stands in its place (a voice note).
+  await expect(page.getByTestId('notesThread.sendAs')).toHaveAttribute('aria-label', `${words.uiText.chat.composer.sendAs}: ${words.notes.level[level]}`)
+  const send = page.getByTestId('notesThread.send')
+  if (await send.count()) await expect(send).toHaveAttribute('aria-label', `${words.uiText.chat.composer.send} · ${words.notes.level[level]}`)
 }
 
 /** Writes a note and lets go of the field (the audience lives in the send button, so there is nothing that folds with the keyboard). */
@@ -421,6 +422,7 @@ test('the audience lives in the send button: it is there and unchanged while the
     await write(ida, 'Friends, from the button')
     await chooseLevel(ida, 'public')
     await expectLevel(ida, 'public')
+    await expect(ida.getByTestId('notesThread.record')).toHaveCount(0)
     await expect(ida.getByTestId('notesThread.sendAsWord')).toHaveText(en.notes.level.public)
     await expect(ida.getByTestId('notes.level.notice')).toHaveCount(1)
     await write(ida, 'Everyone, from the button')

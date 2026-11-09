@@ -20,14 +20,13 @@
 // Read when it opens, when the app comes back to the front and on Refresh: no Realtime (tests/notes-entry.test.ts).
 import type { BarAction } from '#layers/ui/app/components/ui/ReactionBar.vue'
 import { threadKey } from '#layers/chat/app/utils/thread'
-import { mayLoadMedia } from '#layers/chat/app/utils/veil'
 import { isRetryableNoteError, NOTE_EMOJI, type NoteErrorCode, type NoteQuote } from '~/data/notes'
 import type { ReportReason } from '~/data/buddyReads'
 import { isBookId, isChapterSegment } from '~/utils/notesRoute'
 import { chapterOfSegment, noteErrorKey, noteItems, noteQuoteOf, replyChipOf, notesPath, type NoteItem } from '~/utils/notes'
 import { sameAuthorRun, VOICE_UNSIGNED } from '~/utils/roomThread'
 import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
-import { clampToOffer, noteSendOptions, settleLevel, startLevel, type NoteLevel } from '~/utils/noteVisibility'
+import { clampToOffer, noteSendOptions, noteVoiceAllowed, settleLevel, startLevel, type NoteLevel } from '~/utils/noteVisibility'
 import { useBookStore } from '~/stores/book'
 import { useNotesStore } from '~/stores/notes'
 import { useSessionStore } from '~/stores/session'
@@ -246,19 +245,19 @@ async function send() {
   chat.value?.toNewest()
 }
 
-/** What a recording may answer: nothing, or her own live private note (the database takes no other). */
-const voiceReplyOk = computed(() => !replyTo.value || (replyTo.value.mine && replyTo.value.visibility === 'private' && !replyTo.value.removed))
 /**
- * The microphone: only while the send button is on **Only me**, and only when the note is new or answers her own private note. The audience lives in the split send
- * button (`sendAs`), so at Friends or Everyone the button shows Send and no microphone is drawn; holding an option that is not Only me takes the microphone away.
+ * The microphone: only while the split send button is on **Only me**, and only when the note is new or answers her own live private note (`noteVoiceAllowed`, tested in
+ * Node). At Friends or Everyone the field is not offered a recording, so the capsule shows Send; an option that is not Only me takes the microphone away.
  */
-const voiceMaxMs = computed(() => (sendAs.value === 'private' && voiceReplyOk.value ? VOICE_MAX_MS : undefined))
+const voiceMaxMs = computed(() =>
+  noteVoiceAllowed(sendAs.value as NoteLevel, replyTo.value ? { mine: replyTo.value.mine, visibility: replyTo.value.visibility as NoteLevel, removed: replyTo.value.removed } : null) ? VOICE_MAX_MS : undefined,
+)
 
 /** A finished recording from the composer: a private voice note, a bubble at once (`store.sendVoice`). A refusal (too short, too big) is said above the thread. */
 async function sendVoice(voice: PreparedVoice) {
   if (!room.value || !chapter.value) return
   // Only me is the one audience of a recording: the microphone is not offered anywhere else, and one that arrives anyway (the option changed under a recording) is not posted.
-  if (sendAs.value !== 'private' || !voiceReplyOk.value) {
+  if (!noteVoiceAllowed(sendAs.value as NoteLevel, replyTo.value ? { mine: replyTo.value.mine, visibility: replyTo.value.visibility as NoteLevel, removed: replyTo.value.removed } : null)) {
     notice.value = t(noteErrorKey('voice_private_only'))
     return
   }
@@ -392,7 +391,8 @@ function voicePress(event: MouseEvent) {
   if (!item?.voice || item.delivery !== 'sent' || !item.media?.path || store.previewOf(item.key)) return
   event.stopPropagation()
   event.preventDefault()
-  if (!mayLoadMedia(item, view.value?.open === true, revealed.value.has(item.key))) return
+  // Nothing of a chapter that is not open to her is fetched: the thread's veil, one step stricter than the press itself.
+  if (view.value?.open !== true) return
   const now = Date.now()
   const before = lastPress.get(item.key)
   const canLike = !!item.id && event.detail > 0

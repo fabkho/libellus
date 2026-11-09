@@ -3,6 +3,7 @@ import {
   clampToOffer,
   levelStates,
   noteSendOptions,
+  noteVoiceAllowed,
   NOTE_LEVEL_KEY,
   narrower,
   offeredLevels,
@@ -116,5 +117,25 @@ describe('the menu of the split send button', () => {
     const held = noteSendOptions(true, 'friends', words)
     expect(held.find((o) => o.value === 'public')!.hint).toBe(words.heldBack)
     expect(held.find((o) => o.value === 'friends')!.hint).toBe('Your friends')
+  })
+})
+
+describe('where the microphone is offered (private voice notes)', () => {
+  const parent = (over: Partial<{ mine: boolean; visibility: 'private' | 'friends' | 'public'; removed: boolean }> = {}) => ({ mine: true, visibility: 'private' as const, removed: false, ...over })
+
+  it('offers it at Only me alone, on a new note or an answer to her own live private one', () => {
+    expect(noteVoiceAllowed('private', null)).toBe(true)
+    expect(noteVoiceAllowed('private', parent())).toBe(true)
+  })
+
+  it('never at Friends or Everyone, and never on an answer to somebody else’s note, to one that is no longer private, or to a deleted one', () => {
+    expect(noteVoiceAllowed('friends', null)).toBe(false)
+    expect(noteVoiceAllowed('public', null)).toBe(false)
+    expect(noteVoiceAllowed('friends', parent())).toBe(false)
+    expect(noteVoiceAllowed('public', parent())).toBe(false)
+    expect(noteVoiceAllowed('private', parent({ mine: false }))).toBe(false)
+    expect(noteVoiceAllowed('private', parent({ visibility: 'friends' }))).toBe(false)
+    expect(noteVoiceAllowed('private', parent({ visibility: 'public' }))).toBe(false)
+    expect(noteVoiceAllowed('private', parent({ removed: true }))).toBe(false)
   })
 })

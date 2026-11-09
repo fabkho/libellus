@@ -97,3 +97,12 @@ export function noteSendOptions(publicEnabled: boolean, parent: NoteLevel | null
     disabled,
   }))
 }
+
+/**
+ * Whether the microphone is offered with this audience: **Only me** alone, and only when the note is new or answers her own **live private** note (the database takes
+ * a voice answer to nothing else, `voice_private_only`). The screen passes `sendAs`; the gate is a rule, so it is tested in Node (tests/note-visibility.test.ts).
+ */
+export function noteVoiceAllowed(level: NoteLevel, parent: { mine: boolean; visibility: NoteLevel; removed: boolean } | null): boolean {
+  if (level !== 'private') return false
+  return !parent || (parent.mine && parent.visibility === 'private' && !parent.removed)
+}
