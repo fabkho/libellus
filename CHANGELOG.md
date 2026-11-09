@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.42.0](https://github.com/fabkho/libellus/compare/v1.41.1...v1.42.0) (2026-11-09)
+
+
+### Features
+
+* **notes:** voice notes, for your own private notes ([#524](https://github.com/fabkho/libellus/issues/524)) ([01896b0](https://github.com/fabkho/libellus/commit/01896b0218c889c6a35b0949713fe9ace3c4a54b))
+
 ## [1.41.1](https://github.com/fabkho/libellus/compare/v1.41.0...v1.41.1) (2026-11-07)
 
 
