@@ -65,7 +65,13 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
 - **Push to the Profile** (#78). Tapping the avatar in a tab's header grows it into the Profile's
   ring over `standard`, as a cover flies into a book's hero: the Profile fades in as the tab fades
   out (one's opacity the other's complement) and rises `md` into place; the tab bar does not move,
-  the Profile's pinned top bar only fades in. Back (the round button or the system's) plays it the
+  the Profile's pinned top bar only fades in. The bar is the same capsule in both states, so its
+  snapshot stands still on top of the two pages while they cross-fade — and that snapshot is a bitmap
+  of the bar's box: a `backdrop-filter` is painted into it as the whole box, square in the four corners
+  the capsule's radius leaves empty (Chrome; WebKit paints none into it), a rectangle of the blurred
+  page behind for the length of the transition. The bar's group therefore carries the capsule's own
+  shape (`clip-path`, its `--radius-pill`), which is the only one of the transition's four
+  pseudo-elements that clips what is under it. Back (the round button or the system's) plays it the
   other way over `exit` on the `standard` curve: the ring shrinks into the avatar, the Profile fades
   out and sinks `md`, the tab fades in at its place. Into a tab whose avatar is scrolled out of
   view, the ring leaves with the Profile instead of flying off the screen. A Back the browser
