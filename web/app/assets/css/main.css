@@ -456,12 +456,22 @@ html:is([data-profile-transition], [data-push-transition]) [data-testid='shell.t
 html:is([data-profile-transition], [data-push-transition]) [data-top-bar] {
   view-transition-name: top-bar;
 }
-/* The tab bar is the same capsule before and after: the new one stands, at once. */
+/* The tab bar is the same capsule before and after: the new one stands, at once. Its snapshot is a
+   bitmap of the element's border box, and Chromium paints a `backdrop-filter` into it as that box —
+   square, in the four corners the pill's own radius leaves empty (the tint above it keeps them):
+   Back to a tab, and the push, held a rectangle of the blurred page behind around the capsule for
+   the length of the transition. WebKit paints no backdrop into a snapshot, and there the box
+   the tint leaves behind is the capsule already. Clipped back to the capsule's shape here, on the
+   group: the snapshots clip neither (the blurred backdrop is painted outside what they clip). The
+   radius is the bar's own token, so the clip and the capsule cannot drift apart. */
 ::view-transition-old(tab-bar) {
   display: none;
 }
 ::view-transition-new(tab-bar) {
   animation: none;
+}
+::view-transition-group(tab-bar) {
+  clip-path: inset(0 round var(--radius-pill));
 }
 html:is([data-profile-transition='push'], [data-push-transition='push'])::view-transition-old(root) {
   animation-name: page-fade-out;
