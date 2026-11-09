@@ -10,10 +10,10 @@ importers:
     dependencies:
       '@fabkho/chat':
         specifier: github:fabkho/chat#v0.1.0
-        version: https://codeload.github.com/fabkho/chat/tar.gz/031736a52393e1f7769486ae511192ef32e2bf88(957e4a72980a1655c3d422164701d87c)
+        version: https://codeload.github.com/fabkho/chat/tar.gz/031736a52393e1f7769486ae511192ef32e2bf88(525c58355fc846fb98a5088210cdcfbb)
       '@fabkho/ui':
-        specifier: github:fabkho/ui#v0.12.0
-        version: https://codeload.github.com/fabkho/ui/tar.gz/1e50b0011c39bd4690130412b035519d217618ad(f6ceb54993c33bebd9e12c09dcb4b8dd)
+        specifier: github:fabkho/ui#v0.13.0
+        version: https://codeload.github.com/fabkho/ui/tar.gz/fe37ecb3d1f2babbba6970b94d794f9cb64dbd00(f6ceb54993c33bebd9e12c09dcb4b8dd)
       '@fontsource/geist':
         specifier: ^5.3.0
         version: 5.3.0
@@ -1117,9 +1117,9 @@ packages:
       nuxt: ^4.5.2
       vue: ^3.5.43
 
-  '@fabkho/ui@https://codeload.github.com/fabkho/ui/tar.gz/1e50b0011c39bd4690130412b035519d217618ad':
-    resolution: {gitHosted: true, integrity: sha512-8SNFYRViESfYRutiArUzPtvebk18vORFlJ/RAChh3VYoWSRpsl0vPjjwM0+6RG7VuChgoX6kBCPMDxWkq7A78Q==, tarball: https://codeload.github.com/fabkho/ui/tar.gz/1e50b0011c39bd4690130412b035519d217618ad}
-    version: 0.12.0
+  '@fabkho/ui@https://codeload.github.com/fabkho/ui/tar.gz/fe37ecb3d1f2babbba6970b94d794f9cb64dbd00':
+    resolution: {gitHosted: true, integrity: sha512-oXNoXbHoGPlI9IBJYiZtPSnOkR0/c+JlckK61hxKyir/h30CVA57Q+FSenAxA74e/A0eLmVazWGzpqWnpEelOQ==, tarball: https://codeload.github.com/fabkho/ui/tar.gz/fe37ecb3d1f2babbba6970b94d794f9cb64dbd00}
+    version: 0.13.0
     peerDependencies:
       nuxt: ^4.5.2
       vue: ^3.5.43
@@ -7198,13 +7198,13 @@ snapshots:
 
   '@exodus/bytes@1.16.0': {}
 
-  '@fabkho/chat@https://codeload.github.com/fabkho/chat/tar.gz/031736a52393e1f7769486ae511192ef32e2bf88(957e4a72980a1655c3d422164701d87c)':
+  '@fabkho/chat@https://codeload.github.com/fabkho/chat/tar.gz/031736a52393e1f7769486ae511192ef32e2bf88(525c58355fc846fb98a5088210cdcfbb)':
     dependencies:
-      '@fabkho/ui': https://codeload.github.com/fabkho/ui/tar.gz/1e50b0011c39bd4690130412b035519d217618ad(f6ceb54993c33bebd9e12c09dcb4b8dd)
+      '@fabkho/ui': https://codeload.github.com/fabkho/ui/tar.gz/fe37ecb3d1f2babbba6970b94d794f9cb64dbd00(f6ceb54993c33bebd9e12c09dcb4b8dd)
       nuxt: 4.6.3(@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.29.7(supports-color@10.2.2)))(@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.7(supports-color@10.2.2)))(@oxc-project/types@0.152.0)(@rollup/plugin-babel@6.1.0(@babel/core@7.29.7(supports-color@10.2.2))(rollup@4.65.1)(supports-color@10.2.2))(@types/node@26.6.4)(@vue/compiler-sfc@3.5.44)(acorn@8.18.0)(confbox@0.2.4)(db0@0.3.4)(dotenv@17.4.2)(esbuild@0.28.2)(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(giget@3.3.1)(ioredis@5.11.1(supports-color@10.2.2))(lightningcss@1.33.0)(mlly@1.8.2)(optionator@0.9.4)(oxc-parser@0.141.0)(pinia@4.1.0(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.44(typescript@6.0.3)))(rolldown@1.2.15)(rollup-plugin-visualizer@7.1.1(rolldown@1.2.15)(rollup@4.65.1))(rollup@4.65.1)(srvx@1.0.5)(supports-color@10.2.2)(terser@5.51.2)(tsx@4.23.15)(typescript@6.0.3)(vite@8.3.5(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(yaml@2.9.1)
       vue: 3.5.44(typescript@6.0.3)
 
-  '@fabkho/ui@https://codeload.github.com/fabkho/ui/tar.gz/1e50b0011c39bd4690130412b035519d217618ad(f6ceb54993c33bebd9e12c09dcb4b8dd)':
+  '@fabkho/ui@https://codeload.github.com/fabkho/ui/tar.gz/fe37ecb3d1f2babbba6970b94d794f9cb64dbd00(f6ceb54993c33bebd9e12c09dcb4b8dd)':
     dependencies:
       nuxt: 4.6.3(@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.29.7(supports-color@10.2.2)))(@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.7(supports-color@10.2.2)))(@oxc-project/types@0.152.0)(@rollup/plugin-babel@6.1.0(@babel/core@7.29.7(supports-color@10.2.2))(rollup@4.65.1)(supports-color@10.2.2))(@types/node@26.6.4)(@vue/compiler-sfc@3.5.44)(acorn@8.18.0)(confbox@0.2.4)(db0@0.3.4)(dotenv@17.4.2)(esbuild@0.28.2)(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(giget@3.3.1)(ioredis@5.11.1(supports-color@10.2.2))(lightningcss@1.33.0)(mlly@1.8.2)(optionator@0.9.4)(oxc-parser@0.141.0)(pinia@4.1.0(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.44(typescript@6.0.3)))(rolldown@1.2.15)(rollup-plugin-visualizer@7.1.1(rolldown@1.2.15)(rollup@4.65.1))(rollup@4.65.1)(srvx@1.0.5)(supports-color@10.2.2)(terser@5.51.2)(tsx@4.23.15)(typescript@6.0.3)(vite@8.3.5(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(yaml@2.9.1)
       thumbhash: 0.1.1
