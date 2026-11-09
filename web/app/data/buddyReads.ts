@@ -56,7 +56,6 @@ export const BUDDY_ERROR_CODES = [
   'message_voice_invalid',
   'message_voice_missing',
   'message_voice_too_large',
-  'message_spoiler_unavailable',
   'message_reply_unavailable',
   'message_emoji_invalid',
   'report_reason_invalid',
@@ -227,7 +226,6 @@ export type SendBuddyVoice = {
   clientId: string
   media: VoiceJobMedia
   replyTo?: string | null
-  spoiler?: boolean
 }
 
 export type PostBuddyMessage = {
@@ -238,7 +236,6 @@ export type PostBuddyMessage = {
   clientId: string
   body: string
   replyTo?: string | null
-  spoiler?: boolean
 }
 
 export type MessagePage = { items: BuddyMessage[]; /** The page came back full: older ones may be there. */ more: boolean }
@@ -445,7 +442,6 @@ type MessageJson = {
   media_height: number | null
   voice?: { path?: string | null; mime?: string | null; duration_ms?: number | null; peaks?: number[] | null } | null
   reply_to: string | null
-  spoiler: boolean
   created_at: string
   deleted_at: string | null
   reactions: BuddyReaction[] | null
@@ -467,7 +463,8 @@ export function messageFromJson(readId: string, json: MessageJson): BuddyMessage
     body: json.body ?? '',
     createdAt: json.created_at,
     replyTo: json.reply_to ?? null,
-    spoiler: Boolean(json.spoiler),
+    // The chat package's record still has the field; no chapter chat marks a message as a spoiler any more, so it is never set (and the server's flag is not read).
+    spoiler: false,
     media: mediaOf(json.media_url, json.media_width, json.media_height, json.kind),
     voice: json.kind === 'voice' ? voiceFromJson(json.voice, { readId, authorId: json.author?.id ?? null, clientId: json.client_id ?? null }) : null,
     authorName: json.author?.name ?? null,
@@ -569,7 +566,6 @@ export function createBuddyReads(client: SupabaseClient, { online = () => true, 
           p_kind: 'text',
           p_body: input.body,
           p_reply_to: input.replyTo ?? null,
-          p_spoiler: input.spoiler ?? false,
           p_gif: null,
         },
         (j) => messageFromJson(input.readId, j),
@@ -607,7 +603,6 @@ export function createBuddyReads(client: SupabaseClient, { online = () => true, 
           p_duration_ms: Math.round(input.media.durationMs),
           p_peaks: input.media.peaks.length > 0 ? input.media.peaks : null,
           p_reply_to: input.replyTo ?? null,
-          p_spoiler: input.spoiler ?? false,
         },
         (j) => messageFromJson(input.readId, j),
       ),

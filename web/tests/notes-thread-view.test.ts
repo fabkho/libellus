@@ -49,7 +49,7 @@ const note = (id: string, over: Partial<NoteMessage> = {}): NoteMessage => ({
   ...over,
 })
 const bubble = (id: string, over: Partial<NoteMessage> = {}): NoteBubble => sentNote(note(id, over))
-const ctx = (over: Partial<NoteThreadContext> = {}): NoteThreadContext => ({ me: 'ada', open: true, revealed: new Set(), nameOf: () => null, errorWord: (code) => `word:${code}`, retryable: (code) => code === 'offline', ...over })
+const ctx = (over: Partial<NoteThreadContext> = {}): NoteThreadContext => ({ me: 'ada', open: true, nameOf: () => null, errorWord: (code) => `word:${code}`, retryable: (code) => code === 'offline', ...over })
 
 describe('the veil in a chapter', () => {
   it('has no note at all in a chapter that is not open, whatever the store holds', () => {
@@ -58,10 +58,10 @@ describe('the veil in a chapter', () => {
     expect(noteItems(held, ctx({ open: true }))).toHaveLength(2)
   })
 
-  it('veils a note marked Spoiler for the others until it is tapped, never her own', () => {
-    const items = (revealed: string[]) => noteItems([bubble('1', { spoiler: true }), bubble('2', { spoiler: true, senderId: 'ada', author: card('ada') })], ctx({ revealed: new Set(revealed) }))
-    expect(items([]).map((i) => i.veiled)).toEqual([true, false])
-    expect(items(['1']).map((i) => i.veiled)).toEqual([false, false])
+  it('draws a note that was flagged Spoiler once (the mark is gone from the app) as any other note, with its words', () => {
+    const items = noteItems([bubble('1', { spoiler: true, body: 'The ending!' }), bubble('2', { spoiler: true, senderId: 'ada', author: card('ada') })], ctx())
+    expect(items.map((i) => [i.kind, i.body])).toEqual([['text', 'The ending!'], ['text', 'Words of 2']])
+    expect(items.every((i) => !('veiled' in i) && !('spoiler' in i))).toBe(true)
   })
 
   it('carries the audience, the server’s quote and who removed it next to the base’s item', () => {
@@ -92,7 +92,7 @@ describe('the veil in a chapter', () => {
 })
 
 describe('a quote', () => {
-  const words = { deleted: 'Message deleted', spoiler: 'Spoiler', someone: 'A reader', you: 'You', hidden: 'A note you can’t see', voice: 'Voice message' }
+  const words = { deleted: 'Message deleted', someone: 'A reader', you: 'You', hidden: 'A note you can’t see', voice: 'Voice message' }
   const items = noteItems([bubble('1', { body: 'First words' })], ctx())
 
   it('says "A note you can’t see" for a note she may not read, with no name and no jump, and "removed" for a tombstone', () => {
@@ -100,10 +100,9 @@ describe('a quote', () => {
     expect(noteQuoteOf({ quote: { kind: 'removed' }, replyTo: null }, items, 'ada', words)).toEqual({ id: null, mine: false, name: '', preview: 'Message deleted' })
   })
 
-  it('quotes the author and the first words of a note she may read, a spoiler gives none away, her own is "You"', () => {
-    const quote = (over: object) => ({ kind: 'note' as const, id: '1', author: card('ben', 'Ben'), excerpt: 'First words', spoiler: false, ...over })
+  it('quotes the author and the first words of a note she may read, her own is "You"', () => {
+    const quote = (over: object) => ({ kind: 'note' as const, id: '1', author: card('ben', 'Ben'), excerpt: 'First words', ...over })
     expect(noteQuoteOf({ quote: quote({}), replyTo: '1' }, items, 'ada', words)).toEqual({ id: '1', mine: false, name: 'Ben', preview: 'First words' })
-    expect(noteQuoteOf({ quote: quote({ spoiler: true }), replyTo: '1' }, items, 'ada', words)!.preview).toBe('Spoiler')
     expect(noteQuoteOf({ quote: quote({ author: card('ada') }), replyTo: '1' }, items, 'ada', words)).toMatchObject({ mine: true, name: 'You' })
     // The original is not in the chapter's loaded page: no jump.
     expect(noteQuoteOf({ quote: quote({ id: 'far' }), replyTo: 'far' }, items, 'ada', words)!.id).toBeNull()
@@ -117,7 +116,7 @@ describe('a quote', () => {
 })
 
 describe('what is on its way', () => {
-  const job = noteJob({ roomId: 'room', sectionId: 'ch5', clientId: 'cid', body: 'Hello', replyTo: null, spoiler: false, createdAt: '2026-11-13T10:00:00Z' }, 'private')
+  const job = noteJob({ roomId: 'room', sectionId: 'ch5', clientId: 'cid', body: 'Hello', replyTo: null, createdAt: '2026-11-13T10:00:00Z' }, 'private')
 
   it('shows a note at once at the level she chose, and carries the level in the job’s payload', () => {
     expect(job.payload).toEqual({ visibility: 'private' })

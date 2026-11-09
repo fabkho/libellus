@@ -245,8 +245,8 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     // A recording that waited too long is not sent: its object may be swept already (`VOICE_QUEUE_MAX_AGE_MS`); she records it again.
     if (voice && Date.now() - Date.parse(job.createdAt) > VOICE_QUEUE_MAX_AGE_MS) return { ok: false, retry: false, error: 'message_voice_missing', field: null }
     const answer = voice
-      ? await r.sendVoice({ readId: job.conversationId, sectionId: job.threadId, clientId: job.clientId, media: voice, replyTo: job.replyTo, spoiler: job.spoiler })
-      : await r.post({ readId: job.conversationId, sectionId: job.threadId, clientId: job.clientId, body: job.body, replyTo: job.replyTo, spoiler: job.spoiler })
+      ? await r.sendVoice({ readId: job.conversationId, sectionId: job.threadId, clientId: job.clientId, media: voice, replyTo: job.replyTo })
+      : await r.post({ readId: job.conversationId, sectionId: job.threadId, clientId: job.clientId, body: job.body, replyTo: job.replyTo })
     // She was gone in the meantime: nothing of the answer is shown to the next member (the line itself is stopped).
     if (stale(since)) return { ok: false, retry: true, error: 'offline' }
     if (answer.error) {
@@ -366,14 +366,14 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
    * Writes a message: a bubble at once, the queue sends it. The room is `sectionId` null. A text with nothing to read is not sent
    * (the database would refuse it as `message_body_invalid`, and she should not wait to hear it). The screen words the codes.
    */
-  async function send(readId: string, sectionId: string | null, body: string, { replyTo = null, spoiler = false }: { replyTo?: string | null; spoiler?: boolean } = {}): Promise<BuddySend> {
+  async function send(readId: string, sectionId: string | null, body: string, { replyTo = null }: { replyTo?: string | null } = {}): Promise<BuddySend> {
     const member = me.value
     if (!member) return { ok: false, error: 'not_signed_in' }
     if (!/[^\s\u00a0\u200b\p{Cc}]/u.test(body) || body.length > 2000) return { ok: false, error: 'message_body_invalid' }
     const since = epoch
     await ensureQueue()
     if (stale(since) || !queue) return { ok: false, error: 'not_signed_in' }
-    const job: SendJob = { conversationId: readId, threadId: sectionId, clientId: newId(), kind: 'text', body, replyTo, spoiler: sectionId === null ? false : spoiler, createdAt: new Date().toISOString() }
+    const job: SendJob = { conversationId: readId, threadId: sectionId, clientId: newId(), kind: 'text', body, replyTo, spoiler: false, createdAt: new Date().toISOString() }
     mergeBubble(thread(readId, sectionId).messages, pendingBubble(job, member, nameOf(readId, member)))
     queue!.enqueue(buddySendKey(job.clientId), job)
     return { ok: true, clientId: job.clientId }
@@ -398,13 +398,13 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
 
   /**
    * Sends a finished recording (the composer's `voice`): refused here when it is too short, too big or of a type the bucket does not take; otherwise a bubble
-   * at once, stored in the bucket, then posted through the line. The same Section, answer and spoiler mark as a text. The screen words the codes.
+   * at once, stored in the bucket, then posted through the line. The same Section and answer as a text. The screen words the codes.
    */
   async function sendVoice(
     readId: string,
     sectionId: string | null,
     voice: PreparedVoice,
-    { replyTo = null, spoiler = false }: { replyTo?: string | null; spoiler?: boolean } = {},
+    { replyTo = null }: { replyTo?: string | null } = {},
   ): Promise<BuddySend> {
     const member = me.value
     if (!member) return { ok: false, error: 'not_signed_in' }
@@ -415,7 +415,7 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     if (stale(since) || !queue) return { ok: false, error: 'not_signed_in' }
     const clientId = newId()
     const job = voiceJob(
-      { conversationId: readId, threadId: sectionId, clientId, replyTo, spoiler: sectionId === null ? false : spoiler, createdAt: new Date().toISOString() },
+      { conversationId: readId, threadId: sectionId, clientId, replyTo, createdAt: new Date().toISOString() },
       { mime: prepared.mime, durationMs: prepared.durationMs, peaks: prepared.peaks },
     )
     previews.value[clientId] = URL.createObjectURL(voice.blob)

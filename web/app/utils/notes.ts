@@ -44,14 +44,15 @@ export type NoteBubble = NoteMessage & { state: 'sent' | 'sending' | 'failed'; e
 export const sentNote = (note: NoteMessage): NoteBubble => ({ ...note, state: 'sent', error: null })
 
 /** What a queue job carries of a note: its audience rides in the job's `payload`. */
-export const noteJob = (base: { roomId: string; sectionId: string; clientId: string; body: string; replyTo: string | null; spoiler: boolean; createdAt: string }, visibility: NoteVisibility): SendJob => ({
+export const noteJob = (base: { roomId: string; sectionId: string; clientId: string; body: string; replyTo: string | null; createdAt: string }, visibility: NoteVisibility): SendJob => ({
   conversationId: base.roomId,
   threadId: base.sectionId,
   clientId: base.clientId,
   kind: 'text',
   body: base.body,
   replyTo: base.replyTo,
-  spoiler: base.spoiler,
+  // The chat package's job still has the field; no chapter chat marks a note as a spoiler any more.
+  spoiler: false,
   payload: { visibility },
   createdAt: base.createdAt,
 })
@@ -104,7 +105,7 @@ export function pendingNote(job: SendJob, me: string, name: string | null, quote
     body: media ? '' : job.body,
     createdAt: job.createdAt,
     replyTo: job.replyTo,
-    spoiler: job.spoiler,
+    spoiler: false,
     media: null,
     voice: media ? { path: notePath(me, job.conversationId, job.clientId, media.mime), mime: media.mime, durationMs: media.durationMs, peaks: media.peaks } : null,
     author: { id: me, name, photo: null },
@@ -188,7 +189,7 @@ export type NoteThreadContext = Omit<RoomThreadContext, 'errorWord' | 'retryable
 
 /**
  * The notes the screen draws, oldest first. A chapter that is not open has none (`ctx.open`: the veil, applied here and nowhere else); a tombstone is a
- * system line; her own spoiler is never veiled from her.
+ * system line.
  */
 export function noteItems(bubbles: readonly NoteBubble[], ctx: NoteThreadContext): NoteItem[] {
   const items = roomItems(bubbles, { ...ctx, errorWord: (code) => ctx.errorWord(code as NoteErrorCode), retryable: (code) => ctx.retryable(code as NoteErrorCode) })
@@ -201,10 +202,10 @@ export function noteItems(bubbles: readonly NoteBubble[], ctx: NoteThreadContext
 }
 
 /** The words a quote needs that are the app's. */
-export type NoteQuoteWords = { deleted: string; spoiler: string; someone: string; you: string; hidden: string; voice: string }
+export type NoteQuoteWords = { deleted: string; someone: string; you: string; hidden: string; voice: string }
 
 /**
- * The quote over a note, as the base draws it. A note she can read quotes its author and first words (a spoiler gives none away); the other two shapes
+ * The quote over a note, as the base draws it. A note she can read quotes its author and first words; the other two shapes
  * have no id, so the base does not offer a jump to them: `hidden` ("A note you can't see") and `removed`. Which of the three is the server's call;
  * a note still on its way has only the id it answers, found among the items.
  */
@@ -214,18 +215,18 @@ export function noteQuoteOf(item: Pick<NoteItem, 'quote' | 'replyTo'>, items: re
   if (quote?.kind === 'removed') return { id: null, mine: false, name: '', preview: words.deleted }
   if (quote?.kind === 'note') {
     const present = items.some((i) => i.id === quote.id)
-    return { id: present ? quote.id : null, mine: quote.author.id === me, name: quote.author.id === me ? words.you : (quote.author.name?.trim() || words.someone), preview: quote.spoiler ? words.spoiler : quote.voice ? words.voice : quote.excerpt }
+    return { id: present ? quote.id : null, mine: quote.author.id === me, name: quote.author.id === me ? words.you : (quote.author.name?.trim() || words.someone), preview: quote.voice ? words.voice : quote.excerpt }
   }
   if (!item.replyTo) return null
   const original = items.find((i) => i.id === item.replyTo)
   if (!original) return { id: null, mine: false, name: '', preview: words.hidden }
-  const preview = original.removed ? words.deleted : original.veiled ? words.spoiler : original.voice ? words.voice : original.body.replace(/\s+/g, ' ').trim().slice(0, 120)
+  const preview = original.removed ? words.deleted : original.voice ? words.voice : original.body.replace(/\s+/g, ' ').trim().slice(0, 120)
   return { id: original.removed ? null : original.id, mine: original.mine, name: original.mine ? words.you : (original.author ?? words.someone), preview }
 }
 
 /** The quote shown in the composer while she answers `item`: who and the first words, never more than the base draws. */
-export function replyChipOf(item: NoteItem, words: Pick<NoteQuoteWords, 'spoiler' | 'someone' | 'you' | 'voice'>): { name: string; preview: string } {
-  return { name: item.mine ? words.you : (item.author ?? words.someone), preview: item.veiled ? words.spoiler : item.voice ? words.voice : item.body.replace(/\s+/g, ' ').trim().slice(0, 120) }
+export function replyChipOf(item: NoteItem, words: Pick<NoteQuoteWords, 'someone' | 'you' | 'voice'>): { name: string; preview: string } {
+  return { name: item.mine ? words.you : (item.author ?? words.someone), preview: item.voice ? words.voice : item.body.replace(/\s+/g, ' ').trim().slice(0, 120) }
 }
 
 // ------------------------------------------------------------------ the chapter list

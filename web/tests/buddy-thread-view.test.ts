@@ -11,7 +11,7 @@ import { quoteOf, reportInput, sameAuthorRun, threadItems, type ThreadContext } 
 const bubble = (id: string, over: Partial<BuddyBubble> = {}): BuddyBubble =>
   sentBubble({ id, conversationId: 'r', threadId: 's', senderId: 'ben', clientId: `c-${id}`, kind: 'text', body: `Words of ${id}`, createdAt: `2026-11-13T10:00:00.${id.padStart(6, '0')}+00:00`, replyTo: null, spoiler: false, media: null, authorName: 'Ben', deletedAt: null, reactions: [], ...over })
 
-const ctx = (over: Partial<ThreadContext> = {}): ThreadContext => ({ me: 'ada', open: true, revealed: new Set(), nameOf: (id) => (id === 'ben' ? 'Ben' : null), errorWord: (code) => `word:${code}`, ...over })
+const ctx = (over: Partial<ThreadContext> = {}): ThreadContext => ({ me: 'ada', open: true, nameOf: (id) => (id === 'ben' ? 'Ben' : null), errorWord: (code) => `word:${code}`, ...over })
 
 describe('the veil in a thread', () => {
   it('has no message at all in a Section that is not open, whatever the store holds', () => {
@@ -20,10 +20,10 @@ describe('the veil in a thread', () => {
     expect(threadItems(held, ctx({ open: true }))).toHaveLength(2)
   })
 
-  it('veils a comment marked Spoiler for the others until it is tapped, never her own', () => {
-    const items = (revealed: string[]) => threadItems([bubble('1', { spoiler: true }), bubble('2', { spoiler: true, senderId: 'ada' })], ctx({ revealed: new Set(revealed) }))
-    expect(items([]).map((i) => i.veiled)).toEqual([true, false])
-    expect(items(['c-1']).map((i) => i.veiled)).toEqual([false, false])
+  it('draws a comment that was flagged Spoiler once (the mark is gone from the app) as any other message, with its words', () => {
+    const items = threadItems([bubble('1', { spoiler: true, body: 'The ending!' }), bubble('2', { spoiler: true, senderId: 'ada' })], ctx())
+    expect(items.map((i) => [i.kind, i.body])).toEqual([['text', 'The ending!'], ['text', 'Words of 2']])
+    expect(items.every((i) => !('veiled' in i) && !('spoiler' in i))).toBe(true)
   })
 
   it('keeps a message’s key from its bubble to its stored row (the client id), and its id null until it is stored', () => {
@@ -42,7 +42,7 @@ describe('the veil in a thread', () => {
   it('turns a deleted message into a system line with no words and no reactions: "Message removed" is drawn by the screen', () => {
     const gone = bubble('4', { deletedAt: '2026-11-13T11:00:00Z', body: 'still here?', reactions: [{ emoji: '🔥', count: 2, mine: true }], spoiler: true })
     const [item] = threadItems([gone], ctx())
-    expect(item).toMatchObject({ kind: 'system', removed: true, body: '', reactions: [], myReaction: null, veiled: false })
+    expect(item).toMatchObject({ kind: 'system', removed: true, body: '', reactions: [], myReaction: null })
   })
 
   it('names the author from the message, else from the members; a reaction of hers is her own', () => {
@@ -53,7 +53,7 @@ describe('the veil in a thread', () => {
 })
 
 describe('a quote', () => {
-  const words = { deleted: 'Message deleted', spoiler: 'Spoiler', someone: 'A reader', you: 'You' }
+  const words = { deleted: 'Message deleted', someone: 'A reader', you: 'You' }
   const items = threadItems([bubble('1', { body: '  The   ending\nwas  great ' }), bubble('2', { spoiler: true }), bubble('3', { deletedAt: 'x' }), bubble('4', { senderId: 'ada' })], ctx())
 
   it('shows who wrote it and its first words on one line', () => {
@@ -61,8 +61,7 @@ describe('a quote', () => {
     expect(quoteOf(items, '4', words)).toMatchObject({ mine: true, name: 'You' })
   })
 
-  it('gives no word of a spoiler she has not tapped, and says a removed or unknown message is gone', () => {
-    expect(quoteOf(items, '2', words)?.preview).toBe('Spoiler')
+  it('says a removed or unknown message is gone', () => {
     expect(quoteOf(items, '3', words)).toMatchObject({ id: null, preview: 'Message deleted' })
     expect(quoteOf(items, 'nowhere', words)).toMatchObject({ id: null, name: 'A reader', preview: 'Message deleted' })
     expect(quoteOf(items, null, words)).toBeNull()

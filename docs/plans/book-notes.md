@@ -29,8 +29,8 @@ directly."
 
 ## In ten lines
 
-1. **Notes** = a Book's chapters, a thread per chapter, notes, replies, reactions, spoiler marks and the veil by the reader's
-   own chapter. **Buddy read** = the same machinery plus a **private** audience (only the invited), members and invitations,
+1. **Notes** = a Book's chapters, a thread per chapter, notes, replies, reactions and the veil by the reader's
+   own chapter (no spoiler marks on single messages: decision 29). **Buddy read** = the same machinery plus a **private** audience (only the invited), members and invitations,
    the **timeline** of where everybody is, and live updates.
 2. **Two room kinds on one machinery**: a notes room per Book (Work), a buddy read its own room; shared tables for chapters,
    messages, reactions and cursors, shared thread components.
@@ -79,7 +79,7 @@ directly."
 | Piece today | Where | Becomes |
 |---|---|---|
 | Sections (a Book's parts, *The whole book* last, fractions) | `buddy_read_sections`, `private.buddy_sections_parse` | **base** (`room_sections`); for Notes they are the Book's chapters |
-| Messages: text, voice, quote (`reply_to`), spoiler mark, tombstone, delete | `buddy_messages`, `post_buddy_message`, `delete_buddy_message`, `send_buddy_voice` | **base** (`room_messages`), plus a `visibility` a message: `private`, `friends`, `public` in Notes, `members` in a buddy read |
+| Messages: text, voice, quote (`reply_to`), tombstone, delete (the `spoiler` column stays, unused: decision 29) | `buddy_messages`, `post_buddy_message`, `delete_buddy_message`, `send_buddy_voice` | **base** (`room_messages`), plus a `visibility` a message: `private`, `friends`, `public` in Notes, `members` in a buddy read |
 | Reactions (the six emoji, one per member and message) | `buddy_reactions`, `react_to_buddy_message` | **base** |
 | Read cursors and unread counts that skip veiled Sections | `buddy_section_cursors`, `buddy_read_members.last_read_at`, `private.buddy_unread`, `buddy_counts` | **base** (`room_cursors`; the room thread's cursor moves there too) |
 | Report to the owner's inbox | `report_buddy_message` → `feedback` (`kind = 'report'`) | **base** |
@@ -304,8 +304,7 @@ two rules today. Chapters, not pages, are what editions share, so a chapter list
   has finished. Not started (or not in her Library): nothing open; every chapter can still be opened with *Show anyway*.
 - **A friend behind**: Anna writes in chapter 5. Ben is on chapter 2, so on his Notes page chapter 5 is a veiled row (its
   number and a count, no faces, no new-dot); when his reading or his hand reaches 5, it opens, with its count of new notes
-  waiting. A note marked *Spoiler* stays veiled inside an open chapter until he taps it, as today.
-- **Nobody sees her chapter.** In Notes no one sees anyone's position, not even friends; posting in chapter 5 says only that
+  waiting.- **Nobody sees her chapter.** In Notes no one sees anyone's position, not even friends; posting in chapter 5 says only that
   she wrote about chapter 5. The timeline of who is where is the buddy read's (part 1).
 - **The veil stays the app's**, as in buddy reads: the database answers a chapter's notes to whoever may see them, and the app
   does not ask for a veiled chapter before *Show anyway*. A courtesy between readers, not a secret.
@@ -374,8 +373,8 @@ two rules today. Chapters, not pages, are what editions share, so a chapter list
 | **Book page** | Two quiet buttons under *Update progress*: **Notes** and **Read together** (the buddy read, as today). Below them the section **Notes**, only when there is something: **From friends** (faces, "Ben and Jo · 14 notes · chapters 1–9") and **Public** (a globe, "6 notes from 3 members"), each a row to the Notes page. No pop-up, no banner, no count on the buttons | 1 |
 | **Notes page, no chapters yet** | "How many chapters does this book have?", a number with − and +, **Make 43 chapters**, one line that the list is shared and can grow | 2 |
 | **Notes page** | Hero (cover, "Notes", title, "Yours, your friends' and public · 43 chapters"), "You're on chapter 5 · Change", the chapters as the buddy room's rows (number, "Chapter k", faces of visible authors, count, new-dot), veiled rows after her chapter; ⋯ holds *Add chapters* | 3 |
-| **A chapter** | The buddy read's thread screen: bubbles with name and face; a globe and "Everyone" by the name of a public note, a lock and "Only me" under her private one; quotes ("A note you can't see" when hidden); *Spoiler* veil; the composer's chip row holds *Spoiler* and the three-way control **Only me · Friends · Everyone** (icons and a word, the app's segmented pattern, 44 px targets) | 4 |
-| **Choosing Everyone** | The control on *Everyone* and one quiet line under it: "Visible to all members of BetterReads, with your name and photo. Just this note." | 4b |
+| **A chapter** | The buddy read's thread screen: bubbles with name and face; a globe and "Everyone" by the name of a public note, a lock and "Only me" under her private one; quotes ("A note you can't see" when hidden); the audience is chosen on the composer's split send button (decision 28; the first version of this mock-up had a chip row with *Spoiler* and a three-way control, `docs/plans/notes-composer.md`) | 4 |
+| **Choosing Everyone** | The send button on *Everyone* and one quiet line over the capsule: "Visible to all members of BetterReads, with your name and photo. Just this note." | 4b |
 | **Buddy read** | The same rows and threads, plus what it adds: "with Ben and Mira", **Private · only the 3 of you**, the timeline, *Where are you?*, members and invite in ⋯. No visibility control (a buddy read is private) | 5 |
 
 ![The Book page](../images/book-notes/1-book-light-en.jpg)
@@ -476,11 +475,13 @@ edit here in the PR that changes it.
 | 20 | Narrowing a note narrows its wider replies; widening never widens replies | decided (coordinator, delegated; can be overturned) |
 | 21 | `notes_public_enabled` is on now; off before open sign-up unless moderation grew | decided (coordinator, delegated; can be overturned) |
 | 22 | A public note shows its author's name and photo to every member who sees it | decided (coordinator, delegated; can be overturned) |
-| 23 | The line under *Everyone* shows whenever it is selected; no sheet | decided (coordinator, delegated; can be overturned) |
+| 23 | The line over the field shows whenever *Everyone* is selected; no sheet | decided (coordinator, delegated; can be overturned) |
 | 24 | The Book page shows *From friends* and *Public* as two quiet rows; her own notes are not counted there | decided (coordinator, delegated; can be overturned) |
 | 25 | Moderation minimum: report at every level, block from a note, owner removal with a 12-month record | decided (coordinator, delegated; can be overturned) |
 | 26 | Limits: 30 notes a minute, 300 a day, 30 public a day, 20 chapter changes a day | decided (coordinator, delegated; can be overturned) |
 | 27 | A deleted note leaves "Note removed" (as in buddy reads) | decided (coordinator, delegated; can be overturned) |
+| 28 | The audience is chosen on the composer's split send button (the tab opens Only me / Friends / Everyone; the button's icon and tone are the cue), not in a row over the field (`docs/plans/notes-composer.md`, V3) | owner's decision |
+| 29 | No spoiler marks on single messages in chapter chats, in Notes and in buddy-read Sections: a chapter is opened to be read; the chapter veil by the reader's own position stays; the `spoiler` column and the `p_spoiler` parameters stay for compatibility and are ignored | owner's decision |
 
 **Most worth the owner's later look:** 22 (his photo goes to every member on a public note), 21 (Everyone on now, and the rule
 for open sign-up), 6 and 7 (the chapter estimate and that the hand wins both ways), 13 (re-basing the live buddy read), 4, 19

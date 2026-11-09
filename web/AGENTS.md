@@ -48,7 +48,7 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
     (`utils/bookPreview.ts`), so the page's hero is drawn in the first frame and the rest waits in placeholders of its size
     (docs/MOTION.md, "A book opens at once"). A Book in her Library needs none.
 - **The shared chat package** (fabkho/chat, a Nuxt layer of chat logic; `@fabkho/chat` pinned to a tag in `package.json`,
-  never a branch; its README: `node_modules/@fabkho/chat/README.md`) is the send queue, threads and chapters, the spoiler
+  never a branch; its README: `node_modules/@fabkho/chat/README.md`) is the send queue, threads and chapters, the chapter
   veil, photo and GIF helpers and a Realtime core, framework-free behind an adapter. Taken in `chat.config.ts`
   (`extends`, the last layer; `CHAT_LAYER=/path/to/chat-checkout` points at a local checkout, and `#layers/chat`, which
   the Vitest alias follows, too); `tests/chat-layer.test.ts` keeps it registered once and the app's names the app's.

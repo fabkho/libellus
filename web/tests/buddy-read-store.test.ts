@@ -45,7 +45,7 @@ const at = (n: number) => new Date(Date.UTC(2026, 10, 13, 10, 0, 0, n)).toISOStr
 const card = (id: string) => ({ id, name: id.toUpperCase(), photo: null })
 const row = (over: Message): Message => ({
   id: `m${++server.clock}`, section_id: null, author: { id: BEN, name: 'BEN' }, client_id: crypto.randomUUID(), kind: 'text', body: 'Hello', media_url: null, media_width: null, media_height: null,
-  reply_to: null, spoiler: false, created_at: at(server.clock), deleted_at: null, reactions: [], ...over,
+  reply_to: null, created_at: at(server.clock), deleted_at: null, reactions: [], ...over,
 })
 const readJson = () => ({
   id: READ,
@@ -73,7 +73,7 @@ const backend = {
         await server.gate
         const same = server.messages.find((m) => m.client_id === args.p_client_id)
         server.during?.()
-        const made = same ?? row({ section_id: args.p_section, author: { id: ME, name: 'ADA' }, client_id: args.p_client_id, body: args.p_body, spoiler: args.p_spoiler, reply_to: args.p_reply_to })
+        const made = same ?? row({ section_id: args.p_section, author: { id: ME, name: 'ADA' }, client_id: args.p_client_id, body: args.p_body, reply_to: args.p_reply_to })
         if (!same) server.messages.push(made)
         return { data: made, error: null, status: 200 }
       }
@@ -82,7 +82,7 @@ const backend = {
         await server.gate
         const same = server.messages.find((m) => m.client_id === args.p_client_id)
         const made = same ?? row({
-          section_id: args.p_section, author: { id: ME, name: 'ADA' }, client_id: args.p_client_id, kind: 'voice', body: '', spoiler: args.p_spoiler, reply_to: args.p_reply_to,
+          section_id: args.p_section, author: { id: ME, name: 'ADA' }, client_id: args.p_client_id, kind: 'voice', body: '', reply_to: args.p_reply_to,
           voice: { path: `${READ}/${ME}/${args.p_client_id}.m4a`, mime: args.p_mime, duration_ms: args.p_duration_ms, peaks: args.p_peaks },
         })
         if (!same) server.messages.push(made)
@@ -168,7 +168,7 @@ const liveMessage = (over: Message = {}): BuddyLiveEvent => {
     type: 'message',
     message: {
       id: m.id as string, conversationId: READ, threadId: (m.section_id as string | null) ?? null, senderId: (m.author as { id: string }).id, clientId: m.client_id as string, kind: 'text', body: m.body as string,
-      createdAt: m.created_at as string, replyTo: null, spoiler: Boolean(m.spoiler), media: null, authorName: null, deletedAt: null, reactions: [],
+      createdAt: m.created_at as string, replyTo: null, spoiler: false, media: null, authorName: null, deletedAt: null, reactions: [],
     },
   }
 }
@@ -243,37 +243,38 @@ describe('sending', () => {
     await buddy.load(READ)
     await buddy.openThread(READ, S1)
     const open = hold()
-    const sent = await buddy.send(READ, S1, 'First thought', { spoiler: true })
+    const sent = await buddy.send(READ, S1, 'First thought')
     expect(sent.ok).toBe(true)
     // At once: before the database has answered.
     const [bubble] = buddy.messagesOf(READ, S1)
-    expect(bubble).toMatchObject({ body: 'First thought', senderId: ME, state: 'sending', spoiler: true })
+    expect(bubble).toMatchObject({ body: 'First thought', senderId: ME, state: 'sending' })
     open()
     await settle()
     const list = buddy.messagesOf(READ, S1)
     expect(list).toHaveLength(1)
     expect(list[0]).toMatchObject({ state: 'sent', error: null, body: 'First thought', clientId: (sent as { clientId: string }).clientId, id: 'm1', authorName: 'ADA' })
     expect(posts()).toHaveLength(1)
-    expect(posts()[0]!.args).toMatchObject({ p_read: READ, p_section: S1, p_kind: 'text', p_body: 'First thought', p_spoiler: true })
+    expect(posts()[0]!.args).toMatchObject({ p_read: READ, p_section: S1, p_kind: 'text', p_body: 'First thought' })
+    // The spoiler mark is gone from the app: the argument is not sent (the database's default is false).
+    expect(posts()[0]!.args).not.toHaveProperty('p_spoiler')
     expect(buddy.waiting).toBe(0)
     // It counts in the thread, and her own message is never new to her (she was looking at it, too).
     expect(buddy.countsOf(READ, S1)).toMatchObject({ count: 4, unread: 0 })
   })
 
-  it('keeps what she sent in the order she sent it, after the stored rows, and sends the room’s without a spoiler', async () => {
+  it('keeps what she sent in the order she sent it, after the stored rows', async () => {
     const buddy = await store()
     await buddy.load(READ)
     server.messages.push(row({ body: 'Already there' }))
     await buddy.openThread(READ, null)
     const open = hold()
-    await buddy.send(READ, null, 'one', { spoiler: true })
+    await buddy.send(READ, null, 'one')
     await buddy.send(READ, null, 'two')
     expect(buddy.messagesOf(READ, null).map((m) => [m.body, m.state])).toEqual([['Already there', 'sent'], ['one', 'sending'], ['two', 'sending']])
     open()
     await settle()
     expect(buddy.messagesOf(READ, null).map((m) => [m.body, m.state])).toEqual([['Already there', 'sent'], ['one', 'sent'], ['two', 'sent']])
     expect(posts().map((c) => c.args.p_body)).toEqual(['one', 'two'])
-    expect(posts()[0]!.args.p_spoiler).toBe(false)
   })
 
   it('merges the live echo of her own message with its bubble: never two', async () => {
@@ -936,18 +937,19 @@ describe('a voice message', () => {
     const buddy = await store()
     await buddy.load(READ)
     await buddy.openThread(READ, S1)
-    const sent = await buddy.sendVoice(READ, S1, recording(), { spoiler: true })
+    const sent = await buddy.sendVoice(READ, S1, recording())
     expect(sent.ok).toBe(true)
     const clientId = (sent as { clientId: string }).clientId
     // At once: her bubble, sending, a voice with the name its object will have, and a copy of it on the device.
     const [bubble] = buddy.messagesOf(READ, S1)
-    expect(bubble).toMatchObject({ kind: 'voice', body: '', state: 'sending', senderId: ME, spoiler: true, voice: { path: `${READ}/${ME}/${clientId}.m4a`, mime: 'audio/mp4', durationMs: 3_200, peaks: [10, 80, 100, 30] } })
+    expect(bubble).toMatchObject({ kind: 'voice', body: '', state: 'sending', senderId: ME, voice: { path: `${READ}/${ME}/${clientId}.m4a`, mime: 'audio/mp4', durationMs: 3_200, peaks: [10, 80, 100, 30] } })
     expect(buddy.previewOf(clientId)).toMatch(/^blob:/)
     await settle()
     // The sound went to the private bucket under that name, with its type, before anything was posted.
     expect(server.uploads).toEqual([{ bucket: 'buddy-voice', path: `${READ}/${ME}/${clientId}.m4a`, type: 'audio/mp4', blobType: 'audio/mp4', cache: '0' }])
     expect(voicePosts()).toHaveLength(1)
-    expect(voicePosts()[0]!.args).toMatchObject({ p_read: READ, p_section: S1, p_client_id: clientId, p_mime: 'audio/mp4', p_duration_ms: 3_200, p_peaks: [10, 80, 100, 30], p_spoiler: true })
+    expect(voicePosts()[0]!.args).toMatchObject({ p_read: READ, p_section: S1, p_client_id: clientId, p_mime: 'audio/mp4', p_duration_ms: 3_200, p_peaks: [10, 80, 100, 30] })
+    expect(voicePosts()[0]!.args).not.toHaveProperty('p_spoiler')
     expect(posts()).toHaveLength(0)
     const list = buddy.messagesOf(READ, S1)
     expect(list).toHaveLength(1)
@@ -987,13 +989,13 @@ describe('a voice message', () => {
     expect(voicePosts()).toHaveLength(1)
   })
 
-  it('answers a message, in the room, with no spoiler outside a Section', async () => {
+  it('answers a message, in the room', async () => {
     const buddy = await store()
     await buddy.load(READ)
     await buddy.openThread(READ, null)
-    await buddy.sendVoice(READ, null, recording(), { replyTo: 'm9', spoiler: true })
+    await buddy.sendVoice(READ, null, recording(), { replyTo: 'm9' })
     await settle()
-    expect(voicePosts()[0]!.args).toMatchObject({ p_section: null, p_reply_to: 'm9', p_spoiler: false })
+    expect(voicePosts()[0]!.args).toMatchObject({ p_section: null, p_reply_to: 'm9' })
   })
 
   it('refuses a slip of the finger, a file that is too big and a type the bucket does not take before anything is stored', async () => {

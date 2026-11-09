@@ -23,7 +23,7 @@ import { quoteOf, threadItems, VOICE_UNSIGNED, type ThreadContext } from '@/util
  * Voice messages in a buddy read, the parts that need no stack (the rules through the database are tests/buddy-voice-db.test.ts and
  * supabase/tests/buddy_voice_test.sql; the store's send is tests/buddy-read-store.test.ts): what a recording is held to before it is sent, the
  * name of its object (the database works out the same one), how a row, a live event and a queue job become a voice message, how the thread
- * draws one (a placeholder URL until she presses play, a veiled one has no sound, a tombstone nothing) and what a quote of one says.
+ * draws one (a placeholder URL until she presses play, a tombstone nothing) and what a quote of one says.
  */
 
 const READ = '11111111-1111-4111-8111-111111111111'
@@ -126,7 +126,6 @@ describe('a voice message from a row, a live event and the line', () => {
     media_height: null,
     voice: { path: `${READ}/${ADA}/${CLIENT}.m4a`, mime: 'audio/mp4', duration_ms: 5400, peaks: [10, 40, 100] },
     reply_to: null,
-    spoiler: false,
     created_at: '2026-11-14T10:00:00.000000+00:00',
     deleted_at: null,
     reactions: [],
@@ -152,15 +151,14 @@ describe('a voice message from a row, a live event and the line', () => {
       media_height: null,
       voice: { mime: 'audio/webm', duration_ms: 2000, peaks: [5, 6] },
       reply_to: null,
-      spoiler: false,
       created_at: '2026-11-14T10:00:00.000000+00:00',
     })
     expect(event).toMatchObject({ type: 'message', message: { kind: 'voice', voice: { path: `${READ}/${ADA}/${CLIENT}.webm`, mime: 'audio/webm', durationMs: 2000, peaks: [5, 6] } } })
   })
 
   it('makes a queue item of a recording that carries only its type, length and waveform, never the sound', () => {
-    const job = voiceJob({ conversationId: READ, threadId: 's1', clientId: CLIENT, replyTo: 'm0', spoiler: true, createdAt: '2026-11-14T10:00:00.000Z' }, { mime: 'audio/mp4', durationMs: 5400, peaks: [1, 2, 3] })
-    expect(job).toMatchObject({ kind: 'voice', body: '', replyTo: 'm0', spoiler: true, threadId: 's1', media: { mime: 'audio/mp4', durationMs: 5400, peaks: [1, 2, 3] } })
+    const job = voiceJob({ conversationId: READ, threadId: 's1', clientId: CLIENT, replyTo: 'm0', createdAt: '2026-11-14T10:00:00.000Z' }, { mime: 'audio/mp4', durationMs: 5400, peaks: [1, 2, 3] })
+    expect(job).toMatchObject({ kind: 'voice', body: '', replyTo: 'm0', spoiler: false, threadId: 's1', media: { mime: 'audio/mp4', durationMs: 5400, peaks: [1, 2, 3] } })
     // It survives the device's storage as JSON, which is how the line keeps it across a reload.
     expect(voiceOfJob(JSON.parse(JSON.stringify(job)))).toEqual({ mime: 'audio/mp4', durationMs: 5400, peaks: [1, 2, 3] })
     expect(voiceOfJob({ ...job, kind: 'text' })).toBeNull()
@@ -169,7 +167,7 @@ describe('a voice message from a row, a live event and the line', () => {
   })
 
   it('shows the recording on its way as her voice bubble, with the name its object will have', () => {
-    const job = voiceJob({ conversationId: READ, threadId: null, clientId: CLIENT, replyTo: null, spoiler: false, createdAt: '2026-11-14T10:00:00.000Z' }, { mime: 'audio/webm', durationMs: 2000, peaks: [9] })
+    const job = voiceJob({ conversationId: READ, threadId: null, clientId: CLIENT, replyTo: null, createdAt: '2026-11-14T10:00:00.000Z' }, { mime: 'audio/webm', durationMs: 2000, peaks: [9] })
     const bubble = pendingBubble(job, ADA, 'Ada')
     expect(bubble).toMatchObject({ kind: 'voice', body: '', state: 'sending', senderId: ADA, voice: { path: `${READ}/${ADA}/${CLIENT}.webm`, durationMs: 2000 }, media: { kind: 'voice' } })
   })
@@ -184,11 +182,9 @@ describe('how the thread draws a voice message', () => {
   const ctx = (over: Partial<ThreadContext> = {}): ThreadContext => ({
     me: ADA,
     open: true,
-    revealed: new Set(),
     nameOf: (id) => (id === ADA ? 'Ada' : id === BEN ? 'Ben' : null),
     errorWord: (code) => `error:${code}`,
     previewOf: () => null,
-    voiceLabel: 'Voice message',
     ...over,
   })
   const voice = (over: Partial<BuddyBubble> = {}): BuddyBubble => ({
@@ -196,7 +192,7 @@ describe('how the thread draws a voice message', () => {
       messageFromJson(READ, {
         id: 'm1', section_id: 's1', author: { id: BEN, name: 'Ben' }, client_id: CLIENT, kind: 'voice', body: '', media_url: null, media_width: null, media_height: null,
         voice: { path: `${READ}/${BEN}/${CLIENT}.m4a`, mime: 'audio/mp4', duration_ms: 5400, peaks: [10, 40, 100] },
-        reply_to: null, spoiler: false, created_at: '2026-11-14T10:00:00.000000+00:00', deleted_at: null, reactions: [],
+        reply_to: null, created_at: '2026-11-14T10:00:00.000000+00:00', deleted_at: null, reactions: [],
       }),
     ),
     ...over,
@@ -209,14 +205,13 @@ describe('how the thread draws a voice message', () => {
       body: '',
       voice: true,
       removed: false,
-      veiled: false,
       media: { kind: 'voice', url: VOICE_UNSIGNED, path: `${READ}/${BEN}/${CLIENT}.m4a`, mime: 'audio/mp4', durationMs: 5400, peaks: [10, 40, 100], removed: false },
     })
     expect(item!.media!.url).not.toMatch(/^https?:/)
   })
 
   it('has no URL for a recording still on its way that this device has no copy of (the line restored after a reload): the play button is off until it is stored', () => {
-    const job = voiceJob({ conversationId: READ, threadId: null, clientId: CLIENT, replyTo: null, spoiler: false, createdAt: '2026-11-14T10:00:00.000Z' }, { mime: 'audio/webm', durationMs: 2000, peaks: [9] })
+    const job = voiceJob({ conversationId: READ, threadId: null, clientId: CLIENT, replyTo: null, createdAt: '2026-11-14T10:00:00.000Z' }, { mime: 'audio/webm', durationMs: 2000, peaks: [9] })
     const [item] = threadItems([pendingBubble(job, ADA, 'Ada')], ctx())
     expect(item).toMatchObject({ kind: 'media', delivery: 'sending', media: { kind: 'voice', url: null, durationMs: 2000 } })
   })
@@ -226,13 +221,8 @@ describe('how the thread draws a voice message', () => {
     expect(item).toMatchObject({ mine: true, media: { url: 'blob:local' } })
   })
 
-  it('draws a voice message marked Spoiler as a veiled bubble with no sound, until she taps it', () => {
-    const veiled = threadItems([voice({ spoiler: true })], ctx())[0]!
-    expect(veiled).toMatchObject({ kind: 'text', veiled: true, voice: true, media: null, body: 'Voice message' })
-    const revealed = threadItems([voice({ spoiler: true })], ctx({ revealed: new Set([CLIENT]) }))[0]!
-    expect(revealed).toMatchObject({ kind: 'media', veiled: false, media: { kind: 'voice' } })
-    // Her own is never veiled from her.
-    expect(threadItems([voice({ spoiler: true, senderId: ADA })], ctx())[0]).toMatchObject({ kind: 'media', veiled: false })
+  it('draws a voice message that was flagged Spoiler once as any other: a voice bubble with its sound', () => {
+    expect(threadItems([voice({ spoiler: true })], ctx())[0]).toMatchObject({ kind: 'media', voice: true, media: { kind: 'voice' } })
   })
 
   it('has nothing of a Section that is not open to her, and nothing of a deleted one but the line', () => {
@@ -247,12 +237,10 @@ describe('how the thread draws a voice message', () => {
     expect(threadItems([voice({ senderId: ADA, state: 'failed', error: 'not_found' })], ctx())[0]).toMatchObject({ permanent: true })
   })
 
-  it('quotes a voice message as "Voice message" (it has no words), and a veiled one as the spoiler it is', () => {
-    const words = { deleted: 'Deleted', spoiler: 'Spoiler', someone: 'Someone', you: 'You', voice: '🎤 Voice message' }
+  it('quotes a voice message as "Voice message" (it has no words)', () => {
+    const words = { deleted: 'Deleted', someone: 'Someone', you: 'You', voice: '🎤 Voice message' }
     const items = threadItems([voice()], ctx())
     expect(quoteOf(items, 'm1', words)).toEqual({ id: 'm1', mine: false, name: 'Ben', preview: '🎤 Voice message' })
-    const veiled = threadItems([voice({ spoiler: true })], ctx())
-    expect(quoteOf(veiled, 'm1', words)).toMatchObject({ preview: 'Spoiler' })
     const own = threadItems([voice({ senderId: ADA })], ctx())
     expect(quoteOf(own, 'm1', words)).toMatchObject({ mine: true, name: 'You', preview: '🎤 Voice message' })
   })

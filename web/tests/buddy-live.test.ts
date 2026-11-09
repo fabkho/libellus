@@ -57,7 +57,7 @@ describe('the events, as the store takes them', () => {
   it('parses the five the database sends and drops what it does not know', () => {
     const read = '11111111-1111-4111-8111-111111111111'
     const message = parseBuddyEvent('message.new', {
-      id: 'm1', buddy_read_id: read, section_id: null, author_id: 'a', client_id: 'c', kind: 'text', body: 'Hello', media_url: null, media_width: null, media_height: null, reply_to: null, spoiler: false, created_at: '2026-11-13T10:00:00.123456+00:00',
+      id: 'm1', buddy_read_id: read, section_id: null, author_id: 'a', client_id: 'c', kind: 'text', body: 'Hello', media_url: null, media_width: null, media_height: null, reply_to: null, created_at: '2026-11-13T10:00:00.123456+00:00',
     })
     expect(message).toMatchObject({ type: 'message', message: { id: 'm1', conversationId: read, threadId: null, senderId: 'a', clientId: 'c', body: 'Hello', authorName: null, deletedAt: null, reactions: [] } })
     // A tombstone's id, and the broadcast's own `id` on the others, which says nothing about the read.
@@ -113,9 +113,9 @@ describe('the real client, on the stack', () => {
 
     const section = (await buddyOf(ada).read(made.id)).data!.chapters[0]!.id
     const clientId = crypto.randomUUID()
-    const sent = (await buddyOf(ben).post({ readId: made.id, sectionId: section, clientId, body: 'Heard live', spoiler: true })).data!
+    const sent = (await buddyOf(ben).post({ readId: made.id, sectionId: section, clientId, body: 'Heard live' })).data!
     const arrived = await waitFor(() => heardOf(heard, 'message').find((e) => e.message.id === sent.id), 'message.new')
-    expect(arrived.message).toMatchObject({ conversationId: made.id, threadId: section, senderId: ben.id, clientId, kind: 'text', body: 'Heard live', spoiler: true, replyTo: null, media: null })
+    expect(arrived.message).toMatchObject({ conversationId: made.id, threadId: section, senderId: ben.id, clientId, kind: 'text', body: 'Heard live', spoiler: false, replyTo: null, media: null })
     expect(arrived.message.createdAt).toBe(sent.createdAt)
 
     // His reaction, then hers taken back (null).

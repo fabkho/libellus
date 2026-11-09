@@ -95,7 +95,7 @@ export type NotesRoom = { id: string; chapterCount: number; me: NoteMe; chapters
 export type NotesPage = { workKey: string; canWrite: boolean; room: NotesRoom | null }
 
 /** The quote of the note a reply answers: its excerpt and author when she may see it, "hidden" when she may not, "removed" for a tombstone. Never words in the last two. */
-export type NoteQuote = { kind: 'note'; id: string; author: MemberCard; excerpt: string; spoiler: boolean; /** The note is a voice note: no words, the app says "Voice message". */ voice: boolean } | { kind: 'hidden' } | { kind: 'removed' }
+export type NoteQuote = { kind: 'note'; id: string; author: MemberCard; excerpt: string; /** The note is a voice note: no words, the app says "Voice message". */ voice: boolean } | { kind: 'hidden' } | { kind: 'removed' }
 
 /** The Book page's lines: what her friends wrote (the members she follows who follow her back, at Friends or Everyone) and what strangers made public. Her own never counts. */
 export type NotesSummary = {
@@ -131,7 +131,6 @@ export type PostNote = {
   body: string
   visibility: NoteVisibility
   replyTo?: string | null
-  spoiler?: boolean
 }
 
 /** A recording that is stored (`uploadVoice`) and is to be posted (`sendVoice`): the same client id names both the object and the note. Always Only me. */
@@ -164,7 +163,7 @@ type CardJson = Parameters<typeof cardFromJson>[0]
 type MeJson = { chapter: number; finished: boolean; hand: boolean; auto: { chapter: number; finished: boolean } }
 type ChapterJson = { id: string; position: number; kind: 'part' | 'end'; count: number; unread: number; open: boolean; faces: CardJson[] | null }
 type PageJson = { workKey: string; canWrite: boolean; room: null | { id: string; chapterCount: number; me: MeJson; chapters: ChapterJson[] } }
-type QuoteJson = { hidden: true } | { removed: true } | { id: string; author: CardJson; excerpt: string; spoiler: boolean; voice?: boolean }
+type QuoteJson = { hidden: true } | { removed: true } | { id: string; author: CardJson; excerpt: string; voice?: boolean }
 type NoteJson = {
   id: string
   sectionId: string
@@ -175,7 +174,6 @@ type NoteJson = {
   kind: 'note' | 'removed' | 'moderated'
   visibility: NoteVisibility
   effectiveVisibility: NoteVisibility
-  spoiler: boolean
   createdAt: string
   quote: QuoteJson | null
   reactions: { emoji: string; count: number }[] | null
@@ -229,7 +227,7 @@ function quoteFromJson(json: QuoteJson | null | undefined): NoteQuote | null {
   if (!json) return null
   if ('hidden' in json) return { kind: 'hidden' }
   if ('removed' in json) return { kind: 'removed' }
-  return { kind: 'note', id: json.id, author: cardFromJson(json.author), excerpt: json.excerpt, spoiler: Boolean(json.spoiler), voice: Boolean(json.voice) }
+  return { kind: 'note', id: json.id, author: cardFromJson(json.author), excerpt: json.excerpt, voice: Boolean(json.voice) }
 }
 
 /** A note of a room as the layer's record and what the app adds. `roomId` is the room's id: a note's answer does not carry it. */
@@ -247,7 +245,8 @@ export function noteFromJson(roomId: string, json: NoteJson): NoteMessage {
     body: gone ? '' : (json.body ?? ''),
     createdAt: json.createdAt,
     replyTo: quote && quote.kind === 'note' ? quote.id : null,
-    spoiler: Boolean(json.spoiler),
+    // The chat package's record still has the field; no chapter chat marks a note as a spoiler any more, so it is never set (and the server's flag is not read).
+    spoiler: false,
     media: null,
     voice,
     author: cardFromJson(json.author),
@@ -328,7 +327,6 @@ export function createNotes(client: SupabaseClient, { online = () => true }: Not
           p_body: input.body,
           p_visibility: input.visibility,
           p_reply_to: input.replyTo ?? null,
-          p_spoiler: input.spoiler ?? false,
         },
         (row) => noteFromJson(input.roomId, row),
       ),

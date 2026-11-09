@@ -19,7 +19,7 @@ export {
   type ThreadItem,
 } from '~/utils/roomThread'
 
-/** What the thread needs of the screen: who she is, whether the Section is open to her, the spoilers she tapped, the words. */
+/** What the thread needs of the screen: who she is, whether the Section is open to her, the words. */
 export type ThreadContext = Omit<RoomThreadContext, 'errorWord' | 'retryable'> & {
   /** The sentence a refusal is worded with (`buddyRead.error.<code>`). */
   errorWord: (code: BuddyErrorCode) => string
@@ -27,7 +27,7 @@ export type ThreadContext = Omit<RoomThreadContext, 'errorWord' | 'retryable'> &
 
 /**
  * The messages the screen draws, oldest first. A Section that is not open has none. A tombstone becomes a system line (the base
- * breaks a run at it and the screen draws "Message removed"); her own spoiler is never veiled from her (she knows what she wrote).
+ * breaks a run at it and the screen draws "Message removed").
  */
 export function threadItems(bubbles: readonly BuddyBubble[], ctx: ThreadContext): ThreadItem[] {
   return roomItems(bubbles, { ...ctx, errorWord: (code) => ctx.errorWord(code as BuddyErrorCode), retryable: (code) => isRetryableBuddyError(code as BuddyErrorCode) })

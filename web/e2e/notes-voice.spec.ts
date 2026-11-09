@@ -9,8 +9,8 @@ import { expectAccessible, goto, signedIn, untilStill } from './support'
 
 /**
  * Voice notes, for her own private notes (docs/parity.md, *Notes, a chapter*), in Chromium with a fake microphone (`--use-fake-device-for-media-stream`, no prompt, a
- * generated tone: WebKit cannot fake one). Ida records in a chapter of the Notes and Anna, her friend, has the same chapter open: the microphone is there **only at Only me**
- * (at Friends it is gone, and back again); a recording is a private note of her own (a lock, the same words as her other private notes), stored in the private bucket
+ * generated tone: WebKit cannot fake one). Ida records in a chapter of the Notes and Anna, her friend, has the same chapter open: the microphone is there **only at Only me**, on the split send button
+ * (at Friends or Everyone it is gone — the button shows Send — and back again); a recording is a private note of her own (a lock, the same words as her other private notes), stored in the private bucket
  * `note-voice`; after a reload nothing of the sound is asked of the bucket until she presses play (then one URL is signed, and the sound is fetched); Anna sees no note,
  * no count and no sound and asks the bucket for nothing; it can't be widened (the sheet shows Only me alone and says why; the database refuses too); deleting it leaves a
  * tombstone, queues the object, and once the sweep has run (the Edge Function's work) it is not in the bucket. Then a hold of the microphone, a send without a
@@ -36,6 +36,18 @@ const options = (): BrowserContextOptions => ({
   serviceWorkers: 'block',
   permissions: ['microphone'],
 })
+
+/** Opens the split send button's tab and chooses the audience (the tab keeps the field's focus; the menu closes on the choice). */
+async function chooseLevel(page: Page, level: 'private' | 'friends' | 'public') {
+  await page.getByTestId('notesThread.sendAs').click()
+  await page.getByTestId(`notesThread.sendAs.${level}`).click()
+  await expect(page.getByTestId('notesThread.sendAsMenu')).toHaveCount(0)
+}
+
+/** The audience the note will be sent with, as the button itself says it. */
+async function expectLevel(page: Page, level: 'private' | 'friends' | 'public') {
+  await expect(page.getByTestId('notesThread.sendAs')).toHaveAttribute('aria-label', `${en.uiText.chat.composer.sendAs}: ${en.notes.level[level]}`)
+}
 
 const MIC = 'notesThread.record'
 const voices = (page: Page) => page.getByTestId('notesThread.voice')
@@ -93,20 +105,22 @@ test('Ida records a private voice note: the microphone is there only at Only me;
     const idaAsked = watchBucket(ida, NOTE_VOICE_BUCKET)
     await goto(ida, thread)
     await expect(ida.getByTestId('notesThread.screen')).toHaveAttribute('data-status', 'ready')
-    await expect(ida.getByTestId('notesThread.level.friends')).toHaveAttribute('aria-checked', 'true')
+    await expectLevel(ida, 'friends')
     await expect(ida.getByTestId(MIC)).toHaveCount(0)
-    await ida.getByTestId('notesThread.level.private').click()
+    await chooseLevel(ida, 'private')
+    await expectLevel(ida, 'private')
     await expect(ida.getByTestId(MIC)).toBeVisible()
     await expect(ida.getByTestId(MIC)).toHaveAccessibleName(en.uiText.chat.voice.record)
-    await ida.getByTestId('notesThread.level.friends').click()
+    // (Everyone is not on offer in this flow: the owner's switch is off here. book-notes.spec.ts asserts that Everyone has no microphone either.)
+    await chooseLevel(ida, 'friends')
     await expect(ida.getByTestId(MIC)).toHaveCount(0)
-    await ida.getByTestId('notesThread.level.private').click()
+    await chooseLevel(ida, 'private')
     await expect(ida.getByTestId(MIC)).toBeVisible()
 
-    // A tap starts the recording: the scope row is not there while it runs (it cannot change under it); ✕ throws it away and nothing is stored.
+    // A tap starts the recording: the button's tab is away while it runs (the audience cannot change under it); ✕ throws it away and nothing is stored.
     await ida.getByTestId(MIC).click()
     await expect(ida.getByTestId('notesThread.recorder')).toBeVisible()
-    await expect(ida.getByTestId('notesThread.level.friends')).toHaveCount(0)
+    await expect(ida.getByTestId('notesThread.sendAs')).toHaveCount(0)
     await expect(ida.getByTestId('notesThread.voiceTimer')).not.toHaveText('0:00', { timeout: 5_000 })
     await ida.getByTestId('notesThread.voiceCancel').click()
     await expect(ida.getByTestId('notesThread.recorder')).toHaveCount(0)
@@ -132,8 +146,8 @@ test('Ida records a private voice note: the microphone is there only at Only me;
     expect(stored!.voice_object).toMatch(new RegExp(`^${idaMember.id}/${room.id}/[0-9a-f-]{36}\\.(m4a|webm)$`))
     expect(stored!.voice_duration_ms).toBeGreaterThan(1_900)
     expect(await objectInBucket(stored!.voice_object!, NOTE_VOICE_BUCKET)).toBe(true)
-    // The scope is back to what it was: the recording did not change it.
-    await expect(ida.getByTestId('notesThread.level.private')).toHaveAttribute('aria-checked', 'true')
+    // The audience is back to what it was: the recording did not change it, and the note it made is Only me.
+    await expectLevel(ida, 'private')
 
     // After a reload nothing of the sound is asked of the bucket: the thread shows the bubble, its length and waveform, and the play button is on.
     const reloaded = watchBucket(ida, NOTE_VOICE_BUCKET)
@@ -210,7 +224,7 @@ test('Ida records a private voice note: the microphone is there only at Only me;
   }
 })
 
-test('hold the microphone to record: let go sends one private voice note, slide left throws it away; and it is not offered at Friends, with an answer or to a note that is not hers @full', { tag: '@full' }, async ({ page: ida }) => {
+test('hold the microphone to record: let go sends one private voice note, slide left throws it away; and it is not offered at Friends, with an answer, or to a note that is not hers @full', { tag: '@full' }, async ({ page: ida }) => {
   test.setTimeout(120_000)
   const idaMember = await signedIn(ida)
   const bookId = await shelveBook(idaMember, sharedBook('The Voice Hold Flow'), 'reading')
@@ -220,7 +234,7 @@ test('hold the microphone to record: let go sends one private voice note, slide 
   await writeNote(idaMember, room, first.id, 'A friends note of mine', 'friends')
   await goto(ida, `/notes/${bookId}/1`)
   await expect(ida.getByTestId('notesThread.screen')).toHaveAttribute('data-status', 'ready')
-  await ida.getByTestId('notesThread.level.private').click()
+  await chooseLevel(ida, 'private')
   const mic = ida.getByTestId(MIC)
   await expect(mic).toBeVisible()
   await expect(mic).toHaveAccessibleDescription(en.uiText.chat.voice.recordHint)
@@ -271,7 +285,7 @@ test('a send without a connection is told plainly, waits for a tap and is stored
   await makeChapters(idaMember, bookId, 3)
   await goto(ida, `/notes/${bookId}/1`)
   await expect(ida.getByTestId('notesThread.screen')).toHaveAttribute('data-status', 'ready')
-  await ida.getByTestId('notesThread.level.private').click()
+  await chooseLevel(ida, 'private')
 
   await ida.getByTestId(MIC).click()
   await expect(ida.getByTestId('notesThread.voiceTimer')).toHaveAttribute('data-ms', /^[2-9]\d{3}$/, { timeout: 10_000 })

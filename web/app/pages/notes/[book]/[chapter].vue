@@ -4,9 +4,10 @@
 // in the queue, day separators, runs by author, earlier pages on scrolling up, a quote and a swipe to answer. What a note adds to a buddy read's message is its **audience**:
 // - **marks**: a globe and "Everyone" in the bubble's sender line of a public note (others' and hers), a lock and "Only me" under her private one, nothing for Friends. While the owner's switch for
 //   Everyone is off a public note counts as a friends' note: no globe, and her own says "Everyone · paused" in its action bar.
-// - **the three-way control** beside the *Spoiler* chip: Only me · Friends · Everyone (components/notes/LevelPicker.vue; two segments without the switch). A new note starts at the level the device
-//   remembers (Only me or Friends); Everyone is for one note, the control returns to the remembered level after it is sent, and the one quiet line "Visible to all members of BetterReads, with your
-//   name and photo. Just this note." stands under it while it is on Everyone. A reply starts at the narrower of its parent's level and the remembered one and cannot be wider than the note it answers.
+// - **the split send button** (`UiComposer` `sendOptions`, @fabkho/ui 0.13): the tab beside send opens the menu Only me · Friends · Everyone (two items without the switch; a reply's wider levels are off, with the reason), the
+//   send button itself shows the chosen audience (glyph, tone and, for the marked ones, its word) before anything is sent, so nothing about it can fold away with the keyboard. A new note starts at the level the device
+//   remembers (Only me or Friends); Everyone is for one note, the button returns to the remembered level after it is sent, and the one quiet line "Visible to all members of BetterReads, with your
+//   name and photo. Just this note." stands over the capsule while it is on Everyone. A reply starts at the narrower of its parent's level and the remembered one and cannot be wider than the note it answers.
 // - **the action bar**: the six reactions, Reply, Copy; on her note **Who can see this** and **Delete**; on another's **Report** (the sheet of the buddy read, to the owner) and **Block {name}**.
 // - **quotes**: the server's word: the author and first words, "A note you can't see" for a note she may not read, "Note removed" for a tombstone, "Voice message" for a voice note.
 // - **voice notes** (docs/parity.md, *Notes, a chapter*): the microphone is offered **only at Only me** (`voiceMaxMs`, gated by the audience: at Friends or Everyone it is gone, and the audience row is not
@@ -15,18 +16,17 @@
 //   `UiVoiceBubble` with the lock and "Only me" like her other private notes. **Nothing is signed or fetched when the thread loads**: the play button's press is taken here first (`voicePress`, capture
 //   phase) and asks the store for a URL of five minutes the first time; one voice at a time (the base's player); leaving the thread silences it. Nobody else can see a voice note, so this is only ever hers.
 // **The veil** (the app's, as in a buddy read): a chapter that is not open to her (her chapter has not reached it and she has not opened it anyway) is not read at all: this page shows the quiet
-// "hidden" screen with "Show anyway", and only her yes (a peek, kept on this device; her chapter does not move) asks the database for it. A note marked Spoiler is veiled until tapped.
+// "hidden" screen with "Show anyway", and only her yes (a peek, kept on this device; her chapter does not move) asks the database for it. There are no spoiler marks on single notes (a chapter is opened to be read).
 // Read when it opens, when the app comes back to the front and on Refresh: no Realtime (tests/notes-entry.test.ts).
 import type { BarAction } from '#layers/ui/app/components/ui/ReactionBar.vue'
 import { threadKey } from '#layers/chat/app/utils/thread'
-import { mayLoadMedia } from '#layers/chat/app/utils/veil'
 import { isRetryableNoteError, NOTE_EMOJI, type NoteErrorCode, type NoteQuote } from '~/data/notes'
 import type { ReportReason } from '~/data/buddyReads'
 import { isBookId, isChapterSegment } from '~/utils/notesRoute'
 import { chapterOfSegment, noteErrorKey, noteItems, noteQuoteOf, replyChipOf, notesPath, type NoteItem } from '~/utils/notes'
 import { sameAuthorRun, VOICE_UNSIGNED } from '~/utils/roomThread'
 import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
-import { clampToOffer, settleLevel, startLevel, type NoteLevel } from '~/utils/noteVisibility'
+import { clampToOffer, noteSendOptions, noteVoiceAllowed, settleLevel, startLevel, type NoteLevel } from '~/utils/noteVisibility'
 import { useBookStore } from '~/stores/book'
 import { useNotesStore } from '~/stores/notes'
 import { useSessionStore } from '~/stores/session'
@@ -121,13 +121,11 @@ useFocusHeading(() => missing.value || status.value === 'ready' || view.value?.v
 
 // ------------------------------------------------------------------ the notes
 
-const revealed = ref<ReadonlySet<string>>(new Set())
 const items = computed<NoteItem[]>(() =>
   room.value && chapter.value
     ? noteItems(store.messagesOf(room.value.id, chapter.value.id), {
         me: me.value,
         open: view.value?.open === true,
-        revealed: revealed.value,
         nameOf: () => null,
         previewOf: store.previewOf,
         errorWord: (code) => t(noteErrorKey(code)),
@@ -165,7 +163,6 @@ async function loadOlder(): Promise<boolean> {
 
 const quoteWords = computed(() => ({
   deleted: t('uiText.chat.reply.deleted'),
-  spoiler: t('uiText.chat.veiled.label'),
   someone: t('member.someone'),
   you: t('uiText.chat.reply.you'),
   hidden: t('notes.thread.hiddenQuote'),
@@ -182,7 +179,6 @@ useHead({ title: () => `${title.value || t('notes.title')} · ${t('app.name')}` 
 // ------------------------------------------------------------------ writing
 
 const text = ref('')
-const spoiler = ref(false)
 const replyTo = ref<NoteItem | null>(null)
 const notice = ref<string | null>(null)
 const chat = useTemplateRef<{ jumpTo: (id: string) => Promise<void>; toNewest: () => void }>('chat')
@@ -191,7 +187,22 @@ const chat = useTemplateRef<{ jumpTo: (id: string) => Promise<void>; toNewest: (
 const level = ref<NoteLevel>(clampToOffer(store.remembered, store.publicEnabled))
 /** What a reply may not be wider than: the note it answers, as it shows to her. */
 const parentLevel = computed<NoteLevel | null>(() => (replyTo.value ? replyTo.value.effectiveVisibility : null))
-const heldBack = computed(() => parentLevel.value !== null && parentLevel.value !== 'public')
+/** The menu of the split send button: what each audience means, and why a wider one is off while she answers a narrower note. */
+const sendOptions = computed(() =>
+  noteSendOptions(publicEnabled.value, parentLevel.value, {
+    levels: {
+      private: { label: t('notes.level.private'), hint: t('notes.level.privateHint') },
+      friends: { label: t('notes.level.friends'), hint: t('notes.level.friendsHint') },
+      public: { label: t('notes.level.public'), hint: t('notes.level.publicHint') },
+    },
+    heldBack: t('notes.level.heldBack'),
+  }),
+)
+/** `v-model:send-as` of the composer: the audience of the note she is writing (a value the menu does not know is not taken). */
+const sendAs = computed<string>({
+  get: () => level.value,
+  set: (next) => chooseLevel(next as NoteLevel),
+})
 
 function startAgain() {
   level.value = settleLevel(startLevel(store.remembered, parentLevel.value), store.publicEnabled, parentLevel.value)
@@ -213,8 +224,7 @@ function quoteOfReply(item: NoteItem | null): NoteQuote | null {
     kind: 'note',
     id: item.id,
     author: { id: item.authorId ?? '', name: item.author, photo: null },
-    excerpt: item.veiled || item.voice ? '' : item.body.replace(/\s+/g, ' ').trim().slice(0, 140),
-    spoiler: item.spoiler,
+    excerpt: item.voice ? '' : item.body.replace(/\s+/g, ' ').trim().slice(0, 140),
     voice: item.voice,
   }
 }
@@ -223,27 +233,31 @@ async function send() {
   const body = text.value
   if (!body.trim() || !room.value || !chapter.value) return
   notice.value = null
-  const sent = await store.send(room.value.id, chapter.value.id, body, level.value, { replyTo: replyTo.value?.id ?? null, spoiler: spoiler.value, quote: quoteOfReply(replyTo.value) })
+  const sent = await store.send(room.value.id, chapter.value.id, body, level.value, { replyTo: replyTo.value?.id ?? null, quote: quoteOfReply(replyTo.value) })
   if (!sent.ok) {
     notice.value = t(noteErrorKey(sent.error))
     return
   }
   text.value = ''
   replyTo.value = null
-  spoiler.value = false
   // Everyone was for this note: the control is back on what the device remembers.
   level.value = clampToOffer(store.remembered, store.publicEnabled)
   chat.value?.toNewest()
 }
 
-/** What a recording may answer: nothing, or her own private note (the database takes no other). */
-const voiceMaxMs = computed(() => (level.value === 'private' && (!replyTo.value || (replyTo.value.mine && replyTo.value.visibility === 'private')) ? VOICE_MAX_MS : undefined))
+/**
+ * The microphone: only while the split send button is on **Only me**, and only when the note is new or answers her own live private note (`noteVoiceAllowed`, tested in
+ * Node). At Friends or Everyone the field is not offered a recording, so the capsule shows Send; an option that is not Only me takes the microphone away.
+ */
+const voiceMaxMs = computed(() =>
+  noteVoiceAllowed(sendAs.value as NoteLevel, replyTo.value ? { mine: replyTo.value.mine, visibility: replyTo.value.visibility as NoteLevel, removed: replyTo.value.removed } : null) ? VOICE_MAX_MS : undefined,
+)
 
 /** A finished recording from the composer: a private voice note, a bubble at once (`store.sendVoice`). A refusal (too short, too big) is said above the thread. */
 async function sendVoice(voice: PreparedVoice) {
   if (!room.value || !chapter.value) return
-  // Only me is the one audience of a recording: the microphone is not offered anywhere else, and one that arrives anyway is not posted.
-  if (level.value !== 'private') {
+  // Only me is the one audience of a recording: the microphone is not offered anywhere else, and one that arrives anyway (the option changed under a recording) is not posted.
+  if (!noteVoiceAllowed(sendAs.value as NoteLevel, replyTo.value ? { mine: replyTo.value.mine, visibility: replyTo.value.visibility as NoteLevel, removed: replyTo.value.removed } : null)) {
     notice.value = t(noteErrorKey('voice_private_only'))
     return
   }
@@ -269,9 +283,6 @@ async function react(noteId: string, emoji: string) {
   if (!room.value || !chapter.value) return
   const failed = await store.react(room.value.id, chapter.value.id, noteId, emoji)
   notice.value = failed ? t(noteErrorKey(failed)) : null
-}
-function reveal(key: string) {
-  revealed.value = new Set([...revealed.value, key])
 }
 function answer(key: string) {
   const item = byKey.value.get(key)
@@ -380,7 +391,8 @@ function voicePress(event: MouseEvent) {
   if (!item?.voice || item.delivery !== 'sent' || !item.media?.path || store.previewOf(item.key)) return
   event.stopPropagation()
   event.preventDefault()
-  if (!mayLoadMedia(item, view.value?.open === true, revealed.value.has(item.key))) return
+  // Nothing of a chapter that is not open to her is fetched: the thread's veil, one step stricter than the press itself.
+  if (view.value?.open !== true) return
   const now = Date.now()
   const before = lastPress.get(item.key)
   const canLike = !!item.id && event.detail > 0
@@ -522,7 +534,6 @@ function back() {
         :actions="actionsOf(noteOf(item))"
         :reacting="reacting"
         :placement="placement"
-        :veiled="noteOf(item).veiled"
         testid="notesThread"
         @react-open="openReactions"
         @react-close="closeReactions"
@@ -530,7 +541,6 @@ function back() {
         @action="action"
         @reply="answer"
         @retry="retry"
-        @reveal="reveal"
         @quote-tap="(id: string) => chat?.jumpTo(id)"
       >
         <!-- Who wrote it, and a public note's globe: "Mira K. 🌐 Everyone" (hers: the mark alone, at her side). -->
@@ -600,10 +610,12 @@ function back() {
     </template>
 
     <template #composer>
-      <!-- The line under the control while it is on Everyone: it describes the state, it does not nag (no sheet, no dialog). -->
+      <!-- The line over the capsule while the note is on Everyone: it describes the state, it does not nag (no sheet, no dialog). -->
       <p v-if="level === 'public'" class="mx-auto max-w-prose px-xl pb-xs text-center text-footnote text-ink-muted" role="status" data-testid="notes.level.notice">{{ t('notes.level.publicNotice') }}</p>
       <UiComposer
         v-model="text"
+        v-model:send-as="sendAs"
+        :send-options="sendOptions"
         :placeholder="isEnd ? t('notes.thread.placeholderEnd') : t('notes.thread.placeholder', { n: chapter?.position ?? '' })"
         :label="t('notes.thread.composerLabel')"
         :max="2000"
@@ -614,15 +626,7 @@ function back() {
         @voice="sendVoice"
         @voice-error="notice = $event"
         @cancel-quote="replyTo = null"
-      >
-        <template #actions>
-          <UiComposerChip :aria-pressed="spoiler" :icon="spoiler ? 'check' : 'eyeOff'" data-testid="notesThread.spoiler" @click="spoiler = !spoiler">
-            {{ t('notes.thread.spoiler') }}
-          </UiComposerChip>
-          <NotesLevelPicker class="min-w-0 flex-1" :model-value="level" :public-enabled="publicEnabled" :parent="parentLevel" testid="notesThread.level" @update:model-value="chooseLevel" />
-          <p v-if="heldBack" class="basis-full text-footnote text-ink-faint" data-testid="notesThread.levelHeld">{{ t('notes.level.heldBack') }}</p>
-        </template>
-      </UiComposer>
+      />
     </template>
 
     <UiConfirm

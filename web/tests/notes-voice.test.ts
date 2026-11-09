@@ -56,7 +56,6 @@ describe('a voice note from the database', () => {
     kind: 'note' as const,
     visibility: 'private' as const,
     effectiveVisibility: 'private' as const,
-    spoiler: false,
     createdAt: '2026-11-18T10:00:00+00:00',
     quote: null,
     reactions: [],
@@ -75,9 +74,9 @@ describe('a voice note from the database', () => {
   })
 
   it('quotes a voice note as one, never with words', () => {
-    const quoted = noteFromJson(ROOM, row({ voice: undefined, body: 'answer', quote: { id: 'n0', author: card(ME, 'Mia'), excerpt: '', spoiler: false, voice: true } }))
-    expect(quoted.quote).toEqual({ kind: 'note', id: 'n0', author: card(ME, 'Mia'), excerpt: '', spoiler: false, voice: true })
-    expect(noteQuoteOf({ quote: quoted.quote, replyTo: 'n0' }, [], ME, { deleted: 'Deleted', spoiler: 'Spoiler', someone: 'Someone', you: 'You', hidden: 'Hidden', voice: 'Voice message' })).toEqual({
+    const quoted = noteFromJson(ROOM, row({ voice: undefined, body: 'answer', quote: { id: 'n0', author: card(ME, 'Mia'), excerpt: '', voice: true } }))
+    expect(quoted.quote).toEqual({ kind: 'note', id: 'n0', author: card(ME, 'Mia'), excerpt: '', voice: true })
+    expect(noteQuoteOf({ quote: quoted.quote, replyTo: 'n0' }, [], ME, { deleted: 'Deleted', someone: 'Someone', you: 'You', hidden: 'Hidden', voice: 'Voice message' })).toEqual({
       id: null,
       mine: true,
       name: 'You',
@@ -116,7 +115,7 @@ describe('a voice note in a queue and in a thread', () => {
 
   it('says "Voice message" in the chip of the answer, and is a tombstone with nothing to play once deleted', () => {
     const [item] = noteItems([sentNote({ ...(pendingNote(job, ME, 'Mia') as NoteMessage), id: 'n1' })], ctx())
-    expect(replyChipOf(item!, { spoiler: 'Spoiler', someone: 'Someone', you: 'You', voice: 'Voice message' })).toEqual({ name: 'You', preview: 'Voice message' })
+    expect(replyChipOf(item!, { someone: 'Someone', you: 'You', voice: 'Voice message' })).toEqual({ name: 'You', preview: 'Voice message' })
     const gone = tombstoneNote(sentNote({ ...(pendingNote(job, ME, 'Mia') as NoteMessage), id: 'n1' }), '2026-11-18T11:00:00Z')
     expect(gone).toMatchObject({ kind: 'text', body: '', voice: null })
     expect(noteItems([gone], ctx())[0]).toMatchObject({ removed: true, voice: false, media: null })
@@ -148,7 +147,6 @@ const storedRow = (args: Record<string, unknown>) => ({
   kind: 'note',
   visibility: 'private',
   effectiveVisibility: 'private',
-  spoiler: false,
   createdAt: '2026-11-18T10:00:00+00:00',
   quote: null,
   reactions: [],
@@ -333,13 +331,13 @@ describe('the store sends a recording as a private note', () => {
     await notes.refresh('book-1', CH)
     expect(notes.messagesOf(ROOM, CH)).toHaveLength(3)
     // Hers and private: the answer goes with the post.
-    await notes.sendVoice(ROOM, CH, good(), { replyTo: 'n-private', quote: { kind: 'note', id: 'n-private', author: card(ME, 'Mia'), excerpt: 'mine', spoiler: false, voice: false } })
+    await notes.sendVoice(ROOM, CH, good(), { replyTo: 'n-private', quote: { kind: 'note', id: 'n-private', author: card(ME, 'Mia'), excerpt: 'mine', voice: false } })
     await settle()
     expect(server.calls.find((c) => c.fn === 'post_note_voice')!.args.p_reply_to).toBe('n-private')
     // Her own at Friends, somebody else's, and one that is not in the thread: no answer, and no quote on the bubble.
     for (const replyTo of ['n-friends', 'n-theirs', 'n-gone']) {
       server.calls = []
-      const sent = await notes.sendVoice(ROOM, CH, good(), { replyTo, quote: { kind: 'note', id: replyTo, author: card(ME, 'Mia'), excerpt: 'x', spoiler: false, voice: false } })
+      const sent = await notes.sendVoice(ROOM, CH, good(), { replyTo, quote: { kind: 'note', id: replyTo, author: card(ME, 'Mia'), excerpt: 'x', voice: false } })
       await settle()
       const post = server.calls.find((c) => c.fn === 'post_note_voice')!
       expect(post.args.p_reply_to, replyTo).toBeNull()

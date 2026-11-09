@@ -28,7 +28,7 @@ const server = {
 const pad = (n: number) => `n${String(n).padStart(4, '0')}`
 const json = (r: Row) => ({
   id: r.id, sectionId: CH, clientId: null, author: { id: 'ben', name: 'Ben', photo: null }, mine: false, body: `Words of ${r.id}`, kind: 'note', visibility: 'friends',
-  effectiveVisibility: 'friends', spoiler: false, createdAt: r.createdAt, quote: null, reactions: [], myReaction: null,
+  effectiveVisibility: 'friends', createdAt: r.createdAt, quote: null, reactions: [], myReaction: null,
 })
 const room = () => ({
   workKey: 'w:1',

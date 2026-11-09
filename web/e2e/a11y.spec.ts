@@ -510,7 +510,7 @@ test.describe('accessibility, the keyboard', { tag: '@full' }, () => {
 test.describe('accessibility, notes', { tag: '@full' }, () => {
   test.use({ colorScheme: 'dark', viewport: { width: 412, height: 915 } })
 
-  test('the Notes page, a chapter, a veiled chapter and their sheets pass axe, and the control is a labelled radio group of 44 px targets', async ({ page }) => {
+  test('the Notes page, a chapter, a veiled chapter and their sheets pass axe, and the split send button is a labelled menu button with 44 px targets, its menu a menu of radios', async ({ page }) => {
     test.slow()
     const member = await signedIn(page)
     const friend = await signUpMember()
@@ -547,21 +547,36 @@ test.describe('accessibility, notes', { tag: '@full' }, () => {
     await expectAccessible(page, 'the Show anyway question')
     await page.getByTestId('notes.showAnyway.cancel').click()
 
-    // Her chapter: the thread, the control (a named radio group, one tab stop, every segment 44 px), the action bar's sheets.
+    // Her chapter: the thread, the split send button (a tab named "Send as: …", a send button named "Send · …", both 44 px; its menu of radios), the action bar's sheets.
     await goto(page, `/notes/${bookId}/3`)
     await expect(page.getByTestId('notesThread.bubble').filter({ hasText: 'A friend’s note' })).toBeVisible()
     await expectAccessible(page, 'a chapter')
-    const group = page.getByTestId('notesThread.level')
-    await expect(group).toHaveAttribute('role', 'radiogroup')
-    await expect(group).toHaveAttribute('aria-label', en.notes.level.label)
-    // Two segments while the owner's switch for Everyone is off (the migration's default), three while it is on: either way each is 44 px.
-    const segments = group.locator('[role=radio]')
-    expect([2, 3]).toContain(await segments.count())
-    for (const box of await segments.evaluateAll((els) => els.map((el) => { const r = el.getBoundingClientRect(); return { w: r.width, h: r.height } }))) {
+    const tab = page.getByTestId('notesThread.sendAs')
+    await expect(tab).toHaveAttribute('aria-haspopup', 'menu')
+    await expect(tab).toHaveAttribute('aria-expanded', 'false')
+    await expect(tab).toHaveAttribute('aria-label', `${en.uiText.chat.composer.sendAs}: ${en.notes.level.friends}`)
+    await expect(page.getByTestId('notesThread.send')).toHaveAttribute('aria-label', `${en.uiText.chat.composer.send} · ${en.notes.level.friends}`)
+    for (const control of [tab, page.getByTestId('notesThread.send')]) {
+      const box = (await control.boundingBox())!
+      expect(box.height).toBeGreaterThanOrEqual(40)
+      expect(box.width).toBeGreaterThanOrEqual(40)
+    }
+    // The menu: two choices while the owner's switch for Everyone is off (the migration's default), three while it is on; each a radio of 44 px; the arrow keys move; Escape gives the focus back to the tab.
+    await tab.click()
+    const menu = page.getByRole('menu', { name: en.uiText.chat.composer.sendAs })
+    await expect(menu).toBeVisible()
+    const radios = menu.getByRole('menuitemradio')
+    expect([2, 3]).toContain(await radios.count())
+    for (const box of await radios.evaluateAll((els) => els.map((el) => { const r = el.getBoundingClientRect(); return { w: r.width, h: r.height } }))) {
       expect(box.h).toBeGreaterThanOrEqual(44)
       expect(box.w).toBeGreaterThanOrEqual(44)
     }
-    expect(await group.locator('[role=radio][tabindex="0"]').count()).toBe(1)
+    await expect(menu.getByRole('menuitemradio', { name: new RegExp(en.notes.level.friends) })).toBeFocused()
+    await page.keyboard.press('ArrowUp')
+    await expect(menu.getByRole('menuitemradio', { name: new RegExp(en.notes.level.private) })).toBeFocused()
+    await expectAccessible(page, 'the open send-as menu')
+    await page.keyboard.press('Escape')
+    await expect(tab).toBeFocused()
     await page.getByTestId('notesThread.bubble').filter({ hasText: 'A friend’s note' }).click({ button: 'right' })
     await page.getByTestId('notesThread.reactionAction.report').click()
     await expect(page.getByTestId('notes.report')).toBeVisible()
