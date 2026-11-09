@@ -480,7 +480,7 @@ edit here in the PR that changes it.
 | 25 | Moderation minimum: report at every level, block from a note, owner removal with a 12-month record | decided (coordinator, delegated; can be overturned) |
 | 26 | Limits: 30 notes a minute, 300 a day, 30 public a day, 20 chapter changes a day | decided (coordinator, delegated; can be overturned) |
 | 27 | A deleted note leaves "Note removed" (as in buddy reads) | decided (coordinator, delegated; can be overturned) |
-| 28 | The audience is chosen on the composer's split send button (the tab opens Only me / Friends / Everyone; the button's icon and tone are the cue), not in a row over the field (`docs/plans/notes-composer.md`, V3) | owner's decision |
+| 28 | The audience is chosen on the composer's split send button (the tab opens Only me / Friends / Everyone; the button's icon and tone are the cue), not in a row over the field (`docs/plans/notes-composer.md`, V3). The tab and the menu say whom the note goes to, not how it is sent — **"Send to"** / "Senden an" (`uiText.chat.composer.sendAs`, `@fabkho/ui` 0.13.2; the API names `sendAs`/`sendOptions` keep their names) — and the soft keyboard stays up through a voice note: the field leaves the layout for the recording but keeps the focus, so only a cancel closes the keyboard | owner's decision |
 | 29 | No spoiler marks on single messages in chapter chats, in Notes and in buddy-read Sections: a chapter is opened to be read; the chapter veil by the reader's own position stays; the `spoiler` column and the `p_spoiler` parameters stay for compatibility and are ignored | owner's decision |
 
 **Most worth the owner's later look:** 22 (his photo goes to every member on a public note), 21 (Everyone on now, and the rule

@@ -59,7 +59,7 @@ async function chooseLevel(page: Page, level: 'private' | 'friends' | 'public') 
   await expect(page.getByTestId('notesThread.sendAsMenu')).toHaveCount(0)
 }
 
-/** The audience is on the button itself, before anything is sent: the tab ("Send as: Everyone") and the send button ("Send · Everyone") name it. */
+/** The audience is on the button itself, before anything is sent: the tab ("Send to: Everyone") and the send button ("Send · Everyone") name it. */
 async function expectLevel(page: Page, level: 'private' | 'friends' | 'public', words: typeof en | typeof de = en) {
   // The tab is always there; the send button says the audience too, but at Only me with an empty field the microphone stands in its place (a voice note).
   await expect(page.getByTestId('notesThread.sendAs')).toHaveAttribute('aria-label', `${words.uiText.chat.composer.sendAs}: ${words.notes.level[level]}`)

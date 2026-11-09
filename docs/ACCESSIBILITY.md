@@ -175,8 +175,12 @@ shimmer stops, the tab bar stays.
   "Recording"; the bubble's play button, length and waveform are the base's `UiVoiceBubble` (named, 44 px, `aria-live` on the play state); the lock and "Only me"
   under it are text, not colour. The quote of a voice note reads "Voice message" for a screen reader. `e2e/notes-voice.spec.ts` scans the thread with a voice
   note and a thread while recording in both colour schemes. VoiceOver and TalkBack on a real phone were not tried in this change.
+  **The keyboard stays up while a voice note records** (the base's fix in `@fabkho/ui` 0.13.2): the field is never unmounted for a recording, so a
+  screen reader has not lost it either — it leaves the layout (one drawn pixel, transparent, out of the tab order) and keeps its name, its text and
+  its focus. `e2e/notes-voice.spec.ts` asserts what a desktop browser can see of that: the field stays mounted and focused (`document.activeElement`)
+  through the hold, the lock and the send, and is blurred only after a cancel; the system keyboard itself is a device's (docs/TESTING.md).
   **Notes** (the Notes page, a chapter, the Book page's section, the Remove note dialog): `e2e/a11y.spec.ts` ("accessibility, notes") scans the page, a chapter,
-  a veiled chapter and the sheets she opens from them in both colour schemes, and checks that the audience control, the split send button, is a menu button (`aria-haspopup="menu"`) named "Send as: Friends" beside a send button named "Send · Friends", its menu
+  a veiled chapter and the sheets she opens from them in both colour schemes, and checks that the audience control, the split send button, is a menu button (`aria-haspopup="menu"`) named "Send to: Friends" beside a send button named "Send · Friends", its menu
   a `menu` of `menuitemradio`s of 44 px that the arrows move and Escape closes (a level held back by the note she answers is `aria-disabled`, not removed), and axe scans the open menu; `e2e/book-notes.spec.ts` scans the chapter in
   German at 360 px and checks nothing runs out of the screen. A veiled chapter's row is named "Chapter 9, 12 comments, hidden" and holds no word of it.
   A violation that cannot be fixed in BetterReads goes in `ALLOWED` in `e2e/support.ts` with its reason
