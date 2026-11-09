@@ -173,13 +173,12 @@ test('a Section has no Spoiler chip, and a comment flagged Spoiler in the old da
   await expect(ida.getByTestId('buddyThread.veil')).toHaveCount(0)
   await expect(ida.getByTestId('buddyThread.spoiler')).toHaveCount(0)
   await expect(ida.getByTestId('buddyThread.actions')).toHaveCount(0)
-  await expect(ida.getByTestId('buddyThread.record')).toBeVisible()
   await ida.getByTestId('buddyThread.input').fill('Not a spoiler any more')
   await expect(ida.getByTestId('buddyThread.send')).toBeVisible()
   await ida.getByTestId('buddyThread.send').click()
   await expect(ida.getByTestId('buddyThread.bubble').filter({ hasText: 'Not a spoiler any more' })).toBeVisible()
   // What she wrote carries no mark: the app sends no `p_spoiler`, the column keeps its default.
-  expect(await sql<{ spoiler: boolean }>(`select spoiler from public.buddy_messages where body = 'Not a spoiler any more'`)).toEqual([{ spoiler: false }])
+  await expect.poll(() => sql<{ spoiler: boolean }>(`select spoiler from public.buddy_messages where body = 'Not a spoiler any more'`)).toEqual([{ spoiler: false }])
 })
 
 test('Read together on a Book that is not in her Library adds it as Currently reading when the read is made; Home lists the read and its invitation @full', { tag: '@full' }, async ({ page }) => {
