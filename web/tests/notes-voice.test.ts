@@ -131,6 +131,8 @@ vi.mock('~/stores/session', () => ({ useSessionStore: () => session }))
 
 const server = {
   calls: [] as { fn: string; args: Record<string, unknown> }[],
+  /** The rows `note_messages` answers: what the thread holds when it is opened again. */
+  messages: [] as Record<string, unknown>[],
   uploads: [] as { path: string; type: string }[],
   signed: [] as string[],
   uploadError: null as { message: string; statusCode?: string } | null,
@@ -175,7 +177,8 @@ const backend = {
         error: null,
       }
     }
-    if (fn === 'note_messages') return { data: [], error: null }
+    if (fn === 'note_messages') return { data: server.messages, error: null }
+    if (fn === 'notes_config') return { data: { publicEnabled: false }, error: null }
     return { data: null, error: null }
   },
   storage: {
@@ -227,6 +230,7 @@ const good = () => ({ blob: blob(20_000), durationMs: 2_300, peaks: [10, 50, 100
 
 beforeEach(() => {
   server.calls = []
+  server.messages = []
   server.uploads = []
   server.signed = []
   server.uploadError = null
@@ -313,11 +317,36 @@ describe('the store sends a recording as a private note', () => {
     expect(server.calls.filter((c) => c.fn === 'post_note_voice')).toHaveLength(0)
   })
 
-  it('answers her own private note: the id goes with the post', async () => {
+  it('answers her own private note only: any other parent is dropped with its quote, not sent to be refused', async () => {
     const notes = await store()
-    await notes.sendVoice(ROOM, CH, good(), { replyTo: 'note-9' })
+    const herPrivate = { id: 'n-private', senderId: ME, mine: true, visibility: 'private', clientId: null, kind: 'text', body: 'mine, private' }
+    const herFriends = { id: 'n-friends', senderId: ME, mine: true, visibility: 'friends', clientId: null, kind: 'text', body: 'mine, for friends' }
+    const theirs = { id: 'n-theirs', senderId: 'someone-else', mine: false, visibility: 'friends', clientId: null, kind: 'text', body: 'theirs' }
+    const row = (over: Record<string, unknown>) => ({
+      sectionId: CH, clientId: null, author: card(String(over.senderId), 'Someone'), mine: Boolean(over.mine), body: String(over.body), kind: 'note',
+      effectiveVisibility: over.visibility, spoiler: false, createdAt: '2026-11-18T09:00:00+00:00', quote: null, reactions: [], myReaction: null, voice: null, ...over,
+      // `kind` is the database's word for a live note, never the thread item's shape.
+      kind: 'note',
+    })
+    server.messages = [herPrivate, herFriends, theirs].map(row)
+    // A thread that is already loaded is read again by a Refresh (that is what the screen does); a fresh open asks for its page.
+    await notes.refresh('book-1', CH)
+    expect(notes.messagesOf(ROOM, CH)).toHaveLength(3)
+    // Hers and private: the answer goes with the post.
+    await notes.sendVoice(ROOM, CH, good(), { replyTo: 'n-private', quote: { kind: 'note', id: 'n-private', author: card(ME, 'Mia'), excerpt: 'mine', spoiler: false, voice: false } })
     await settle()
-    expect(server.calls.find((c) => c.fn === 'post_note_voice')!.args.p_reply_to).toBe('note-9')
+    expect(server.calls.find((c) => c.fn === 'post_note_voice')!.args.p_reply_to).toBe('n-private')
+    // Her own at Friends, somebody else's, and one that is not in the thread: no answer, and no quote on the bubble.
+    for (const replyTo of ['n-friends', 'n-theirs', 'n-gone']) {
+      server.calls = []
+      const sent = await notes.sendVoice(ROOM, CH, good(), { replyTo, quote: { kind: 'note', id: replyTo, author: card(ME, 'Mia'), excerpt: 'x', spoiler: false, voice: false } })
+      await settle()
+      const post = server.calls.find((c) => c.fn === 'post_note_voice')!
+      expect(post.args.p_reply_to, replyTo).toBeNull()
+      const bubble = notes.messagesOf(ROOM, CH).find((m) => m.clientId === (sent.ok ? sent.clientId : ''))!
+      expect(bubble.replyTo, replyTo).toBeNull()
+      expect(bubble.quote, replyTo).toBeNull()
+    }
   })
 })
 

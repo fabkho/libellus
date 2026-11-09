@@ -237,7 +237,7 @@ $$;
 
 -- The insert policy: her own folder, a Notes room (the name's second part) of a Book she has (the rule of post_note), at most 20
 -- objects an hour (the post limits count notes, and an upload comes before its note; 20 x 3 MB a member an hour is the most that can
--- wait, unsent, for the sweep).
+-- wait, unsent, for the sweep). The count is a prefix range of her own folder in the bucket's (bucket_id, name) index, never the bucket.
 create or replace function private.note_voice_writable(p_name text)
 returns boolean
 language plpgsql
@@ -257,7 +257,8 @@ begin
     return false;
   end if;
   return (select count(*) from storage.objects o
-           where o.bucket_id = 'note-voice' and o.owner_id = v_caller::text
+           where o.bucket_id = 'note-voice' and o.name like v_caller::text || '/%'
+             and o.owner_id = v_caller::text
              and o.created_at > now() - interval '1 hour') < 20;
 end;
 $$;
@@ -406,7 +407,8 @@ $$;
 
 -- Post a voice note she has uploaded: p_object is the object's name (it must be exactly
 -- private.note_voice_path(p_room, her, p_client_id, p_mime): hers, in this room, of that type), p_mime its type, p_duration_ms how long it
--- plays (1 - 120000), p_peaks the waveform (up to 48 values 0 - 100, null for none). The object must be there already, of that type and at
+-- plays (1 - 120000), p_peaks the waveform (one-dimensional, up to 48 values 0 - 100, null for none; an integer[] like buddy's, so a value that is
+-- no waveform value is voice_invalid and not a smallint overflow raised before this function runs). The object must be there already, of that type and at
 -- most 3 MB. There is no visibility parameter: it is private, always. p_reply_to answers her own live private note of the same chapter,
 -- nobody else's (a voice note is nobody's to answer but hers). Idempotent on (her, p_client_id) like post_note: the same call again answers
 -- the note it made; the same client id for another room, chapter or kind is client_id_reused. The rules are post_note's (same locks, same
@@ -418,7 +420,7 @@ create or replace function public.post_note_voice(
   p_object      text,
   p_mime        text,
   p_duration_ms integer,
-  p_peaks       smallint[],
+  p_peaks       integer[],
   p_reply_to    uuid default null
 )
 returns jsonb
@@ -443,7 +445,8 @@ begin
   end if;
   if private.buddy_voice_ext(p_mime) is null
      or p_duration_ms is null or p_duration_ms not between 1 and 120000
-     or (p_peaks is not null and (cardinality(p_peaks) not between 1 and 48
+     or (p_peaks is not null and (array_ndims(p_peaks) <> 1
+                                  or cardinality(p_peaks) not between 1 and 48
                                   or array_position(p_peaks, null) is not null
                                   or 0 > any (p_peaks) or 100 < any (p_peaks))) then
     raise exception 'voice_invalid' using errcode = '22023';
@@ -520,7 +523,7 @@ begin
   insert into public.room_messages (room_id, section_id, author_id, client_id, kind, body, reply_to, visibility,
                                     voice_object, voice_mime, voice_duration_ms, voice_peaks, created_at)
   values (p_room, p_section, v_caller, p_client_id, 'voice', '', p_reply_to, 'private',
-          v_path, p_mime, p_duration_ms, p_peaks,
+          v_path, p_mime, p_duration_ms, p_peaks::smallint[],
           greatest(clock_timestamp(),
                    (select max(m.created_at) + interval '1 microsecond'
                       from public.room_messages m where m.section_id = p_section)))
@@ -773,15 +776,26 @@ $$;
 
 -- -------------------------------------------------------------------------- the sweep (service role only), both buckets
 
--- Whether a live voice note points at this object's name.
+-- Whether a live voice note points at this object's name. Looked up by the (author, client id) the name carries, the key of the unique
+-- index room_messages_author_id_client_id_key (like private.buddy_voice_attached), with the equality on voice_object kept: one index
+-- probe per object, not a scan of the table (the sweep asks once per object an hour). No new index.
 create or replace function private.note_voice_attached(p_name text)
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = pg_catalog, public, private
 as $$
-  select exists (select 1 from public.room_messages m where m.voice_object = p_name)
+declare
+  v_parts text[] := private.note_voice_parts(p_name);
+begin
+  if v_parts is null then
+    return false;
+  end if;
+  return exists (select 1 from public.room_messages m
+                  where m.author_id = v_parts[1]::uuid and m.client_id = v_parts[3]::uuid
+                    and m.voice_object = p_name);
+end;
 $$;
 
 -- What the sweep hands the Edge Function, for the buckets asked: the queue (objects of deleted notes and messages), the ones tried least
@@ -915,8 +929,8 @@ revoke all on function private.room_messages_check() from public, anon, authenti
 revoke all on function private.note_quote(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.note_json(uuid, public.room_messages) from public, anon, authenticated;
 
-revoke all on function public.post_note_voice(uuid, uuid, uuid, text, text, integer, smallint[], uuid) from public, anon;
-grant execute on function public.post_note_voice(uuid, uuid, uuid, text, text, integer, smallint[], uuid) to authenticated;
+revoke all on function public.post_note_voice(uuid, uuid, uuid, text, text, integer, integer[], uuid) from public, anon;
+grant execute on function public.post_note_voice(uuid, uuid, uuid, text, text, integer, integer[], uuid) to authenticated;
 revoke all on function public.voice_sweep_batch(integer, interval, boolean) from public, anon, authenticated;
 revoke all on function public.voice_sweep_done(jsonb) from public, anon, authenticated;
 grant execute on function public.voice_sweep_batch(integer, interval, boolean) to service_role;

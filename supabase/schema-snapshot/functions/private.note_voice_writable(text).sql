@@ -16,7 +16,8 @@ begin
     return false;
   end if;
   return (select count(*) from storage.objects o
-           where o.bucket_id = 'note-voice' and o.owner_id = v_caller::text
+           where o.bucket_id = 'note-voice' and o.name like v_caller::text || '/%'
+             and o.owner_id = v_caller::text
              and o.created_at > now() - interval '1 hour') < 20;
 end;
 $function$

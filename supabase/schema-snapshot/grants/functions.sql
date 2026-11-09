@@ -276,8 +276,8 @@ grant execute on function public.post_buddy_message(uuid,uuid,uuid,text,text,uui
 grant execute on function public.post_buddy_message(uuid,uuid,uuid,text,text,uuid,boolean,jsonb) to service_role;
 grant execute on function public.post_note(uuid,uuid,uuid,text,text,uuid,boolean) to authenticated;
 grant execute on function public.post_note(uuid,uuid,uuid,text,text,uuid,boolean) to service_role;
-grant execute on function public.post_note_voice(uuid,uuid,uuid,text,text,integer,smallint[],uuid) to authenticated;
-grant execute on function public.post_note_voice(uuid,uuid,uuid,text,text,integer,smallint[],uuid) to service_role;
+grant execute on function public.post_note_voice(uuid,uuid,uuid,text,text,integer,integer[],uuid) to authenticated;
+grant execute on function public.post_note_voice(uuid,uuid,uuid,text,text,integer,integer[],uuid) to service_role;
 grant execute on function public.profile_links_of(uuid) to authenticated;
 grant execute on function public.profile_links_of(uuid) to service_role;
 grant execute on function public.progress_page_fits(integer,integer) to authenticated;

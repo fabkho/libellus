@@ -15,7 +15,7 @@
 -- Assertions ask about rows this test made, never counts of a table.
 
 begin;
-select plan(141);
+select plan(147);
 
 create schema if not exists tests;
 select set_config('storage.allow_delete_query', 'true', true);
@@ -211,7 +211,7 @@ declare
   v_path text := v_me || '/' || p_room || '/' || p_client || '.' || case p_mime when 'audio/mp4' then 'm4a' when 'audio/webm' then 'webm' else 'ogg' end;
 begin
   perform tests.obj(v_path, v_me, p_mime);
-  return public.post_note_voice(p_room, p_section, p_client, v_path, p_mime, 4200, array[10, 40, 90, 20]::smallint[], p_reply);
+  return public.post_note_voice(p_room, p_section, p_client, v_path, p_mime, 4200, array[10, 40, 90, 20]::integer[], p_reply);
 end;
 $$;
 
@@ -262,7 +262,7 @@ select public.set_note_chapter(:'room', 4);
 select tests.act_as(:'m');
 select public.set_note_chapter(:'room', 4);
 
-select gen_random_uuid() as c1, gen_random_uuid() as c2, gen_random_uuid() as c3, gen_random_uuid() as c4, gen_random_uuid() as c5, gen_random_uuid() as c6 \gset
+select gen_random_uuid() as c1, gen_random_uuid() as c2, gen_random_uuid() as c3, gen_random_uuid() as c4, gen_random_uuid() as c5, gen_random_uuid() as c6, gen_random_uuid() as c7 \gset
 
 -- ------------------------------------------------------------------ the bucket
 
@@ -288,7 +288,7 @@ select is(tests.upload(tests.path(:'m', :'room', gen_random_uuid()), :'m'), '425
 
 select tests.act_as(:'m');
 select public.post_note_voice(:'room', :'ch1', :'c1', tests.path(:'m', :'room', :'c1'), 'audio/mp4', 4200,
-                              array[10, 40, 90, 20]::smallint[]) as v1 \gset
+                              array[10, 40, 90, 20]::integer[]) as v1 \gset
 select is(:'v1'::jsonb ->> 'visibility', 'private', 'post_note_voice: private');
 select is(:'v1'::jsonb ->> 'body', '', 'post_note_voice: no words');
 select is(:'v1'::jsonb -> 'voice' ->> 'path', tests.path(:'m', :'room', :'c1'), 'the answer names the object (to her)');
@@ -298,7 +298,7 @@ select is(:'v1'::jsonb ->> 'mine', 'true', 'and that it is hers');
 select is(tests.commit_point(), 'authenticated: ok', 'post_note_voice commits as a member');
 select :'v1'::jsonb ->> 'id' as n1 \gset
 
-select is(public.post_note_voice(:'room', :'ch1', :'c1', tests.path(:'m', :'room', :'c1'), 'audio/mp4', 4200, array[10, 40, 90, 20]::smallint[]) ->> 'id',
+select is(public.post_note_voice(:'room', :'ch1', :'c1', tests.path(:'m', :'room', :'c1'), 'audio/mp4', 4200, array[10, 40, 90, 20]::integer[]) ->> 'id',
           :'n1', 'idempotent on the client id: the same call answers the note it made');
 select is(jsonb_array_length(public.note_messages(:'room', :'ch1')), 1, 'note_messages: it is in her thread (one row)');
 select is((public.note_messages(:'room', :'ch1') -> 0 -> 'voice' ->> 'mime'), 'audio/mp4', 'the thread says it is a voice note, to her');
@@ -332,10 +332,21 @@ select is(tests.outcome(format('select public.post_note_voice(%L, %L, %L, %L, %L
           '22023 voice_invalid', 'no length: voice_invalid');
 select is(tests.outcome(format('select public.post_note_voice(%L, %L, %L, %L, %L, 120001, null)', :'room', :'ch1', :'c3', tests.path(:'m', :'room', :'c3'), 'audio/webm')),
           '22023 voice_invalid', 'over two minutes: voice_invalid');
-select is(tests.outcome(format('select public.post_note_voice(%L, %L, %L, %L, %L, 1000, array[101]::smallint[])', :'room', :'ch1', :'c3', tests.path(:'m', :'room', :'c3'), 'audio/webm')),
+select is(tests.outcome(format('select public.post_note_voice(%L, %L, %L, %L, %L, 1000, array[101]::integer[])', :'room', :'ch1', :'c3', tests.path(:'m', :'room', :'c3'), 'audio/webm')),
           '22023 voice_invalid', 'a waveform value over 100: voice_invalid');
-select is(tests.outcome(format('select public.post_note_voice(%L, %L, %L, %L, %L, 1000, array[]::smallint[])', :'room', :'ch1', :'c3', tests.path(:'m', :'room', :'c3'), 'audio/webm')),
+select is(tests.outcome(format('select public.post_note_voice(%L, %L, %L, %L, %L, 1000, array[]::integer[])', :'room', :'ch1', :'c3', tests.path(:'m', :'room', :'c3'), 'audio/webm')),
           '22023 voice_invalid', 'an empty waveform: voice_invalid');
+select is(tests.outcome(format('select public.post_note_voice(%L, %L, %L, %L, %L, 1000, array[1, null]::integer[])', :'room', :'ch1', :'c3', tests.path(:'m', :'room', :'c3'), 'audio/webm')),
+          '22023 voice_invalid', 'a waveform with a null in it: voice_invalid');
+-- A value no waveform value is, in the parameter itself: the parameter is integer[], so a smallint overflow (22003) is not raised before the function runs.
+select is(tests.outcome(format('select public.post_note_voice(%L, %L, %L, %L, %L, 1000, array[40000]::integer[])', :'room', :'ch1', :'c3', tests.path(:'m', :'room', :'c3'), 'audio/webm')),
+          '22023 voice_invalid', 'a waveform value a smallint cannot hold: voice_invalid, never an overflow');
+select is(tests.outcome(format('select public.post_note_voice(%L, %L, %L, %L, %L, 1000, array[[10, 20]]::integer[])', :'room', :'ch1', :'c3', tests.path(:'m', :'room', :'c3'), 'audio/webm')),
+          '22023 voice_invalid', 'a two-dimensional waveform (no one-dimensional array of values, which the check would read as none): voice_invalid');
+-- The type Storage kept carries the recorder's codec parameters ("audio/webm;codecs=opus"); the database compares it without them (split_part).
+select tests.obj(tests.path(:'m', :'room', :'c7', 'webm'), :'m', 'audio/webm;codecs=opus');
+select ok(public.post_note_voice(:'room', :'ch2', :'c7', tests.path(:'m', :'room', :'c7', 'webm'), 'audio/webm', 4200, array[10, 40]::integer[]) ? 'voice',
+          'an object stored as "audio/webm;codecs=opus" is taken for "audio/webm" (the parameters are not part of the type)');
 select is(tests.outcome(format('select public.post_note_voice(%L, %L, %L, %L, %L, 1000, null)', :'room', :'ch1', :'c3', tests.path(:'m', :'room', :'c3'), 'audio/wav')),
           '22023 voice_invalid', 'a type that is none of three: voice_invalid');
 select is(tests.outcome(format('select public.post_note_voice(%L, %L, %L, %L, %L, 1000, null)', :'room', gen_random_uuid(), :'c3', tests.path(:'m', :'room', :'c3'), 'audio/webm')),
@@ -538,6 +549,14 @@ select ok(exists (select 1 from jsonb_array_elements(public.voice_sweep_batch(50
           'the hourly run queues and hands out an upload no note points at that is older than the grace');
 reset role;
 select is(tests.in_trash('note-voice', tests.path(:'m', :'room', :'c1')), false, 'an object a live voice note points at is never swept, however old');
+-- The buddy half, asked to look for orphans too (the old Edge Function's call), never touches a note-voice object: it could not remove it, and it would forget it.
+select tests.path(:'m', :'room', gen_random_uuid()) as older_note_orphan \gset
+select tests.obj(:'older_note_orphan', :'m', 'audio/mp4', 1000, interval '9 hours');
+select tests.act_service();
+select is((select count(*)::int from unnest(public.buddy_voice_sweep_batch(500, interval '6 hours', true)) x where x = :'older_note_orphan'), 0,
+          'buddy_voice_sweep_batch(p_orphans := true) hands out no note-voice orphan');
+reset role;
+select is(tests.in_trash('note-voice', :'older_note_orphan'), false, 'and does not queue one: the note-voice orphans wait for the new function');
 select is(tests.obj_there(tests.path(:'m', :'room', :'c1')), true, 'and is still there');
 
 -- a queued path whose note came back, or whose object is gone, is forgotten
@@ -551,8 +570,8 @@ select is(tests.in_trash('note-voice', tests.path(:'m', :'room', :'c1')), false,
 
 -- ------------------------------------------------------------------ grants
 
-select is(has_function_privilege('authenticated', 'public.post_note_voice(uuid, uuid, uuid, text, text, integer, smallint[], uuid)', 'execute'), true, 'authenticated: post_note_voice');
-select is(has_function_privilege('anon', 'public.post_note_voice(uuid, uuid, uuid, text, text, integer, smallint[], uuid)', 'execute'), false, 'anon: no post_note_voice');
+select is(has_function_privilege('authenticated', 'public.post_note_voice(uuid, uuid, uuid, text, text, integer, integer[], uuid)', 'execute'), true, 'authenticated: post_note_voice');
+select is(has_function_privilege('anon', 'public.post_note_voice(uuid, uuid, uuid, text, text, integer, integer[], uuid)', 'execute'), false, 'anon: no post_note_voice');
 select is(has_function_privilege('authenticated', 'public.voice_sweep_batch(integer, interval, boolean)', 'execute'), false, 'authenticated: no voice_sweep_batch');
 select is(has_function_privilege('authenticated', 'public.voice_sweep_done(jsonb)', 'execute'), false, 'authenticated: no voice_sweep_done');
 select is(has_function_privilege('service_role', 'public.voice_sweep_batch(integer, interval, boolean)', 'execute'), true, 'service_role: voice_sweep_batch');

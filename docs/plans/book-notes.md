@@ -137,7 +137,12 @@ Steps:
    and after and stops if they differ. Every public function keeps its name and arguments (installed apps call them), so the
    web app needs no change on the day. The recording stays where it is: its path is `<read id>/<author>/<client id>.m4a`, and
    the read id is kept.
-3. **N3b, one release later, drops the `*_retired` tables.** Forward-only as `AGENTS.md` requires; a mistake in N3 is
+3. **N3 must relax two voice rules of `room_messages` when it re-bases buddy voice** (`20261118010000_notes_private_voice.sql`):
+   `room_messages_voice_private` (a voice note is `private`, whoever writes it) and the refusal in `private.room_messages_check`
+   of a `kind = 'voice'` message in a buddy room (`visibility = 'members'`): a buddy read's voice message is voice at `members`,
+   which neither allows. N3 keeps the note side as it is (a Notes voice note stays private) and carves out the buddy room, with its own
+   pgTAP case (`supabase/tests/buddy_voice_test.sql`) and the Notes one (`notes_private_voice_test.sql`) still green.
+4. **N3b, one release later, drops the `*_retired` tables.** Forward-only as `AGENTS.md` requires; a mistake in N3 is
    corrected by the next migration, with the old rows still there to copy from.
 
 Why not rename the buddy tables in place first: a rename breaks every function body that names the table (plpgsql bodies are

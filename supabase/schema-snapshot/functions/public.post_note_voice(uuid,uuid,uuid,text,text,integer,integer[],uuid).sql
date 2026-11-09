@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION public.post_note_voice(p_room uuid, p_section uuid, p_client_id uuid, p_object text, p_mime text, p_duration_ms integer, p_peaks smallint[], p_reply_to uuid DEFAULT NULL::uuid)
+CREATE OR REPLACE FUNCTION public.post_note_voice(p_room uuid, p_section uuid, p_client_id uuid, p_object text, p_mime text, p_duration_ms integer, p_peaks integer[], p_reply_to uuid DEFAULT NULL::uuid)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -21,7 +21,8 @@ begin
   end if;
   if private.buddy_voice_ext(p_mime) is null
      or p_duration_ms is null or p_duration_ms not between 1 and 120000
-     or (p_peaks is not null and (cardinality(p_peaks) not between 1 and 48
+     or (p_peaks is not null and (array_ndims(p_peaks) <> 1
+                                  or cardinality(p_peaks) not between 1 and 48
                                   or array_position(p_peaks, null) is not null
                                   or 0 > any (p_peaks) or 100 < any (p_peaks))) then
     raise exception 'voice_invalid' using errcode = '22023';
@@ -98,7 +99,7 @@ begin
   insert into public.room_messages (room_id, section_id, author_id, client_id, kind, body, reply_to, visibility,
                                     voice_object, voice_mime, voice_duration_ms, voice_peaks, created_at)
   values (p_room, p_section, v_caller, p_client_id, 'voice', '', p_reply_to, 'private',
-          v_path, p_mime, p_duration_ms, p_peaks,
+          v_path, p_mime, p_duration_ms, p_peaks::smallint[],
           greatest(clock_timestamp(),
                    (select max(m.created_at) + interval '1 microsecond'
                       from public.room_messages m where m.section_id = p_section)))

@@ -535,7 +535,8 @@ export const useNotesStore = defineStore('notes', () => {
   /**
    * Sends a finished recording (the composer's `voice`), **as a private note**: refused here when it is too short, too big or of a type the bucket does not take;
    * otherwise a bubble at once, the sound stored (`uploadVoice`) and its post queued. It has no level: the screen offers the microphone only at Only me and the database
-   * posts nothing else.
+   * posts nothing else. An answer goes only to her own private note of the thread (`parentOf`): a Reply tapped on another note while the recording ran, or a note that
+   * changed level in the meantime, is dropped here with its quote rather than failing the send with `reply_not_visible`.
    */
   async function sendVoice(
     roomId: string,
@@ -547,14 +548,17 @@ export const useNotesStore = defineStore('notes', () => {
     if (!member) return { ok: false, error: 'not_signed_in' }
     const prepared = prepareVoice(voice)
     if (!prepared.ok) return { ok: false, error: prepared.reason === 'short' ? 'voice_short' : prepared.reason === 'large' ? 'voice_large' : 'voice_type' }
+    // An answer to anybody else's note, or to one that is no longer private, is no answer: the database takes a voice answer to her own private note only.
+    const parent = replyTo ? thread(roomId, sectionId).messages.find((m) => m.id === replyTo) : null
+    const answer = parent && parent.senderId === member && parent.visibility === 'private' && !parent.deletedAt ? parent : null
     const since = epoch
     await ensureQueue()
     if (stale(since) || !queue) return { ok: false, error: 'not_signed_in' }
     const clientId = newId()
-    const job = noteVoiceJob({ roomId, sectionId, clientId, replyTo, createdAt: new Date().toISOString() }, { mime: prepared.mime, durationMs: prepared.durationMs, peaks: prepared.peaks })
+    const job = noteVoiceJob({ roomId, sectionId, clientId, replyTo: answer?.id ?? null, createdAt: new Date().toISOString() }, { mime: prepared.mime, durationMs: prepared.durationMs, peaks: prepared.peaks })
     previews.value[clientId] = URL.createObjectURL(voice.blob)
     uploads.set(clientId, { blob: voice.blob, mime: prepared.mime, job })
-    mergeNote(thread(roomId, sectionId).messages, pendingNote(job, member, nameOf(), quote))
+    mergeNote(thread(roomId, sectionId).messages, pendingNote(job, member, nameOf(), answer ? quote : null))
     void uploadVoice(clientId)
     return { ok: true, clientId }
   }

@@ -50,9 +50,13 @@ async function runSweep() {
 
 const objectThere = async (path: string) => !(await service.storage.from(NOTE_VOICE_BUCKET).download(path)).error
 
+/** The voice ledger allows 10 a note a minute (the caps are pgTAP's, supabase/tests/notes_private_voice_test.sql): each seeded note starts from a clean one. */
+const clearVoice = (memberId: string) => sql(`delete from private.note_calls where member_id = $1 and kind in ('voice', 'voice_day')`, [memberId])
+
 /** Stores the fixture as the member and posts it; the stored note. */
 async function say(member: TestMember, over: { sectionId?: string; replyTo?: string | null; mime?: 'audio/mp4' | 'audio/webm' } = {}) {
   const repo = notesOf(member)
+  await clearVoice(member.id)
   const clientId = crypto.randomUUID()
   const mime = over.mime ?? 'audio/mp4'
   const stored = await repo.uploadVoice(room, member.id, clientId, asBlob(mime === 'audio/mp4' ? M4A : WEBM, mime), mime)
@@ -227,6 +231,51 @@ describe('hearing it: only the one who said it', () => {
     expect((await notesOf(mia).setVisibility(note.id, 'public')).error).toBe('voice_private_only')
     expect((await notesOf(mia).setVisibility(note.id, 'private')).error).toBeNull()
     expect((await thread(kai)).some((n) => n.id === note.id)).toBe(false)
+  })
+
+  it('is a bucket nobody browses: a friend lists none of her folder, and not even she sees an upload no note points at', async () => {
+    const { clientId, path } = await say(mia)
+    const bucket = (member: TestMember) => member.client.storage.from(NOTE_VOICE_BUCKET)
+    const folder = `${mia.id}/${room}`
+    const namesOf = async (member: TestMember, path = folder) => ((await bucket(member).list(path, { limit: 100 })).data ?? []).map((o) => o.name)
+    // Hers: the objects of the voice notes this file gave her, all under the name their notes have, and nothing else.
+    const hers = await namesOf(mia)
+    expect(hers).toContain(`${clientId}.m4a`)
+    expect(hers.every((n) => /^[0-9a-f-]{36}\.(m4a|webm)$/.test(n))).toBe(true)
+    // An upload no note points at is invisible to her as well (the policy is the note's, not the folder's).
+    const unpostedId = crypto.randomUUID()
+    const unposted = await notesOf(mia).uploadVoice(room, mia.id, unpostedId, asBlob(M4A, 'audio/mp4'), 'audio/mp4')
+    expect(unposted.error).toBeNull()
+    expect(await namesOf(mia)).toEqual(hers)
+    expect(hers).not.toContain(`${unpostedId}.m4a`)
+    // A friend, a member of Everyone, the owner: nothing at all, not even the folder.
+    for (const member of [kai, pia, owner]) {
+      expect(await namesOf(member), member.email).toEqual([])
+      expect(await namesOf(member, ''), member.email).not.toContain(mia.id)
+    }
+    expect(path).toBe(notePath(mia.id, room, clientId, 'audio/mp4'))
+  })
+
+  it('lets nobody but her read, and lets nobody at all change it: remove, move, copy and an overwrite are refused, hers too', async () => {
+    const { path } = await say(mia)
+    const bucket = (member: TestMember) => member.client.storage.from(NOTE_VOICE_BUCKET)
+    for (const member of [mia, kai, pia, owner]) {
+      const who = member.email
+      // No delete policy (the sweep, through the service role, removes an object): refused, or nothing removed.
+      const removed = await bucket(member).remove([path])
+      expect(removed.data ?? [], who).toEqual([])
+      expect(await objectThere(path), who).toBe(true)
+      const moved = await bucket(member).move(path, `${member.id}/${room}/${crypto.randomUUID()}.m4a`)
+      expect(moved.error ?? moved.data, who).toBeTruthy()
+      const copied = await bucket(member).copy(path, `${member.id}/${room}/${crypto.randomUUID()}.m4a`)
+      expect(copied.error ?? copied.data, who).toBeTruthy()
+      const overwritten = await bucket(member).upload(path, asBlob(WEBM, 'audio/webm'), { contentType: 'audio/webm', upsert: true })
+      expect(overwritten.error, who).toBeTruthy()
+    }
+    // Still the bytes she recorded, and still hers alone.
+    expect(await objectThere(path)).toBe(true)
+    expect((await notesOf(mia).voiceUrl(path)).error).toBeNull()
+    expect((await notesOf(kai).voiceUrl(path)).error).toBeTruthy()
   })
 
   it('is not a table anyone reads directly', async () => {
