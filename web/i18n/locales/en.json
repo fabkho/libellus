@@ -2697,7 +2697,7 @@
         "label": "Message",
         "placeholder": "Message",
         "send": "Send",
-        "sendAs": "Send as",
+        "sendAs": "Send to",
         "actions": "Message actions",
         "photo": "Photo",
         "photoLabel": "Send a photo from your gallery",

@@ -547,7 +547,7 @@ test.describe('accessibility, notes', { tag: '@full' }, () => {
     await expectAccessible(page, 'the Show anyway question')
     await page.getByTestId('notes.showAnyway.cancel').click()
 
-    // Her chapter: the thread, the split send button (a tab named "Send as: …", a send button named "Send · …", both 44 px; its menu of radios), the action bar's sheets.
+    // Her chapter: the thread, the split send button (a tab named "Send to: …", a send button named "Send · …", both 44 px; its menu of radios), the action bar's sheets.
     await goto(page, `/notes/${bookId}/3`)
     await expect(page.getByTestId('notesThread.bubble').filter({ hasText: 'A friend’s note' })).toBeVisible()
     await expectAccessible(page, 'a chapter')

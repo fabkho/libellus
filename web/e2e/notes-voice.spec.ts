@@ -314,3 +314,99 @@ test('a send without a connection is told plainly, waits for a tap and is stored
   await ida.context().setOffline(false)
   expect(await voiceRows(idaMember.id)).toHaveLength(1)
 })
+
+/**
+ * The soft keyboard through a whole recording (@fabkho/ui 0.13.2). A desktop browser has no system keyboard, so it is emulated the
+ * way the base reads one: the layout viewport shrinks under the tallest height this width was seen at (291 px, the keyboard the
+ * docs' shots draw). What is asserted is what that reading drives and what the DOM shows: the capsule still says `data-keyboard`
+ * and still stands on the emulated keyboard, the field stays mounted and focused (`document.activeElement`) through the hold, the
+ * lock and the send — an unmounted field sends no blur, but it would take the keyboard with it — and only a cancel blurs it. The
+ * system keyboard itself is a real device's (docs/TESTING.md).
+ */
+test('the field keeps the keyboard through a whole voice note: hold, lock and send leave it mounted and focused, and only a cancel closes it @full', { tag: '@full' }, async ({ page: ida }) => {
+  test.setTimeout(120_000)
+  const idaMember = await signedIn(ida)
+  const bookId = await shelveBook(idaMember, sharedBook('The Voice Keyboard Flow'), 'reading')
+  await makeChapters(idaMember, bookId, 2)
+  await goto(ida, `/notes/${bookId}/1`)
+  await expect(ida.getByTestId('notesThread.screen')).toHaveAttribute('data-status', 'ready')
+  await chooseLevel(ida, 'private')
+
+  const input = ida.getByTestId('notesThread.input')
+  const capsule = ida.getByTestId('notesThread.composer')
+  /** Whose the page's focus is: the field's test id, or whatever else took it (the body, a button). */
+  const focused = () => ida.evaluate(() => document.activeElement?.getAttribute('data-testid') ?? document.activeElement?.tagName ?? 'none')
+  /** The field is in the page (not unmounted), out of the layout, and keeps the focus: what the vendor's fix does while a recording runs. */
+  const awayButFocused = async () => {
+    await expect(input).toHaveCount(1)
+    await expect(input).toHaveClass(/field-away/)
+    expect(await focused()).toBe('notesThread.input')
+  }
+  const stillUp = async (when: string) => {
+    await expect(capsule, when).toHaveAttribute('data-keyboard', 'true')
+    await expect(ida.getByTestId('notesThread.recorder'), when).toBeVisible()
+  }
+
+  // The keyboard up: the field takes the focus at the page's own height (the reading's tallest), then the layout viewport shrinks by the keyboard's 291 px.
+  const tall = ida.viewportSize()!
+  await input.click()
+  await expect(input).toBeFocused()
+  await ida.setViewportSize({ width: tall.width, height: tall.height - 291 })
+  await expect(capsule).toHaveAttribute('data-keyboard', 'true')
+  const onKeyboard = async (where: string) => {
+    const box = (await capsule.boundingBox())!
+    expect(box.y + box.height, where).toBeLessThanOrEqual(tall.height - 291 + 1)
+  }
+  await onKeyboard('the capsule at rest, on the emulated keyboard')
+
+  // A TAP on the microphone starts the recording: the field leaves the layout (never the page) and keeps the focus, and the capsule stays on the keyboard through the panel.
+  await ida.getByTestId(MIC).click()
+  await stillUp('a tap, recording')
+  await awayButFocused()
+  await onKeyboard('recording, on the emulated keyboard')
+  await expect(ida.getByTestId('notesThread.voiceTimer')).toHaveAttribute('data-ms', /^[1-9]\d{3}$/, { timeout: 10_000 })
+
+  // ✕ is the one end that closes it: the keyboard goes with the field's blur, and the field is back in the layout.
+  await ida.getByTestId('notesThread.voiceCancel').click()
+  await expect(ida.getByTestId('notesThread.recorder')).toHaveCount(0)
+  await expect(capsule).not.toHaveAttribute('data-keyboard', 'true')
+  expect(await focused()).not.toBe('notesThread.input')
+  await expect(input).not.toHaveClass(/field-away/)
+  expect(await voiceRows(idaMember.id)).toHaveLength(0)
+
+  // Up again, and a HOLD: the keyboard holds through the hold, the LOCK (the finger lets go, the recording goes on) and the panel's own send.
+  await input.click()
+  await expect(capsule).toHaveAttribute('data-keyboard', 'true')
+  const f = await finger(ida, MIC)
+  await f.down()
+  await stillUp('a hold to record')
+  await awayButFocused()
+  await expect(ida.getByTestId('notesThread.recorder')).toHaveAttribute('data-hold', 'true')
+  await expect(ida.getByTestId('notesThread.voiceTimer')).toHaveAttribute('data-ms', /^[1-9]\d{3}$/, { timeout: 10_000 })
+  await ida.waitForTimeout(700)
+  await f.move(-2, -35)
+  await f.move(-3, -80)
+  await f.up(-3, -80)
+  await expect(ida.getByTestId('notesThread.recorder')).not.toHaveAttribute('data-hold', 'true')
+  await stillUp('locked')
+  await awayButFocused()
+  await onKeyboard('locked, on the emulated keyboard')
+  await ida.getByTestId('notesThread.voiceSend').click()
+  await expect(ida.getByTestId('notesThread.recorder')).toHaveCount(0)
+  await expect(input).not.toHaveClass(/field-away/)
+  expect(await focused()).toBe('notesThread.input')
+  await expect(capsule).toHaveAttribute('data-keyboard', 'true')
+  await expect(voices(ida)).toHaveCount(1)
+  await expect.poll(async () => (await voiceRows(idaMember.id)).length, { timeout: 20_000 }).toBe(1)
+
+  // A take too short to send is no cancel either: said, thrown away, and the field has its focus and its keyboard back.
+  await ida.getByTestId(MIC).click()
+  await expect(ida.getByTestId('notesThread.recorder')).toBeVisible()
+  await ida.getByTestId('notesThread.voiceSend').click()
+  await expect(ida.getByTestId('notesThread.mediaError')).toHaveText(en.notes.error.voice_short)
+  await expect(ida.getByTestId('notesThread.recorder')).toHaveCount(0)
+  await expect(input).not.toHaveClass(/field-away/)
+  expect(await focused()).toBe('notesThread.input')
+  await expect(capsule).toHaveAttribute('data-keyboard', 'true')
+  expect(await voiceRows(idaMember.id)).toHaveLength(1)
+})

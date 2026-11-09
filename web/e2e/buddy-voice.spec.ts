@@ -98,15 +98,16 @@ test('Ida records a voice message in a Section thread; Ben gets it live and play
     await expect(ida.getByTestId('buddyThread.record')).toHaveCount(0)
     await ida.getByTestId('buddyThread.input').fill('')
 
-    // A tap starts: the capsule is the recording bar, the field gives way, the timer runs; ✕ throws it away and nothing is stored.
+    // A tap starts: the capsule is the recording bar, the field leaves the layout but stays in the page (its focus keeps the soft keyboard up, `@fabkho/ui` 0.13.2), the timer runs; ✕ throws it away and nothing is stored.
     await ida.getByTestId('buddyThread.record').click()
     await expect(ida.getByTestId('buddyThread.recorder')).toBeVisible()
-    await expect(ida.getByTestId('buddyThread.input')).toHaveCount(0)
+    await expect(ida.getByTestId('buddyThread.input')).toHaveCount(1)
+    await expect(ida.getByTestId('buddyThread.input')).toHaveClass(/field-away/)
     await expect(ida.getByTestId('buddyThread.recordingStatus')).toContainText(en.uiText.chat.voice.recording)
     await expect(ida.getByTestId('buddyThread.voiceTimer')).not.toHaveText('0:00', { timeout: 5_000 })
     await ida.getByTestId('buddyThread.voiceCancel').click()
     await expect(ida.getByTestId('buddyThread.recorder')).toHaveCount(0)
-    await expect(ida.getByTestId('buddyThread.input')).toBeVisible()
+    await expect(ida.getByTestId('buddyThread.input')).not.toHaveClass(/field-away/)
     expect(await sql(`select 1 from public.buddy_messages where buddy_read_id = $1 and kind = 'voice'`, [made.id])).toHaveLength(0)
 
     // A slip of the finger is no message: said above the thread, nothing stored.
