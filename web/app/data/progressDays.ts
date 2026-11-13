@@ -117,8 +117,9 @@ export const PACE_DAYS = 14
 
 /**
  * How much a day, over the last two weeks: what was read since the first day
- * that read anything in them, spread over every day from it to today, rounded
- * (at least 1). Null with fewer than two days of reading to go on.
+ * that read anything in them, spread over the days she read in them, not the
+ * calendar span from it to today (a day without reading is not a day she read),
+ * rounded (at least 1). Null with fewer than two days of reading to go on.
  */
 export function paceOf(days: readonly ProgressDay[], today: string, pageCount: number | null): number | null {
   const recent = days
@@ -128,7 +129,7 @@ export function paceOf(days: readonly ProgressDay[], today: string, pageCount: n
     .sort((a, b) => a.day.localeCompare(b.day))
   if (recent.length < 2) return null
   const total = recent.reduce((sum, d) => sum + d.amount, 0)
-  const span = daysFrom(recent[0]!.day, today) + 1
+  const span = recent.length
   return Math.max(1, Math.round(total / span))
 }
 
