@@ -15,6 +15,7 @@ import { noteErrorKey } from '~/utils/notes'
 import type { NoteErrorCode } from '~/data/notes'
 import { useBookStore } from '~/stores/book'
 import { useLibraryStore } from '~/stores/library'
+import { useMemberPhotosStore } from '~/stores/memberPhotos'
 import { useNotesStore } from '~/stores/notes'
 
 definePageMeta({
@@ -31,6 +32,7 @@ const router = useRouter()
 const store = useNotesStore()
 const books = useBookStore()
 const library = useLibraryStore()
+const photos = useMemberPhotosStore()
 const online = useOnline()
 // Direct, as the other screens that draw a Book from a social answer (docs/plans/owned-covers.md §5).
 const coverHosts = { ...useCoverHosts(), proxy: false }
@@ -94,7 +96,7 @@ function rowLabel(row: ChapterRow): string | undefined {
   return titleSaysNumber(rowTitle(row), row.number) ? undefined : t('notes.chapter', { n: row.number })
 }
 const faceName = (f: { name: string | null }) => f.name?.trim() || t('member.someone')
-const faceOf = (face: ChapterRow['faces'][number]) => ({ initials: initialsOf('', faceName(face)), photo: face.photo, label: faceName(face) })
+const faceOf = (face: ChapterRow['faces'][number]) => ({ initials: initialsOf('', faceName(face)), photo: photos.photoOf(face), label: faceName(face) })
 const facesLabel = (row: ChapterRow) => (row.faces.length ? t('notes.hereNow', { names: row.faces.map(faceName).join(t('common.listSeparator')) }) : undefined)
 
 const asking = ref<ChapterRow | null>(null)

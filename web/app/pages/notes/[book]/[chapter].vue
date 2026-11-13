@@ -223,7 +223,7 @@ function quoteOfReply(item: NoteItem | null): NoteQuote | null {
   return {
     kind: 'note',
     id: item.id,
-    author: { id: item.authorId ?? '', name: item.author, photo: item.authorPhoto },
+    author: { id: item.authorId ?? '', name: item.author, photo: null },
     excerpt: item.voice ? '' : item.body.replace(/\s+/g, ' ').trim().slice(0, 140),
     voice: item.voice,
   }

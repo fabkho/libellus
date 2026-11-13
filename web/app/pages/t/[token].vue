@@ -80,7 +80,7 @@ watch(outcome, async () => {
 
 const host = computed(() => target.value?.host?.name?.trim() || t('member.someone'))
 const names = computed(() => (target.value?.members ?? []).map((m) => m.name?.trim() || t('member.someone')))
-const faces = computed(() => (target.value?.members ?? []).map((m, i) => ({ initials: initialsOf('', m.name), photo: m.photo, label: names.value[i]! })))
+const faces = computed(() => (target.value?.members ?? []).map((m, i) => ({ initials: initialsOf('', m.name), photo: null, label: names.value[i]! })))
 
 onMounted(open)
 </script>
