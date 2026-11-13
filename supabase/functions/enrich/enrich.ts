@@ -71,6 +71,9 @@ export type WorkPayload = {
   year?: number | null
   kind?: wd.WorkKind | null
   coverUrl?: string | null
+  ratingsCount?: number | null
+  readinglogCount?: number | null
+  wantToReadCount?: number | null
   editions?: Record<string, { title: string | null; isbn13: string | null; openlibrary_edition_key: string | null; cover_url: string | null }>
   genres?: string[]
   authors?: AuthorRef[]
@@ -541,7 +544,10 @@ export async function enrichAuthor(ref: AuthorRef, ctx: EnrichContext): Promise<
       ...listedWorkPayload(work, seriesFacts),
       openlibrary: doc?.key ?? (work.openLibraryIds.length === 1 ? work.openLibraryIds[0] : null),
       year: work.year ?? doc?.year ?? null,
-      coverUrl: doc?.coverId ? ol.coverUrl(doc.coverId) : null,
+      ratingsCount: doc?.ratingsCount ?? null,
+      readinglogCount: doc?.readinglogCount ?? null,
+      wantToReadCount: doc?.wantToReadCount ?? null,
+      coverUrl: doc?.coverId ? ol.coverUrl(doc.coverId) : doc?.edition?.coverId ? ol.coverUrl(doc.edition.coverId) : null,
       editions: doc ? editionsOf(doc.key, olDocs) : {},
       authors: [self],
       fetched: true,
@@ -560,7 +566,10 @@ export async function enrichAuthor(ref: AuthorRef, ctx: EnrichContext): Promise<
         openlibrary: doc.key,
         title: doc.title,
         year: doc.year,
-        coverUrl: doc.coverId ? ol.coverUrl(doc.coverId) : null,
+        ratingsCount: doc.ratingsCount,
+        readinglogCount: doc.readinglogCount,
+        wantToReadCount: doc.wantToReadCount,
+        coverUrl: doc.coverId ? ol.coverUrl(doc.coverId) : doc.edition?.coverId ? ol.coverUrl(doc.edition.coverId) : null,
         editions: editionsOf(doc.key, olDocs),
         authors: [self],
         fetched: true,

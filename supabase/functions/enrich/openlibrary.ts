@@ -56,7 +56,7 @@ export const MARC_LANGUAGES: Record<string, string> = { en: 'eng', de: 'ger', fr
 export function authorWorksUrl(author: string, language: string, limit = 100): string {
   return `${OPEN_LIBRARY}/search.json?${new URLSearchParams({
     q: `author_key:${author}`,
-    fields: 'key,title,first_publish_year,cover_i,edition_count,editions,editions.key,editions.title,editions.language,editions.isbn,editions.cover_i',
+    fields: 'key,title,first_publish_year,cover_i,edition_count,editions,editions.key,editions.title,editions.language,editions.isbn,editions.cover_i,ratings_count,readinglog_count,want_to_read_count',
     sort: 'editions',
     limit: String(limit),
     lang: language,
@@ -189,6 +189,10 @@ export type OlSearchDoc = {
   authorNames: string[]
   year: number | null
   coverId: number | null
+  /** Open Library's popularity counts, from the search document; null when it gives none. */
+  ratingsCount: number | null
+  readinglogCount: number | null
+  wantToReadCount: number | null
   subjects: string[]
   editionCount: number
   edition: { key: string | null; title: string | null; isbn13: string | null; coverId: number | null; language: string | null } | null
@@ -210,6 +214,9 @@ export function parseSearch(body: unknown): OlSearchDoc[] {
         authorNames: strings(doc.author_name),
         year: typeof doc.first_publish_year === 'number' ? doc.first_publish_year : null,
         coverId: typeof doc.cover_i === 'number' && doc.cover_i > 0 ? doc.cover_i : null,
+        ratingsCount: nonNegativeCount(doc.ratings_count),
+        readinglogCount: nonNegativeCount(doc.readinglog_count),
+        wantToReadCount: nonNegativeCount(doc.want_to_read_count),
         subjects: strings(doc.subject),
         editionCount: typeof doc.edition_count === 'number' ? doc.edition_count : 0,
         edition: edition
@@ -261,6 +268,11 @@ export function parseSeriesText(text: string): { name: string; position: number 
     .trim()
   if (!value || /^\d+$/.test(value) || value.length > 200 || PUBLISHER_SERIES.test(value)) return null
   return { name: value, position }
+}
+
+/** A count from a search document: the number as given, null when absent or not a non-negative number. */
+function nonNegativeCount(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
 }
 
 function parsePosition(value: unknown): number | null {
