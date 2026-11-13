@@ -94,7 +94,7 @@ function rowLabel(row: ChapterRow): string | undefined {
   return titleSaysNumber(rowTitle(row), row.number) ? undefined : t('notes.chapter', { n: row.number })
 }
 const faceName = (f: { name: string | null }) => f.name?.trim() || t('member.someone')
-const faceOf = (face: ChapterRow['faces'][number]) => ({ initials: initialsOf('', faceName(face)), photo: null, label: faceName(face) })
+const faceOf = (face: ChapterRow['faces'][number]) => ({ initials: initialsOf('', faceName(face)), photo: face.photo, label: faceName(face) })
 const facesLabel = (row: ChapterRow) => (row.faces.length ? t('notes.hereNow', { names: row.faces.map(faceName).join(t('common.listSeparator')) }) : undefined)
 
 const asking = ref<ChapterRow | null>(null)

@@ -106,7 +106,7 @@ function rowLabel(row: RoomRow): string | undefined {
 const rowTitle = (row: RoomRow) => (row.kind === 'room' ? t('together.room') : row.title)
 const facesLabel = (row: RoomRow) =>
   row.faces.length ? t('together.hereNow', { names: row.faces.map((f) => f.name?.trim() || t('member.someone')).join(t('common.listSeparator')) }) : undefined
-const faceOf = (face: RoomRow['faces'][number]) => ({ initials: initialsOf('', face.name?.trim() || t('member.someone')), photo: null, label: face.name?.trim() || t('member.someone') })
+const faceOf = (face: RoomRow['faces'][number]) => ({ initials: initialsOf('', face.name?.trim() || t('member.someone')), photo: face.photo, label: face.name?.trim() || t('member.someone') })
 
 const asking = ref<RoomRow | null>(null)
 const confirmOpen = ref(false)
