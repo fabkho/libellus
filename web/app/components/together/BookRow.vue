@@ -10,7 +10,7 @@
 // *Notes* (components/notes/BookButton.vue) stands beside it in the same row when the Book has a Notes page: two quiet half-width buttons, and what each says under them is full width; without one the action has the row to itself.
 //
 // Props: `book` (the page's Book), `entry` (her Library entry of it, or null). Test ids: `book.together` (the block), `book.together.start`, `book.together.open`,
-// `book.together.summary`, `book.together.hint`, `book.together.adds`, `book.together.unavailable`, and the sheet's own (`buddySetup`).
+// `book.together.summary`, `book.together.adds`, `book.together.unavailable`, and the sheet's own (`buddySetup`).
 import type { Book, BookSnapshot } from '~/data/books'
 import type { LibraryEntry } from '~/data/library'
 import { useBuddyInvitesStore } from '~/stores/buddyInvites'
