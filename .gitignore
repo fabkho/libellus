@@ -6,6 +6,9 @@ node_modules/
 
 # Claude Code worktrees and local agent state
 .claude/
+.commandcode/
+.wrangler/
+.pi/subagent-schedules/
 
 # web/pnpm-workspace.yaml is committed: it approves dependency build scripts
 # for pnpm 11+ (web/AGENTS.md, gotchas). design/ has none to approve.
