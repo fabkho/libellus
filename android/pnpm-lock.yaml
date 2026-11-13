@@ -212,8 +212,8 @@ packages:
   '@jimp/utils@0.22.12':
     resolution: {integrity: sha512-yJ5cWUknGnilBq97ZXOyOS0HhsHOyAyjHwYfHxGbSyMTohgQI6sVyE8KPgDwH8HHW/nMKXk8TrSwAE71zt716Q==}
 
-  '@maxim_mazurok/gapi.client.androidpublisher-v3@0.5.20261029':
-    resolution: {integrity: sha512-T75IdogjRE9tn/RRxtjr8H5AhXOFf+qc++qAaTIAvjINsAW86XqEqwEAkgCzTbrR6yKIYeNBDxaWNF9A0H6xCA==}
+  '@maxim_mazurok/gapi.client.androidpublisher-v3@0.5.20261112':
+    resolution: {integrity: sha512-Z4NMwcytaFC+KJIDwWlDamJRK7k+B+7ZggumtAd5TyQk76akDE/E3X/vXrdGpia8m6QMgw/FrF1i+rc/YktRMA==}
 
   '@maxim_mazurok/gapi.client.discovery-v1@0.6.20200806':
     resolution: {integrity: sha512-QN6aGmIbLXcJW0SEf8tz9UWCpQTBMy2u4xSuZ04YofzMGknhWwMeUecySLntCZYAEstHzDoSgwxCf5Gb8GqIRQ==}
@@ -839,8 +839,8 @@ packages:
       encoding:
         optional: true
 
-  node-forge@1.4.2:
-    resolution: {integrity: sha512-rRtAR5XLJ8gCKd9du4qrKAsgCG1ObGP4gLeNJMa4vYSeq4bmBMOJk5IHkrviBV0q7uoAJlVd8HEQYQSVUb4FGQ==}
+  node-forge@1.4.3:
+    resolution: {integrity: sha512-P6wzfh6t70avmV8FrVEAd/36sOPJQ+hkaJVX1Laap9J/77m7M0eyozDvc8SwnDf4P7MP94gwbAAo0rg3YVXT+g==}
     engines: {node: '>= 6.13.0'}
 
   object-inspect@1.13.4:
@@ -1447,7 +1447,7 @@ snapshots:
     dependencies:
       regenerator-runtime: 0.13.11
 
-  '@maxim_mazurok/gapi.client.androidpublisher-v3@0.5.20261029':
+  '@maxim_mazurok/gapi.client.androidpublisher-v3@0.5.20261112':
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -1528,7 +1528,7 @@ snapshots:
 
   '@types/gapi.client.androidpublisher@3.0.2':
     dependencies:
-      '@maxim_mazurok/gapi.client.androidpublisher-v3': 0.5.20261029
+      '@maxim_mazurok/gapi.client.androidpublisher-v3': 0.5.20261112
 
   '@types/gapi.client.discovery-v1@0.0.4':
     dependencies:
@@ -1899,7 +1899,7 @@ snapshots:
 
   google-p12-pem@3.1.4:
     dependencies:
-      node-forge: 1.4.2
+      node-forge: 1.4.3
 
   googleapis-common@5.1.0(supports-color@7.2.0):
     dependencies:
@@ -2112,7 +2112,7 @@ snapshots:
     dependencies:
       whatwg-url: 5.0.0
 
-  node-forge@1.4.2: {}
+  node-forge@1.4.3: {}
 
   object-inspect@1.13.4: {}
 
