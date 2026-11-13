@@ -48,16 +48,16 @@ onMounted(() => void invites.load({ force: true }))
 <template>
   <div class="mt-sm" data-testid="book.together">
     <!-- *Notes* (components/notes/BookButton.vue) and *Read together* side by side, two quiet half-width buttons; what is said under them is full width. -->
-    <div class="grid grid-cols-2 gap-sm">
+    <div class="flex gap-sm">
       <NotesBookButton :book="book" />
-      <UiButton v-if="action?.kind === 'open' && read" :to="roomPath(read.id)" tone="quiet" block data-testid="book.together.open">
+      <UiButton v-if="action?.kind === 'open' && read" :to="roomPath(read.id)" tone="quiet" block class="flex-1" data-testid="book.together.open">
         <UiIcon name="chat" :size="18" />{{ t('together.entry.openRoom') }}
         <TogetherUnreadBadge :count="read.unread" :label="t('together.entry.unread', { count: read.unread })" />
       </UiButton>
-      <UiButton v-else-if="action?.kind === 'start'" tone="quiet" block aria-haspopup="dialog" data-testid="book.together.start" @click="start">
+      <UiButton v-else-if="action?.kind === 'start'" tone="quiet" block class="flex-1" aria-haspopup="dialog" data-testid="book.together.start" @click="start">
         <UiIcon name="chat" :size="18" />{{ t('together.entry.start') }}
       </UiButton>
-      <UiButton v-else-if="action?.kind === 'unavailable'" tone="quiet" block disabled aria-describedby="book-together-why" data-testid="book.together.start">
+      <UiButton v-else-if="action?.kind === 'unavailable'" tone="quiet" block class="flex-1" disabled aria-describedby="book-together-why" data-testid="book.together.start">
         <UiIcon name="chat" :size="18" />{{ t('together.entry.start') }}
       </UiButton>
     </div>
@@ -68,7 +68,6 @@ onMounted(() => void invites.load({ force: true }))
       </p>
     </template>
     <template v-else-if="action?.kind === 'start'">
-      <p class="mt-xs text-center text-caption text-ink-muted" data-testid="book.together.hint">{{ t('together.entry.hint') }}</p>
       <p v-if="action.adds" class="mt-xxs text-center text-caption text-ink-muted" data-testid="book.together.adds">{{ t('together.entry.adds') }}</p>
     </template>
     <p v-else-if="action?.kind === 'unavailable'" id="book-together-why" class="mt-xs text-center text-caption text-ink-muted" data-testid="book.together.unavailable">{{ t('together.entry.unavailable') }}</p>
