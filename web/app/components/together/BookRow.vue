@@ -7,10 +7,10 @@
 //   creates the read, and the line under the action and the sheet say so; nothing is added if she cancels;
 // - a Manual book (her own record: it has no work to read together): the action disabled, with the one line why.
 // The setup sheet (and with it the big store and the chat layer) is built when she first presses the action, not with the page.
-// *Notes* (components/notes/BookButton.vue) stands beside it in the same row: two quiet half-width buttons, and what each says under them is full width.
+// *Notes* (components/notes/BookButton.vue) stands beside it in the same row when the Book has a Notes page: two quiet half-width buttons, and what each says under them is full width; without one the action has the row to itself.
 //
 // Props: `book` (the page's Book), `entry` (her Library entry of it, or null). Test ids: `book.together` (the block), `book.together.start`, `book.together.open`,
-// `book.together.summary`, `book.together.hint`, `book.together.adds`, `book.together.unavailable`, and the sheet's own (`buddySetup`).
+// `book.together.summary`, `book.together.adds`, `book.together.unavailable`, and the sheet's own (`buddySetup`).
 import type { Book, BookSnapshot } from '~/data/books'
 import type { LibraryEntry } from '~/data/library'
 import { useBuddyInvitesStore } from '~/stores/buddyInvites'
@@ -30,6 +30,13 @@ const where = computed(() => (read.value ? whereWords(read.value.where) : null))
 const readers = computed(() => (read.value ? t('together.count.readers', { count: read.value.memberCount }, read.value.memberCount) : ''))
 const whereText = computed(() => (where.value ? t(where.value.key, where.value.values) : ''))
 
+// The *Notes* button stands beside the action only when the Book has a Notes page: a Manual
+// book is her own record (nobody else can open it) and a search result that is not in the
+// Catalogue has none (components/notes/BookButton.vue). Without it the action has the row.
+// These two mirror components/notes/BookButton.vue:12-13, where the button decides to render; if that condition changes, these must change with it.
+const manual = computed(() => props.book.source === 'manual')
+const notes = computed(() => !manual.value && !!('id' in props.book ? props.book.id : null))
+
 // The sheet is built open when she first presses the action (it initialises itself on mounting), and then kept.
 const open = ref(false)
 const asked = ref(false)
@@ -47,8 +54,8 @@ onMounted(() => void invites.load({ force: true }))
 
 <template>
   <div class="mt-sm" data-testid="book.together">
-    <!-- *Notes* (components/notes/BookButton.vue) and *Read together* side by side, two quiet half-width buttons; what is said under them is full width. -->
-    <div class="grid grid-cols-2 gap-sm">
+    <!-- *Notes* (components/notes/BookButton.vue) and *Read together* side by side when the Book has a Notes page, two quiet half-width buttons; without one (a Manual book, her own record, and a search result not in the Catalogue) the action has the row to itself. What is said under them is full width. -->
+    <div class="grid gap-sm" :class="notes ? 'grid-cols-2' : 'grid-cols-1'">
       <NotesBookButton :book="book" />
       <UiButton v-if="action?.kind === 'open' && read" :to="roomPath(read.id)" tone="quiet" block data-testid="book.together.open">
         <UiIcon name="chat" :size="18" />{{ t('together.entry.openRoom') }}
@@ -68,7 +75,6 @@ onMounted(() => void invites.load({ force: true }))
       </p>
     </template>
     <template v-else-if="action?.kind === 'start'">
-      <p class="mt-xs text-center text-caption text-ink-muted" data-testid="book.together.hint">{{ t('together.entry.hint') }}</p>
       <p v-if="action.adds" class="mt-xxs text-center text-caption text-ink-muted" data-testid="book.together.adds">{{ t('together.entry.adds') }}</p>
     </template>
     <p v-else-if="action?.kind === 'unavailable'" id="book-together-why" class="mt-xs text-center text-caption text-ink-muted" data-testid="book.together.unavailable">{{ t('together.entry.unavailable') }}</p>

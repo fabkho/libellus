@@ -133,15 +133,15 @@ describe('progress by day, worked out', () => {
   })
 
   it('works out the pace over two weeks from the first day read, and the days to go', () => {
-    // 212 pages over the 12 days from the first one to today.
-    expect(paceOf(eden, today, 608)).toBe(18)
+    // 212 pages over the 9 days she read.
+    expect(paceOf(eden, today, 608)).toBe(24)
     expect(daysLeftOf(18, 212, 608)).toBe(22)
     expect(daysLeftOf(18, 608, 608)).toBe(0)
     expect(daysLeftOf(null, 212, 608)).toBeNull()
     // One day of reading is not a pace yet; days older than two weeks are not counted.
     expect(paceOf([day(1, 188, 212)], today, 608)).toBeNull()
     expect(paceOf([day(20, null, 100), day(1, 100, 124), day(0, 124, 140)], today, 608)).toBe(20)
-    expect(paceOf([day(3, 20, 30, 'percent'), day(0, 30, 44, 'percent')], today, null)).toBe(6)
+    expect(paceOf([day(3, 20, 30, 'percent'), day(0, 30, 44, 'percent')], today, null)).toBe(12)
   })
 
   it('says what she read last time: the latest day before today that read something', () => {

@@ -71,7 +71,7 @@ const chartLabel = computed(() =>
 
     <UiReveal :show="shown !== 'none'" data-testid="book.progressStats">
       <div class="pt-md">
-        <dl class="grid grid-cols-4 gap-sm" data-testid="book.progressFigures">
+        <dl class="flex justify-between gap-sm" data-testid="book.progressFigures">
           <div class="flex flex-col gap-xs">
             <dt class="eyebrow">{{ pages ? t('book.progress.figurePage') : t('book.progress.figureRead') }}</dt>
             <dd class="figures text-callout" data-testid="book.progressValue">
