@@ -17,6 +17,7 @@ import { friendsNameParts } from '~/utils/friendsNames'
 import { buddyErrorKey } from '~/utils/buddyRead'
 import { useBuddyReadStore } from '~/stores/buddyRead'
 import { useSessionStore } from '~/stores/session'
+import { useMemberPhotosStore } from '~/stores/memberPhotos'
 
 definePageMeta({
   layout: 'tabs',
@@ -31,6 +32,7 @@ const route = useRoute()
 const router = useRouter()
 const store = useBuddyReadStore()
 const session = useSessionStore()
+const photos = useMemberPhotosStore()
 const online = useOnline()
 // Direct, as the other screens that draw a Book from a social answer (docs/plans/owned-covers.md §5).
 const coverHosts = { ...useCoverHosts(), proxy: false }
@@ -106,7 +108,7 @@ function rowLabel(row: RoomRow): string | undefined {
 const rowTitle = (row: RoomRow) => (row.kind === 'room' ? t('together.room') : row.title)
 const facesLabel = (row: RoomRow) =>
   row.faces.length ? t('together.hereNow', { names: row.faces.map((f) => f.name?.trim() || t('member.someone')).join(t('common.listSeparator')) }) : undefined
-const faceOf = (face: RoomRow['faces'][number]) => ({ initials: initialsOf('', face.name?.trim() || t('member.someone')), photo: null, label: face.name?.trim() || t('member.someone') })
+const faceOf = (face: RoomRow['faces'][number]) => ({ initials: initialsOf('', face.name?.trim() || t('member.someone')), photo: photos.photoOf(face), label: face.name?.trim() || t('member.someone') })
 
 const asking = ref<RoomRow | null>(null)
 const confirmOpen = ref(false)
