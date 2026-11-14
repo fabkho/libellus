@@ -38,10 +38,13 @@ const words = computed(() => text(progress.value, pageCount.value))
 const atEnd = computed(() => progressReachedEnd(progress.value, pageCount.value))
 const authorLine = computed(() => formatAuthors(props.entry.book.authors, t('common.etAl')))
 const readingDays = useReadingDays(() => props.entry)
-// A whole percent, from the same progress the card has; null when it cannot be known (a page without a page count).
-const percentText = computed(() => (words.value.percent === null ? null : t('book.progress.percent', { percent: words.value.percent })))
-// What the bar says to a screen reader: the percent first, then the place when it is a page.
-const barValue = computed(() => (percentText.value && !('percent' in (progress.value ?? {})) ? `${percentText.value} · ${words.value.value}` : words.value.value))
+// A whole percent, from the same progress the card has: null when it cannot be known (a page without a page count) and when
+// the place is already a percent — "45 %" says it once, so the bar's caption is not told the same thing twice.
+const percentText = computed(() =>
+  words.value.percent === null || 'percent' in (progress.value ?? {}) ? null : t('book.progress.percent', { percent: words.value.percent }),
+)
+// What the bar says to a screen reader, and its caption in the same words: the percent first, then the place when it is a page.
+const barValue = computed(() => (percentText.value ? `${percentText.value} · ${words.value.value}` : words.value.value))
 
 // This card's last save, while Undo is on offer.
 const undo = computed(() => (reading.progressUndo?.entryId === props.entry.id ? reading.progressUndo : null))
@@ -109,7 +112,6 @@ function act() {
           <span class="truncate text-body text-ink-muted">{{ authorLine }}</span>
           <EbooksMark :entry="entry" testid="home.ebookMark" />
         </span>
-        <span v-if="percentText" class="figures mt-xs text-meta text-ink-muted" data-testid="home.entryPercent">{{ percentText }}</span>
       </UiPressLink>
       <div v-if="readingDays.hasHistory.value && readingDays.paceLine.value" class="mt-sm flex items-end gap-sm" data-testid="home.days">
         <span class="figures text-meta text-ink-faint wrap-anywhere" data-testid="home.pace">{{ readingDays.paceLine.value }}</span>
@@ -126,6 +128,12 @@ function act() {
         <p class="min-w-0 text-meta wrap-anywhere" data-testid="home.progress">
           <span v-if="atEnd" class="text-body text-ink" data-testid="home.theEnd">{{ t('book.progress.theEnd') }}</span>
           <template v-else>
+            <!-- The bar's caption: how far, once — the whole percent, then the place it is, the same words the bar gives a
+                 screen reader (`barValue`). At the last page "The end." stands in for both. -->
+            <template v-if="percentText">
+              <span class="figures text-ink-muted" data-testid="home.progressPercent">{{ percentText }}</span>
+              <span class="text-ink-faint" aria-hidden="true"> · </span>
+            </template>
             <span class="figures" :class="progress ? 'text-ink-muted' : 'text-ink-faint'" data-testid="home.progressValue">{{ words.value }}</span>
             <span v-if="gain" class="figures text-accent-ink" data-testid="home.progressGain"> · {{ gain }}</span>
           </template>
