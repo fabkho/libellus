@@ -45,7 +45,7 @@ const bubble = (page: Page, words: string) => page.getByTestId('notesThread.bubb
 const row = (page: Page, n: number | 'whole') => page.locator(`[data-testid="notes.chapter.row"][data-segment="${n}"]`)
 
 /** Right click (the pointer's long press) on a bubble opens its bar; then one of the app's entries. */
-async function bar(page: Page, words: string, action: 'visibility' | 'delete' | 'report' | 'block' | 'reply') {
+async function bar(page: Page, words: string, action: 'edit' | 'visibility' | 'delete' | 'report' | 'block' | 'reply') {
   await untilStill(page)
   await bubble(page, words).click({ button: 'right' })
   await expect(page.getByTestId('notesThread.reactionBar')).toBeVisible()
@@ -458,6 +458,66 @@ test('the audience lives in the send button: it is there and unchanged while the
     await goto(anna, `/notes/${bookId}/3`)
     await expect(bubble(anna, 'Friends, from the button')).toBeVisible()
     await expect(anna.getByTestId('notesThread.veil')).toHaveCount(0)
+  } finally {
+    await context.close()
+  }
+})
+
+test('she edits one of her own notes in place: the field holds it, Save rewrites it for every reader and says “edited”, Cancel leaves it @full', { tag: '@full' }, async ({ page: ida, browser }) => {
+  test.slow()
+  const { context, idaMember, pages, members: [annaMember] } = await members(browser, ida, ['Anna'])
+  const [anna] = pages as [Page]
+  try {
+    await befriend(idaMember, annaMember!)
+    const snapshot = sharedBook('The Edit Flow')
+    const bookId = await shelveBook(idaMember, snapshot, 'reading')
+    await shelveBook(annaMember!, snapshot, 'reading')
+    const room = await makeChapters(idaMember, bookId, 3)
+    for (const m of [idaMember, annaMember!]) await notesOf(m).setChapter(room.id, 2)
+    const row = async (words: string) => (await sql<{ id: string; body: string; edited_at: string | null }>('select id, body, edited_at from public.room_messages where body = $1', [words]))[0]
+
+    await goto(ida, `/notes/${bookId}/2`)
+    await write(ida, 'Ida thoguht so')
+    // Her own note's bar has Edit; Edit opens the thread's capsule as that note's field, holding what it says.
+    await bar(ida, 'Ida thoguht so', 'edit')
+    const field = ida.getByTestId('notesThread.edit.input')
+    await expect(field).toBeVisible()
+    await expect(field).toHaveValue('Ida thoguht so')
+    // The thread's own composer waits behind it: one line writes at a time.
+    await expect(ida.getByTestId('notesThread.input')).toHaveCount(0)
+    // Cancel leaves the note as it was.
+    await ida.getByTestId('notesThread.editCancel').click()
+    await expect(ida.getByTestId('notesThread.edit.input')).toHaveCount(0)
+    await expect(bubble(ida, 'Ida thoguht so')).toBeVisible()
+    await expect(ida.getByTestId('notesThread.edited')).toHaveCount(0)
+    await expect.poll(async () => (await row('Ida thoguht so'))!.edited_at).toBeNull()
+
+    // Save rewrites it: the bubble says the new words and carries the caption; the stored row keeps its id and gets its stamp.
+    const before = await row('Ida thoguht so')
+    await bar(ida, 'Ida thoguht so', 'edit')
+    await ida.getByTestId('notesThread.edit.input').fill('Ida thought so')
+    await ida.getByTestId('notesThread.editSave').click()
+    await expect(bubble(ida, 'Ida thought so')).toBeVisible()
+    await expect(ida.getByTestId('notesThread.message').filter({ hasText: 'Ida thought so' }).getByTestId('notesThread.edited')).toBeVisible()
+    await expect(ida.getByTestId('notesThread.edit.input')).toHaveCount(0)
+    expect(await ida.content()).not.toContain('Ida thoguht so')
+    await expect.poll(async () => (await row('Ida thought so'))!.id).toBe(before!.id)
+    await expect.poll(async () => (await row('Ida thought so'))!.edited_at).not.toBeNull()
+
+    // Anna reads the corrected words and says they were edited; the note stayed where and as it was.
+    await goto(anna, `/notes/${bookId}/2`)
+    await expect(bubble(anna, 'Ida thought so')).toBeVisible()
+    // The caption sits under the bubble, in the message's own block (a bubble's meta), so it is drawn for anybody who may read the note.
+    await expect(anna.getByTestId('notesThread.message').filter({ hasText: 'Ida thought so' }).getByTestId('notesThread.edited')).toBeVisible()
+    expect(await anna.content()).not.toContain('Ida thoguht so')
+    expect((await anna.content())).toContain(en.notes.thread.edited)
+
+    // Not hers to edit: Anna's own note has Edit on her side only, and Ida's bar on Anna's note has none.
+    await write(anna, 'Anna says hers')
+    await goto(ida, `/notes/${bookId}/2`)
+    await bubble(ida, 'Anna says hers').click({ button: 'right' })
+    await expect(ida.getByTestId('notesThread.reactionBar')).toBeVisible()
+    await expect(ida.getByTestId('notesThread.reactionAction.edit')).toHaveCount(0)
   } finally {
     await context.close()
   }

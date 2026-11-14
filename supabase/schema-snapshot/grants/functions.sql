@@ -130,6 +130,8 @@ grant execute on function public.delete_session(uuid) to service_role;
 grant execute on function public.edge_pace_hold(text,integer) to service_role;
 grant execute on function public.edge_pace_take(text,integer,integer) to service_role;
 grant execute on function public.edge_rate_hit(uuid,text,integer,integer) to service_role;
+grant execute on function public.edit_note(uuid,text) to authenticated;
+grant execute on function public.edit_note(uuid,text) to service_role;
 grant execute on function public.enrich_backfill(integer) to service_role;
 grant execute on function public.enrich_claim(integer,interval,uuid) to service_role;
 grant execute on function public.enrich_failed(uuid,text) to service_role;

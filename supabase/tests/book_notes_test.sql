@@ -16,7 +16,7 @@
 -- about rows this test made, never counts of a table.
 
 begin;
-select plan(198);
+select plan(232);
 
 create schema if not exists tests;
 
@@ -492,6 +492,161 @@ select is(tests.outcome(format(
   '23514 note_wider_than_parent', 'constraint trigger: narrowing a note under its replies without them fails at commit');
 set constraints all deferred;
 
+
+-- ------------------------------------------------------------------------- 3b. editing a note (20261118030000_edit_note.sql)
+
+-- A voice note of a member, past the API (the shape checks pin the object's name to the row's own ids).
+create or replace function tests.voice(p_room uuid, p_section uuid, p_author uuid)
+returns uuid language plpgsql security definer as $$
+declare
+  v_client uuid := gen_random_uuid();
+  v_id     uuid;
+begin
+  insert into public.room_messages (room_id, section_id, author_id, client_id, kind, body, visibility,
+                                    voice_object, voice_mime, voice_duration_ms)
+  values (p_room, p_section, p_author, v_client, 'voice', '', 'private',
+          p_author || '/' || p_room || '/' || v_client || '.m4a', 'audio/mp4', 1000)
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+-- A row as the owner's removal leaves it: a tombstone, marked moderated (the state owner_remove_note writes).
+create or replace function tests.moderate(p_note uuid)
+returns void language plpgsql security definer as $$
+begin
+  update public.room_messages set body = '', deleted_at = clock_timestamp(), moderated = true where id = p_note;
+end;
+$$;
+create or replace function tests.row_of_note(p_note uuid)
+returns jsonb language sql security definer as $$
+  select to_jsonb(m) from public.room_messages m where m.id = p_note
+$$;
+create or replace function tests.answer_of(p_viewer uuid, p_room uuid, p_section uuid, p_note uuid)
+returns jsonb language plpgsql as $$
+declare v jsonb;
+begin
+  perform tests.act_as(p_viewer);
+  v := tests.in_page(public.note_messages(p_room, p_section), p_note);
+  reset role;
+  return v;
+end;
+$$;
+create or replace function tests.outcome_as(p_viewer uuid, p_sql text)
+returns text language plpgsql as $$
+declare v text;
+begin
+  perform tests.act_as(p_viewer);
+  v := tests.outcome(p_sql);
+  reset role;
+  return v;
+end;
+$$;
+
+-- A note she wrote can be corrected in place: the words and the stamp change, nothing else about it.
+select tests.act_as(:'a');
+select tests.note(:'room', :'ch4', 'Anna: a thoguht', 'friends') as ed \gset
+reset role;
+select tests.row_of_note(:'ed') as ed_before \gset
+select tests.act_as(:'a');
+select public.edit_note(:'ed', 'Anna: a thought') as ed_json \gset
+reset role;
+select is(tests.answer_of(:'a', :'room', :'ch4', :'ed') ->> 'body', 'Anna: a thought', 'edit_note: the words are the ones she gave');
+select is(:'ed_json'::jsonb ->> 'body', 'Anna: a thought', 'the answer is the note as its author sees it');
+select ok((tests.row_of_note(:'ed') ->> 'edited_at')::timestamptz >= (tests.row_of_note(:'ed') ->> 'created_at')::timestamptz,
+  'and the edit is stamped, never before the note was written');
+select is((:'ed_json'::jsonb ->> 'editedAt')::timestamptz, (tests.row_of_note(:'ed') ->> 'edited_at')::timestamptz,
+  'editedAt in the answer is the stamp on the row');
+select is((tests.row_of_note(:'ed') - 'edited_at') - 'body', (:'ed_before'::jsonb - 'edited_at') - 'body',
+  'every other column is the row it was: the author, the level, the chapter, the client id, the instant it was written');
+select is(tests.answer_of(:'f', :'room', :'ch4', :'ed') ->> 'body', 'Anna: a thought', 'her friend reads the corrected words');
+select is((tests.answer_of(:'f', :'room', :'ch4', :'ed') ->> 'editedAt')::timestamptz,
+  (tests.row_of_note(:'ed') ->> 'edited_at')::timestamptz, 'and its editedAt');
+select is(tests.answer_of(:'f', :'room', :'ch4', :'ed') -> 'mine', 'false'::jsonb, '(the note is hers, not his)');
+
+-- A second edit replaces the words again and stamps a later instant; no other column moves.
+select tests.act_as(:'a');
+select public.edit_note(:'ed', 'Anna: a thought, once more') as ed_again \gset
+reset role;
+select is(tests.answer_of(:'a', :'room', :'ch4', :'ed') ->> 'body', 'Anna: a thought, once more', 'a second edit replaces the words again');
+select ok((:'ed_again'::jsonb ->> 'editedAt')::timestamptz > (:'ed_json'::jsonb ->> 'editedAt')::timestamptz,
+  'and stamps a later instant than the first edit');
+select is((tests.row_of_note(:'ed') - 'edited_at') - 'body', (:'ed_before'::jsonb - 'edited_at') - 'body',
+  'and still no other column of the row moves');
+select is(tests.sorted(tests.page_ids(:'a', :'room', :'ch4')) @> array[:'ed']::uuid[], true, 'the note is still in its chapter');
+
+-- Never edited: no stamp, in the row and in the answer.
+select tests.act_as(:'a');
+select tests.note(:'room', :'ch4', 'Anna: never changed', 'friends') as ed_plain \gset
+reset role;
+select is(tests.row_of_note(:'ed_plain') -> 'edited_at', 'null'::jsonb, 'a note nobody edited has no stamp in its row');
+select is(tests.answer_of(:'a', :'room', :'ch4', :'ed_plain') -> 'editedAt', 'null'::jsonb, 'nor editedAt in the answer');
+select is(tests.answer_of(:'f', :'room', :'ch4', :'ed_plain') -> 'editedAt', 'null'::jsonb, 'nor in anybody else''s');
+
+-- Refusals: not signed in, blank, too long, not hers, a tombstone, a moderated row, a voice note.
+select tests.act_anon();
+select is(tests.outcome(format('select public.edit_note(%L, %L)', :'ed', 'x')), '42501 permission denied for function edit_note',
+  'anon: edit_note is not granted');
+reset role;
+select set_config('request.jwt.claims', '{"role": "authenticated"}', true);
+set local role authenticated;
+select is(tests.outcome(format('select public.edit_note(%L, %L)', :'ed', 'x')), '42501 not_signed_in',
+  'a token without a member: not_signed_in');
+reset role;
+select tests.act_as(:'a');
+select is(tests.outcome(format('select public.edit_note(%L, %L)', :'ed', '   ')), '22023 body_empty', 'nothing but spaces: body_empty');
+select is(tests.outcome(format('select public.edit_note(%L, %L)', :'ed', E'\u00a0\u200b')), '22023 body_empty',
+  'the spaces and control characters the shape check skips: body_empty');
+select is(tests.outcome(format('select public.edit_note(%L, %L)', :'ed', null)), '22023 body_empty', 'null: body_empty');
+select is(tests.outcome(format('select public.edit_note(%L, %L)', :'ed', repeat('x', 2001))), '22023 body_too_long',
+  '2001 characters: body_too_long');
+select is(public.edit_note(:'ed', repeat('x', 2000)) ->> 'body', repeat('x', 2000), '2000 characters: the longest note');
+select is(tests.outcome(format('select public.edit_note(%L, %L)', gen_random_uuid(), 'x')), 'PT404 not_found', 'no such note: not_found');
+select public.delete_note(:'ed_plain');
+select is(tests.outcome(format('select public.edit_note(%L, %L)', :'ed_plain', 'x')), '22023 note_not_editable',
+  'her own tombstone: note_not_editable');
+select is(tests.outcome(format('select public.edit_note(%L, %L)', :'gone', 'x')), 'PT404 not_found',
+  'another member''s tombstone: not_found, not note_not_editable');
+reset role;
+
+-- Another member's note is not found, never refused for being hers: the reply of another in the same chapter too.
+select tests.act_as(:'f');
+select tests.note(:'room', :'ch4', 'Ben: mine to say', 'friends') as ed_ben \gset
+select tests.note(:'room', :'ch4', 'Ben: to the point', 'friends') as ed_child \gset
+reset role;
+select is(tests.outcome_as(:'a', format('select public.edit_note(%L, %L)', :'ed_ben', 'not mine to touch')), 'PT404 not_found',
+  'a note of another member: not_found (never a refusal that says it exists)');
+select is(tests.outcome_as(:'a', format('select public.edit_note(%L, %L)', :'ed_child', 'x')), 'PT404 not_found',
+  'and so is a second one of his');
+select is(tests.outcome_as(:'f', format('select public.edit_note(%L, %L)', :'ed_ben', 'Ben: mine to say')) , 'ok',
+  '(fixture: Ben edits his own)');
+
+-- A moderated row is a tombstone too: her words never come back.
+select tests.act_as(:'a');
+select tests.note(:'room', :'ch4', 'Anna: to be removed', 'friends') as ed_bad \gset
+reset role;
+select tests.moderate(:'ed_bad');
+select is(tests.outcome_as(:'a', format('select public.edit_note(%L, %L)', :'ed_bad', 'back again')), '22023 note_not_editable',
+  'a moderated note stays removed: note_not_editable');
+
+-- A voice note has no words to change.
+select tests.voice(:'room', :'ch4', :'a') as ed_voice \gset
+select is(tests.outcome_as(:'a', format('select public.edit_note(%L, %L)', :'ed_voice', 'words for the recording')),
+  '22023 note_not_editable', 'a voice note of hers: note_not_editable');
+select is(tests.outcome_as(:'a', format('select public.edit_note(%L, %L)', :'ed_voice', '  ')), '22023 body_empty',
+  'an empty body is refused first, as for any note: body_empty');
+
+-- An edited note that becomes a tombstone says nothing about it any more.
+select tests.act_as(:'a');
+select tests.note(:'room', :'ch4', 'Anna: edited, then gone', 'friends') as ed_gone \gset
+select public.edit_note(:'ed_gone', 'Anna: edited then removed') as ed_gone_live \gset
+reset role;
+select is((:'ed_gone_live'::jsonb ->> 'editedAt') is not null, true, 'an edited note says so while it is live');
+select tests.act_as(:'a');
+select public.delete_note(:'ed_gone') as ed_gone_dead \gset
+reset role;
+select is(:'ed_gone_dead'::jsonb -> 'editedAt', 'null'::jsonb, 'a tombstone carries no editedAt in its answer');
+select is(tests.row_of_note(:'ed_gone') ->> 'body', '', 'and no words');
+
 -- ------------------------------------------------------------------------- 4. counts never leak
 
 -- Chapter 5 holds only A's private and friends notes.
@@ -585,8 +740,8 @@ select tests.act_as(:'f');
 select tests.in_page(public.note_messages(:'room', tests.sec(:'room', 1)), :'n_pub') as f_pub \gset
 reset role;
 select is(array(select jsonb_object_keys(:'a_pub'::jsonb) order by 1),
-  array['author', 'body', 'clientId', 'createdAt', 'effectiveVisibility', 'id', 'kind', 'mine', 'myReaction', 'quote',
-        'reactions', 'sectionId', 'spoiler', 'visibility'],
+  array['author', 'body', 'clientId', 'createdAt', 'editedAt', 'effectiveVisibility', 'id', 'kind', 'mine', 'myReaction',
+        'quote', 'reactions', 'sectionId', 'spoiler', 'visibility'],
   'a note''s keys');
 select is((:'a_pub'::jsonb ->> 'mine')::boolean, true, 'mine for its author');
 select ok(:'a_pub'::jsonb ->> 'clientId' is not null, 'its author gets her client id');

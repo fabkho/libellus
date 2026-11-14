@@ -181,6 +181,14 @@ useHead({ title: () => `${title.value || t('notes.title')} · ${t('app.name')}` 
 const text = ref('')
 const replyTo = ref<NoteItem | null>(null)
 const notice = ref<string | null>(null)
+/**
+ * The note whose words she is rewriting (`notes.thread.edit` in its bar). Its own composer reuse: the capsule over the thread becomes an edit
+ * field holding her note, with Save and Cancel, and the thread's own composer steps aside while it is open (one line writes at a time).
+ */
+const editing = ref<NoteItem | null>(null)
+const editText = ref('')
+const editBusy = ref(false)
+const editError = ref<NoteErrorCode | null>(null)
 const chat = useTemplateRef<{ jumpTo: (id: string) => Promise<void>; toNewest: () => void }>('chat')
 
 /** The audience of the note she is writing. */
@@ -295,6 +303,8 @@ function actionsOf(item: NoteItem): BarAction[] {
   if (item.removed || !item.id) return []
   const list: BarAction[] = []
   if (item.mine) {
+    // Her own live text note: its words can be corrected. A voice note is a recording and a tombstone stays one, so neither is offered it.
+    if (!item.voice && !item.removed) list.push({ id: 'edit', label: t('notes.thread.edit'), icon: 'pencil' })
     // While the owner's switch is off her public note counts as a friends' one: the bar says so where she would change it.
     list.push({ id: 'visibility', label: item.visibility === 'public' && !publicEnabled.value ? t('notes.level.paused') : t('notes.visibilitySheet.title'), icon: item.visibility === 'public' ? 'globe' : item.visibility === 'private' ? 'lock' : 'people' })
     list.push({ id: 'delete', label: t('notes.thread.delete'), icon: 'trash' })
@@ -321,7 +331,9 @@ const blockError = ref<string | null>(null)
 function action(actionId: string, key: string) {
   const item = byKey.value.get(key)
   if (!item?.id) return
-  if (actionId === 'delete') {
+  if (actionId === 'edit') {
+    openEdit(item)
+  } else if (actionId === 'delete') {
     deleting.value = item
     deleteError.value = null
     deleteOpen.value = true
@@ -337,6 +349,47 @@ function action(actionId: string, key: string) {
     blockOpen.value = true
   }
 }
+// ------------------------------------------------------------------ editing a note
+
+/** The capsule becomes the field of her note, holding what it says: `saveEdit` writes it, `cancelEdit` leaves it be. */
+function openEdit(item: NoteItem) {
+  if (!item.id || item.voice || item.removed) return
+  editing.value = item
+  editText.value = item.body
+  editError.value = null
+  notice.value = null
+  void nextTick(() => document.querySelector<HTMLElement>('[data-testid="notesThread.edit"] textarea, [data-testid="notesThread.edit"] input')?.focus())
+}
+function cancelEdit() {
+  editing.value = null
+  editText.value = ''
+  editError.value = null
+}
+/** The edit's answer, as `send`'s: a refusal is said above the thread and the field keeps her words. */
+async function saveEdit() {
+  const item = editing.value
+  if (!item?.id || editBusy.value || !room.value || !chapter.value) return
+  const body = editText.value
+  if (!body.trim()) return
+  editBusy.value = true
+  editError.value = null
+  const failed = await store.editNote(room.value.id, chapter.value.id, item.id, body)
+  editBusy.value = false
+  if (failed) {
+    editError.value = failed
+    notice.value = t(noteErrorKey(failed))
+    return
+  }
+  cancelEdit()
+}
+// Sign-out, another chapter, a note that became a tombstone under her: the field does not outlive its note.
+watch(items, (now) => {
+  const open = editing.value
+  if (!open) return
+  const same = now.find((i) => i.key === open.key)
+  if (!same || same.removed) cancelEdit()
+})
+
 async function confirmDelete() {
   const item = deleting.value
   if (!item?.id || deleteBusy.value || !room.value || !chapter.value) return
@@ -575,8 +628,13 @@ function back() {
           <FriendsAvatar :card="{ id: item.authorId ?? '', name: noteOf(item).author, photo: noteOf(item).authorPhoto }" />
         </template>
         <!-- Her private note says so under the bubble; a note that was refused says why: "Try again" unless nothing can change it, and "Delete" for good. -->
-        <template v-if="item.delivery === 'failed' || (item.mine && noteOf(item).visibility === 'private')" #meta="{ time, showTime }">
+        <template
+          v-if="item.delivery === 'failed' || (item.mine && noteOf(item).visibility === 'private') || noteOf(item).editedAt"
+          #meta="{ time, showTime }"
+        >
           <time :datetime="item.createdAt" class="px-xs pt-xs text-caption text-ink-faint tabular-nums" :class="showTime ? '' : 'sr-only'">{{ time }}</time>
+          <!-- Her note was rewritten (`editedAt`): the caption says so, for anybody who may read it. -->
+          <p v-if="noteOf(item).editedAt" class="px-xs text-caption text-ink-faint" data-testid="notesThread.edited">{{ t('notes.thread.edited') }}</p>
           <p v-if="item.mine && noteOf(item).visibility === 'private'" class="flex items-center justify-end gap-xxs px-xs pt-xs text-caption text-ink-faint" data-testid="notesThread.private">
             <UiIcon name="lock" :size="14" /><span>{{ t('notes.level.private') }}</span>
           </p>
@@ -610,6 +668,39 @@ function back() {
     </template>
 
     <template #composer>
+      <!-- She is rewriting one of her notes: the capsule is that note's field, and the thread's own composer waits behind it. -->
+      <div v-if="editing" class="edit-bar" data-testid="notesThread.edit">
+        <p v-if="editError" class="mx-auto max-w-prose px-xl pb-xs text-center text-footnote text-error" role="status" data-testid="notesThread.editError">
+          {{ t('notes.thread.editFailed') }} {{ t(noteErrorKey(editError)) }}
+        </p>
+        <UiComposer
+          v-model="editText"
+          compact
+          :note="t('notes.thread.editTitle')"
+          :note-label="t('notes.thread.edit')"
+          :placeholder="t('notes.thread.editTitle')"
+          :label="t('notes.thread.editTitle')"
+          :max="2000"
+          testid="notesThread.edit"
+          @send="saveEdit"
+          @dismiss-note="cancelEdit"
+        />
+        <div class="edit-actions">
+          <button type="button" class="min-h-(--size-touch) px-sm text-caption text-ink-muted" data-testid="notesThread.editCancel" @click="cancelEdit">
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            type="button"
+            class="min-h-(--size-touch) px-sm text-caption text-accent-ink disabled:text-ink-faint"
+            :disabled="editBusy || !editText.trim()"
+            data-testid="notesThread.editSave"
+            @click="saveEdit"
+          >
+            {{ editBusy ? t('notes.thread.editing') : t('notes.thread.editSave') }}
+          </button>
+        </div>
+      </div>
+      <template v-else>
       <!-- The line over the capsule while the note is on Everyone: it describes the state, it does not nag (no sheet, no dialog). -->
       <p v-if="level === 'public'" class="mx-auto max-w-prose px-xl pb-xs text-center text-footnote text-ink-muted" role="status" data-testid="notes.level.notice">{{ t('notes.level.publicNotice') }}</p>
       <UiComposer
@@ -627,6 +718,7 @@ function back() {
         @voice-error="notice = $event"
         @cancel-quote="replyTo = null"
       />
+      </template>
     </template>
 
     <UiConfirm
@@ -669,6 +761,22 @@ function back() {
    its arrow keys and its focus bring a button into view, instead of running off the screen. */
 .quote {
   min-height: calc(var(--text-caption--line-height) * 2);
+}
+/* The field of an edit and its two words: the capsule over the thread, its actions under it, never off the screen. */
+.edit-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xxs);
+}
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-xs);
+  padding-inline: var(--spacing-md);
+}
+/* The capsule's own send arrow is not the edit's: its two actions are the named pair under it (and Enter saves from the field). */
+.edit-bar :deep([data-testid='notesThread.edit.send']) {
+  display: none;
 }
 .notes-thread :deep([data-testid$='.reactionBar']) {
   max-width: calc(100vw - var(--spacing-xxl) - var(--spacing-lg));

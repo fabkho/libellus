@@ -19,6 +19,7 @@ AS $function$
                                 then 'friends' else p_note.visibility end,
     'spoiler', p_note.spoiler,
     'createdAt', p_note.created_at,
+    'editedAt', case when p_note.deleted_at is null then p_note.edited_at end,
     'quote', case when p_note.reply_to is not null then private.note_quote(p_viewer, p_note.reply_to) end,
     'reactions', case when p_note.deleted_at is not null then '[]'::jsonb else coalesce((
         select jsonb_agg(jsonb_build_object('emoji', x.emoji, 'count', x.n)

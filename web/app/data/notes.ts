@@ -41,6 +41,7 @@ export const NOTE_ERROR_CODES = [
   'reply_not_visible',
   'body_empty',
   'body_too_long',
+  'note_not_editable',
   'client_id_required',
   'client_id_reused',
   'report_self',
@@ -115,6 +116,8 @@ export type NoteMessage = ChatRecord & {
   authorName: string | null
   author: MemberCard
   deletedAt: string | null
+  /** When she last rewrote it (`edit_note`); null for a note nobody edited and for every tombstone. */
+  editedAt: string | null
   moderated: boolean
   reactions: NoteReaction[]
   visibility: NoteVisibility
@@ -175,6 +178,7 @@ type NoteJson = {
   visibility: NoteVisibility
   effectiveVisibility: NoteVisibility
   createdAt: string
+  editedAt?: string | null
   quote: QuoteJson | null
   reactions: { emoji: string; count: number }[] | null
   myReaction: string | null
@@ -252,6 +256,7 @@ export function noteFromJson(roomId: string, json: NoteJson): NoteMessage {
     author: cardFromJson(json.author),
     authorName: json.author?.name ?? null,
     deletedAt: gone ? json.createdAt : null,
+    editedAt: gone ? null : (json.editedAt ?? null),
     moderated: json.kind === 'moderated',
     reactions: gone ? [] : (json.reactions ?? []).map((r) => ({ emoji: r.emoji, count: Number(r.count), mine: r.emoji === json.myReaction })),
     visibility: json.visibility,
@@ -383,6 +388,9 @@ export function createNotes(client: SupabaseClient, { online = () => true }: Not
     react: (noteId: string, emoji: string | null) => call('react_to_note', { p_note: noteId, p_emoji: emoji }, nothing),
     /** Her own note becomes "Note removed". */
     deleteNote: (noteId: string) => call('delete_note', { p_note: noteId }, nothing),
+    /** Rewrites the words of her own live text note: the row it answers, stamped with `editedAt`. */
+    editNote: (roomId: string, noteId: string, body: string) =>
+      call<NoteJson, NoteMessage>('edit_note', { p_note: noteId, p_body: body }, (row) => noteFromJson(roomId, row)),
     /** To the owner's inbox: a reason and a few words. */
     report: (noteId: string, reason: string, text: string | null = null) => call('report_note', { p_note: noteId, p_reason: reason, p_text: text }, nothing),
     /** Her cursor in a chapter moves forward to `until`. */
