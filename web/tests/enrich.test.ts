@@ -26,13 +26,25 @@ const SUBSERIES = qid()
 const WORKS = { one: qid(), two: qid(), three: qid(), essays: qid() }
 const invented = [AUTHOR, SERIES, SUBSERIES, ...Object.values(WORKS)]
 
+/**
+ * Real covers on covers.openlibrary.org (the host private.cover_allowed accepts). The author page folds a
+ * series group away unless at least two of its works' cards carry a cover, and a card takes her own Book's
+ * cover before the edition's: so her Books of the Imperial Radch need theirs here, and Mercy, which no Book of
+ * hers holds, takes its edition's.
+ */
+const covers = {
+  justice: 'https://covers.openlibrary.org/b/id/15350927-L.jpg',
+  sword: 'https://covers.openlibrary.org/b/id/15350929-L.jpg',
+  mercy: 'https://covers.openlibrary.org/b/id/15350931-L.jpg',
+}
+
 afterAll(async () => {
   await sql('delete from public.works where wikidata_id = any($1)', [invented])
   await sql('delete from public.series where wikidata_id = any($1)', [invented])
   await sql('delete from public.authors where wikidata_id = any($1)', [invented])
 })
 
-function book(title: string): BookSnapshot {
+function book(title: string, coverUrl: string | null = null): BookSnapshot {
   return {
     title: runTitle(title),
     authors: ['Ann Leckie-Test'],
@@ -43,7 +55,7 @@ function book(title: string): BookSnapshot {
     language: 'en',
     publisher: TEST_PUBLISHER,
     description: null,
-    coverUrl: null,
+    coverUrl,
     coverThumbhash: null,
     coverColors: null,
     source: 'apple',
@@ -73,7 +85,7 @@ async function enrich(bookId: string, work: string, title: string, series: unkno
     ],
     works: [
       { wikidata: WORKS.three, title: 'Ancillary Mercy', year: 2015, kind: 'novel', authors: [author], series: inSeries(3, 3),
-        editions: { en: { title: 'Ancillary Mercy', isbn13: '9780316246682', openlibrary_edition_key: null, cover_url: null } } },
+        editions: { en: { title: 'Ancillary Mercy', isbn13: '9780316246682', openlibrary_edition_key: null, cover_url: covers.mercy } } },
       { wikidata: WORKS.essays, title: 'Essays on Ships', kind: 'nonfiction', authors: [author] },
     ],
     book: {
@@ -89,8 +101,8 @@ async function enrich(bookId: string, work: string, title: string, series: unkno
 async function reader() {
   const member = await signUpMember()
   const library = createLibrary(member.client)
-  const one = (await library.addToLibrary(book('Ancillary Justice'), { status: 'finished', endedOn: '2026-09-01', rating: 18 })).data!
-  const two = (await library.addToLibrary(book('Ancillary Sword'))).data!
+  const one = (await library.addToLibrary(book('Ancillary Justice', covers.justice), { status: 'finished', endedOn: '2026-09-01', rating: 18 })).data!
+  const two = (await library.addToLibrary(book('Ancillary Sword', covers.sword))).data!
   await enrich(one.book.id, WORKS.one, 'Ancillary Justice', inSeries(1, 1), ['sci-fi'])
   await enrich(two.book.id, WORKS.two, 'Ancillary Sword', inSeries(2, 2), ['sci-fi', 'thriller'])
   return { member, one, two }

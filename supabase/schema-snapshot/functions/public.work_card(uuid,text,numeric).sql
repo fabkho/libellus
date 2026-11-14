@@ -14,6 +14,9 @@ AS $function$
                       w.title),
     'year', w.first_year,
     'kind', w.kind,
+    'ratingsCount', w.ratings_count,
+    'readinglogCount', w.readinglog_count,
+    'wantToReadCount', w.want_to_read_count,
     'position', p_position,
     -- The cover of what the card opens, as its page shows it: her Book's, else the Catalogue's Book of the
     -- edition (none when that Book has none: the page shows the Placeholder then), else the edition's own,

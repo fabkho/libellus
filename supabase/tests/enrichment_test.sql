@@ -12,7 +12,7 @@
 -- counts (the case-when ratchet and the non-negative check on public.works).
 
 begin;
-select plan(69);
+select plan(71);
 
 create schema if not exists tests;
 
@@ -74,7 +74,7 @@ select results_eq(
 select tests.act_as(:'ada_id');
 select (public.add_to_library('{"title":"Guards! Guards!","authors":["Terry Pratchett"],"source":"apple","apple_id":"990000016101"}',
                               'finished', '2026-09-01', '2026-09-10', 18)).id as guards_entry_id \gset
-select (public.add_to_library('{"title":"Men at Arms","authors":["Terry Pratchett"],"source":"apple","apple_id":"990000016102"}')).id
+select (public.add_to_library('{"title":"Men at Arms","authors":["Terry Pratchett"],"source":"apple","apple_id":"990000016102","cover_url":"https://covers.openlibrary.org/b/id/2101-L.jpg"}')).id
   as men_entry \gset
 select (public.add_to_library('{"title":"The Lathe of Heaven","authors":["Ursula K. Le Guin"],"source":"apple","apple_id":"990000016103"}')).id
   as lathe_entry \gset
@@ -126,16 +126,24 @@ select lives_ok(format($$select public.enrich_save(%L::jsonb)$$, jsonb_build_obj
         jsonb_build_object('series', jsonb_build_object('wikidata', 'Q990000011'), 'position', 2, 'source', 'wikidata'))),
     jsonb_build_object('wikidata', 'Q990000021', 'title', 'Feet of Clay', 'year', 1996, 'kind', 'novel',
       'genres', jsonb_build_array('fantasy', 'crime'),
-      'editions', jsonb_build_object('en', jsonb_build_object('title', 'Feet of Clay', 'isbn13', '9780061807022')),
+      'editions', jsonb_build_object('en', jsonb_build_object('title', 'Feet of Clay', 'isbn13', '9780061807022', 'cover_url', 'https://covers.openlibrary.org/b/id/2102-L.jpg')),
       'authors', jsonb_build_array(jsonb_build_object('wikidata', 'Q990000001', 'name', 'Terry Pratchett')),
       'series', jsonb_build_array(
         jsonb_build_object('series', jsonb_build_object('wikidata', 'Q990000010'), 'position', 19, 'source', 'wikidata'),
         jsonb_build_object('series', jsonb_build_object('wikidata', 'Q990000011'), 'position', 3, 'source', 'wikidata'))),
     jsonb_build_object('wikidata', 'Q990000022', 'title', 'Small Gods', 'year', 1992, 'kind', 'novel',
       'titles', jsonb_build_object('de', 'Einfach göttlich'),
+      'coverUrl', 'https://covers.openlibrary.org/b/id/2103-L.jpg',
       'authors', jsonb_build_array(jsonb_build_object('wikidata', 'Q990000001', 'name', 'Terry Pratchett')),
       'series', jsonb_build_array(
         jsonb_build_object('series', jsonb_build_object('wikidata', 'Q990000010'), 'position', 13, 'source', 'wikidata'))),
+    -- A second work of Discworld in no sub-series, with a cover: a series group survives on two covered
+    -- works (20261120010000), and Discworld is the parent of City Watch, which holds its covered ones.
+    jsonb_build_object('wikidata', 'Q990000025', 'title', 'Lords and Ladies', 'year', 1992, 'kind', 'novel',
+      'coverUrl', 'https://covers.openlibrary.org/b/id/2104-L.jpg',
+      'authors', jsonb_build_array(jsonb_build_object('wikidata', 'Q990000001', 'name', 'Terry Pratchett')),
+      'series', jsonb_build_array(
+        jsonb_build_object('series', jsonb_build_object('wikidata', 'Q990000010'), 'position', 14, 'source', 'wikidata'))),
     jsonb_build_object('wikidata', 'Q990000023', 'title', 'The Science of Discworld', 'kind', 'nonfiction',
       'authors', jsonb_build_array(jsonb_build_object('wikidata', 'Q990000001', 'name', 'Terry Pratchett')))),
   'book', jsonb_build_object(
@@ -250,7 +258,7 @@ select is(public.author_page('Q990000001') -> 'series' -> 0 -> 'works' -> 0 -> '
   'and her rating of the one she finished');
 select is(
   (select jsonb_agg(w ->> 'title') from jsonb_array_elements(public.author_page('Q990000001') -> 'series' -> 1 -> 'works') w),
-  '["Small Gods"]'::jsonb,
+  '["Small Gods", "Lords and Ladies"]'::jsonb,
   'Discworld lists only the works in no sub-series');
 select is(public.author_page('Q990000001', 'de') -> 'series' -> 1 -> 'works' -> 0 ->> 'title', 'Einfach göttlich',
   'in her language where the work has a title in it');
@@ -353,6 +361,18 @@ select results_eq(
   format($$select ratings_count, readinglog_count, want_to_read_count from public.works where wikidata_id = %L$$, 'Q990000092'),
   $$values (89, 344, 217)$$,
   'a payload without the counts leaves the stored ones unchanged');
+-- The card carries the same three counts (20261120010000) so the app can order by them without a
+-- round trip; a work without them has no key at all (jsonb_strip_nulls drops the nulls).
+select is((select jsonb_build_object(
+               'ratingsCount', c -> 'ratingsCount',
+               'readinglogCount', c -> 'readinglogCount',
+               'wantToReadCount', c -> 'wantToReadCount')
+             from (select public.work_card((select id from public.works where wikidata_id = 'Q990000092'), 'en') as c) k),
+          '{"ratingsCount": 89, "readinglogCount": 344, "wantToReadCount": 217}'::jsonb,
+          'the card carries ratingsCount, readinglogCount and wantToReadCount');
+select is(public.work_card((select id from public.works where wikidata_id = 'Q990000090'), 'en')
+            ?| array['ratingsCount', 'readinglogCount', 'wantToReadCount'],
+          false, 'and a work without them has none of the three keys');
 -- The check constraint refuses a negative count (a fresh row: the fixture's
 -- works all have null counts).
 -- public.works is written only by the service role; a definer helper runs the
