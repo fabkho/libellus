@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // An author's page (#167): the hero (portrait, name, life dates, genres, the
 // Wikipedia intro with its credits), then her works, one entry per work,
-// grouped: each series in reading order ("Book 3"), the novels in no series,
-// and the rest (collections, non-fiction, works without a place); those two
-// newest first, works without a year last. Each work
+// grouped: each series in reading order ("Book 3"), then the works in no series
+// split by what they are — the novels, the novellas, then the rest (collections,
+// non-fiction, works without a place and works without a kind). A work says its
+// kind beside its year. Each work
 // shows her status or "+ Want to read" and opens its Book's page. Opened by
 // any of the author's keys (Wikidata item, Open Library id, uuid) from the
 // Book page's author line and from a list row's. A pushed screen in the tabs
@@ -13,6 +14,7 @@
 import type { WorkCard } from '~/data/enrich'
 import { useAuthorsStore } from '~/stores/authors'
 import { useLibraryStore } from '~/stores/library'
+import { standaloneByKind } from '~/utils/authorPage'
 import { newestFirst } from '~/utils/enrich'
 
 definePageMeta({ layout: 'tabs', screen: 'author', pushed: true })
@@ -47,9 +49,12 @@ type Group = { id: string; title: string; parent?: string; works: WorkCard[]; pl
 const groups = computed<Group[]>(() => {
   const p = page.value
   if (!p) return []
+  const standalone = standaloneByKind(p.standalone)
   return [
     ...p.series.map((s) => ({ id: `series-${s.id}`, title: s.name, parent: s.parentName ?? undefined, works: s.works, places: true })),
-    ...(p.standalone.length ? [{ id: 'standalone', title: t('author.standalone'), works: newestFirst(p.standalone), places: false }] : []),
+    ...(standalone.novels.length ? [{ id: 'standalone', title: t('author.standalone'), works: newestFirst(standalone.novels), places: false }] : []),
+    ...(standalone.novellas.length ? [{ id: 'novellas', title: t('author.novellas'), works: newestFirst(standalone.novellas), places: false }] : []),
+    ...(standalone.rest.length ? [{ id: 'standaloneOther', title: t('author.standaloneOther'), works: newestFirst(standalone.rest), places: false }] : []),
     ...(p.other.length ? [{ id: 'other', title: t('author.other'), works: newestFirst(p.other), places: false }] : []),
   ]
 })
@@ -89,6 +94,7 @@ function back() {
               :place="placeOf(group, work)"
               testid="author.work"
               :author="author?.name"
+              kind
               :eager="g === 0 && index < 4"
             />
           </component>

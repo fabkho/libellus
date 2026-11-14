@@ -11,6 +11,7 @@ export type WorkCard = {
   openLibraryKey?: string
   title: string
   year?: number
+  /** What it is: a novel, a novella, a collection…; null where no source says. */
   kind?: 'novel' | 'novella' | 'collection' | 'short-story' | 'nonfiction' | 'poetry' | 'graphic' | 'other'
   /** Its place in the series it is listed under. */
   position?: number

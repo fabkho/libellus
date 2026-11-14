@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // One work on an author page or in a series sheet (#167): small cover, serif
-// title, a mono line with its place ("Book 3") and year, and her status beside
-// it — ✓ with her Rating, Reading, Want to read — or, for a work she does not
-// have, "+ Want to read", which opens the Add sheet on the edition in her
+// title, a mono line with its place ("Book 3"), its year and what the work is
+// (its kind, a quiet caption: "1956 · novelette"), and her status beside it — ✓
+// with her Rating, Reading, Want to read — or, for a work she does not have,
+// "+ Want to read", which opens the Add sheet on the edition in her
 // language (Want to read chosen). The row opens the Book's page from the
 // touch-down, its cover flying into the hero; a work with no edition to open
 // is a plain row, and where it has no edition we could add, "Find" opens the
@@ -32,9 +33,14 @@ const props = withDefaults(defineProps<{
   year?: boolean
   /** The author's name, for the search "Find" opens. */
   author?: string | null
+  /**
+   * Whether the mono line says what the work is ("novelette"). Only her own page does: a series sheet, Home's "Next in
+   * your series" and the Book page's teaser say where a Book stands, not what kind of work it is.
+   */
+  kind?: boolean
   /** Where it stands in its series, structured (Home's "Next in your series"): what the Book's page shows of it before it has read the Book. */
   series?: SeriesLine | null
-}>(), { place: null, year: true, author: null, series: null })
+}>(), { place: null, year: true, author: null, kind: false, series: null })
 
 const { t } = useI18n()
 const books = useBookStore()
@@ -59,7 +65,15 @@ const owned = computed(() => {
   const book = live.value?.book
   return book && book.coverUrl && book.coverUrl === workCover(props.work) ? book : null
 })
-const meta = computed(() => [props.place, props.year && props.work.year ? String(props.work.year) : null].filter(Boolean).join(' · '))
+/**
+ * The mono line under the title: its place in a series, its year, and what it is. The kind is a caption, not a badge, so it
+ * rides in the same faint line.
+ */
+const meta = computed(() =>
+  [props.place, props.year && props.work.year ? String(props.work.year) : null, props.kind && props.work.kind ? t(`author.kind.${props.work.kind}`) : null]
+    .filter(Boolean)
+    .join(' · '),
+)
 
 // "Find": no edition to add, so the search looks for one (the palette opens over the page).
 const search = useSearchStore()
