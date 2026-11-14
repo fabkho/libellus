@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { CONTACT_KINDS, createFeedback, FEEDBACK_KINDS, itemFromRow } from '@/data/feedback'
-import { reportInput } from '@/utils/buddyThread'
+import { reportInput } from '@/utils/roomThread'
 import { buddyOf, follows, joinRead, startRead } from './support/buddy'
 import { signUpMember, type TestMember } from './support/member'
 import { sql } from './support/stack'

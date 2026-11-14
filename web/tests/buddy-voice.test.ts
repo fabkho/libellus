@@ -17,7 +17,8 @@ import {
 import { messageFromJson, mapVoiceStorageError } from '@/data/buddyReads'
 import { parseBuddyEvent } from '@/data/buddyLive'
 import { pendingBubble, sentBubble, tombstoneOf, voiceJob, voiceOfJob, type BuddyBubble } from '@/utils/buddyRead'
-import { quoteOf, threadItems, VOICE_UNSIGNED, type ThreadContext } from '@/utils/buddyThread'
+import { isRetryableBuddyError, type BuddyErrorCode } from '@/data/buddyReads'
+import { quoteOf, roomItems, VOICE_UNSIGNED, type RoomThreadContext } from '@/utils/roomThread'
 
 /**
  * Voice messages in a buddy read, the parts that need no stack (the rules through the database are tests/buddy-voice-db.test.ts and
@@ -179,11 +180,12 @@ describe('a voice message from a row, a live event and the line', () => {
 })
 
 describe('how the thread draws a voice message', () => {
-  const ctx = (over: Partial<ThreadContext> = {}): ThreadContext => ({
+  const ctx = (over: Partial<RoomThreadContext> = {}): RoomThreadContext => ({
     me: ADA,
     open: true,
     nameOf: (id) => (id === ADA ? 'Ada' : id === BEN ? 'Ben' : null),
     errorWord: (code) => `error:${code}`,
+    retryable: (code) => isRetryableBuddyError(code as BuddyErrorCode),
     previewOf: () => null,
     ...over,
   })
@@ -199,7 +201,7 @@ describe('how the thread draws a voice message', () => {
   })
 
   it('is the base\'s voice bubble: kind media, its length and waveform, and no URL but the placeholder: nothing was signed', () => {
-    const [item] = threadItems([voice()], ctx())
+    const [item] = roomItems([voice()], ctx())
     expect(item).toMatchObject({
       kind: 'media',
       body: '',
@@ -212,36 +214,36 @@ describe('how the thread draws a voice message', () => {
 
   it('has no URL for a recording still on its way that this device has no copy of (the line restored after a reload): the play button is off until it is stored', () => {
     const job = voiceJob({ conversationId: READ, threadId: null, clientId: CLIENT, replyTo: null, createdAt: '2026-11-14T10:00:00.000Z' }, { mime: 'audio/webm', durationMs: 2000, peaks: [9] })
-    const [item] = threadItems([pendingBubble(job, ADA, 'Ada')], ctx())
+    const [item] = roomItems([pendingBubble(job, ADA, 'Ada')], ctx())
     expect(item).toMatchObject({ kind: 'media', delivery: 'sending', media: { kind: 'voice', url: null, durationMs: 2000 } })
   })
 
   it('plays her own recording from the device\'s copy, which is no URL of the server\'s either', () => {
-    const [item] = threadItems([voice({ senderId: ADA })], ctx({ previewOf: (clientId) => (clientId === CLIENT ? 'blob:local' : null) }))
+    const [item] = roomItems([voice({ senderId: ADA })], ctx({ previewOf: (clientId) => (clientId === CLIENT ? 'blob:local' : null) }))
     expect(item).toMatchObject({ mine: true, media: { url: 'blob:local' } })
   })
 
   it('draws a voice message that was flagged Spoiler once as any other: a voice bubble with its sound', () => {
-    expect(threadItems([voice({ spoiler: true })], ctx())[0]).toMatchObject({ kind: 'media', voice: true, media: { kind: 'voice' } })
+    expect(roomItems([voice({ spoiler: true })], ctx())[0]).toMatchObject({ kind: 'media', voice: true, media: { kind: 'voice' } })
   })
 
   it('has nothing of a Section that is not open to her, and nothing of a deleted one but the line', () => {
-    expect(threadItems([voice()], ctx({ open: false }))).toEqual([])
-    const [gone] = threadItems([tombstoneOf(voice(), '2026-11-14T11:00:00.000Z')], ctx())
+    expect(roomItems([voice()], ctx({ open: false }))).toEqual([])
+    const [gone] = roomItems([tombstoneOf(voice(), '2026-11-14T11:00:00.000Z')], ctx())
     expect(gone).toMatchObject({ kind: 'system', removed: true, voice: false, media: null, body: '' })
   })
 
   it('carries a failed recording with its refusal, for a tap to send again', () => {
-    const [item] = threadItems([voice({ senderId: ADA, state: 'failed', error: 'offline' })], ctx())
+    const [item] = roomItems([voice({ senderId: ADA, state: 'failed', error: 'offline' })], ctx())
     expect(item).toMatchObject({ delivery: 'failed', error: 'error:offline', permanent: false })
-    expect(threadItems([voice({ senderId: ADA, state: 'failed', error: 'not_found' })], ctx())[0]).toMatchObject({ permanent: true })
+    expect(roomItems([voice({ senderId: ADA, state: 'failed', error: 'not_found' })], ctx())[0]).toMatchObject({ permanent: true })
   })
 
   it('quotes a voice message as "Voice message" (it has no words)', () => {
     const words = { deleted: 'Deleted', someone: 'Someone', you: 'You', voice: '🎤 Voice message' }
-    const items = threadItems([voice()], ctx())
+    const items = roomItems([voice()], ctx())
     expect(quoteOf(items, 'm1', words)).toEqual({ id: 'm1', mine: false, name: 'Ben', preview: '🎤 Voice message' })
-    const own = threadItems([voice({ senderId: ADA })], ctx())
+    const own = roomItems([voice({ senderId: ADA })], ctx())
     expect(quoteOf(own, 'm1', words)).toMatchObject({ mine: true, name: 'You', preview: '🎤 Voice message' })
   })
 })

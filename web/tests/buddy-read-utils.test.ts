@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { SendJob } from '#layers/chat/app/types/adapter'
 import { chapterFromJson, marksOf, messageFromJson, readFromJson, whereFromJson, type BuddyMember, type BuddyRead } from '@/data/buddyReads'
-import { bumpCounts, clearUnread, countsOf, mergeBubble, pendingBubble, reactedBy, sentBubble, settleBubbles, tombstoneOf, type BuddyBubble } from '@/utils/buddyRead'
+import { bumpCounts, clearUnread, countsOf, mergeBubble, pendingBubble, sentBubble, settleBubbles, tombstoneOf, type BuddyBubble } from '@/utils/buddyRead'
+import { toggledReaction } from '@/utils/roomThread'
 
 /** The pure rules of a buddy read thread (utils/buddyRead.ts) and the shapes (data/buddyReads.ts): no database, no store. */
 
@@ -51,16 +52,16 @@ describe('a thread, oldest first', () => {
   })
 })
 
-describe('her reaction, before the database says', () => {
+describe('her reaction, before the database says (utils/roomThread owns the rule for both threads)', () => {
   const fire = { emoji: '🔥', count: 2, mine: false }
   it('adds hers, moves it, takes it back, and the same tap again takes it back too', () => {
-    expect(reactedBy([], '🔥')).toEqual([{ emoji: '🔥', count: 1, mine: true }])
-    expect(reactedBy([fire], '🔥')).toEqual([{ emoji: '🔥', count: 3, mine: true }])
+    expect(toggledReaction([], '🔥')).toEqual([{ emoji: '🔥', count: 1, mine: true }])
+    expect(toggledReaction([fire], '🔥')).toEqual([{ emoji: '🔥', count: 3, mine: true }])
     const mine = [{ emoji: '🔥', count: 3, mine: true }, { emoji: '📚', count: 1, mine: false }]
-    expect(reactedBy(mine, '📚')).toEqual([{ emoji: '🔥', count: 2, mine: false }, { emoji: '📚', count: 2, mine: true }])
-    expect(reactedBy(mine, null)).toEqual([{ emoji: '🔥', count: 2, mine: false }, { emoji: '📚', count: 1, mine: false }])
-    expect(reactedBy(mine, '🔥')).toEqual([{ emoji: '🔥', count: 2, mine: false }, { emoji: '📚', count: 1, mine: false }])
-    expect(reactedBy([{ emoji: '🔥', count: 1, mine: true }], null)).toEqual([])
+    expect(toggledReaction(mine, '📚')).toEqual([{ emoji: '🔥', count: 2, mine: false }, { emoji: '📚', count: 2, mine: true }])
+    expect(toggledReaction(mine, null)).toEqual([{ emoji: '🔥', count: 2, mine: false }, { emoji: '📚', count: 1, mine: false }])
+    expect(toggledReaction(mine, '🔥')).toEqual([{ emoji: '🔥', count: 2, mine: false }, { emoji: '📚', count: 1, mine: false }])
+    expect(toggledReaction([{ emoji: '🔥', count: 1, mine: true }], null)).toEqual([])
   })
 })
 

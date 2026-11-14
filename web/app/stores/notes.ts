@@ -22,7 +22,8 @@ import { prepareVoice, VOICE_QUEUE_MAX_AGE_MS, VOICE_URL_REUSE_MS, type Prepared
 import { notePath, type VoiceMime } from '~/data/noteVoice'
 import { useSessionStore } from '~/stores/session'
 import { notesPeekKey, notesQueueKey } from '~/utils/notesStorage'
-import { byInstantThenId, mergeNote, noteJob, noteVoiceJob, noteVoiceOfJob, pageCursor, noteSendKey, pendingNote, reactedNote, sentNote, tombstoneNote, type NoteBubble } from '~/utils/notes'
+import { byInstantThenId, mergeNote, noteJob, noteVoiceJob, noteVoiceOfJob, pageCursor, noteSendKey, pendingNote, sentNote, tombstoneNote, type NoteBubble } from '~/utils/notes'
+import { toggledReaction } from '~/utils/roomThread'
 import { rememberedLevel, rememberLevel } from '~/utils/noteVisibility'
 
 /**
@@ -654,7 +655,7 @@ export const useNotesStore = defineStore('notes', () => {
     if (!r) return 'offline'
     const bubble = messagesOf(roomId, sectionId).find((m) => m.id === noteId)
     const before = bubble?.reactions
-    if (bubble) bubble.reactions = reactedNote(bubble.reactions, emoji)
+    if (bubble) bubble.reactions = toggledReaction(bubble.reactions, emoji)
     const answer = await r.react(noteId, emoji)
     if (answer.error && bubble && before) bubble.reactions = before
     return answer.error

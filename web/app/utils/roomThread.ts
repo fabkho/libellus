@@ -3,7 +3,7 @@ import { REPORT_REASONS, type ReportReason } from '~/data/buddyReads'
 import type { VoiceInfo } from '~/data/buddyVoice'
 
 /**
- * A room's thread as its screen draws it, the parts a buddy read (pages/together/[id]/[section].vue, utils/buddyThread.ts) and a Book's notes
+ * A room's thread as its screen draws it, the parts a buddy read (pages/together/[id]/[section].vue) and a Book's notes
  * (pages/notes/[book]/[chapter].vue, utils/noteThread.ts) both use: the stored bubbles of a store turned into what the base's `UiChatThread` and `UiBubble` take (`BubbleMessage`), plus what only a buddy
  * read adds: who wrote it, the message it answers and the tombstone. Pure functions on plain data, so Vitest
  * drives them in Node.
@@ -129,6 +129,28 @@ export function roomItems(bubbles: readonly RoomBubble[], ctx: RoomThreadContext
  */
 export function sameAuthorRun(before: Pick<ThreadItem, 'mine' | 'kind' | 'authorId'>, item: Pick<ThreadItem, 'mine' | 'kind' | 'authorId'>): boolean {
   return sameSide(before, item) && before.authorId === item.authorId
+}
+
+/** One row of reactions on a message: whose it is (`mine`), which it is, how many. */
+export type ReactionRow = { emoji: string; count: number; mine: boolean }
+
+/**
+ * Her reaction at once, before the database says: `emoji` replaces the one she had (null takes it back; the same one again takes it back too,
+ * as the database does). Counts decrement, rows at zero drop.
+ */
+export function toggledReaction<T extends ReactionRow>(reactions: readonly T[], emoji: string | null): T[] {
+  const had = reactions.find((r) => r.mine)?.emoji ?? null
+  const next = emoji === had ? null : emoji
+  const out = reactions
+    .map((r) => (r.emoji === had ? { ...r, count: r.count - 1, mine: false } : { ...r }))
+    .filter((r) => r.count > 0)
+  if (!next) return out
+  const there = out.find((r) => r.emoji === next)
+  if (there) {
+    there.count += 1
+    there.mine = true
+  } else out.push({ emoji: next, count: 1, mine: true } as T)
+  return out
 }
 
 /** The words a quote needs that are the app's. */
