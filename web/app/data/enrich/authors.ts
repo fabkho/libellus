@@ -55,6 +55,12 @@ export type AuthorPage = {
   stale: boolean
 }
 
+/**
+ * How `author_page` orders a standalone group (`p_order`): 'default' is the newest work first, 'most-read' the one most
+ * people want to read. The page asks for 'most-read'; the server's order is drawn as given (no client sort).
+ */
+export type AuthorOrder = 'default' | 'most-read'
+
 export type BookAuthor = { position: number; name: string; authorId: string; key: string }
 
 /**
@@ -68,7 +74,7 @@ export type CreditHit = { ref: string | null; position: number; name: string; au
 
 export type AuthorsRepository = {
   /** The author page, or null when no author has that key. */
-  page: (key: string, language?: string) => Promise<EnrichResult<AuthorPage | null>>
+  page: (key: string, language?: string, order?: AuthorOrder) => Promise<EnrichResult<AuthorPage | null>>
   /** A Book's linked authors in credit order (translators and introducers are not linked). */
   forBook: (bookId: string) => Promise<EnrichResult<BookAuthor[]>>
   /** The authors of a Book that may not be in the Catalogue, by its work, its credited names and their ids. */
@@ -92,8 +98,11 @@ export function createAuthors(
   { online = () => true }: { online?: () => boolean } = {},
 ): AuthorsRepository {
   return {
-    async page(key, language = 'en') {
-      const { data, error } = await client.rpc('author_page', { p_author: key, p_language: language })
+    // `most-read` by default (Wave C5): this page draws the order the server gives it, and the most-read order (by
+    // `want_to_read_count`) is what a member wants first. The database defaults `p_order` itself, so an instance whose
+    // function predates the argument still answers; nothing is re-sorted on the client.
+    async page(key, language = 'en', order: AuthorOrder = 'most-read') {
+      const { data, error } = await client.rpc('author_page', { p_author: key, p_language: language, p_order: order })
       if (error) return { data: null, error: mapError(error) }
       if (!data) return { data: null, error: null }
       const page = data as AuthorPage

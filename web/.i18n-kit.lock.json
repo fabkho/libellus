@@ -263,6 +263,21 @@
           "de"
         ]
       },
+      "author.filterClear": {
+        "83b12c2216efb4fd": [
+          "de"
+        ]
+      },
+      "author.filterCount": {
+        "585231e144b46c91": [
+          "de"
+        ]
+      },
+      "author.filterEmpty": {
+        "6763bd908f16511e": [
+          "de"
+        ]
+      },
       "author.find": {
         "822b2ae4542bc74b": [
           "de"
@@ -280,6 +295,46 @@
       },
       "author.genres": {
         "3561abfe8067f3c1": [
+          "de"
+        ]
+      },
+      "author.kind.collection": {
+        "fa7496e4ae840306": [
+          "de"
+        ]
+      },
+      "author.kind.graphic": {
+        "0dcf574f9a326905": [
+          "de"
+        ]
+      },
+      "author.kind.nonfiction": {
+        "66b239ffbdc149b5": [
+          "de"
+        ]
+      },
+      "author.kind.novel": {
+        "f2110e6cf92b93ae": [
+          "de"
+        ]
+      },
+      "author.kind.novella": {
+        "ac6d052cc42a0ed4": [
+          "de"
+        ]
+      },
+      "author.kind.other": {
+        "d9298a10d1b07358": [
+          "de"
+        ]
+      },
+      "author.kind.poetry": {
+        "81c320ebd209dddd": [
+          "de"
+        ]
+      },
+      "author.kind.short-story": {
+        "73298637e7e6d1e4": [
           "de"
         ]
       },
@@ -313,6 +368,11 @@
           "de"
         ]
       },
+      "author.novellas": {
+        "e9dd20d740e9787e": [
+          "de"
+        ]
+      },
       "author.offline": {
         "4bb86c2da1e095fa": [
           "de"
@@ -338,6 +398,21 @@
           "de"
         ]
       },
+      "author.popularity.ratings": {
+        "25561648326ab265": [
+          "de"
+        ]
+      },
+      "author.popularity.reading": {
+        "587816b2c46a8402": [
+          "de"
+        ]
+      },
+      "author.popularity.wantToRead": {
+        "c98ef1c737ed5268": [
+          "de"
+        ]
+      },
       "author.reading": {
         "463816d07097e1a7": [
           "de"
@@ -355,6 +430,11 @@
       },
       "author.standalone": {
         "d3912a5967d47abc": [
+          "de"
+        ]
+      },
+      "author.standaloneOther": {
+        "274fc85f12694a33": [
           "de"
         ]
       },

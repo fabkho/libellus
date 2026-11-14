@@ -11,6 +11,7 @@ export type WorkCard = {
   openLibraryKey?: string
   title: string
   year?: number
+  /** What it is: a novel, a novella, a collection…; null where no source says. */
   kind?: 'novel' | 'novella' | 'collection' | 'short-story' | 'nonfiction' | 'poetry' | 'graphic' | 'other'
   /** Its place in the series it is listed under. */
   position?: number
@@ -22,6 +23,13 @@ export type WorkCard = {
   coverKey?: string
   coverWidths?: number[]
   genres?: string[]
+  /**
+   * How many people want to read it, keep a reading log of it and rate it, from Open Library (absent where it says
+   * nothing, which is not the same as 0). The author page's row shows the first of them it has (utils/authorPage.ts).
+   */
+  wantToReadCount?: number
+  readinglogCount?: number
+  ratingsCount?: number
   /** A representative edition in the asked language: what "+ Want to read" can add by ISBN. */
   edition?: { title: string | null; isbn13: string | null; openlibrary_edition_key: string | null; cover_url: string | null }
   /** 'member' for her own Book she placed in a series herself. */
