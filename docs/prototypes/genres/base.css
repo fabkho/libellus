@@ -1,0 +1,133 @@
+/* Static mock-ups for docs/plans/genres.md. Not app code: the tokens are a copy (tokens.css), the
+   classes below imitate the app's components (UiSheet, UiPill, the Book page's chip row) closely
+   enough to judge layout, density and copy at 390 and 360 px. */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,500;1,6..72,400&display=block');
+@import url('tokens.css');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #777; }
+body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; }
+
+.phone {
+  position: relative; overflow: hidden; width: 390px; height: 844px;
+  background: var(--color-surface); color: var(--color-ink);
+}
+.phone.narrow { width: 360px; height: 780px; }
+
+/* type */
+.serif { font-family: var(--font-serif); font-weight: 500; letter-spacing: -0.01em; }
+.headline { font-size: 24px; line-height: 29px; }
+.callout { font-size: 17px; line-height: 22px; letter-spacing: -0.015em; }
+.body { font-size: 15px; line-height: 20px; letter-spacing: -0.005em; }
+.body-large { font-size: 16px; line-height: 22px; letter-spacing: -0.01em; }
+.subhead { font-size: 14.5px; line-height: 21px; }
+.caption { font-size: 13px; line-height: 18px; }
+.footnote { font-size: 12.5px; line-height: 16px; }
+.meta { font-size: 11px; line-height: 14px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--font-mono); font-size: 10.5px; line-height: 12px; letter-spacing: 0.12em; font-weight: 500; text-transform: uppercase; color: var(--color-ink-faint); }
+.input { font-size: 19px; line-height: 24px; letter-spacing: -0.015em; }
+.muted { color: var(--color-ink-muted); }
+.faint { color: var(--color-ink-faint); }
+.ghost { color: var(--color-ink-ghost); }
+.lamp { color: var(--color-accent-ink); }
+
+/* edges */
+.edge { box-shadow: inset 0 0 0 0.5px var(--color-hairline-strong); }
+.edge-faint { box-shadow: inset 0 0 0 0.5px var(--color-hairline); }
+.rule { height: 0.5px; background: var(--color-hairline); }
+
+/* the chips under the facts line (book/Genres.vue: chip edge rounded-pill px-md text-caption text-ink-muted) */
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 4px; }
+.chips.left { justify-content: flex-start; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px; border-radius: 999px;
+  font-size: 13px; color: var(--color-ink-muted); box-shadow: inset 0 0 0 0.5px var(--color-hairline-strong); white-space: nowrap;
+}
+/* hers: the fill, no ring, and a small person mark (private to her) */
+.chip.mine { background: var(--color-fill-strong); box-shadow: none; color: var(--color-ink); }
+.chip.mine::before {
+  content: ''; width: 6px; height: 6px; border-radius: 999px; background: currentColor; opacity: 0.55;
+}
+.chip.more { font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-faint); padding: 0 12px; }
+.chip.hidden-for-her { color: var(--color-ink-faint); text-decoration: line-through; box-shadow: inset 0 0 0 0.5px var(--color-hairline); }
+.chip .x { font-size: 15px; line-height: 1; opacity: 0.6; margin-right: -4px; }
+.quiet-link { font-size: 11px; color: var(--color-ink-faint); text-decoration: underline; text-decoration-color: var(--color-ink-ghost); text-underline-offset: 3px; padding: 0 6px; }
+
+/* chips and pills that are tapped keep a 44 px hit area, as UiPill does */
+.chip, .pill { position: relative; }
+.chip::after, .pill::after { content: ''; position: absolute; inset: 50% 0 auto; height: 44px; transform: translateY(-50%); }
+
+/* UiPill */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 16px; border-radius: 999px;
+  font-size: 14.5px; color: var(--color-ink-muted); box-shadow: inset 0 0 0 0.5px var(--color-hairline-strong); white-space: nowrap;
+}
+.pill .count { font-family: var(--font-mono); font-size: 13px; color: var(--color-ink-faint); }
+.pill.on { background: var(--color-ink); color: var(--color-on-ink); box-shadow: none; }
+.pill.on .count { color: var(--color-on-ink); opacity: 0.68; }
+.pill.mine::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: currentColor; opacity: 0.55; }
+
+/* covers: the Placeholder cover (cloth by title, title set in type) */
+.cover {
+  position: relative; flex: none; display: flex; flex-direction: column; justify-content: space-between;
+  aspect-ratio: 2 / 3; border-radius: 3.5px; overflow: hidden; color: var(--color-cloth-ink);
+  box-shadow: var(--shadow-cover); padding: 10% 9%;
+}
+.cover::before { content: ''; position: absolute; inset: 0 auto 0 5%; width: 1px; background: rgb(0 0 0 / 0.18); }
+.cover .t { font-family: var(--font-serif); font-weight: 500; line-height: 1.05; }
+.cover .a { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; }
+.cover.sm { width: 40px; border-radius: 2.5px; padding: 4px; }
+.cover.sm .t { font-size: 5.5px; } .cover.sm .a { font-size: 3px; }
+.cover.xl { width: 140px; }
+.cover.xl .t { font-size: 19px; } .cover.xl .a { font-size: 7px; }
+.c1 { background: var(--color-cloth1); } .c2 { background: var(--color-cloth2); } .c3 { background: var(--color-cloth3); }
+.c4 { background: var(--color-cloth4); } .c5 { background: var(--color-cloth5); } .c6 { background: var(--color-cloth6); }
+
+/* round glass buttons and the tab bar */
+.round { position: absolute; top: 54px; width: 44px; height: 44px; border-radius: 999px; background: var(--color-glass);
+  backdrop-filter: blur(24px); display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 0.5px var(--color-hairline-strong); }
+.tabbar { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: 228px; height: 62px; border-radius: 999px;
+  background: var(--color-glass); backdrop-filter: blur(30px); box-shadow: var(--shadow-float), inset 0 0 0 0.5px var(--color-hairline-strong);
+  display: flex; align-items: center; justify-content: space-around; color: var(--color-ink-faint); }
+.tabbar svg, .round svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.status-bar { position: absolute; top: 0; left: 0; right: 0; height: 47px; display: flex; justify-content: space-between; align-items: flex-end;
+  padding: 0 32px 6px; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; z-index: 5; }
+
+/* UiSheet */
+.scrim { position: absolute; inset: 0; background: var(--color-scrim); z-index: 10; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 11; background: var(--color-surface-sheet);
+  border-radius: 30px 30px 0 0; box-shadow: var(--shadow-sheet); padding: 0 20px 34px; }
+.sheet .grabber { width: 36px; height: 5px; border-radius: 999px; background: var(--color-ink-ghost); margin: 5px auto 0; }
+.sheet .head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 44px; margin-top: 6px; }
+.sheet .head .cancel { justify-self: start; font-size: 16px; color: var(--color-ink-muted); }
+.sheet .head .title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.sheet .head .action { justify-self: end; font-size: 16px; font-weight: 600; color: var(--color-accent-ink); }
+.sheet .body { padding-top: 16px; }
+
+/* UiRow in a UiRowGroup */
+.rowgroup { border-radius: 14px; background: var(--color-fill); box-shadow: inset 0 0 0 0.5px var(--color-hairline); }
+.row { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; font-size: 15px; }
+.row { position: relative; }
+.row + .row::before { content: ''; position: absolute; top: 0; left: 14px; right: 0; height: 0.5px; background: var(--color-hairline); }
+.row .v { margin-left: auto; color: var(--color-ink-faint); font-size: 15px; }
+.chev { color: var(--color-ink-ghost); font-size: 18px; }
+
+/* a field (UiField-like) */
+.field { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--color-hairline-strong); padding-bottom: 6px; min-height: 44px; }
+.field.focus { border-bottom-color: var(--color-accent); }
+.field .caret { display: inline-block; width: 1.5px; height: 22px; background: var(--color-accent); vertical-align: -4px; margin-left: 1px; }
+.field .ph { color: var(--color-ink-faint); }
+
+/* suggestions under the field */
+.suggest { margin-top: 6px; border-radius: 14px; background: var(--color-surface-raised); box-shadow: var(--shadow-raised), inset 0 0 0 0.5px var(--color-hairline); overflow: hidden; }
+.suggest .s { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; font-size: 15px; }
+.suggest .s + .s { border-top: 0.5px solid var(--color-hairline); }
+.suggest .s.lit { background: var(--color-fill); }
+.suggest .k { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-faint); text-transform: uppercase; letter-spacing: 0.08em; }
+.suggest b { font-weight: 600; }
+
+/* a note on the mock-up itself (only where a shot needs a word of explanation) */
+.note { position: absolute; z-index: 20; right: 10px; bottom: 10px; max-width: 200px; padding: 6px 9px; border-radius: 8px;
+  background: rgb(220 60 40 / 0.92); color: #fff; font: 500 10.5px/1.35 var(--font-mono); }
