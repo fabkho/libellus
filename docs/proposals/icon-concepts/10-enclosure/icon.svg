@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Enclosure (the mark held in a rounded rect, hairline outline, and the only colour is the notch of the page-bookmark)</title>
+<defs><linearGradient id="i10room" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#i10room)"/>
+<rect x="86" y="86" width="340" height="340" rx="86" fill="none" stroke="#f1e3c8" stroke-width="14"/>
+<path fill="#f1e3c8" d="M206 148H306V344L256 296L206 344Z"/>
+<path fill="#efb768" d="M256 148H306V296L256 252Z"/>
+</svg>

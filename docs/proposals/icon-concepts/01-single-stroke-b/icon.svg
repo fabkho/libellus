@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Single-stroke B (one letterform, no frame; the two bowls run into the stem and are swallowed by it)</title>
+<defs><linearGradient id="i01room" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#i01room)"/>
+<path d="M196 162C272 148 334 168 334 216C334 264 272 284 196 270" fill="none" stroke="#efb768" stroke-width="60" stroke-linecap="round"/>
+<path d="M196 296C282 282 346 302 346 350C346 398 282 418 196 404" fill="none" stroke="#efb768" stroke-width="60" stroke-linecap="round"/>
+<path d="M196 130V382" fill="none" stroke="#f1e3c8" stroke-width="72" stroke-linecap="round"/>
+</svg>

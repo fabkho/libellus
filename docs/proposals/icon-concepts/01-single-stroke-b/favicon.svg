@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — Single-stroke B (favicon: the letter fattened, the waist kept, for 16 and 32 px)</title>
+<defs><linearGradient id="i01froom" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="32" height="32" rx="7" fill="url(#i01froom)"/>
+<path d="M13.4 10.1C18.1 9.2 22 10.5 22 13.5C22 16.5 18.1 17.8 13.4 16.9" fill="none" stroke="#efb768" stroke-width="4.6" stroke-linecap="round"/>
+<path d="M13.4 18.5C18.8 17.6 22.8 18.9 22.8 21.9C22.8 24.9 18.8 26.1 13.4 25.3" fill="none" stroke="#efb768" stroke-width="4.6" stroke-linecap="round"/>
+<path d="M13.4 8.1V23.9" fill="none" stroke="#f1e3c8" stroke-width="4.8" stroke-linecap="round"/>
+</svg>

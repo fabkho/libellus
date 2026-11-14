@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Block B (the letter cut on one grid, each block one flat colour, the two right blocks the lamp and no gradient anywhere)</title>
+<defs><linearGradient id="i02room" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#i02room)"/>
+<g fill="#efb768"><rect x="284" y="96" width="68" height="136"/><rect x="284" y="232" width="68" height="184"/></g>
+<g fill="#f1e3c8"><rect x="140" y="96" width="72" height="320"/><rect x="212" y="96" width="72" height="72"/><rect x="212" y="232" width="72" height="72"/><rect x="212" y="344" width="72" height="72"/></g>
+</svg>

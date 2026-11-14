@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Book as window (a cream page whose centre is cut into a book and lit from behind: the window is the book, not a frame around it)</title>
+<defs><linearGradient id="i07room" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#i07room)"/>
+<path fill="#f1e3c8" fill-rule="evenodd" d="M96 92H416V420H96ZM256 180C210 148 178 148 146 164V326C178 310 210 310 256 342C302 310 334 310 366 326V164C334 148 302 148 256 180Z"/>
+<path fill="#efb768" d="M256 180C210 148 178 148 146 164V326C178 310 210 310 256 342Z"/>
+</svg>

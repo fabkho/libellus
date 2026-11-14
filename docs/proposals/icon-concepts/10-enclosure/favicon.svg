@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — Enclosure (favicon: the outline thickened to hold at 16 px, the ribbon and its lit face kept)</title>
+<defs><linearGradient id="i10froom" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="32" height="32" rx="7" fill="url(#i10froom)"/>
+<rect x="5.4" y="5.4" width="21.2" height="21.2" rx="5.4" fill="none" stroke="#f1e3c8" stroke-width="1.7"/>
+<path fill="#f1e3c8" d="M12.9 9.6H19.1V22.2L16 19.2L12.9 22.2Z"/>
+<path fill="#efb768" d="M16 9.6H19.1V19.2L16 16.2Z"/>
+</svg>

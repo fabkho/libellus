@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — Spine and boards (favicon: the spine widened to a 4 px bar so it stays a colour at 16 px, the boards shortened)</title>
+<defs><linearGradient id="i09froom" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="32" height="32" rx="7" fill="url(#i09froom)"/>
+<path fill="#f1e3c8" d="M6.6 6.6H14.2V25.4H6.6Z"/>
+<path fill="#efb768" d="M14.2 6.6H17.8V25.4H14.2Z"/>
+<path fill="#f1e3c8" d="M17.8 6.6H25.4V25.4H17.8Z"/>
+</svg>

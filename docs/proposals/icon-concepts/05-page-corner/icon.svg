@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Turned corner (a page with its top-right corner folded back, the fold the one lit plane)</title>
+<defs><linearGradient id="i05room" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#i05room)"/>
+<path fill="#f1e3c8" d="M124 92H288L388 192V420H124Z"/>
+<path fill="#efb768" d="M288 92L388 192H288Z"/>
+</svg>

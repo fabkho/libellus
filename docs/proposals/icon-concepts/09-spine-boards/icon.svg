@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Spine and boards (a book seen from above, its two boards cream and its spine the lit strip between them)</title>
+<defs><linearGradient id="i09room" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#i09room)"/>
+<path fill="#f1e3c8" d="M104 116H236V396H104Z"/>
+<path fill="#f1e3c8" d="M276 116H408V396H276Z"/>
+<path fill="#efb768" d="M236 116H276V396H236Z"/>
+</svg>

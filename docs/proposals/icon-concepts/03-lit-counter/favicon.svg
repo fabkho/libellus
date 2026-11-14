@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — Lit counter (favicon: the counter is filled with light instead of a dot, so the letter survives at 16 px)</title>
+<defs><linearGradient id="i03froom" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="32" height="32" rx="7" fill="url(#i03froom)"/>
+<path d="M13.2 9.9C18.2 8.9 22.3 10.3 22.3 13.7C22.3 17.1 18.2 18.4 13.2 17.4" fill="none" stroke="#f1e3c8" stroke-width="4.4" stroke-linecap="round"/>
+<path d="M13.2 18.8C18.8 17.9 22.8 19.1 22.8 22.2C22.8 25.3 18.8 26.6 13.2 25.6" fill="none" stroke="#f1e3c8" stroke-width="4.4" stroke-linecap="round"/>
+<path d="M13.2 7.6V24.2" fill="none" stroke="#f1e3c8" stroke-width="4.8" stroke-linecap="round"/>
+<path d="M16 12.2h4.4v3.4H16z" fill="#efb768"/>
+</svg>

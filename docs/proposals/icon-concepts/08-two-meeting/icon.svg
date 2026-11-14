@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Two forms meeting (an abstract mark, no object: a page-half and a lamp-half nearly closing a ring, staggered so the seam never quite meets)</title>
+<defs><linearGradient id="i08room" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#i08room)"/>
+<path fill="#f1e3c8" d="M238 128A116 116 0 0 0 238 360Z"/>
+<path fill="#efb768" d="M274 164A116 116 0 0 1 274 396Z"/>
+</svg>

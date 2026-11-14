@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Ribbon (the bookmark itself, one solid plane with a swallowtail notch, no page behind it)</title>
+<defs><linearGradient id="i06room" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#i06room)"/>
+<path fill="#efb768" d="M170 84H342V414L256 330L170 414Z"/>
+</svg>

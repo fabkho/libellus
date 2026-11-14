@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — Open book (favicon: the pages widened and the spine gap doubled, so the valley survives at 16 px)</title>
+<defs><linearGradient id="i04froom" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="32" height="32" rx="7" fill="url(#i04froom)"/>
+<path fill="#f1e3c8" d="M15.2 9.4C12.6 7.8 9.6 7.4 6 8.6V23.4C9.6 22.2 12.6 22.6 15.2 24.2Z"/>
+<path fill="#f1e3c8" d="M16.8 9.4C19.4 7.8 22.4 7.4 26 8.6V23.4C22.4 22.2 19.4 22.6 16.8 24.2Z"/>
+</svg>

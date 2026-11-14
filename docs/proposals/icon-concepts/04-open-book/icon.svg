@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Open book (the object alone: two pages meeting in a valley you can see the room through, no lamp added)</title>
+<defs><linearGradient id="i04room" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#i04room)"/>
+<path fill="#f1e3c8" d="M250 168C210 140 160 134 104 152V356C160 338 210 344 250 372Z"/>
+<path fill="#f1e3c8" d="M262 168C302 140 352 134 408 152V356C352 338 302 344 262 372Z"/>
+</svg>

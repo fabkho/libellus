@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — Two forms meeting (favicon: the halves fattened and the stagger kept, the two colours still separable at 16 px)</title>
+<defs><linearGradient id="i08froom" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="32" height="32" rx="7" fill="url(#i08froom)"/>
+<path fill="#f1e3c8" d="M15 7.4A8.6 8.6 0 0 0 15 24.6Z"/>
+<path fill="#efb768" d="M17 9.8A8.6 8.6 0 0 1 17 27Z"/>
+</svg>
