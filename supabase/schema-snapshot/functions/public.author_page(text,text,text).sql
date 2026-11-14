@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION public.author_page(p_author text, p_language text DEFAULT 'en'::text)
+CREATE OR REPLACE FUNCTION public.author_page(p_author text, p_language text DEFAULT 'en'::text, p_order text DEFAULT 'default'::text)
  RETURNS jsonb
  LANGUAGE sql
  STABLE
@@ -23,14 +23,31 @@ AS $function$
   series_groups as (
     select s.id, s.name, s.parent_id, s.wikidata_id,
            jsonb_agg(public.work_card(aw.id, p_language, p.position) order by p.position, aw.first_year) as works,
-           min(aw.first_year) as first_year
+           min(aw.first_year) as first_year,
+           count(case when coalesce(aw_mine.cover_url, aw.editions -> p_language ->> 'cover_url', aw.cover_url) is not null then 1 end) as covered
       from placed p
       join aw on aw.id = p.work_id
       join public.series s on s.id = p.series_id
+      left join lateral (
+        select e.id as entry_id, e.book_id, e.status, b.title, b.cover_url, last_read.rating, last_read.ended_on
+          from public.book_works bw
+          join public.library_entries e on e.book_id = bw.book_id and e.member_id = (select auth.uid())
+          join public.books b on b.id = e.book_id
+          left join lateral (
+            select s2.rating, s2.ended_on from public.reading_sessions s2
+             where s2.entry_id = e.id and s2.outcome = 'finished'
+             order by s2.ended_on desc nulls last, s2.created_at desc
+             limit 1
+          ) last_read on true
+         where bw.work_id = aw.id
+         order by case e.status when 'finished' then 0 when 'reading' then 1 else 2 end, e.added_at desc
+         limit 1
+      ) aw_mine on true
      group by s.id
   ),
   unplaced as (
-    select aw.* from aw where not exists (select 1 from placed p where p.work_id = aw.id)
+    select aw.* from aw
+      where not exists (select 1 from series_groups sg where sg.id = (select p.series_id from placed p where p.work_id = aw.id) and sg.covered >= 2)
   ),
   -- Her Books credited to the author whose work is not among the works.
   her_books as (
@@ -77,8 +94,12 @@ AS $function$
                                  'parentName', (select p.name from public.series p where p.id = sg.parent_id),
                                  'works', sg.works))
                                order by sg.parent_id is null, sg.first_year nulls last, sg.name)
-                          from series_groups sg), '[]'),
-    'standalone', coalesce((select jsonb_agg(public.work_card(u.id, p_language) order by u.first_year nulls last, u.title)
+                          from series_groups sg
+                         where sg.covered >= 2), '[]'),
+    'standalone', coalesce((select jsonb_agg(public.work_card(u.id, p_language)
+                              order by case when p_order = 'most-read' then 0 else 1 end,
+                                       case when p_order = 'most-read' then coalesce(u.want_to_read_count, 0) end desc,
+                                       u.first_year nulls last, u.title)
                               from unplaced u where u.kind in ('novel', 'novella')), '[]'),
     'other', coalesce((select jsonb_agg(card order by year nulls last, card ->> 'title')
                          from (select public.work_card(u.id, p_language) as card, u.first_year as year
