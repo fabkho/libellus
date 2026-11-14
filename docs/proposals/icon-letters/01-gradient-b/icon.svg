@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — letterform study 01, Gradient B (plum tile, monoline B in a five-stop spectrum stroke)</title>
+<defs><linearGradient id="gb1bg" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient><linearGradient id="gb1st" x1="96" y1="0" x2="416" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ff5da2"/><stop offset="0.28" stop-color="#ff4b3e"/><stop offset="0.52" stop-color="#ffb020"/><stop offset="0.76" stop-color="#34c759"/><stop offset="1" stop-color="#2f9dff"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#gb1bg)"/>
+<g transform="translate(-23 0)"><path d="M208 384 V128 H296 C362 128 362 256 296 256 H208 M208 256 H308 C382 256 382 384 308 384 H208" fill="none" stroke="url(#gb1st)" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/></g>
+</svg>

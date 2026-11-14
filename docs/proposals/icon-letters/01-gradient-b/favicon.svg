@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — letterform study 01, Gradient B (favicon: plum tile, the B redrawn with a heavier monoline stroke for 16–32 px)</title>
+<defs><linearGradient id="gb1fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient><linearGradient id="gb1fst" x1="8" y1="0" x2="25" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ff5da2"/><stop offset="0.3" stop-color="#ff4b3e"/><stop offset="0.55" stop-color="#ffb020"/><stop offset="0.8" stop-color="#34c759"/><stop offset="1" stop-color="#2f9dff"/></linearGradient></defs>
+<rect width="32" height="32" rx="7" fill="url(#gb1fbg)"/>
+<path d="M10 25.5 V6.5 H15 C21.5 6.5 21.5 16 15 16 H10 M10 16 H16 C22.5 16 22.5 25.5 16 25.5 H10" fill="none" stroke="url(#gb1fst)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
