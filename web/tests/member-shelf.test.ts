@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { Book } from '../app/data/books'
 import { validateLibraryFile } from '../app/data/export/regalLibraryFile'
 import type { LibraryEntry, ReadingSession } from '../app/data/library'
-import { MEMBER_SHELF_GENERATOR, memberShelfDocument } from '../app/data/memberShelf'
+import { MEMBER_SHELF_GENERATOR, memberShelfDocument, memberShelfFromFinished } from '../app/data/memberShelf'
 import { booksReadIn, shelfOf } from '../app/data/shelf'
+import type { MemberFinished, SocialBook } from '../app/data/socialShapes'
 import { bookColour } from '../app/utils/bookColour'
 
 /**
@@ -177,5 +178,97 @@ describe('memberShelfDocument', () => {
     expect(validateLibraryFile(file).ok).toBe(true)
     // A generous ceiling for a slow CI machine; on a laptop it is a few milliseconds.
     expect(took).toBeLessThan(400)
+  })
+})
+
+/**
+ * Her finished reads, as the friend page has them (E1): `memberShelfFromFinished` builds the same document
+ * from what another member's profile carries, for a Book whose Library this device does not have.
+ * Synthetic Books only.
+ */
+
+/** One of her finished Books as a profile hands it out (data/socialShapes.ts). */
+function socialBook(over: Partial<SocialBook> = {}): SocialBook {
+  counter++
+  return {
+    id: `00000000-0000-4000-8000-${String(counter).padStart(12, '0')}`,
+    title: `Book ${counter}`,
+    authors: ['A. Writer'],
+    year: 2020,
+    coverUrl: `https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/aa/bb/${counter}.jpg/600x900bb.jpg`,
+    coverThumbhash: null,
+    coverColors: { dominant: '#1f3f5b', secondary: '#d9c9a3' },
+    coverKey: null,
+    coverWidths: null,
+    manual: false,
+    unverified: false,
+    ...over,
+  }
+}
+
+/** One finished read on her profile, with everything her switches let through. */
+function finishedRead(over: Partial<MemberFinished> = {}): MemberFinished {
+  return {
+    book: socialBook(),
+    endedOn: '2025-11-03',
+    rating: 15,
+    review: null,
+    sessionId: `s-${counter}`,
+    likes: 0,
+    liked: false,
+    spoilers: false,
+    folded: false,
+    ...over,
+  }
+}
+
+describe('memberShelfFromFinished', () => {
+  it('builds the document memberShelfDocument builds, from the read the profile carries', () => {
+    const social = socialBook()
+    // The Library entry that read stands for: her Book, its cover, her Rating and the day it ended.
+    const fromLibrary = entry(
+      'finished',
+      {
+        addedAt: '2025-11-03',
+        book: book({
+          id: social.id,
+          title: social.title,
+          authors: social.authors,
+          year: social.year,
+          pageCount: null,
+          coverUrl: social.coverUrl,
+          coverColors: social.coverColors,
+          // Naming no format is what leaves her binding word out, as her profile does.
+          format: null,
+          source: 'import',
+        }),
+      },
+      { startedOn: null, endedOn: '2025-11-03', rating: 15 },
+    )
+    const fromProfile = memberShelfFromFinished([finishedRead({ book: social })], OPTIONS)
+    expect(fromProfile).toEqual(memberShelfDocument([fromLibrary], OPTIONS))
+    expect(validateLibraryFile(fromProfile).ok).toBe(true)
+    expect(fromProfile.generator).toBe(MEMBER_SHELF_GENERATOR)
+    expect(fromProfile.books[0]!.status).toBe('read')
+  })
+
+  it('gives a read whose Book carries no cover colour a spine all the same (the cloth fallback)', () => {
+    const bare = socialBook({ coverColors: null })
+    const file = memberShelfFromFinished([finishedRead({ book: bare })], OPTIONS)
+    expect(file.books[0]!.assets!.color).toBe(bookColour(bare).colour)
+    // No cover image either: the Book is still stood up in a colour.
+    const typed = socialBook({ coverUrl: null, coverColors: null, manual: true })
+    const spines = shelfOf(memberShelfFromFinished([finishedRead({ book: bare }), finishedRead({ book: typed })], OPTIONS)).books.map((b) => b.spine)
+    expect(spines).toEqual([bookColour(bare).colour, bookColour(typed).colour])
+    expect(bookColour(typed).source).toBe('cloth')
+    for (const spine of spines) expect(spine).toMatch(/^#[\da-f]{6}$/)
+  })
+
+  it('yields a valid empty document when she has finished nothing', () => {
+    const file = memberShelfFromFinished([], OPTIONS)
+    expect(validateLibraryFile(file).ok).toBe(true)
+    expect(file.books).toEqual([])
+    expect(file.generator).toBe(MEMBER_SHELF_GENERATOR)
+    expect(file.owner).toBeUndefined()
   })
 })

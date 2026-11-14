@@ -1,7 +1,8 @@
-import { formatOf, type BookFormat } from './books'
+import { formatOf, type BookFormat, type Book } from './books'
 import { exportRegalLibrary, type RegalExportEntry } from './export/regal'
 import type { KnownReadingStatus, LibraryBook, RegalLibraryFile } from './export/regalLibraryFile'
 import type { LibraryEntry } from './library'
+import type { MemberFinished } from './socialShapes'
 import { bookColour } from '../utils/bookColour'
 import { coverImage, type CoverHosts } from '../utils/coverRef'
 
@@ -103,6 +104,83 @@ export function memberShelfDocument(entries: readonly LibraryEntry[], options: M
   })
   file.books = file.books.map((book) => dressed(book, byBook.get(book.id)!, options))
   return file
+}
+
+/**
+ * Her finished reads, as her profile carries them (`MemberProfile['finished']`, `data/social.ts`), as her
+ * shelf's library document: the same document `memberShelfDocument` builds from a member's own Library,
+ * built here from what another member's profile hands out (the friend page, `pages/friends/[member]`).
+ *
+ * The profile carries one entry per finished Book — her latest finished read of it — and not her
+ * Library: no added day, no page count of her own, no format word. What it has, it keeps: the Book (its
+ * cover and colours), the day the read ended, her Rating and her review, the review's spoiler flag; and
+ * the Rating and the review are there only where her switches let them through (the database sends them
+ * null otherwise). The shelf therefore holds exactly what her profile shows.
+ *
+ * Every step is `memberShelfDocument`'s, reached by handing it these reads as Library entries: the same
+ * `memberShelfEntry`, `exportRegalLibrary` and `dressed`, so each Book's Spine is its cover's colour
+ * (`bookColour`), and a Book whose cover the profile could not carry takes the cloth colour of its
+ * title, as it does on her own shelf. Pure: the same profile gives the same document (`generatedAt` aside).
+ */
+export function memberShelfFromFinished(finished: readonly MemberFinished[], options: MemberShelfOptions): RegalLibraryFile {
+  return memberShelfDocument(
+    finished.filter((item) => !item.book.unverified).map(finishedEntry),
+    options,
+  )
+}
+
+/**
+ * One finished read as the Library entry it stands for. The day the read ended is the day the Book joined
+ * the shelf (`dateAdded`), which is what a shelf of finished reads has: her profile carries no added day.
+ * A Book the server could not confirm is left out above: it has no title or cover at all (`shownBook`,
+ * utils/unverifiedBook.ts), and Regal needs a title to stand a Book up.
+ */
+function finishedEntry(item: MemberFinished): LibraryEntry {
+  const { book } = item
+  const shelfBook: Book = {
+    id: book.id,
+    createdAt: '',
+    title: book.title,
+    authors: book.authors,
+    isbn13: null,
+    isbn10: null,
+    // Her own page count is not hers to show here; the edition's is not carried either.
+    pageCount: null,
+    year: book.year,
+    language: null,
+    publisher: null,
+    description: null,
+    coverUrl: book.coverUrl,
+    coverThumbhash: book.coverThumbhash,
+    coverColors: book.coverColors,
+    ...(book.coverKey || book.coverWidths ? { coverKey: book.coverKey ?? null, coverWidths: book.coverWidths ?? null } : {}),
+    // The format word is not hers to show: `formatOf` then names no binding (an Apple edition would claim an ebook).
+    source: book.manual ? 'manual' : 'import',
+    appleId: null,
+    openLibraryEditionKey: null,
+    openLibraryWorkKey: null,
+  }
+  return {
+    id: `member-finished-${book.id}`,
+    status: 'finished',
+    addedAt: item.endedOn ?? '',
+    book: shelfBook,
+    pageCountOverride: null,
+    latestSession: {
+      id: item.sessionId ?? `member-finished-${book.id}`,
+      startedOn: null,
+      endedOn: item.endedOn,
+      outcome: 'finished',
+      rating: item.rating,
+      review: item.review,
+      reviewSpoilers: item.spoilers,
+      abandonReason: null,
+      progressPage: null,
+      progressPercent: null,
+      progressUpdatedAt: null,
+      createdAt: '',
+    },
+  }
 }
 
 function dressed(book: LibraryBook, entry: LibraryEntry, options: MemberShelfOptions): LibraryBook {
