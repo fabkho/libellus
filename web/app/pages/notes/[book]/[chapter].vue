@@ -24,7 +24,7 @@ import { isRetryableNoteError, NOTE_EMOJI, type NoteErrorCode, type NoteQuote } 
 import type { ReportReason } from '~/data/buddyReads'
 import { isBookId, isChapterSegment } from '~/utils/notesRoute'
 import { chapterOfSegment, noteErrorKey, noteItems, noteQuoteOf, replyChipOf, notesPath, type NoteItem } from '~/utils/notes'
-import { sameAuthorRun, VOICE_UNSIGNED } from '~/utils/roomThread'
+import { sameAuthorRun } from '~/utils/roomThread'
 import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
 import { clampToOffer, noteSendOptions, noteVoiceAllowed, settleLevel, startLevel, type NoteLevel } from '~/utils/noteVisibility'
 import { useBookStore } from '~/stores/book'
@@ -422,66 +422,20 @@ async function confirmBlock() {
 // ------------------------------------------------------------------ playing a voice note
 
 const voicePlayer = useVoicePlayer()
-// Leaving the thread silences the voice that is playing.
-onBeforeUnmount(() => voicePlayer.stop())
-
-/** The base's double-tap window (`UiBubble`): a second press inside it likes. */
-const DOUBLE_TAP_MS = 300
-type Press = { at: number; started: boolean; liked: boolean }
-const lastPress = new Map<string, Press>()
-
-/**
- * The press on the play button of a **stored voice note**, taken before the base's own (the capture phase of the thread's root: the base would play the
- * placeholder it was given, `VOICE_UNSIGNED`, because nothing was signed when the thread loaded). Here the first press asks for the URL (`store.voiceUrl`,
- * five minutes, kept for four) and plays it; a second press inside the double-tap window likes the note, as on any bubble (and stops the sound the first one
- * started). A press with the keyboard (no `detail`) only plays or pauses. A note still on its way, or refused, plays from the device's own copy: the base's.
- */
-function voicePress(event: MouseEvent) {
-  const button = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-testid$=".voicePlay"]')
-  if (!button) return
-  const key = button.closest<HTMLElement>('[data-key]')?.dataset.key
-  const item = key ? items.value.find((i) => i.key === key) : undefined
-  if (!item?.voice || item.delivery !== 'sent' || !item.media?.path || store.previewOf(item.key)) return
-  event.stopPropagation()
-  event.preventDefault()
-  // Nothing of a chapter that is not open to her is fetched: the thread's veil, one step stricter than the press itself.
-  if (view.value?.open !== true) return
-  const now = Date.now()
-  const before = lastPress.get(item.key)
-  const canLike = !!item.id && event.detail > 0
-  if (canLike && before && now - before.at <= DOUBLE_TAP_MS) {
-    lastPress.delete(item.key)
-    // The first press may still be waiting for its URL: it is told not to play when it comes.
-    before.liked = true
-    if (before.started) voicePlayer.stop()
-    void react(item.id!, NOTE_EMOJI[0]!)
-    return
-  }
-  const press: Press = { at: now, started: false, liked: false }
-  lastPress.set(item.key, press)
-  void playVoice(item, press)
-}
-
-async function playVoice(item: NoteItem, press: Press) {
-  notice.value = null
-  const path = item.media!.path!
-  // Her press again on the one that is playing (or paused): the base's player pauses or resumes it, with no new URL.
-  if (voicePlayer.current.key === item.key && !voicePlayer.current.failed) {
-    const playing = voicePlayer.current.playing
-    voicePlayer.toggle(item.key, VOICE_UNSIGNED)
-    press.started = !playing
-    return
-  }
-  const answer = await store.voiceUrl(path)
-  if (answer.error) {
-    notice.value = answer.error === 'offline' ? t(noteErrorKey('offline')) : t('notes.thread.voicePlayFailed')
-    return
-  }
-  // A second press came while the URL was on its way: that was a double tap, which likes and does not play.
-  if (press.liked) return
-  voicePlayer.toggle(item.key, answer.data)
-  press.started = true
-}
+/** The whole press-to-play interaction, once for both threads (`composables/useVoicePress.ts`): what differs here is the ❤️ of the notes' bar, the veil, and the two sentences. */
+const { onPress: voicePress } = useVoicePress({
+  items: () => items.value,
+  isOpen: () => view.value?.open === true,
+  canLike: () => true,
+  likeEmoji: NOTE_EMOJI[0]!,
+  like: (id, emoji) => void react(id, emoji),
+  notice: (message) => (notice.value = message),
+  isPreview: (key) => !!store.previewOf(key),
+  voiceUrl: (path) => store.voiceUrl(path),
+  offlineWord: () => t(noteErrorKey('offline')),
+  failedWord: () => t('notes.thread.voicePlayFailed'),
+  voicePlayer,
+})
 
 // ------------------------------------------------------------------ the veil
 
