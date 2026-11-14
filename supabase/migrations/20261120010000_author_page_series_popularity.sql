@@ -3,9 +3,10 @@
 --
 -- A series group with fewer than two covered works is noise on the author
 -- page; its works fall back to `standalone`/`other` instead. A work is
--- *covered* when the calling member has a library entry of one of its books
--- (the cover expression `work_card` shows) or when the work itself carries a
--- cover for the page's language.
+-- *covered* when the card `work_card` builds for it carries a `coverUrl` — the
+-- same cover the page draws, through every branch of the card's chain (her
+-- Book's, the Catalogue's, the edition's, the work's, the English edition's),
+-- rather than a second, hand-rolled copy of it.
 --
 -- `work_card` gains the three popularity counts from the work's Open Library
 -- search document (20261118020000_work_popularity.sql) so the app can order
@@ -131,27 +132,15 @@ as $$
   ),
   series_groups as (
     select s.id, s.name, s.parent_id, s.wikidata_id,
-           jsonb_agg(public.work_card(aw.id, p_language, p.position) order by p.position, aw.first_year) as works,
+           jsonb_agg(wc.card order by p.position, aw.first_year) as works,
            min(aw.first_year) as first_year,
-           count(case when coalesce(aw_mine.cover_url, aw.editions -> p_language ->> 'cover_url', aw.cover_url) is not null then 1 end) as covered
+           -- The card is the single source of truth for a cover: it is built once per work and counted here,
+           -- so a group is covered exactly when the page would draw its covers.
+           count(case when wc.card ->> 'coverUrl' is not null then 1 end) as covered
       from placed p
       join aw on aw.id = p.work_id
       join public.series s on s.id = p.series_id
-      left join lateral (
-        select e.id as entry_id, e.book_id, e.status, b.title, b.cover_url, last_read.rating, last_read.ended_on
-          from public.book_works bw
-          join public.library_entries e on e.book_id = bw.book_id and e.member_id = (select auth.uid())
-          join public.books b on b.id = e.book_id
-          left join lateral (
-            select s2.rating, s2.ended_on from public.reading_sessions s2
-             where s2.entry_id = e.id and s2.outcome = 'finished'
-             order by s2.ended_on desc nulls last, s2.created_at desc
-             limit 1
-          ) last_read on true
-         where bw.work_id = aw.id
-         order by case e.status when 'finished' then 0 when 'reading' then 1 else 2 end, e.added_at desc
-         limit 1
-      ) aw_mine on true
+      cross join lateral (select public.work_card(aw.id, p_language, p.position) as card) wc
      group by s.id
   ),
   unplaced as (
