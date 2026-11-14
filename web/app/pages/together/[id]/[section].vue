@@ -139,6 +139,7 @@ const items = computed<ThreadItem[]>(() =>
     open: view.value?.open === true,
     nameOf,
     errorWord: (code) => t(buddyErrorKey(code)),
+    retryable: (code) => isRetryableBuddyError(code as BuddyErrorCode),
     previewOf: store.previewOf,
   }),
 )
