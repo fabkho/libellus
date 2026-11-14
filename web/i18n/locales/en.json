@@ -1870,6 +1870,11 @@
       "graphic": "graphic novel",
       "other": "other"
     },
+    "popularity": {
+      "wantToRead": "{count} want to read",
+      "reading": "{count} reading",
+      "ratings": "{count} rating | {count} ratings"
+    },
     "filterCount": "{shown} of {total} book | {shown} of {total} books",
     "filterEmpty": "None of her works is in the genres you picked.",
     "filterClear": "Clear",

@@ -12,6 +12,12 @@
 // and refreshes behind it; the first opening stands in placeholders of its
 // shape, replaced whole when the page comes.
 //
+// The order is the server's, never sorted here: `author_page` is asked for
+// `p_order = 'most-read'` (data/enrich/authors.ts), so a standalone group draws the
+// works people want to read most first, and this page does not re-sort them.
+// `newestFirst` is not used here at all; it still sorts the Book page's "More from
+// the author" teaser, which says what she wrote last and is not this page's order.
+//
 // The hero's genre chips filter the works below (C5b): a pressed chip shows only
 // the works whose genres include it, several pressed chips are an OR, and none
 // pressed shows everything. The state is the page's own and goes away with it;
@@ -21,7 +27,6 @@ import type { WorkCard } from '~/data/enrich'
 import { useAuthorsStore } from '~/stores/authors'
 import { useLibraryStore } from '~/stores/library'
 import { filterByGenres, standaloneByKind } from '~/utils/authorPage'
-import { newestFirst } from '~/utils/enrich'
 
 definePageMeta({ layout: 'tabs', screen: 'author', pushed: true })
 
@@ -76,10 +81,10 @@ const groups = computed<Group[]>(() => {
   const standalone = standaloneByKind(v.standalone)
   return [
     ...v.series.map((s) => ({ id: `series-${s.id}`, title: s.name, parent: s.parentName ?? undefined, works: s.works, places: true })),
-    ...(standalone.novels.length ? [{ id: 'standalone', title: t('author.standalone'), works: newestFirst(standalone.novels), places: false }] : []),
-    ...(standalone.novellas.length ? [{ id: 'novellas', title: t('author.novellas'), works: newestFirst(standalone.novellas), places: false }] : []),
-    ...(standalone.rest.length ? [{ id: 'standaloneOther', title: t('author.standaloneOther'), works: newestFirst(standalone.rest), places: false }] : []),
-    ...(v.other.length ? [{ id: 'other', title: t('author.other'), works: newestFirst(v.other), places: false }] : []),
+    ...(standalone.novels.length ? [{ id: 'standalone', title: t('author.standalone'), works: standalone.novels, places: false }] : []),
+    ...(standalone.novellas.length ? [{ id: 'novellas', title: t('author.novellas'), works: standalone.novellas, places: false }] : []),
+    ...(standalone.rest.length ? [{ id: 'standaloneOther', title: t('author.standaloneOther'), works: standalone.rest, places: false }] : []),
+    ...(v.other.length ? [{ id: 'other', title: t('author.other'), works: v.other, places: false }] : []),
   ]
 })
 
@@ -147,6 +152,7 @@ function back() {
               testid="author.work"
               :author="author?.name"
               kind
+              popularity
               :eager="g === 0 && index < 4"
             />
           </component>

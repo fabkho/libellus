@@ -3,9 +3,9 @@ import type { WorkCard } from '~/data/enrich/works'
 
 /**
  * What an author page makes of the works the database hands it (Wave C5): the
- * standalone works split by what they are, and the hero's genre chips as a
- * filter over every work below. Pure and framework-free, so
- * `tests/author-page.test.ts` drives them in plain Node.
+ * standalone works split by what they are, the hero's genre chips as a filter
+ * over every work below, and the one popularity figure a row shows. Pure and
+ * framework-free, so `tests/author-page.test.ts` drives them in plain Node.
  */
 
 /** The kinds `work_card` gives a work; a work without one says none. */
@@ -41,4 +41,19 @@ export function matchesGenres(work: Pick<WorkCard, 'genres'>, active: readonly G
 /** `matchesGenres` over a list, keeping the order it was given (the server's). */
 export function filterByGenres(works: readonly WorkCard[], active: readonly GenreId[]): WorkCard[] {
   return active.length ? works.filter((work) => matchesGenres(work, active)) : [...works]
+}
+
+/** Which popularity figure a row shows, when the card carries any. */
+export type Popularity = { key: 'wantToRead' | 'reading' | 'ratings'; count: number }
+
+/**
+ * The one popularity figure a work's row shows: how many want to read it, since that is the most-read signal; the
+ * reading log and the ratings only stand in where that count is unknown. Null when the card carries none of them (an
+ * unknown count is absent, not 0).
+ */
+export function popularityOf(work: Pick<WorkCard, 'wantToReadCount' | 'readinglogCount' | 'ratingsCount'>): Popularity | null {
+  if (work.wantToReadCount) return { key: 'wantToRead', count: work.wantToReadCount }
+  if (work.readinglogCount) return { key: 'reading', count: work.readinglogCount }
+  if (work.ratingsCount) return { key: 'ratings', count: work.ratingsCount }
+  return null
 }

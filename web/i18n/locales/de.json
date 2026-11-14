@@ -1870,6 +1870,11 @@
       "graphic": "Graphic Novel",
       "other": "Sonstiges"
     },
+    "popularity": {
+      "wantToRead": "{count} möchten es lesen",
+      "reading": "{count} lesen es gerade",
+      "ratings": "{count} Bewertung | {count} Bewertungen"
+    },
     "filterCount": "{shown} von {total} Buch | {shown} von {total} Büchern",
     "filterEmpty": "Keines der Werke passt zu den gewählten Genres.",
     "filterClear": "Zurücksetzen",
