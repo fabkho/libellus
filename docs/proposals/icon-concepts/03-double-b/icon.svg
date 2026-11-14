@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Double B (a block monogram from overlapping gradient strokes)</title>
+<defs><linearGradient id="mse3bg" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient><linearGradient id="mse3mid" x1="128" y1="0" x2="384" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f5c67e"/><stop offset="1" stop-color="#efb768"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#mse3bg)"/>
+<rect x="128" y="120" width="64" height="272" fill="#f1e3c8"/>
+<rect x="320" y="120" width="64" height="272" fill="#f1e3c8"/>
+<rect x="128" y="120" width="256" height="56" fill="#f1e3c8"/>
+<rect x="128" y="228" width="256" height="56" fill="url(#mse3mid)"/>
+<rect x="128" y="336" width="256" height="56" fill="#f1e3c8"/>
+</svg>

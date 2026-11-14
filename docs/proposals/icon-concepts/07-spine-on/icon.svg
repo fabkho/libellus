@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Spine on (one upright book, its lit spine facing the reader)</title>
+<defs><linearGradient id="mse7bg" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#mse7bg)"/>
+<rect x="196" y="72" width="44" height="368" fill="#f1e3c8" opacity="0.28"/>
+<rect x="272" y="72" width="44" height="368" fill="#f1e3c8" opacity="0.28"/>
+<rect x="152" y="72" width="44" height="368" fill="#f1e3c8" opacity="0.28"/>
+<rect x="228" y="72" width="56" height="368" fill="#efb768"/>
+<rect x="228" y="72" width="56" height="12" fill="#f1e3c8" opacity="0.55"/>
+<rect x="228" y="428" width="56" height="12" fill="#211b2e" opacity="0.45"/>
+</svg>

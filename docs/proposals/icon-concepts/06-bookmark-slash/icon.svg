@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Bookmark slash (a ribbon dropping from the top edge, cut swallowtail)</title>
+<defs><linearGradient id="mse6bg" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#mse6bg)"/>
+<polygon points="216,96 296,96 296,416 256,368 216,416" fill="#efb768"/>
+</svg>

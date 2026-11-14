@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Hairline ring (the mark in a rounded enclosure, colour only in one bar)</title>
+<defs><linearGradient id="mse10bg" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#mse10bg)"/>
+<rect x="116" y="116" width="280" height="280" rx="64" fill="none" stroke="#f1e3c8" stroke-width="18"/>
+<rect x="176" y="216" width="160" height="26" rx="13" fill="#f1e3c8"/>
+<rect x="176" y="262" width="160" height="26" rx="13" fill="#efb768"/>
+</svg>

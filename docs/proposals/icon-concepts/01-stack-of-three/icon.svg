@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Stack of three (three flat book-blocks, the middle one lit)</title>
+<defs><linearGradient id="mse1bg" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#mse1bg)"/>
+<rect x="96" y="104" width="320" height="88" rx="14" fill="#f1e3c8"/>
+<rect x="96" y="216" width="320" height="88" rx="14" fill="#efb768"/>
+<rect x="96" y="328" width="320" height="88" rx="14" fill="#f1e3c8"/>
+</svg>

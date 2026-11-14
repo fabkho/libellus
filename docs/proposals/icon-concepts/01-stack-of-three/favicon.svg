@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — Stack of three (favicon: three flat bars, the middle one lit)</title>
+<defs><linearGradient id="mse1fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="32" height="32" fill="url(#mse1fbg)"/>
+<rect x="3" y="5" width="26" height="6" rx="1.5" fill="#f1e3c8"/>
+<rect x="3" y="13" width="26" height="6" rx="1.5" fill="#efb768"/>
+<rect x="3" y="21" width="26" height="6" rx="1.5" fill="#f1e3c8"/>
+</svg>

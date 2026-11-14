@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — Open doors (favicon: two page-quads with the light-blade between)</title>
+<defs><linearGradient id="mse4fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="32" height="32" fill="url(#mse4fbg)"/>
+<rect x="13" y="5" width="6" height="22" fill="#efb768"/>
+<polygon points="5,7 13,9 13,27 5,25" fill="#f1e3c8"/>
+<polygon points="27,7 19,9 19,27 27,25" fill="#f1e3c8"/>
+</svg>

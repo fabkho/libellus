@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Open doors (two pages parting with a blade of lamp-light between)</title>
+<defs><linearGradient id="mse4bg" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#mse4bg)"/>
+<polygon points="256,148 226,392 286,392" fill="#efb768"/>
+<polygon points="150,132 244,168 244,392 150,356" fill="#f1e3c8"/>
+<polygon points="362,132 268,168 268,392 362,356" fill="#f1e3c8"/>
+</svg>

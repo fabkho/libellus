@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — Lamp dot (favicon: the lamp-disc over the page-line, enlarged)</title>
+<defs><linearGradient id="mse2fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="32" height="32" fill="url(#mse2fbg)"/>
+<circle cx="16" cy="16" r="9" fill="#efb768"/>
+<rect x="6" y="26" width="20" height="4" rx="2" fill="#f1e3c8"/>
+</svg>

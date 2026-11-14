@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — Progress ring (favicon: the ring thickened, gap kept open)</title>
+<defs><linearGradient id="mse5fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="32" height="32" fill="url(#mse5fbg)"/>
+<circle cx="16" cy="16" r="10.5" fill="none" stroke="#f1e3c8" stroke-width="6" opacity="0.25"/>
+<path d="M16,5.5 A10.5,10.5 0 1 1 5.5,16" fill="none" stroke="#efb768" stroke-width="6" stroke-linecap="round"/>
+</svg>

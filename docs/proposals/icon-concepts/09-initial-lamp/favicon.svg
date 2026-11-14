@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+<title>BetterReads — Initial lamp (favicon: the block B with its amber bowl, simplified)</title>
+<defs><linearGradient id="mse9fbg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="32" height="32" fill="url(#mse9fbg)"/>
+<rect x="8" y="5" width="4" height="22" fill="#f1e3c8"/>
+<rect x="8" y="5" width="11" height="4" fill="#f1e3c8"/>
+<rect x="8" y="12" width="11" height="3.5" fill="#f1e3c8"/>
+<rect x="12" y="9" width="7" height="3" fill="#211b2e"/>
+<rect x="8" y="15.5" width="13" height="11.5" rx="2" fill="#efb768"/>
+</svg>

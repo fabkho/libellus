@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>BetterReads — Night window (a lit pane with three book-silhouettes on its sill)</title>
+<defs><linearGradient id="mse8bg" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3c3251"/><stop offset="1" stop-color="#211b2e"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#mse8bg)"/>
+<rect x="136" y="112" width="240" height="288" fill="#efb768"/>
+<rect x="188" y="252" width="36" height="148" fill="#211b2e"/>
+<rect x="232" y="228" width="36" height="172" fill="#211b2e"/>
+<rect x="276" y="260" width="36" height="140" fill="#211b2e"/>
+<rect x="136" y="392" width="240" height="16" fill="#f1e3c8"/>
+</svg>
