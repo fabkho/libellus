@@ -18,7 +18,8 @@ import { messageFromJson, mapVoiceStorageError } from '@/data/buddyReads'
 import { parseBuddyEvent } from '@/data/buddyLive'
 import { pendingBubble, sentBubble, tombstoneOf, voiceJob, voiceOfJob, type BuddyBubble } from '@/utils/buddyRead'
 import { isRetryableBuddyError, type BuddyErrorCode } from '@/data/buddyReads'
-import { quoteOf, roomItems, VOICE_UNSIGNED, type RoomThreadContext } from '@/utils/roomThread'
+import { roomItems, VOICE_UNSIGNED, type RoomThreadContext } from '@/utils/roomThread'
+import { quoteOf } from '@/utils/roomThread'
 
 /**
  * Voice messages in a buddy read, the parts that need no stack (the rules through the database are tests/buddy-voice-db.test.ts and
@@ -241,9 +242,10 @@ describe('how the thread draws a voice message', () => {
 
   it('quotes a voice message as "Voice message" (it has no words)', () => {
     const words = { deleted: 'Deleted', someone: 'Someone', you: 'You', voice: '🎤 Voice message' }
+    const reply = (replyTo: string) => ({ kind: 'reply' as const, replyTo })
     const items = roomItems([voice()], ctx())
-    expect(quoteOf(items, 'm1', words)).toEqual({ id: 'm1', mine: false, name: 'Ben', preview: '🎤 Voice message' })
+    expect(quoteOf(items, reply('m1'), words)).toEqual({ id: 'm1', mine: false, name: 'Ben', preview: '🎤 Voice message' })
     const own = roomItems([voice({ senderId: ADA })], ctx())
-    expect(quoteOf(own, 'm1', words)).toMatchObject({ mine: true, name: 'You', preview: '🎤 Voice message' })
+    expect(quoteOf(own, reply('m1'), words)).toMatchObject({ mine: true, name: 'You', preview: '🎤 Voice message' })
   })
 })

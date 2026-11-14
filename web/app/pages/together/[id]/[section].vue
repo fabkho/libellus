@@ -33,9 +33,10 @@ import { BUDDY_EMOJI, type BuddyErrorCode, type ReportReason } from '~/data/budd
 import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
 import { isReadId, isSectionSegment, roomPath, sectionOfSegment } from '~/utils/buddyRoute'
 import { buddyErrorKey } from '~/utils/buddyRead'
+import { quoteOf, replyChipOf } from '~/utils/roomThread'
 import { sectionTitle } from '~/utils/buddySectionTitle'
 import { isRetryableBuddyError } from '~/data/buddyReads'
-import { quoteOf, roomItems, sameAuthorRun, type ThreadItem } from '~/utils/roomThread'
+import { sameAuthorRun, roomItems, type ThreadItem } from '~/utils/roomThread'
 import { useBuddyReadStore } from '~/stores/buddyRead'
 import { useSessionStore } from '~/stores/session'
 
@@ -137,8 +138,7 @@ const items = computed<ThreadItem[]>(() =>
     me: me.value,
     open: view.value?.open === true,
     nameOf,
-    errorWord: (code) => t(buddyErrorKey(code as BuddyErrorCode)),
-    retryable: (code) => isRetryableBuddyError(code as BuddyErrorCode),
+    errorWord: (code) => t(buddyErrorKey(code)),
     previewOf: store.previewOf,
   }),
 )
@@ -169,7 +169,7 @@ async function loadOlder(): Promise<boolean> {
 
 const sectionWords = { whole: () => t('together.wholeBook'), label: (n: string) => t('together.sectionLabel', { n }) }
 const quoteWords = computed(() => ({ deleted: t('uiText.chat.reply.deleted'), someone: t('member.someone'), you: t('uiText.chat.reply.you'), voice: t('uiText.chat.reply.voice') }))
-const quoteFor = (item: ThreadItem) => quoteOf(items.value, item.replyTo, quoteWords.value)
+const quoteFor = (item: ThreadItem) => quoteOf(items.value, item.replyTo ? { kind: 'reply', replyTo: item.replyTo } : null, quoteWords.value)
 
 // ------------------------------------------------------------------ title and banners
 
@@ -196,10 +196,7 @@ const replyTo = ref<ThreadItem | null>(null)
 const notice = ref<string | null>(null)
 const chat = useTemplateRef<{ jumpTo: (id: string) => Promise<void>; toNewest: () => void }>('chat')
 
-const replyQuote = computed(() => {
-  const q = replyTo.value ? quoteOf(items.value, replyTo.value.id, quoteWords.value) : null
-  return q ? { name: q.name, preview: q.preview } : null
-})
+const replyQuote = computed(() => (replyTo.value ? replyChipOf(replyTo.value, quoteWords.value) : null))
 
 async function send() {
   const body = text.value

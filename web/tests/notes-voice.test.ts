@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { VOICE_QUEUE_MAX_AGE_MS, VOICE_URL_REUSE_MS } from '@/data/buddyVoice'
 import { noteFromJson, mapNoteVoiceStorageError, type NoteMessage } from '@/data/notes'
 import { NOTE_VOICE_BUCKET, notePath, voiceFromNoteJson } from '@/data/noteVoice'
-import { noteItems, noteJob, noteQuoteOf, noteVoiceJob, noteVoiceOfJob, pendingNote, replyChipOf, sentNote, tombstoneNote, visibilityOfJob, type NoteThreadContext } from '@/utils/notes'
-import { VOICE_UNSIGNED } from '@/utils/roomThread'
+import { noteItems, noteJob, noteQuoteOf, noteVoiceJob, noteVoiceOfJob, pendingNote, sentNote, tombstoneNote, visibilityOfJob, type NoteThreadContext } from '@/utils/notes'
+import { replyChipOf, VOICE_UNSIGNED } from '@/utils/roomThread'
 
 /**
  * Voice notes, the parts that need no stack (the rules through the database are tests/notes-voice-db.test.ts and supabase/tests/notes_private_voice_test.sql):

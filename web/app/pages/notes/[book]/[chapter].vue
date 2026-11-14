@@ -23,8 +23,8 @@ import { threadKey } from '#layers/chat/app/utils/thread'
 import { isRetryableNoteError, NOTE_EMOJI, type NoteErrorCode, type NoteQuote } from '~/data/notes'
 import type { ReportReason } from '~/data/buddyReads'
 import { isBookId, isChapterSegment } from '~/utils/notesRoute'
-import { chapterOfSegment, noteErrorKey, noteItems, noteQuoteOf, replyChipOf, notesPath, type NoteItem } from '~/utils/notes'
-import { sameAuthorRun } from '~/utils/roomThread'
+import { chapterOfSegment, noteErrorKey, noteItems, quoteSourceOf, notesPath, type NoteItem } from '~/utils/notes'
+import { quoteOf, replyChipOf, sameAuthorRun } from '~/utils/roomThread'
 import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
 import { clampToOffer, noteSendOptions, noteVoiceAllowed, settleLevel, startLevel, type NoteLevel } from '~/utils/noteVisibility'
 import { useBookStore } from '~/stores/book'
@@ -168,7 +168,7 @@ const quoteWords = computed(() => ({
   hidden: t('notes.thread.hiddenQuote'),
   voice: t('notes.thread.voiceQuote'),
 }))
-const quoteFor = (item: NoteItem) => noteQuoteOf(item, items.value, me.value, quoteWords.value)
+const quoteFor = (item: NoteItem) => quoteOf(items.value, quoteSourceOf(item, me.value), quoteWords.value)
 
 // ------------------------------------------------------------------ title
 

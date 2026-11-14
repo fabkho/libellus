@@ -5,7 +5,8 @@ import { sectionTitle } from '@/utils/buddySectionTitle'
 import { isReadId, isSectionSegment, sectionOfSegment, threadPath } from '@/utils/buddyRoute'
 import { sentBubble, type BuddyBubble } from '@/utils/buddyRead'
 import { isRetryableBuddyError, type BuddyErrorCode } from '@/data/buddyReads'
-import { quoteOf, reportInput, roomItems, sameAuthorRun, type RoomThreadContext } from '@/utils/roomThread'
+import { reportInput, sameAuthorRun, roomItems, type RoomThreadContext } from '@/utils/roomThread'
+import { quoteOf } from '@/utils/roomThread'
 
 /** What the room and a thread draw (utils/buddyRoom.ts, buddyThread.ts, buddyRoute.ts): the veil, the tombstone, the quote, the track, the report. No database, no store. */
 
@@ -55,16 +56,17 @@ describe('the veil in a thread', () => {
 
 describe('a quote', () => {
   const words = { deleted: 'Message deleted', someone: 'A reader', you: 'You' }
+  const reply = (replyTo: string) => ({ kind: 'reply' as const, replyTo })
   const items = roomItems([bubble('1', { body: '  The   ending\nwas  great ' }), bubble('2', { spoiler: true }), bubble('3', { deletedAt: 'x' }), bubble('4', { senderId: 'ada' })], ctx())
 
   it('shows who wrote it and its first words on one line', () => {
-    expect(quoteOf(items, '1', words)).toEqual({ id: '1', mine: false, name: 'Ben', preview: 'The ending was great' })
-    expect(quoteOf(items, '4', words)).toMatchObject({ mine: true, name: 'You' })
+    expect(quoteOf(items, reply('1'), words)).toEqual({ id: '1', mine: false, name: 'Ben', preview: 'The ending was great' })
+    expect(quoteOf(items, reply('4'), words)).toMatchObject({ mine: true, name: 'You' })
   })
 
   it('says a removed or unknown message is gone', () => {
-    expect(quoteOf(items, '3', words)).toMatchObject({ id: null, preview: 'Message deleted' })
-    expect(quoteOf(items, 'nowhere', words)).toMatchObject({ id: null, name: 'A reader', preview: 'Message deleted' })
+    expect(quoteOf(items, reply('3'), words)).toMatchObject({ id: null, preview: 'Message deleted' })
+    expect(quoteOf(items, reply('nowhere'), words)).toMatchObject({ id: null, name: 'A reader', preview: 'Message deleted' })
     expect(quoteOf(items, null, words)).toBeNull()
   })
 })

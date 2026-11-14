@@ -3,7 +3,7 @@ import { REPORT_REASONS, type ReportReason } from '~/data/buddyReads'
 import type { VoiceInfo } from '~/data/buddyVoice'
 
 /**
- * A room's thread as its screen draws it, the parts a buddy read (pages/together/[id]/[section].vue) and a Book's notes
+ * A room's thread as its screen draws it, the parts a buddy read (pages/together/[id]/[section].vue, utils/buddyThread.ts) and a Book's notes
  * (pages/notes/[book]/[chapter].vue, utils/noteThread.ts) both use: the stored bubbles of a store turned into what the base's `UiChatThread` and `UiBubble` take (`BubbleMessage`), plus what only a buddy
  * read adds: who wrote it, the message it answers and the tombstone. Pure functions on plain data, so Vitest
  * drives them in Node.
@@ -153,19 +153,71 @@ export function toggledReaction<T extends ReactionRow>(reactions: readonly T[], 
   return out
 }
 
-/** The words a quote needs that are the app's. */
-export type QuoteWords = { deleted: string; someone: string; you: string; voice?: string }
+/** The words a quote needs that are the app's. A buddy read's are the first four (it has no server quote, so no `hidden`); a Book's notes need `hidden` too, and both word a voice message because both threads send them. */
+export type QuoteWords = { deleted: string; someone: string; you: string; voice?: string; hidden?: string }
+
+/** The most of a message's words a quote shows (and what the database keeps of a quoted note's excerpt: `private.note_quote`). */
+export const QUOTE_PREVIEW_MAX = 120
 
 /**
- * The message `replyTo` names, as a quote over a bubble or the composer: who wrote it and its first words. A tombstone says it is
- * gone, a voice message is "Voice message" (it has no words). null when it answers nothing.
+ * Where the quote of a message comes from: the two threads agree on it here rather than each resolving its own.
+ *
+ * - `reply`: the message answers another one of the thread, found among the items (`replyTo`, both threads).
+ * - `hidden`: the server holds the note it answers and says she may not read it: no id to jump to, no words to show.
+ * - `removed`: the server says the note it answers is deleted: no id, and the words "removed".
+ * - `note`: the server sent the note it answers as she may see it: `id` jumps to it when it is in the loaded page, `excerpt` is its words
+ *   (already cut by the database), and `voice` says it is a voice note (no words at all).
  */
-export function quoteOf(items: readonly ThreadItem[], replyTo: string | null, words: QuoteWords): BubbleQuote | null {
-  if (!replyTo) return null
-  const original = items.find((item) => item.id === replyTo)
-  if (!original) return { id: null, mine: false, name: words.someone, preview: words.deleted }
-  const preview = original.removed ? words.deleted : original.voice ? (words.voice ?? '') : original.body.replace(/\s+/g, ' ').trim().slice(0, 120)
+export type QuoteSource =
+  | { kind: 'reply'; replyTo: string }
+  | { kind: 'hidden' }
+  | { kind: 'removed' }
+  | { kind: 'note'; id: string; mine: boolean; author: string | null; excerpt: string; voice: boolean }
+
+/** A message's first words, as a quote or the composer's chip shows them: one line, and no more than `QUOTE_PREVIEW_MAX` characters. */
+export const quotePreview = (words: string): string => words.replace(/\s+/g, ' ').trim().slice(0, QUOTE_PREVIEW_MAX)
+
+/** The quote a voice message is: "Voice message" when the app words it, nothing when it does not. */
+const voiceQuote = (words: QuoteWords): string => words.voice ?? ''
+
+/**
+ * The quote of a message that answers nothing among the items: a note's is a note she may not see, which is said with `words.hidden` and no name at
+ * all (its author is not hers to know); a buddy read's is a tombstone, so it says that and keeps the author it cannot vouch for ("A reader").
+ */
+const missingQuote = (words: QuoteWords): BubbleQuote =>
+  words.hidden ? { id: null, mine: false, name: '', preview: words.hidden } : { id: null, mine: false, name: words.someone, preview: words.deleted }
+
+/**
+ * The quote of a message, as the base draws it over a bubble or in the composer: who wrote it and its first words, and the id to jump to when the
+ * original is one she can reach. null when it answers nothing. A tombstone says it is gone, a voice message is "Voice message" (it has no words),
+ * a note she may not read says so (`words.hidden`, both name and words withheld), and an original that is not among the items is a note she may not
+ * read for the thread that has `hidden` to say it with, a tombstone for the one that does not.
+ */
+export function quoteOf(items: readonly ThreadItem[], source: QuoteSource | null, words: QuoteWords): BubbleQuote | null {
+  if (!source) return null
+  if (source.kind === 'hidden') return { id: null, mine: false, name: '', preview: words.hidden ?? '' }
+  if (source.kind === 'removed') return { id: null, mine: false, name: '', preview: words.deleted }
+  if (source.kind === 'note') {
+    const present = items.some((item) => item.id === source.id)
+    return {
+      id: present ? source.id : null,
+      mine: source.mine,
+      name: source.mine ? words.you : (source.author?.trim() || words.someone),
+      preview: source.voice ? voiceQuote(words) : source.excerpt,
+    }
+  }
+  const original = items.find((item) => item.id === source.replyTo)
+  if (!original) return missingQuote(words)
+  const preview = original.removed ? words.deleted : original.voice ? voiceQuote(words) : quotePreview(original.body)
   return { id: original.removed ? null : original.id, mine: original.mine, name: original.mine ? words.you : (original.author ?? words.someone), preview }
+}
+
+/**
+ * The quote the composer shows above the box while she answers `item`: who and the first words, never more than the base draws. Both threads'
+ * composers use it, so the shape and the cut are decided once.
+ */
+export function replyChipOf(item: Pick<ThreadItem, 'mine' | 'author' | 'voice' | 'body'>, words: Pick<QuoteWords, 'someone' | 'you' | 'voice'>): { name: string; preview: string } {
+  return { name: item.mine ? words.you : (item.author ?? words.someone), preview: item.voice ? voiceQuote(words) : quotePreview(item.body) }
 }
 
 // ------------------------------------------------------------------ report
