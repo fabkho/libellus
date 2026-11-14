@@ -5,15 +5,19 @@
 // Book that is not in the Library, Start reading on Want to read, Update
 // progress while it is being read (under its progress; Finish and DNF live in
 // that sheet, not here), Read again on a finished Book and Start again on an
-// abandoned one — and what the Book is about. Opened from search (a Catalogue
-// Book by id, or a result that is not in the Catalogue yet by its source id)
-// and from the Library. Where a Book came from is never shown. Under the
-// action, when the member has linked an ebook file on this device (#131), one
-// quiet line says so (BookEbook); with the copy there, Read now is the lit
-// action on Want to read and Reading (Start reading or Update progress steps
-// back under it) and opens the built-in reader over the page, its cover flying
-// from this one (components/reader/Reader.vue). How she read it (Read as, #169)
-// is set in the options sheet.
+// abandoned one — and what the Book is about. **The action area holds the
+// reading actions and nothing else** (V4, docs/plans/book-actions.md): one
+// filled primary, and with an ebook on this device (#131) Read now above it and
+// the state's own action stepped back to a quiet one. Notes and Read together are
+// not buttons here any more: they are rows of their own under About
+// (components/notes/BookSection.vue, components/together/BookRow.vue). Opened
+// from search (a Catalogue Book by id, or a result that is not in the Catalogue
+// yet by its source id) and from the Library. Where a Book came from is never
+// shown. Under the action, when the member has linked an ebook file on this
+// device (#131), one quiet line says so (BookEbook); with the copy there, Read
+// now is the lit action on Want to read and Reading and opens the built-in
+// reader over the page, its cover flying from this one (components/reader/Reader.vue).
+// How she read it (Read as, #169) is set in the options sheet.
 import { formatOf, sourceKeys } from '~/data/books'
 import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
@@ -395,18 +399,15 @@ function back() {
       <UiButton v-else-if="entry.status === 'reading'" block data-testid="book.updateProgress" @click="reading.openProgress(entry)">
         <UiIcon name="bookmark" :size="18" bold />{{ t('book.progress.update') }}
       </UiButton>
-      <!-- Closed: the next read starts a new session; the earlier ones stay. -->
+      <!-- Closed: the next read starts a new session; the earlier ones stay. Alone in its state (Read now is only on Want to read and Reading), so it is the filled one. -->
       <UiButton
         v-else
-        tone="quiet"
         block
         :data-testid="notFinished ? 'book.startAgain' : 'book.readAgain'"
         @click="reading.openStart(entry)"
       >
         <UiIcon name="repeat" :size="18" />{{ notFinished ? t('book.startAgain') : t('book.readAgain') }}
       </UiButton>
-      <!-- Read together (buddy reads): on every Book page, in her Library or not, in the action area, right under the Book's one action. -->
-      <TogetherBookRow :book="book" :entry="entry" />
       <!-- Its ebook on this device, when one is linked (#131); a finished or abandoned Book opens in the reader from here. -->
       <BookEbook v-if="entry" :entry="entry" :read="Boolean(ebook) && entry.status !== 'want_to_read' && entry.status !== 'reading'" @read="read(entry)" />
       <!-- The reader's code could not be brought in (docs/perf/bundle.md F6): say so, where a tap used to do nothing. -->
@@ -419,8 +420,6 @@ function back() {
       <span class="skeleton wave block h-(--size-button) w-full rounded-pill" :style="{ '--wave': 0.5 }" />
     </div>
 
-    <!-- Notes (docs/parity.md, *Notes, the Book page section*): what her friends and the public wrote on this Book, when there is something. -->
-    <NotesBookSection v-if="book" :book="book" />
 
     <BookProgressLog v-if="entry?.status === 'reading'" :entry="entry" />
     <CollectionsBookRow v-if="book" :book="book" :entry="entry" :book-key="key" />
@@ -451,6 +450,12 @@ function back() {
       <span class="line eyebrow-line mb-ms w-1/4"><span class="skeleton wave w-full" :style="{ '--wave': 0.6 }" /></span>
       <span v-for="i in 4" :key="i" class="line subhead-line" :class="i === 4 ? 'w-2/3' : 'w-full'"><span class="skeleton wave w-full" :style="{ '--wave': 0.6 + i * 0.1 }" /></span>
     </section>
+
+    <!-- V4 (docs/plans/book-actions.md): *Notes* and *Read together* are rows of their own, under the About text and in the order the mock draws them —
+         what she and her friends wrote on the Book first, then with whom to read it. Each is one link (or, without a read, one press that opens the setup
+         sheet) in the same language: the icon, the label, one line of what it says, the chevron. -->
+    <NotesBookSection v-if="book" :book="book" />
+    <TogetherBookRow v-if="book" :book="book" :entry="entry" />
 
     <!-- In your friends (social v2a, §1.5): the people she follows who have this Book, under its description and right above More from the author. -->
     <BookReaders v-if="book" :book="book" />

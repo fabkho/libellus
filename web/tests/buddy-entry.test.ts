@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { BuddyCard } from '@/data/buddyReads'
-import { activeReads, bookEntryAction, canReadTogether, homeReads, readOfBook, unreadBadge, unreadTotal, whereWords } from '@/utils/buddyEntry'
+import { activeReads, bookEntryAction, bookEntryRow, canReadTogether, homeReads, readOfBook, unreadBadge, unreadTotal, whereWords } from '@/utils/buddyEntry'
 
 /**
  * The entry points of a buddy read: what the Book page's action and Home's card say, as view models (utils/buddyEntry.ts, plain Node), and where the screens put
@@ -90,6 +90,28 @@ describe('her reads of a Book', () => {
     expect(bookEntryAction(null, false, reads)).toBeNull()
     expect(bookEntryAction(undefined, true, reads)).toBeNull()
   })
+
+  // V4 (docs/plans/book-actions.md): the action became a section row under About; the row is the same three states, and nothing for no Book.
+  it('draws the row as the action it is: one link to her read, one press for the sheet, one off for a Manual book', () => {
+    expect(bookEntryRow(bookEntryAction(catalogue('a'), true, reads))).toEqual({ kind: 'open', read: mine })
+    expect(bookEntryRow(bookEntryAction(catalogue('c'), false, reads))).toEqual({ kind: 'start', adds: true })
+    expect(bookEntryRow(bookEntryAction({ id: 'a', source: 'manual' }, true, reads))).toEqual({ kind: 'unavailable' })
+    expect(bookEntryRow(null)).toBeNull()
+  })
+
+  it('keeps the row out of the Book page’s action area, and the four reading actions inside it', () => {
+    const page = readFileSync(join(process.cwd(), 'app/pages/book/[key].vue'), 'utf8')
+    const actions = page.slice(page.indexOf('data-testid="book.actions"'), page.indexOf('data-testid="book.actionsLoading"'))
+    // The cluster is the state line, the progress figures and the reading actions; the two rows are below About.
+    for (const id of ['book.add', 'book.start', 'book.updateProgress', 'book.read']) expect(actions).toContain(`data-testid="${id}"`)
+    expect(actions).not.toContain('TogetherBookRow')
+    expect(actions).not.toContain('NotesBook')
+    // book.notes is the Notes row's id and lives under About, with book.together.start.
+    expect(actions).not.toContain('book.notes')
+    const about = page.indexOf('data-testid="book.about"')
+    expect(page.indexOf('<NotesBookSection', about)).toBeGreaterThan(about)
+    expect(page.indexOf('<TogetherBookRow', about)).toBeGreaterThan(page.indexOf('<NotesBookSection', about))
+  })
 })
 
 describe("Home's card", () => {
@@ -139,14 +161,16 @@ describe('where the screens put the entry points (read from the sources)', () =>
       .map((line) => /^\s*import\s+(?!type\b)[^'"]*from\s+['"]([^'"]+)['"]/.exec(line)?.[1])
       .filter((spec): spec is string => Boolean(spec))
 
-  it('the Book page puts the action in the action area, under the Book’s one action and above the ebook rows, for every Book', () => {
+  it('the Book page puts the action as a row under About, below the Notes rows, out of the action area (V4)', () => {
     const page = read('pages/book/[key].vue')
     const at = (needle: string) => page.indexOf(needle)
-    const row = '<TogetherBookRow :book="book" :entry="entry" />'
+    const row = '<TogetherBookRow v-if="book" :book="book" :entry="entry" />'
+    // The action area keeps the reading actions: the buddy read left it, with the Notes rows, for a section under About.
     expect(at(row)).toBeGreaterThan(at('data-testid="book.actions"'))
-    expect(at(row)).toBeGreaterThan(at('data-testid="book.add"'))
-    expect(at(row)).toBeLessThan(at('<BookEbook'))
-    // Not behind a condition of its own, nor a menu: the line carries nothing but the component.
+    expect(at(row)).toBeGreaterThan(at('data-testid="book.about"'))
+    expect(at(row)).toBeGreaterThan(at('<NotesBookSection'))
+    expect(at(row)).toBeGreaterThan(at('<BookEbook'))
+    // Not behind a condition of its own, nor a menu: the line carries nothing but the component (and only a known Book draws it).
     expect(page.split('\n').filter((line) => line.includes('TogetherBookRow')).every((line) => line.trim() === row || line.includes('<!--'))).toBe(true)
   })
 
