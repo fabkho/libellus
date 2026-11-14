@@ -50,3 +50,40 @@ a product decision.
 - **Tests**: Update `tests/buddy-thread-view.test.ts` imports only; no behavior change, so no new tests — the test's value is unchanged, it just stops pinning the shim.
 - **Priority**: Should
 - **Why**: A module whose interface is identical to another module's is the definition of shallow, and this one is load-bearing confusion: it makes readers believe buddy threads have their own view model when they don't.
+
+### 5. One pending-link store for share, follow, and buddy-read links
+- **Action**: Merge the three near-identical pending-link modules into one owner with one key scheme, one TTL, and one take/peek shape.
+- **Files/modules**: `web/app/utils/pendingShare.ts`, `web/app/utils/pendingFollow.ts`, `web/app/utils/pendingBuddyRead.ts` (each ~60 lines: keep/peek/take + token-in-path + to-open), orchestrated by `web/app/utils/signedOutRoute.ts` (`signedOutDestination`) and consumed in `web/app/middleware/auth.global.ts`, `web/app/pages/share.vue`, `web/app/pages/t/[token].vue`, `web/app/pages/f/[token].vue`.
+- **Change**: New `web/app/utils/pendingLink.ts` owns the concept "something she opened while signed out, kept through sign-in": `keep(kind, value)`, `peek(kind)`, `take(kind)`, and the path-token parsers as data (one 22-char token shape shared by follow and buddy-read; share's payload shape as the third kind). The three modules become re-exports or are deleted. Priority order (share before follow before buddy-read) stays exactly where it is — in `signedOutRoute.ts`, which is the one place that says where a signed-out visitor goes.
+- **Boundary**: `keepPending(kind: 'share' | 'follow' | 'buddyRead', value: string): boolean`, `takePending(kind): string | null`, `pendingToOpen(...)` — three functions, one TTL constant.
+- **Tests**: Collapse the three pending-link test files' overlapping cases (malformed token dropped, hour TTL expiry, take-forgets) into one boundary suite; keep one test pinning the share-beats-follow-beats-buddy priority in `signedOutRoute`.
+- **Priority**: Should
+- **Why**: Three files with the same keep/peek/take/TTL shape and two with the same token regex are a copy-paste waiting for its first divergence — today a TTL or prefix change must be made in three places.
+
+### 6. One voice-path policy instead of two mirrored ones
+- **Action**: Unify the object-naming and JSON-parsing rules for voice recordings; keep the bucket names and the Notes-private-only rule as parameters, not as parallel implementations.
+- **Files/modules**: `web/app/data/buddyVoice.ts` (`voicePath`: `<read>/<author>/<client>.<ext>`, `voiceFromJson` with `duration_ms`, ~lines 50–100) vs `web/app/data/noteVoice.ts` (`notePath`: `<author>/<room>/<client>.<ext>`, `voiceFromNoteJson` with camelCase `durationMs`, ~lines 19–35).
+- **Change**: Move the shared policy — allowed mimes (`voiceMime`), extension mapping (`voiceExtension`), `prepareVoice` limits handshake, `sendablePeaks` thinning, and the signed-URL-never-stored rule — behind one owner (extend `buddyVoice.ts` into a `voice.ts` both import, or keep `buddyVoice.ts` as the owner and make `noteVoice.ts` the thin adapter the shelf precedent blesses). What stays per-caller: the bucket name, the path-segment order, and the JSON key-case adapter — each a one-liner, each visibly the only difference.
+- **Boundary**: `voicePath(parts)`, `prepareVoice(voice)`, `sendablePeaks(peaks)` — owned once; per-caller adapters `notePath(...)` / `voicePath(...)` keep their names so call sites don't churn.
+- **Tests**: Add one boundary test asserting the two path builders produce the shape the database's `private.*_voice_path` functions expect (today verified only by reading SQL comments); the existing `tests/buddy-voice.test.ts` / `tests/notes-voice.test.ts` limit tests collapse to one suite.
+- **Priority**: Later
+- **Why**: The limits, waveform rules, and expiry policy are already shared by comment reference ("the buddy reads'", "docs/parity.md"), which means a limit change in one file silently invalidates the other's comments — ownership should be code, not prose.
+
+### 7. Fold `friendsView`/`feedView` appliance functions into `data/feed.ts`'s boundary
+- **Action**: Move the feed-list algebra (`mergeFirstPage`, `withoutDoubledReviews`, `withoutMember`, `appendPage`, `copyTimeLabel`, `copyTakenAt`) next to `feedDays` in `data/feed.ts`, and leave `feedView.ts` owning only words (verb keys, empty states, day labels).
+- **Files/modules**: `web/app/data/feed.ts` (`feedDays`, ~line 100), `web/app/utils/feedView.ts` (120 lines, half list-algebra half wording), `web/app/utils/friendsView.ts` (imports both `feedDays` and `feedBatchKey`/`feedVerbKey`, ~line 1–3).
+- **Change**: `data/feed.ts` becomes the one owner of "entries in, rows out, pages joined" (pure, framework-free, already tested in Node); `feedView.ts` keeps "rows to words" (day labels, verb/batch keys, empty states, copy labels). `friendsView.ts` then imports list logic from one module and wording from one module instead of straddling both. No call-site behavior change: Home's Friends and the feed page call the same functions from their new home.
+- **Boundary**: `feedDays(entries, dayOf)`, `mergeFirstPage(current, fresh, following?)`, `withoutDoubledReviews(entries)`, `appendPage(current, page)` — all in `data/feed.ts`; `feedView.ts` keeps `feedVerbKey`, `feedBatchKey`, `feedEmptyState`, `feedDayLabel`.
+- **Tests**: Move the list-algebra tests to the `feed` boundary suite; keep the wording tests where they are. The seam this kills is real: `withoutDoubledReviews` must run before batching, but nothing in the module layout says so — one owner can document and enforce the order.
+- **Priority**: Later
+- **Why**: A reader asking "how does the feed list work" currently assembles the answer from a data file and two utils files; the ordering constraint between dedup and batching lives only in a comment.
+
+## What I did not look at
+
+- **The database and edge functions** (`supabase/functions/**`, the `buddy_*`/`room_*`/notes migrations): the N3 convergence question from the brief needs SQL-level verification I did not do — item candidates there are deliberately absent, and the "two parallel thread layers" framing is unverified beyond the client seam (the `buddyThread.ts` shim and the `buddy*` vs `note*` mirrors above).
+- **Importers, ebooks, and export** (`data/import/**`, `data/ebooks/**`, `data/export/**`, `BookImport` flows): the largest data-layer surface by line count (~3.9k lines in `data/import` alone); covered only by listing. A whole review could be written about importer mapping drift.
+- **Library sorting/filtering** (`data/libraryView.ts`, `stores/libraryView.ts`, `pages/library.vue`): read enough to confirm `arrange`/`matches`/`sortLibrary` form a coherent boundary already — no item proposed, but not stress-tested against the "dangling client sort" pattern.
+- **Enrich/authors/series** (`data/enrich/**`, `utils/enrich.ts`, `MoreFromAuthor`, author page): read `newestFirst`/`moreFromAuthor`/`workBookKey` closely; the teaser-vs-page ordering split is deliberate and documented, so no item — but the prefetch path (`coversToPrefetch` + per-component `coverHosts`) was not traced end to end.
+- **Avatar/member-photo pipeline** (`data/avatar.ts`, `stores/avatar.ts`, `stores/memberPhotos.ts`): confirmed `MemberCard.photo` is a storage path resolved through a download cache (the good shape — no URL/path confusion found there), but did not audit every avatar call site.
+- **Perf, motion, and the reader** (`perf/`, `docs/perf/`, `components/reader`, foliate): out of scope for a module-depth review; untouched.
+- **E2E/typecheck/supabase stacks**: per the brief, none were run; every claim above is from reading code and tests, with line numbers as given.
