@@ -5,6 +5,7 @@ create table public.room_messages (
   created_at timestamp with time zone default clock_timestamp() not null,
   deleted_at timestamp with time zone,
   deleted_by uuid,
+  edited_at timestamp with time zone,
   id uuid default gen_random_uuid() not null,
   kind text default 'text'::text not null,
   moderated boolean default false not null,

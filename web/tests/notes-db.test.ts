@@ -198,6 +198,28 @@ describe('who sees a note', () => {
     expect((await notesOf(anna).setVisibility(note.id, 'private')).error).toBe('not_found')
     expect((await notesOf(ida).setVisibility(note.id, 'nobody' as never)).error).toBe('invalid_visibility')
   })
+
+  it('rewrites her own note in place, stamps it edited, and answers everybody the new words; nobody else may', async () => {
+    const r = await room()
+    const chapter = r.chapter(1)
+    const note = await writeNote(ida, r.room, chapter, 'a thoguht', 'friends')
+    expect(note.editedAt).toBeNull()
+
+    const edited = await notesOf(ida).editNote(r.room.id, note.id, 'a thought')
+    expect(edited.error).toBeNull()
+    expect(edited.data).toMatchObject({ id: note.id, body: 'a thought', visibility: 'friends', createdAt: note.createdAt, editedAt: expect.any(String) })
+    expect(await bodies(anna, r, 1)).toEqual(['a thought'])
+    // Anna reads the correction, never the words it replaced.
+    const asAnna = (await notesOf(anna).messages(r.room.id, chapter)).data!.items.find((i) => i.id === note.id)!
+    expect(asAnna).toMatchObject({ body: 'a thought', editedAt: edited.data!.editedAt })
+
+    // A note that is not hers is not found; blank, too long and a tombstone are refused with their codes.
+    expect((await notesOf(anna).editNote(r.room.id, note.id, 'not mine')).error).toBe('not_found')
+    expect((await notesOf(ida).editNote(r.room.id, note.id, '   ')).error).toBe('body_empty')
+    expect((await notesOf(ida).editNote(r.room.id, note.id, 'x'.repeat(2001))).error).toBe('body_too_long')
+    expect((await notesOf(ida).deleteNote(note.id)).error).toBeNull()
+    expect((await notesOf(ida).editNote(r.room.id, note.id, 'back again')).error).toBe('note_not_editable')
+  })
 })
 
 describe('writing and reading', () => {

@@ -111,6 +111,7 @@ export function pendingNote(job: SendJob, me: string, name: string | null, quote
     author: { id: me, name, photo: null },
     authorName: name,
     deletedAt: null,
+    editedAt: null,
     moderated: false,
     reactions: [],
     visibility,
@@ -151,8 +152,9 @@ export function mergeNote(list: NoteBubble[], incoming: NoteBubble): boolean {
   return !seen
 }
 
-/** A note that became a tombstone: no body, no reactions; its level stays (the database keeps it). */
-export const tombstoneNote = (bubble: NoteBubble, at: string): NoteBubble => ({ ...bubble, kind: 'text', body: '', voice: null, reactions: [], quote: bubble.quote, deletedAt: bubble.deletedAt ?? at })
+/** A note that became a tombstone: no body, no reactions; its level stays (the database keeps it), and so does nothing it said about being edited. */
+export const tombstoneNote = (bubble: NoteBubble, at: string): NoteBubble => ({ ...bubble, kind: 'text', body: '', voice: null, reactions: [], quote: bubble.quote, editedAt: null, deletedAt: bubble.deletedAt ?? at })
+
 
 /** Her reaction at once, before the database says (the same rule as a buddy read's: another emoji replaces hers, the same one takes it back). */
 export function reactedNote(reactions: readonly NoteReaction[], emoji: string | null): NoteReaction[] {
@@ -180,6 +182,8 @@ export type NoteItem = ThreadItem & {
   moderated: boolean
   /** Her photo's path when the caller may see it (the card's), for the avatar. */
   authorPhoto: string | null
+  /** When she last rewrote it; null for a note nobody edited and for every tombstone. */
+  editedAt: string | null
 }
 
 export type NoteThreadContext = Omit<RoomThreadContext, 'errorWord' | 'retryable'> & {
@@ -197,7 +201,7 @@ export function noteItems(bubbles: readonly NoteBubble[], ctx: NoteThreadContext
   const byKey = new Map(bubbles.map((b) => [b.clientId ?? b.id, b]))
   return items.map((item) => {
     const bubble = byKey.get(item.key)!
-    return { ...item, visibility: bubble.visibility, effectiveVisibility: bubble.effectiveVisibility, quote: bubble.quote, moderated: bubble.moderated, authorPhoto: bubble.author.photo }
+    return { ...item, visibility: bubble.visibility, effectiveVisibility: bubble.effectiveVisibility, quote: bubble.quote, moderated: bubble.moderated, authorPhoto: bubble.author.photo, editedAt: bubble.editedAt }
   })
 }
 

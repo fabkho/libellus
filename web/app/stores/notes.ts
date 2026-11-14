@@ -659,6 +659,21 @@ export const useNotesStore = defineStore('notes', () => {
     if (answer.error && bubble && before) bubble.reactions = before
     return answer.error
   }
+  /**
+   * Her own note's words, rewritten (`edit_note`): the bubble follows the stored row it answers — the new body and its `editedAt` — or, when the
+   * call was refused, the words it had. Nothing else about the note moves: its place in the thread, its audience, its chapter, the note it answers.
+   */
+  async function editNote(roomId: string, sectionId: string, noteId: string, body: string): Promise<NoteErrorCode | null> {
+    const r = repo()
+    if (!r) return 'offline'
+    const answer = await r.editNote(roomId, noteId, body)
+    if (answer.error) return answer.error
+    const list = thread(roomId, sectionId).messages
+    const at = list.findIndex((m) => m.id === noteId)
+    if (at >= 0) list[at] = sentNote(answer.data)
+    return null
+  }
+
 
   /** Her own note: it stays as a tombstone, "Note removed". */
   async function deleteNote(roomId: string, sectionId: string, noteId: string): Promise<NoteErrorCode | null> {
@@ -775,6 +790,7 @@ export const useNotesStore = defineStore('notes', () => {
     kick,
     react,
     deleteNote,
+    editNote,
     setVisibility,
     report,
     reset,
