@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.43.0](https://github.com/fabkho/libellus/compare/v1.42.1...v1.43.0) (2026-11-14)
+
+
+### Features
+
+* **enrich:** Open Library popularity counts and the cover fallback ([#541](https://github.com/fabkho/libellus/issues/541)) ([c7076d4](https://github.com/fabkho/libellus/commit/c7076d4815abab5a3bc4e8d5078402eff1e18510))
+
+
+### Fixes
+
+* **book:** the Book page's action cluster, hint and pace ([#540](https://github.com/fabkho/libellus/issues/540)) ([3991e16](https://github.com/fabkho/libellus/commit/3991e1642d51cfd3e59632989ce1c57864a1b725))
+* **members:** stop dropping real photos from the avatar stacks ([#538](https://github.com/fabkho/libellus/issues/538)) ([bee98df](https://github.com/fabkho/libellus/commit/bee98df2cc6fe35b4ccfecd06df101f99d940976))
+
 ## [1.42.1](https://github.com/fabkho/libellus/compare/v1.42.0...v1.42.1) (2026-11-09)
 
 
