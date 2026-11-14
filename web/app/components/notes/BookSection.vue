@@ -1,6 +1,8 @@
 <script setup lang="ts">
 // The *Notes* rows of a Book's page (docs/plans/book-notes.md part 5; docs/plans/book-actions.md, V4; docs/parity.md, *Notes, the Book page section*),
-// **below the About text** and above the Read together row — a section row in their own right, not a half-width button beside Read together any more:
+// **in the pair under the About text**: the rows of components/book/ActionPair.vue, the one box they share with Read together (which owns the fill, the
+// radius, the hairline edge and the line between the two halves; the Notes eyebrow went with the coupling — the mock's `.secrows` has no heading, and one
+// heading over a box that also holds Read together would name the wrong thing — so the section keeps its name for a screen reader (`notes.title`)):
 // **From friends** (up to three faces, "Ben and Jo · 14 notes · chapters 1–9") and **Public** (a globe, "6 notes from 3 members"), each a link to the Notes
 // page. A row is absent when its count is 0, and with both absent the section gives way to the plain **Notes** row (components/notes/BookButton.vue,
 // `book.notes`), so the way in is always here; a Manual book's row is off, with the one line why. A search result that is not in the Catalogue yet has no
@@ -41,37 +43,37 @@ const faceCard = (a: { id: string; name: string | null; photo: string | null }) 
 </script>
 
 <template>
-  <section v-if="hasRows && bookId" class="relative px-ml pt-xl" aria-labelledby="book-notes-title" data-testid="book.notes.section">
-    <h2 id="book-notes-title" class="eyebrow mb-ms">{{ t('notes.title') }}</h2>
-    <UiRowGroup>
-      <NuxtLink
-        v-if="rows.friends"
-        :to="notesPath(bookId)"
-        class="flex min-h-(--size-row) w-full items-center gap-ms px-inset py-xs text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent active:bg-fill-strong"
-        data-testid="book.notes.friends"
-      >
-        <span class="flex shrink-0 -space-x-2" aria-hidden="true"><FriendsAvatar v-for="a in rows.friends.authors" :key="a.id" :card="faceCard(a)" /></span>
-        <span class="min-w-0 flex-1">
-          <span class="block text-body">{{ t('notes.section.friends') }}</span>
-          <span class="block text-subhead text-ink-muted wrap-anywhere">{{ friendsLine }}</span>
-        </span>
-        <UiIcon name="chevron" :size="15" bold class="text-ink-ghost" />
-      </NuxtLink>
-      <NuxtLink
-        v-if="rows.public"
-        :to="notesPath(bookId)"
-        class="flex min-h-(--size-row) w-full items-center gap-ms border-hairline px-inset py-xs text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent active:bg-fill-strong not-first:border-t"
-        data-testid="book.notes.public"
-      >
-        <span class="flex w-(--size-avatar) shrink-0 justify-center text-ink-faint" aria-hidden="true"><UiIcon name="globe" :size="22" /></span>
-        <span class="min-w-0 flex-1">
-          <span class="block text-body">{{ t('notes.section.public') }}</span>
-          <span class="block text-subhead text-ink-muted wrap-anywhere">{{ publicLine }}</span>
-        </span>
-        <UiIcon name="chevron" :size="15" bold class="text-ink-ghost" />
-      </NuxtLink>
-    </UiRowGroup>
+  <!-- The rows in the pair's one box (components/book/ActionPair.vue, which owns the fill, the radius and the hairline edge), above
+       Read together and separated from it by that box's hairline; the section is here for the name (*Notes*) and the test id. -->
+  <section v-if="hasRows && bookId" class="divide-y divide-hairline" :aria-label="t('notes.title')" data-testid="book.notes.section">
+    <NuxtLink
+      v-if="rows.friends"
+      :to="notesPath(bookId)"
+      class="flex min-h-(--size-row) w-full items-center gap-ms px-inset py-xs text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent active:bg-fill-strong"
+      data-testid="book.notes.friends"
+    >
+      <span class="flex shrink-0 -space-x-2" aria-hidden="true"><FriendsAvatar v-for="a in rows.friends.authors" :key="a.id" :card="faceCard(a)" /></span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-body">{{ t('notes.section.friends') }}</span>
+        <span class="block text-subhead text-ink-muted wrap-anywhere">{{ friendsLine }}</span>
+      </span>
+      <UiIcon name="chevron" :size="15" bold class="text-ink-ghost" />
+    </NuxtLink>
+    <NuxtLink
+      v-if="rows.public"
+      :to="notesPath(bookId)"
+      class="flex min-h-(--size-row) w-full items-center gap-ms px-inset py-xs text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent active:bg-fill-strong"
+      data-testid="book.notes.public"
+    >
+      <span class="flex w-(--size-avatar) shrink-0 justify-center text-ink-faint" aria-hidden="true"><UiIcon name="globe" :size="22" /></span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-body">{{ t('notes.section.public') }}</span>
+        <span class="block text-subhead text-ink-muted wrap-anywhere">{{ publicLine }}</span>
+      </span>
+      <UiIcon name="chevron" :size="15" bold class="text-ink-ghost" />
+    </NuxtLink>
   </section>
-  <!-- Nothing counted yet, or a Manual book: the one plain Notes row is the way in (and says why when it is off). -->
+  <!-- Nothing counted yet, or a Manual book: the one plain Notes row is the way in (and says why when it is off). A search result that is
+       not in the Catalogue yet has no Notes page and draws nothing — the pair's box then holds Read together alone. -->
   <NotesBookButton v-else :book="book" />
 </template>

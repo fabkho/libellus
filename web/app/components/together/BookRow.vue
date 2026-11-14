@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// The buddy read row on a Book's page (docs/parity.md, *Buddy read, the Book page action*; V4, docs/plans/book-actions.md): **a section row of its
-// own**, under the Notes rows and below the Book's About text, on every Book page, in her Library or not — not a button in the action area any more
+// The buddy read row on a Book's page (docs/parity.md, *Buddy read, the Book page action*; V4, docs/plans/book-actions.md): **the second half of the
+// pair**, under the Notes rows and below the Book's About text, on every Book page, in her Library or not — not a button in the action area any more
 // (the action area keeps the reading actions and nothing else). It reads her buddy list (`my_buddy_reads()`, once when the page opens, through the
 // small store stores/buddyInvites.ts: no chat layer, no Realtime) and says one of three things:
 // - she is in an active read of this Book: **Open the buddy read** (the whole row a link to its room), the unread count in a pill, and "N readers · Section 4"
@@ -50,55 +50,55 @@ onMounted(() => void invites.load({ force: true }))
 </script>
 
 <template>
-  <section class="relative px-ml pt-xl" data-testid="book.together">
+  <!-- The pair's second half (components/book/ActionPair.vue owns the box: the fill, the radius, the hairline edge, and the hairline between
+       this and the Notes rows above), a section of its own for its test id and the one line why when it is off. -->
+  <section data-testid="book.together">
     <!-- One row, in the same language as the Notes rows above it (components/notes/BookSection.vue): the icon, the label, one line of what it says,
          the chevron at the end. In a read it is a link to the room; not in one, a press that opens the setup sheet; a Manual book, a disabled row. -->
-    <UiRowGroup>
-      <NuxtLink
-        v-if="row?.kind === 'open' && read"
-        :to="roomPath(read.id)"
-        class="flex min-h-(--size-row) w-full items-center gap-ms px-inset py-xs text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent active:bg-fill-strong"
-        data-testid="book.together.open"
-      >
-        <span class="flex w-(--size-avatar) shrink-0 justify-center text-ink-faint" aria-hidden="true"><UiIcon name="chat" :size="22" /></span>
-        <span class="min-w-0 flex-1">
-          <span class="block text-body">{{ t('together.entry.openRoom') }}</span>
-          <span class="block text-subhead text-ink-muted wrap-anywhere" data-testid="book.together.summary">
-            {{ readers }}<span aria-hidden="true"> · </span><span class="sr-only">, </span>{{ whereText }}
-          </span>
+    <NuxtLink
+      v-if="row?.kind === 'open' && read"
+      :to="roomPath(read.id)"
+      class="flex min-h-(--size-row) w-full items-center gap-ms px-inset py-xs text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent active:bg-fill-strong"
+      data-testid="book.together.open"
+    >
+      <span class="flex w-(--size-avatar) shrink-0 justify-center text-ink-faint" aria-hidden="true"><UiIcon name="chat" :size="22" /></span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-body">{{ t('together.entry.openRoom') }}</span>
+        <span class="block text-subhead text-ink-muted wrap-anywhere" data-testid="book.together.summary">
+          {{ readers }}<span aria-hidden="true"> · </span><span class="sr-only">, </span>{{ whereText }}
         </span>
-        <TogetherUnreadBadge :count="read.unread" :label="t('together.entry.unread', { count: read.unread })" />
-        <UiIcon name="chevron" :size="15" bold class="text-ink-ghost" />
-      </NuxtLink>
-      <button
-        v-else-if="row?.kind === 'start'"
-        type="button"
-        class="flex min-h-(--size-row) w-full items-center gap-ms px-inset py-xs text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent active:bg-fill-strong"
-        aria-haspopup="dialog"
-        data-testid="book.together.start"
-        @click="start"
-      >
-        <span class="flex w-(--size-avatar) shrink-0 justify-center text-ink-faint" aria-hidden="true"><UiIcon name="chat" :size="22" /></span>
-        <span class="min-w-0 flex-1">
-          <span class="block text-body">{{ t('together.entry.start') }}</span>
-        </span>
-        <UiIcon name="chevron" :size="15" bold class="text-ink-ghost" />
-      </button>
-      <button
-        v-else-if="row?.kind === 'unavailable'"
-        type="button"
-        class="flex min-h-(--size-row) w-full items-center gap-ms px-inset py-xs text-left"
-        disabled
-        aria-describedby="book-together-why"
-        data-testid="book.together.start"
-      >
-        <span class="flex w-(--size-avatar) shrink-0 justify-center text-ink-faint" aria-hidden="true"><UiIcon name="chat" :size="22" /></span>
-        <span class="min-w-0 flex-1">
-          <span class="block text-body text-ink-faint">{{ t('together.entry.start') }}</span>
-        </span>
-      </button>
-    </UiRowGroup>
-    <p v-if="row?.kind === 'unavailable'" id="book-together-why" class="mt-xs text-caption text-ink-muted" data-testid="book.together.unavailable">{{ t('together.entry.unavailable') }}</p>
+      </span>
+      <TogetherUnreadBadge :count="read.unread" :label="t('together.entry.unread', { count: read.unread })" />
+      <UiIcon name="chevron" :size="15" bold class="text-ink-ghost" />
+    </NuxtLink>
+    <button
+      v-else-if="row?.kind === 'start'"
+      type="button"
+      class="flex min-h-(--size-row) w-full items-center gap-ms px-inset py-xs text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent active:bg-fill-strong"
+      aria-haspopup="dialog"
+      data-testid="book.together.start"
+      @click="start"
+    >
+      <span class="flex w-(--size-avatar) shrink-0 justify-center text-ink-faint" aria-hidden="true"><UiIcon name="chat" :size="22" /></span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-body">{{ t('together.entry.start') }}</span>
+      </span>
+      <UiIcon name="chevron" :size="15" bold class="text-ink-ghost" />
+    </button>
+    <button
+      v-else-if="row?.kind === 'unavailable'"
+      type="button"
+      class="flex min-h-(--size-row) w-full items-center gap-ms px-inset py-xs text-left"
+      disabled
+      aria-describedby="book-together-why"
+      data-testid="book.together.start"
+    >
+      <span class="flex w-(--size-avatar) shrink-0 justify-center text-ink-faint" aria-hidden="true"><UiIcon name="chat" :size="22" /></span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-body text-ink-faint">{{ t('together.entry.start') }}</span>
+      </span>
+    </button>
+    <p v-if="row?.kind === 'unavailable'" id="book-together-why" class="px-inset pb-sm text-caption text-ink-muted" data-testid="book.together.unavailable">{{ t('together.entry.unavailable') }}</p>
     <LazyTogetherSetupSheet v-if="asked" v-model:open="open" :entry="entry" :book="book" :friend="friend" />
   </section>
 </template>

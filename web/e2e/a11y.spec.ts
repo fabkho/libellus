@@ -595,9 +595,14 @@ test.describe('accessibility, notes', { tag: '@full' }, () => {
     await expectAccessible(page, 'the visibility sheet')
     await page.getByTestId('notes.visibilitySheet.action').click()
 
-    // The Book page's section (the friend's note is counted there for her).
+
+    // The Book page's section (the friend's note is counted there for her), and the pair it sits in: one box under About, Notes above Read
+    // together, passed through axe in the dark room it is drawn in and in the light one (this suite's own two rooms, 412 × 915).
     await goto(page, `/book/${bookId}`)
     await expect(page.getByTestId('book.notes.section')).toBeVisible()
-    await expectAccessible(page, 'the Book page with its Notes section')
+    const pair = page.getByTestId('book.actionPair')
+    await expect(pair.getByTestId('book.notes.friends')).toBeVisible()
+    await expect(pair.getByTestId('book.together.start')).toBeVisible()
+    await expectAccessible(page, 'the Book page with its Notes section and the pair it sits in')
   })
 })
