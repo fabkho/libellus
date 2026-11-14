@@ -8,8 +8,11 @@ create table public.works (
   id uuid default gen_random_uuid() not null,
   kind text,
   openlibrary_key text,
+  ratings_count integer,
+  readinglog_count integer,
   title text not null,
   titles jsonb default '{}'::jsonb not null,
+  want_to_read_count integer,
   wikidata_id text
 );
 
@@ -21,6 +24,7 @@ alter table public.works add constraint works_kind CHECK ((kind = ANY (ARRAY['no
 alter table public.works add constraint works_openlibrary_format CHECK ((openlibrary_key ~ '^OL[1-9][0-9]{0,11}W$'::text));
 alter table public.works add constraint works_openlibrary_key_key UNIQUE (openlibrary_key);
 alter table public.works add constraint works_pkey PRIMARY KEY (id);
+alter table public.works add constraint works_popularity_nonnegative CHECK (((COALESCE(ratings_count, 0) >= 0) AND (COALESCE(readinglog_count, 0) >= 0) AND (COALESCE(want_to_read_count, 0) >= 0)));
 alter table public.works add constraint works_title_present CHECK (((char_length(btrim(title)) >= 1) AND (char_length(btrim(title)) <= 500)));
 alter table public.works add constraint works_titles_object CHECK ((jsonb_typeof(titles) = 'object'::text));
 alter table public.works add constraint works_wikidata_format CHECK ((wikidata_id ~ '^Q[1-9][0-9]{0,11}$'::text));

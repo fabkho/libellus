@@ -42,6 +42,9 @@ begin
          titles = case when p ? 'titles' then w.titles || coalesce(p -> 'titles', '{}') else w.titles end,
          first_year = case when p ? 'year' then coalesce((p ->> 'year')::smallint, w.first_year) else w.first_year end,
          kind = case when p ? 'kind' then coalesce(p ->> 'kind', w.kind) else w.kind end,
+         ratings_count = case when p ? 'ratingsCount' then coalesce((p ->> 'ratingsCount')::integer, w.ratings_count) else w.ratings_count end,
+         readinglog_count = case when p ? 'readinglogCount' then coalesce((p ->> 'readinglogCount')::integer, w.readinglog_count) else w.readinglog_count end,
+         want_to_read_count = case when p ? 'wantToReadCount' then coalesce((p ->> 'wantToReadCount')::integer, w.want_to_read_count) else w.want_to_read_count end,
          cover_url = case when p ? 'coverUrl' then coalesce(p ->> 'coverUrl', w.cover_url) else w.cover_url end,
          editions = case when p ? 'editions' then w.editions || coalesce(p -> 'editions', '{}') else w.editions end,
          genre_ids = case when jsonb_typeof(p -> 'genres') = 'array' and jsonb_array_length(p -> 'genres') > 0

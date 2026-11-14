@@ -8,10 +8,11 @@
 -- member's statuses; her corrections (set/reset_entry_genres,
 -- set/reset_entry_series), hers alone; and RLS: catalogue facts readable by
 -- members, written only by the service role. Assertions act as signed-in
--- members and ask about the rows this test made.
+-- members and ask about the rows this test made; and the work's popularity
+-- counts (the case-when ratchet and the non-negative check on public.works).
 
 begin;
-select plan(64);
+select plan(69);
 
 create schema if not exists tests;
 
@@ -44,11 +45,19 @@ returns text language sql security definer as $$
   select reason from private.enrich_queue where book_id = p_book
 $$;
 
+-- The work's write path, past the API: it lives in `private`.
+create or replace function tests.enrich_work(p_payload jsonb)
+returns uuid language sql security definer as $$
+  select private.enrich_work(p_payload)
+$$;
+
 select tests.member('ada@enrich.pgtap.test') as ada_id \gset
 select tests.member('ben@enrich.pgtap.test') as ben_id \gset
 
 grant usage on schema tests to anon, authenticated;
+grant usage on schema tests to supabase_admin;
 grant execute on all functions in schema tests to anon, authenticated;
+grant execute on all functions in schema tests to supabase_admin;
 
 -- ------------------------------------------------------------ the genre list
 
@@ -326,6 +335,47 @@ select is(public.work_card((select id from public.works where wikidata_id = 'Q99
   'Small Gods', 'no title in her language: the English edition''s before the work''s own');
 select is(public.work_card((select id from public.works where wikidata_id = 'Q990000091'), 'fr') -> 'edition' ->> 'isbn13',
   '9780552152976', 'and the English edition is the one Want to read adds');
+
+-- The popularity counts the author page orders by: Open Library's ratings,
+-- readinglog and want-to-read, as the work's search document carries them
+-- (ratingsCount, readinglogCount, wantToReadCount). enrich_work writes them
+-- into public.works; a payload that omits them leaves what the row has
+-- (the case-when ratchet), and the check constraint keeps them non-negative.
+select tests.enrich_work('{"wikidata":"Q990000092","openlibrary":"OL990092W","title":"Popularity","fetched":true,
+  "ratingsCount":89,"readinglogCount":344,"wantToReadCount":217}'::jsonb);
+select results_eq(
+  format($$select ratings_count, readinglog_count, want_to_read_count from public.works where wikidata_id = %L$$, 'Q990000092'),
+  $$values (89, 344, 217)$$,
+  'a payload with the three counts stores them on the work');
+-- A payload that omits the counts leaves the row as it was.
+select tests.enrich_work('{"wikidata":"Q990000092","title":"Popularity","fetched":true}'::jsonb);
+select results_eq(
+  format($$select ratings_count, readinglog_count, want_to_read_count from public.works where wikidata_id = %L$$, 'Q990000092'),
+  $$values (89, 344, 217)$$,
+  'a payload without the counts leaves the stored ones unchanged');
+-- The check constraint refuses a negative count (a fresh row: the fixture's
+-- works all have null counts).
+-- public.works is written only by the service role; a definer helper runs the
+-- insert and returns the SQLSTATE it caught, so the check constraint (not the
+-- grant) is what throws.
+reset role;
+create or replace function public.test_work_neg(p_sql text)
+returns text language plpgsql as $$
+begin
+  execute p_sql;
+  return 'ok';
+exception when others then
+  return sqlstate;
+end;
+$$;
+grant execute on function public.test_work_neg(text) to postgres, supabase_admin;
+select is(public.test_work_neg('insert into public.works (title, openlibrary_key, ratings_count) values (''x'', ''OL1W'', -1)'),
+  '23514', 'the table itself refuses a negative ratings count');
+select is(public.test_work_neg('insert into public.works (title, openlibrary_key, readinglog_count) values (''x'', ''OL2W'', -1)'),
+  '23514', 'and a negative readinglog count');
+select is(public.test_work_neg('insert into public.works (title, openlibrary_key, want_to_read_count) values (''x'', ''OL3W'', -1)'),
+  '23514', 'and a negative want-to-read count');
+reset role;
 
 reset role;
 select * from finish();
