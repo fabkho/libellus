@@ -2019,7 +2019,11 @@
     "bothReadEyebrow": "You both read · {count}",
     "bothReadAgree": "You agree on {agree} of {of}",
     "bothReadDisagree": "{title}: {name} {hers}, you {mine}",
-    "bothReadFirst": "{name} read {count} of them first"
+    "bothReadFirst": "{name} read {count} of them first",
+    "shelf": "Shelf",
+    "shelfTitle": "{name} · Shelf",
+    "shelfNewest": "Newest",
+    "shelfEmpty": "{name} hasn't finished a book you can see."
   },
   "follow": {
     "loading": "Opening…",

@@ -357,6 +357,13 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await goto(page, `/friends/${ida.id}/${today.slice(0, 4)}`)
     await expect(page.getByTestId('memberYear.title')).toBeVisible()
     await expectAccessible(page, "a member's year")
+    // Her shelf, from the card her profile draws (wave E): only a build with Regal has one.
+    if (/^(1|true)$/i.test(process.env.LIBELLUS_REGAL?.trim() ?? '')) {
+      await goto(page, `/friends/${ida.id}`)
+      await page.getByTestId('member.shelfRow').click()
+      await expect(page.getByTestId('memberShelf.stage')).toBeVisible()
+      await expectAccessible(page, "a member's shelf")
+    }
 
     // A follow link to a private account: the card, with Ask to follow.
     await goto(page, `/f/${link}`)

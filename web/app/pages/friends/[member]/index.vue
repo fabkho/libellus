@@ -108,6 +108,14 @@ const bothReadShown = computed(() => bothRead.value.length > 0 || bothReadPendin
 // Regal's chunk (the reel, and its still for the fallbacks) starts coming as the page opens, not when the section is drawn.
 prefetchBothReadReel(useAppConfig().regal === true)
 const wantAll = computed(() => view.value.want ?? open.value?.want ?? [])
+/**
+ * Her shelf's Books (wave E): the finished reads her profile carries, newest first, and only where she
+ * shows her *Finished* (the database sends none otherwise, so the row is not there for her either), in
+ * a build with Regal (`appConfig.regal`, regal.config.ts): without it there is no shelf to open.
+ */
+const shelfBooks = computed(() => (useAppConfig().regal === true && open.value?.sections.finished ? open.value.finished : []))
+// The covers' hosts, direct as this screen asked before own covers: only the Library's row and the reel go through `/cover`.
+const coverHosts = { ...useCoverHosts(), proxy: false }
 
 // ------------------------------------------------------------------ sheets
 // A month's books, a star row's, an author's reads of the period, the reads without a page count or the ones
@@ -354,6 +362,45 @@ function back() {
           </div>
         </UiReveal>
 
+        <!-- Her shelf (wave E): the Books she has finished, as a card drawn the way a year's card is (ProfileYearCards):
+             the count, the newest finished cover, its title, opening her shelf. Only when she has finished something, and
+             nothing when her *Finished* switch is off (her profile carries no finished Book then). -->
+        <UiReveal :show="shelfBooks.length > 0">
+          <section aria-labelledby="memberShelfTitle" class="flex flex-col gap-md pb-xl" data-testid="member.shelfSection">
+            <h2 id="memberShelfTitle" class="eyebrow">{{ t('member.shelf') }}</h2>
+            <div class="scrollbar-none -mx-screen flex gap-ms overflow-x-auto px-screen">
+              <NuxtLink
+                :to="`/friends/${id}/shelf`"
+                class="shelf-card relative flex shrink-0 flex-col gap-sm overflow-hidden rounded-lg bg-surface-raised p-inset shadow-raised edge-faint active:opacity-80"
+                data-testid="member.shelfRow"
+              >
+                <UiAmbient :colors="shelfBooks[0]?.book.coverColors ?? null" shape="card" />
+                <span class="relative flex items-start justify-between gap-sm">
+                  <span class="flex flex-col gap-xs">
+                    <span class="text-figure tabular-nums">{{ count(shelfBooks.length) }}</span>
+                    <span class="figures text-meta text-ink-muted" data-testid="member.shelfCount">{{ t('shelf.count', { count: count(shelfBooks.length) }, shelfBooks.length) }}</span>
+                  </span>
+                  <UiCover
+                    decorative
+                    v-if="shelfBooks[0]"
+                    :title="shelfBooks[0].book.title"
+                    :authors="shelfBooks[0].book.authors"
+                    v-bind="coverImage(shelfBooks[0].book, 'md', coverHosts)"
+                    :thumbhash="shelfBooks[0].book.coverThumbhash"
+                    :colors="shelfBooks[0].book.coverColors"
+                    size="md"
+                    glow
+                  />
+                </span>
+                <span v-if="shelfBooks[0]" class="relative mt-auto flex flex-col gap-xxs">
+                  <span class="eyebrow">{{ t('member.shelfNewest') }}</span>
+                  <span class="book-title title-wrap text-callout">{{ shelfBooks[0].book.title }}</span>
+                </span>
+              </NuxtLink>
+            </div>
+          </section>
+        </UiReveal>
+
         <UiReveal :show="blocks.yearCards">
           <div class="pb-xl">
             <ProfileYearCards :years="loading ? null : yearFigures" :base="`/friends/${id}`" />
@@ -396,5 +443,10 @@ function back() {
 .lock {
   width: var(--size-touch);
   height: var(--size-touch);
+}
+/* Her shelf's card at the size a year's card has (ProfileYearCards), the one card in its sideways row. */
+.shelf-card {
+  width: calc(var(--size-cover-xl) * 1.6);
+  min-height: calc(var(--size-cover-xl) * 1.2);
 }
 </style>
