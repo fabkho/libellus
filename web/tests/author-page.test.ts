@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { WorkCard } from '@/data/enrich/works'
-import { standaloneByKind } from '@/utils/authorPage'
+import { filterByGenres, matchesGenres, standaloneByKind } from '@/utils/authorPage'
 
 /**
- * What the author page makes of its works (Wave C5): the standalone group split by what a work is. The page's template
- * only draws what this says, so the split is tested here rather than end to end.
+ * What the author page makes of its works (Wave C5): the standalone group split by what a work is, and the hero's genre
+ * chips as a filter over every work below. The page's template only draws what these say, so the split and the predicate
+ * are tested here rather than end to end.
  */
 
 const work = (title: string, extra: Partial<WorkCard> = {}): WorkCard => ({ title, ...extra })
@@ -31,5 +32,49 @@ describe('standaloneByKind', () => {
     const list = [work('A', { kind: 'novella' }), work('B', { kind: 'novel' })]
     standaloneByKind(list)
     expect(list.map((w) => w.title)).toEqual(['A', 'B'])
+  })
+})
+
+describe('matchesGenres', () => {
+  const sciFi = work('S', { genres: ['sci-fi'] })
+  const both = work('Both', { genres: ['sci-fi', 'fantasy'] })
+  const none = work('Plain')
+
+  it('passes everything while no chip is pressed', () => {
+    expect(matchesGenres(none, [])).toBe(true)
+    expect(matchesGenres(sciFi, [])).toBe(true)
+  })
+
+  it('keeps a work whose genres include a pressed chip', () => {
+    expect(matchesGenres(sciFi, ['sci-fi'])).toBe(true)
+    expect(matchesGenres(sciFi, ['fantasy'])).toBe(false)
+    expect(matchesGenres(both, ['fantasy'])).toBe(true)
+  })
+
+  it('is an OR across the pressed chips', () => {
+    expect(matchesGenres(sciFi, ['sci-fi', 'crime'])).toBe(true)
+    expect(matchesGenres(work('C', { genres: ['crime'] }), ['sci-fi', 'crime'])).toBe(true)
+    expect(matchesGenres(work('H', { genres: ['horror'] }), ['sci-fi', 'crime'])).toBe(false)
+  })
+
+  it('leaves a work that carries no genre out while a chip is pressed', () => {
+    expect(matchesGenres(none, ['sci-fi'])).toBe(false)
+    expect(matchesGenres({ title: 'No list', genres: undefined }, ['sci-fi'])).toBe(false)
+  })
+})
+
+describe('filterByGenres', () => {
+  it('keeps the order the server gave', () => {
+    const list = [work('First', { genres: ['sci-fi'] }), work('Plain'), work('Third', { genres: ['sci-fi'] })]
+    expect(filterByGenres(list, ['sci-fi']).map((w) => w.title)).toEqual(['First', 'Third'])
+  })
+
+  it('returns the whole list, untouched, while nothing is pressed', () => {
+    const list = [work('A'), work('B')]
+    expect(filterByGenres(list, []).map((w) => w.title)).toEqual(['A', 'B'])
+  })
+
+  it('can leave nothing at all', () => {
+    expect(filterByGenres([work('A', { genres: ['horror'] })], ['sci-fi'])).toEqual([])
   })
 })

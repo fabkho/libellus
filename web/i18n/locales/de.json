@@ -1870,6 +1870,9 @@
       "graphic": "Graphic Novel",
       "other": "Sonstiges"
     },
+    "filterCount": "{shown} von {total} Buch | {shown} von {total} Büchern",
+    "filterEmpty": "Keines der Werke passt zu den gewählten Genres.",
+    "filterClear": "Zurücksetzen",
     "reading": "Lese ich",
     "want": "Möchte ich lesen",
     "wantLabel": "{title} zu „Möchte ich lesen“ hinzufügen",

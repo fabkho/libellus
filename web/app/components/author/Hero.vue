@@ -2,14 +2,20 @@
 // The top of an author page (#167): the portrait in a ring (her initials
 // underneath, so the circle never empties while the photo decodes; initials
 // alone where no source has a portrait), the name, the life dates in mono, the
-// genres her works are in (display only), and the Wikipedia intro, cut at five
-// lines with More. The credits the licences ask for sit under them: "From
-// Wikipedia" linking the article, and the portrait's author and licence
-// linking the file. With `loading` it is the same shape in placeholders.
+// genres her works are in, and the Wikipedia intro, cut at five lines with
+// More. The credits the licences ask for sit under them: "From Wikipedia"
+// linking the article, and the portrait's author and licence linking the file.
+// With `loading` it is the same shape in placeholders.
+//
+// The genre chips are the page's filter (Wave C5): a chip toggles, and while any
+// is on it is pressed (`UiPill`, as the Library's filters are) and the works
+// below are those of the pressed genres. Which ones are on belongs to the page
+// (`activeGenres`), so the hero only says what it is given and asks for a toggle.
 import type { AuthorHero } from '~/data/enrich'
 import type { GenreId } from '~/data/enrich'
 
-const props = defineProps<{ author: AuthorHero | null; genres: readonly GenreId[]; arriving?: boolean }>()
+const props = defineProps<{ author: AuthorHero | null; genres: readonly GenreId[]; active?: readonly GenreId[]; arriving?: boolean }>()
+const emit = defineEmits<{ toggle: [genre: GenreId] }>()
 
 const { t } = useI18n()
 
@@ -27,8 +33,10 @@ const expanded = ref(false)
       <h1 class="mt-md max-w-full text-title text-balance wrap-anywhere" :class="{ arrive: arriving }" data-testid="author.name">{{ author.name }}</h1>
       <p v-if="dates" class="eyebrow mt-xs" :class="{ arrive: arriving }" data-testid="author.dates">{{ dates }}</p>
       <ul v-if="genres.length" class="mt-ms flex flex-wrap justify-center gap-xs" :aria-label="t('author.genres')" :class="{ arrive: arriving }" data-testid="author.genres">
-        <li v-for="genre in genres" :key="genre" class="inline-flex h-(--size-button-sm) items-center rounded-pill bg-fill px-ms text-caption text-ink-muted edge" data-testid="author.genre">
-          {{ t(`genre.${genre}`) }}
+        <li v-for="genre in genres" :key="genre">
+          <UiPill :pressed="active?.includes(genre) ?? false" data-testid="author.genre" @click="emit('toggle', genre)">
+            {{ t(`genre.${genre}`) }}
+          </UiPill>
         </li>
       </ul>
       <div v-if="summary" class="mt-ml w-full text-left" :class="{ arrive: arriving }">

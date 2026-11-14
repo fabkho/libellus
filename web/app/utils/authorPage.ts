@@ -1,8 +1,10 @@
+import type { GenreId } from '~/data/enrich/genres'
 import type { WorkCard } from '~/data/enrich/works'
 
 /**
  * What an author page makes of the works the database hands it (Wave C5): the
- * standalone works split by what they are. Pure and framework-free, so
+ * standalone works split by what they are, and the hero's genre chips as a
+ * filter over every work below. Pure and framework-free, so
  * `tests/author-page.test.ts` drives them in plain Node.
  */
 
@@ -24,4 +26,19 @@ export function standaloneByKind(works: readonly WorkCard[]): StandaloneGroups {
     else groups.rest.push(work)
   }
   return groups
+}
+
+/**
+ * Whether a work passes the hero's genre chips: with none active everything passes, with several active a work matches
+ * any of them (OR), and a work that carries no genre matches nothing while a chip is pressed — it is not one of them.
+ */
+export function matchesGenres(work: Pick<WorkCard, 'genres'>, active: readonly GenreId[]): boolean {
+  if (!active.length) return true
+  const genres = work.genres ?? []
+  return active.some((genre) => genres.includes(genre))
+}
+
+/** `matchesGenres` over a list, keeping the order it was given (the server's). */
+export function filterByGenres(works: readonly WorkCard[], active: readonly GenreId[]): WorkCard[] {
+  return active.length ? works.filter((work) => matchesGenres(work, active)) : [...works]
 }

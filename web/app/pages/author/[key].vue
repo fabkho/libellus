@@ -11,10 +11,16 @@
 // layout; it opens from the device's copy where there is one (offline too)
 // and refreshes behind it; the first opening stands in placeholders of its
 // shape, replaced whole when the page comes.
+//
+// The hero's genre chips filter the works below (C5b): a pressed chip shows only
+// the works whose genres include it, several pressed chips are an OR, and none
+// pressed shows everything. The state is the page's own and goes away with it;
+// the predicate and the filter are `utils/authorPage.ts`, tested in plain Node.
+import type { GenreId } from '~/data/enrich'
 import type { WorkCard } from '~/data/enrich'
 import { useAuthorsStore } from '~/stores/authors'
 import { useLibraryStore } from '~/stores/library'
-import { standaloneByKind } from '~/utils/authorPage'
+import { filterByGenres, standaloneByKind } from '~/utils/authorPage'
 import { newestFirst } from '~/utils/enrich'
 
 definePageMeta({ layout: 'tabs', screen: 'author', pushed: true })
@@ -45,19 +51,56 @@ useHead({ title: () => (author.value ? `${author.value.name} · ${t('app.name')}
 const SHOWN = 8
 const opened = reactive(new Set<string>())
 
+/** The hero's genre chips a finger has pressed: their own state, gone with the page. */
+const activeGenres = ref<GenreId[]>([])
+
+/**
+ * Every work the page shows, as the hero's chips leave them: the page's own works with those of the pressed genres, or
+ * all of them while nothing is pressed.
+ */
+const visible = computed(() => {
+  const p = page.value
+  if (!p) return null
+  const pick = (works: readonly WorkCard[]) => filterByGenres(works, activeGenres.value)
+  return {
+    series: p.series.map((s) => ({ ...s, works: pick(s.works) })).filter((s) => s.works.length),
+    standalone: pick(p.standalone),
+    other: pick(p.other),
+  }
+})
+
 type Group = { id: string; title: string; parent?: string; works: WorkCard[]; places: boolean }
 const groups = computed<Group[]>(() => {
-  const p = page.value
-  if (!p) return []
-  const standalone = standaloneByKind(p.standalone)
+  const v = visible.value
+  if (!v) return []
+  const standalone = standaloneByKind(v.standalone)
   return [
-    ...p.series.map((s) => ({ id: `series-${s.id}`, title: s.name, parent: s.parentName ?? undefined, works: s.works, places: true })),
+    ...v.series.map((s) => ({ id: `series-${s.id}`, title: s.name, parent: s.parentName ?? undefined, works: s.works, places: true })),
     ...(standalone.novels.length ? [{ id: 'standalone', title: t('author.standalone'), works: newestFirst(standalone.novels), places: false }] : []),
     ...(standalone.novellas.length ? [{ id: 'novellas', title: t('author.novellas'), works: newestFirst(standalone.novellas), places: false }] : []),
     ...(standalone.rest.length ? [{ id: 'standaloneOther', title: t('author.standaloneOther'), works: newestFirst(standalone.rest), places: false }] : []),
-    ...(p.other.length ? [{ id: 'other', title: t('author.other'), works: newestFirst(p.other), places: false }] : []),
+    ...(v.other.length ? [{ id: 'other', title: t('author.other'), works: newestFirst(v.other), places: false }] : []),
   ]
 })
+
+/** Every work of hers this page lists, and how many of them the chips leave: what the status line says. */
+const totals = computed(() => {
+  const p = page.value
+  if (!p) return { all: 0, shown: 0 }
+  const all = p.series.reduce((n, s) => n + s.works.length, 0) + p.standalone.length + p.other.length
+  const shown = groups.value.reduce((n, g) => n + g.works.length, 0)
+  return { all, shown }
+})
+
+const filterStatus = computed(() =>
+  activeGenres.value.length ? t('author.filterCount', { shown: totals.value.shown, total: totals.value.all }, totals.value.all) : '',
+)
+
+function toggleGenre(genre: GenreId) {
+  activeGenres.value = activeGenres.value.includes(genre)
+    ? activeGenres.value.filter((g) => g !== genre)
+    : [...activeGenres.value, genre]
+}
 const shown = (group: Group) => (opened.has(group.id) || group.works.length <= SHOWN + 2 ? group.works : group.works.slice(0, SHOWN))
 const placeOf = (group: Group, work: WorkCard) => {
   const n = group.places ? positionText(work.position) : null
@@ -75,9 +118,18 @@ function back() {
     <UiTopBar :back-label="t('author.back')" back-testid="author.back" @back="back" />
 
     <template v-if="page || loading">
-      <AuthorHero :author="author" :genres="page?.genres ?? []" :arriving="arriving" />
+      <AuthorHero :author="author" :genres="page?.genres ?? []" :active="activeGenres" :arriving="arriving" @toggle="toggleGenre" />
 
       <div v-if="page" class="relative px-ml" :class="{ arrive: arriving }">
+        <!-- What the chips leave, and the way back to everything: one line, a polite status, so the change below is heard
+             and nothing above it moves (the Library's own filter says its count the same way). -->
+        <div v-if="activeGenres.length" class="flex min-h-(--size-touch) items-center justify-between gap-md" data-testid="author.filter">
+          <p class="figures min-w-0 truncate text-caption text-ink-faint" role="status" data-testid="author.filterCount">{{ filterStatus }}</p>
+          <UiButton tone="plain" size="sm" class="shrink-0" data-testid="author.filterClear" @click="activeGenres = []">{{ t('author.filterClear') }}</UiButton>
+        </div>
+
+        <p v-if="activeGenres.length && !groups.length" class="pt-xl text-center text-subhead text-ink-muted" data-testid="author.filterEmpty">{{ t('author.filterEmpty') }}</p>
+
         <section v-for="(group, g) in groups" :key="group.id" class="pt-xl" :data-testid="group.places ? 'author.series' : `author.${group.id}`">
           <div class="flex min-h-(--size-touch) items-end justify-between gap-md pb-xs">
             <h2 class="min-w-0">
@@ -110,7 +162,7 @@ function back() {
           </button>
         </section>
 
-        <p v-if="!groups.length" class="pt-xl text-center text-subhead text-ink-muted" data-testid="author.noWorks">{{ t('author.noWorks') }}</p>
+        <p v-if="!groups.length && !activeGenres.length" class="pt-xl text-center text-subhead text-ink-muted" data-testid="author.noWorks">{{ t('author.noWorks') }}</p>
       </div>
 
       <!-- The works, in placeholders, under the hero's: replaced whole with the page. -->

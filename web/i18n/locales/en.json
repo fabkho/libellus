@@ -1870,6 +1870,9 @@
       "graphic": "graphic novel",
       "other": "other"
     },
+    "filterCount": "{shown} of {total} book | {shown} of {total} books",
+    "filterEmpty": "None of her works is in the genres you picked.",
+    "filterClear": "Clear",
     "reading": "Reading",
     "want": "Want to read",
     "wantLabel": "Add {title} to Want to read",
