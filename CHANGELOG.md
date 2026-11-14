@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.44.0](https://github.com/fabkho/libellus/compare/v1.43.0...v1.44.0) (2026-11-14)
+
+
+### Features
+
+* **authors:** author_page drops thin series, adds the most-read order ([#542](https://github.com/fabkho/libellus/issues/542)) ([6d8351c](https://github.com/fabkho/libellus/commit/6d8351c14165cc8620da1c6a35830b5279d82849))
+* **authors:** the author page shows kind, genre filtering and the most-read order ([#551](https://github.com/fabkho/libellus/issues/551)) ([73a4d31](https://github.com/fabkho/libellus/commit/73a4d3164b7c82b9ca0b6bcade281346d78ed3e0))
+* **book:** the Book page's action cluster, progressive disclosure (V4) ([#552](https://github.com/fabkho/libellus/issues/552)) ([eee9cb9](https://github.com/fabkho/libellus/commit/eee9cb9151cd0c6e72a0195e870224e6abeefba3))
+* **notes:** edit a note in place, and say it was edited ([#549](https://github.com/fabkho/libellus/issues/549)) ([6e275ab](https://github.com/fabkho/libellus/commit/6e275ab72adba79116574664db370b7487e62d1d))
+* **social:** the friend page's shelf ([#550](https://github.com/fabkho/libellus/issues/550)) ([9f0501e](https://github.com/fabkho/libellus/commit/9f0501e4ce5a03b80e4b8562ff520442dfe6c4d7))
+
 ## [1.43.0](https://github.com/fabkho/libellus/compare/v1.42.1...v1.43.0) (2026-11-14)
 
 
