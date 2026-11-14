@@ -139,6 +139,33 @@ export async function signedIn(
 }
 
 /**
+ * Asks for a code to `email` and signs in with it, in a way that survives the sign-in cooldown.
+ *
+ * GoTrue refuses a second mail to one address inside `auth.email.max_frequency` (20 s: CODE_COOLDOWN_MS in the app,
+ * `supabase/config.toml`). A `@full` flow that signs several members in — Mo, the owner, and somebody else — can have
+ * one of them open the window just before the owner asks, and the owner's request is then answered `code_just_sent`
+ * (`data/auth.ts`). Waiting before asking is not enough alone, because the number of mails in the box was read before
+ * the wait: `readMailedCode(email, n)` then waits for a mail a later request never sent, or reads the previous one.
+ *
+ * So each attempt waits the window out, reads the count *after* that wait, asks, and on `code_just_sent` tries again.
+ * Three attempts is well past a 20 s window, so a third refusal is a real fault and the error says what came back.
+ */
+async function signInOwner(auth: ReturnType<typeof createAuth>, email: string) {
+  let refusal = ''
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await emailCooldown()
+    const mailed = await mailCount(email)
+    const requested = await auth.requestCode(email)
+    if (requested.kind === 'sent') return auth.verifyCode(email, await readMailedCode(email, mailed + 1))
+    if (requested.kind !== 'error' || requested.code !== 'code_just_sent') {
+      throw new Error(`The owner could not be sent a code: ${JSON.stringify(requested)}`)
+    }
+    refusal = `attempt ${attempt}: ${JSON.stringify(requested)}`
+  }
+  throw new Error(`The owner could not be sent a code after three attempts, the window out each time: ${refusal}`)
+}
+
+/**
  * The instance's owner, signed in: the member the flows' build names as the owner (`shelfOwner`, the
  * app's NUXT_PUBLIC_SHELF_OWNER_ID) and the one the database names (`private.instance_owner`, which
  * the owner's screens ask: Waitlist, Errors, Feedback). She is not made by a sign-up, so she signs in
@@ -156,11 +183,7 @@ export async function signedInAsOwner(page: Page) {
   )
   const { kept, storage } = sessionStorageInMemory()
   const auth = createAuth(newClient(storage))
-  const mailed = await mailCount(owner.email)
-  await emailCooldown()
-  const requested = await auth.requestCode(owner.email)
-  if (requested.kind !== 'sent') throw new Error(`The owner could not be sent a code: ${JSON.stringify(requested)}`)
-  const verified = await auth.verifyCode(owner.email, await readMailedCode(owner.email, mailed + 1))
+  const verified = await signInOwner(auth, owner.email)
   if (verified.error) throw new Error(`The owner could not sign in: ${verified.error}`)
   await handSession(page, kept)
   await page.goto('/')
