@@ -22,7 +22,7 @@ import { useEbooksStore } from '~/stores/ebooks'
 import { useShareStore } from '~/stores/share'
 import { sizeLabel, type PendingShare } from '~/data/ebooks/shared'
 import { LAUNCH_QUERY, LAUNCH_SEARCH } from '~/utils/launch'
-import { PENDING_SHARE_KEY, takeShare } from '~/utils/pendingShare'
+import { forgetPending, takePending } from '~/utils/pendingLink'
 import type { SharedPayload } from '~/utils/shared'
 
 definePageMeta({ layout: false, screen: 'share' })
@@ -74,9 +74,9 @@ onMounted(async () => {
     url: first(route.query.url),
     ebooks: first(route.query.ebooks),
   }
-  const shared = fromAddress.title || fromAddress.text || fromAddress.url || fromAddress.ebooks ? fromAddress : takeShare(window.localStorage)
+  const shared = fromAddress.title || fromAddress.text || fromAddress.url || fromAddress.ebooks ? fromAddress : takePending(window.localStorage, 'share')
   // A share in the address replaces any kept from before.
-  window.localStorage.removeItem(PENDING_SHARE_KEY)
+  forgetPending(window.localStorage, 'share')
   if (!shared) return void (await navigateTo('/', { replace: true }))
 
   if (shared.ebooks) {

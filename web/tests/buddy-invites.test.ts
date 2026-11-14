@@ -43,7 +43,7 @@ describe('buddy reads are for everyone: no flag, no switch', () => {
   })
 
   it('keeps the link kept through the sign-in, and the link and the rooms behind it: they are not public addresses', () => {
-    expect(read('middleware/auth.global.ts')).toContain('buddyReadToOpen(path, peekBuddyRead(window.localStorage)')
+    expect(read('middleware/auth.global.ts')).toContain('buddyRead: peekPending(storage, \'buddyRead\')')
     expect(isPublicPath(`/t/${'A'.repeat(22)}`)).toBe(false)
     expect(isPublicPath('/together/abc')).toBe(false)
   })

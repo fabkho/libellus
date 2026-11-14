@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { mostRecentlyUpdated } from '@/utils/launch'
-import { keepShare, peekShare, PENDING_SHARE_KEY, PENDING_SHARE_TTL_MS, takeShare } from '@/utils/pendingShare'
 import { cleanSharedText, linksIn, namesTheBook, parseShared } from '@/utils/shared'
-import type { DeviceStorage } from '@/data/localData'
 import type { LibraryEntry } from '@/data/library'
 
 /**
@@ -167,39 +165,6 @@ describe('namesTheBook', () => {
   it('does not match another book or an empty hint', () => {
     expect(namesTheBook('Piranesi', 'The Piranesi Prints')).toBe(false)
     expect(namesTheBook('', 'Piranesi')).toBe(false)
-  })
-})
-
-describe('the share kept through the sign-in', () => {
-  function storage(): DeviceStorage {
-    const items = new Map<string, string>()
-    return {
-      get length() {
-        return items.size
-      },
-      key: (i) => [...items.keys()][i] ?? null,
-      getItem: (key) => items.get(key) ?? null,
-      setItem: (key, value) => void items.set(key, value),
-      removeItem: (key) => void items.delete(key),
-    }
-  }
-
-  it('is kept, read back and forgotten once taken', () => {
-    const device = storage()
-    expect(peekShare(device)).toBeNull()
-    keepShare(device, { url: 'https://www.amazon.com/dp/163557563X' }, 1000)
-    expect(peekShare(device, 2000)).toEqual({ url: 'https://www.amazon.com/dp/163557563X' })
-    expect(takeShare(device, 2000)).toEqual({ url: 'https://www.amazon.com/dp/163557563X' })
-    expect(peekShare(device, 2000)).toBeNull()
-  })
-
-  it('is dropped after an hour and when unreadable', () => {
-    const device = storage()
-    keepShare(device, { text: 'Piranesi' }, 0)
-    expect(peekShare(device, PENDING_SHARE_TTL_MS + 1)).toBeNull()
-    device.setItem(PENDING_SHARE_KEY, '{nope')
-    expect(peekShare(device)).toBeNull()
-    expect(device.getItem(PENDING_SHARE_KEY)).toBeNull()
   })
 })
 

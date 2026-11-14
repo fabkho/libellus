@@ -3,9 +3,8 @@ import type { SessionStorage } from '@/data/createSupabaseClient'
 import { DEVICE_LIBRARY_KEY } from '@/data/deviceLibrary'
 import { IMPRINT_ENABLED } from '@/legal/config'
 import { type DeviceStorage } from '@/data/localData'
-import { peekFollow } from '@/utils/pendingFollow'
-import { peekShare } from '@/utils/pendingShare'
-import { knownSignedOut, PENDING_SIGN_IN_KEY, signedOutDestination, withoutSlash } from '@/utils/signedOutRoute'
+import { keepPending, peekPending } from '@/utils/pendingLink'
+import { knownSignedOut, PENDING_SIGN_IN_KEY, pendingLinkToOpen, signedOutDestination, withoutSlash } from '@/utils/signedOutRoute'
 import { signUpMember } from './support/member'
 
 /**
@@ -28,6 +27,9 @@ function device(): DeviceStorage & SessionStorage {
 
 const at = (path: string, query: Record<string, unknown> = {}) => ({ path, query })
 const FOLLOW = 'A'.repeat(22)
+const JOINING = 'B'.repeat(22)
+const SHARE = { title: 'A Book' }
+const nothing = { share: null, follow: null, buddyRead: null }
 
 describe('knownSignedOut: only a device with nothing of a member', () => {
   it('is true for a first visit and for a device that holds only unrelated keys', () => {
@@ -94,15 +96,23 @@ describe('signedOutDestination', () => {
   it('keeps a follow link and a share through the sign-in', () => {
     const kept = storage()
     expect(signedOutDestination(at(`/f/${FOLLOW}/`), { pending: false, storage: kept })).toBe('/sign-in')
-    expect(peekFollow(kept)).toBe(FOLLOW)
+    expect(peekPending(kept, 'follow')).toBe(FOLLOW)
     expect(signedOutDestination(at('/f/not-a-token'), { pending: false, storage: kept })).toBe('/sign-in')
 
     const shared = storage()
     expect(signedOutDestination(at('/share', { title: ['A Book'], url: 'https://example.com/b' }), { pending: false, storage: shared })).toBe('/sign-in')
-    expect(peekShare(shared)).toMatchObject({ title: 'A Book', url: 'https://example.com/b' })
+    expect(peekPending(shared, 'share')).toMatchObject({ title: 'A Book', url: 'https://example.com/b' })
     const nothing = storage()
     signedOutDestination(at('/share'), { pending: false, storage: nothing })
-    expect(peekShare(nothing)).toBeNull()
+    expect(peekPending(nothing, 'share')).toBeNull()
+  })
+
+  it('keeps a buddy read link the same way, and only a token it could resolve', () => {
+    const kept = storage()
+    expect(signedOutDestination(at(`/t/${JOINING}/`), { pending: false, storage: kept })).toBe('/sign-in')
+    expect(peekPending(kept, 'buddyRead')).toBe(JOINING)
+    expect(signedOutDestination(at('/t/not-a-token'), { pending: false, storage: kept })).toBe('/sign-in')
+    expect(peekPending(kept, 'follow')).toBeNull()
   })
 
   it('keeps nothing without a storage', () => {
@@ -112,5 +122,45 @@ describe('signedOutDestination', () => {
   it('compares paths without the trailing slash', () => {
     expect(withoutSlash('/sign-up/')).toBe('/sign-up')
     expect(withoutSlash('/')).toBe('/')
+  })
+})
+
+/**
+ * One pending link opens at a time, and which one is not a detail: a wrong order sends a member to the wrong screen
+ * after her sign-in. The order lives in `pendingLinkToOpen`, beside the rule for where a signed-out visitor goes.
+ */
+describe('pendingLinkToOpen: the priority a member lands by', () => {
+  it('opens the share first, then the follow link, then the buddy read link', () => {
+    expect(pendingLinkToOpen('/', { share: SHARE, follow: FOLLOW, buddyRead: JOINING })).toBe('/share')
+    expect(pendingLinkToOpen('/', { share: null, follow: FOLLOW, buddyRead: JOINING })).toBe(`/f/${FOLLOW}`)
+    expect(pendingLinkToOpen('/', { share: null, follow: null, buddyRead: JOINING })).toBe(`/t/${JOINING}`)
+    // Nothing waiting, nothing opened.
+    expect(pendingLinkToOpen('/', nothing)).toBeNull()
+  })
+
+  it('opens from anywhere else, whatever the address', () => {
+    for (const path of ['/', '/sign-in', '/verify', '/library', '/profile', '/book/abc']) {
+      expect(pendingLinkToOpen(path, { ...nothing, follow: FOLLOW }), path).toBe(`/f/${FOLLOW}`)
+      expect(pendingLinkToOpen(path, { ...nothing, buddyRead: JOINING }), path).toBe(`/t/${JOINING}`)
+      expect(pendingLinkToOpen(path, { ...nothing, share: SHARE }), path).toBe('/share')
+    }
+  })
+
+  it('opens nothing on /share: the page in hand is taking a share in', () => {
+    expect(pendingLinkToOpen('/share', { share: SHARE, follow: FOLLOW, buddyRead: JOINING })).toBeNull()
+    expect(pendingLinkToOpen('/share', { ...nothing, follow: FOLLOW })).toBeNull()
+    expect(pendingLinkToOpen('/share', { ...nothing, buddyRead: JOINING })).toBeNull()
+  })
+
+  it('does not reopen the link she is already on (that page spends it), and a share waiting still goes first', () => {
+    expect(pendingLinkToOpen(`/f/${FOLLOW}`, { ...nothing, follow: FOLLOW })).toBeNull()
+    expect(pendingLinkToOpen(`/f/${FOLLOW}/`, { ...nothing, follow: FOLLOW })).toBeNull()
+    expect(pendingLinkToOpen(`/t/${JOINING}`, { ...nothing, buddyRead: JOINING })).toBeNull()
+    expect(pendingLinkToOpen(`/t/${JOINING}/`, { ...nothing, buddyRead: JOINING })).toBeNull()
+    // A share still waiting is not the link she is on: it goes first even from a link's own page.
+    expect(pendingLinkToOpen(`/f/${FOLLOW}`, { share: SHARE, follow: FOLLOW, buddyRead: null })).toBe('/share')
+    // The other link is another address: it opens.
+    expect(pendingLinkToOpen(`/t/${JOINING}`, { ...nothing, follow: FOLLOW })).toBe(`/f/${FOLLOW}`)
+    expect(pendingLinkToOpen(`/f/${FOLLOW}`, { ...nothing, buddyRead: JOINING })).toBe(`/t/${JOINING}`)
   })
 })

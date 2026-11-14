@@ -7,10 +7,10 @@
 // nothing is asked: the app's offline line and Try again.
 //
 // Signed out, the link never gets this far: the auth middleware keeps the token on the device and
-// sends the visitor to Sign in, and brings her back here once she is in (utils/pendingFollow.ts).
+// sends the visitor to Sign in, and brings her back here once she is in (utils/pendingLink.ts).
 // Like the share target it has no tab bar: it is a moment's redirect.
 import { useSocialStore } from '~/stores/social'
-import { isFollowToken, PENDING_FOLLOW_KEY } from '~/utils/pendingFollow'
+import { forgetPending, isPendingToken } from '~/utils/pendingLink'
 
 definePageMeta({ layout: false, screen: 'follow' })
 
@@ -29,8 +29,8 @@ const outcome = ref<Outcome>('loading')
 async function open() {
   outcome.value = 'loading'
   // The link she is on is the one that counts: a kept one from before is spent.
-  window.localStorage.removeItem(PENDING_FOLLOW_KEY)
-  if (!isFollowToken(token.value)) return void (outcome.value = 'missing')
+  forgetPending(window.localStorage, 'follow')
+  if (!isPendingToken(token.value)) return void (outcome.value = 'missing')
   if (!online.value) return void (outcome.value = 'offline')
 
   const mine = token.value
