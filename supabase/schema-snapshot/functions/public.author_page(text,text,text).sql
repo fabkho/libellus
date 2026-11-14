@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION public.author_page(p_author text, p_language text DEFAULT 'en'::text)
+CREATE OR REPLACE FUNCTION public.author_page(p_author text, p_language text DEFAULT 'en'::text, p_order text DEFAULT 'default'::text)
  RETURNS jsonb
  LANGUAGE sql
  STABLE
@@ -22,15 +22,20 @@ AS $function$
   ),
   series_groups as (
     select s.id, s.name, s.parent_id, s.wikidata_id,
-           jsonb_agg(public.work_card(aw.id, p_language, p.position) order by p.position, aw.first_year) as works,
-           min(aw.first_year) as first_year
+           jsonb_agg(wc.card order by p.position, aw.first_year) as works,
+           min(aw.first_year) as first_year,
+           -- The card is the single source of truth for a cover: it is built once per work and counted here,
+           -- so a group is covered exactly when the page would draw its covers.
+           count(case when wc.card ->> 'coverUrl' is not null then 1 end) as covered
       from placed p
       join aw on aw.id = p.work_id
       join public.series s on s.id = p.series_id
+      cross join lateral (select public.work_card(aw.id, p_language, p.position) as card) wc
      group by s.id
   ),
   unplaced as (
-    select aw.* from aw where not exists (select 1 from placed p where p.work_id = aw.id)
+    select aw.* from aw
+      where not exists (select 1 from series_groups sg where sg.id = (select p.series_id from placed p where p.work_id = aw.id) and sg.covered >= 2)
   ),
   -- Her Books credited to the author whose work is not among the works.
   her_books as (
@@ -77,8 +82,12 @@ AS $function$
                                  'parentName', (select p.name from public.series p where p.id = sg.parent_id),
                                  'works', sg.works))
                                order by sg.parent_id is null, sg.first_year nulls last, sg.name)
-                          from series_groups sg), '[]'),
-    'standalone', coalesce((select jsonb_agg(public.work_card(u.id, p_language) order by u.first_year nulls last, u.title)
+                          from series_groups sg
+                         where sg.covered >= 2), '[]'),
+    'standalone', coalesce((select jsonb_agg(public.work_card(u.id, p_language)
+                              order by case when p_order = 'most-read' then 0 else 1 end,
+                                       case when p_order = 'most-read' then coalesce(u.want_to_read_count, 0) end desc,
+                                       u.first_year nulls last, u.title)
                               from unplaced u where u.kind in ('novel', 'novella')), '[]'),
     'other', coalesce((select jsonb_agg(card order by year nulls last, card ->> 'title')
                          from (select public.work_card(u.id, p_language) as card, u.first_year as year

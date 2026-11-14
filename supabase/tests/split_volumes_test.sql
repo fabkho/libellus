@@ -9,7 +9,7 @@
 -- link) and her author page still shows it; nobody but the owner of the database may run it.
 
 begin;
-select plan(20);
+select plan(26);
 
 create schema if not exists tests;
 
@@ -42,12 +42,16 @@ grant usage on schema tests to anon, authenticated;
 grant execute on all functions in schema tests to anon, authenticated;
 
 -- A work of the fixture: Wikidata item, title, year, position in a series.
-create or replace function tests.work(p_qid text, p_title text, p_series text, p_position numeric, p_kind text default 'novel')
+-- A work of the fixture: Wikidata item, title, year, position in a series, and (optionally) the cover
+-- the author page counts for it ("covered", 20261120010000).
+create or replace function tests.work(p_qid text, p_title text, p_series text, p_position numeric,
+                                      p_kind text default 'novel', p_cover text default null)
 returns jsonb language sql as $$
   select jsonb_build_object('wikidata', p_qid, 'title', p_title, 'kind', p_kind,
     'authors', jsonb_build_array(jsonb_build_object('wikidata', 'Q991000001', 'name', 'Tad Williams')),
     'series', jsonb_build_array(jsonb_build_object('series', jsonb_build_object('wikidata', p_series),
                                                    'position', p_position, 'source', 'wikidata')))
+         || case when p_cover is null then '{}'::jsonb else jsonb_build_object('coverUrl', p_cover) end
 $$;
 
 -- ---------------------------------------------------------------- the fixture
@@ -62,9 +66,11 @@ select jsonb_build_object(
     jsonb_build_object('wikidata', 'Q991000014', 'name', 'The Last King of Osten Ard', 'fetched', true),
     jsonb_build_object('wikidata', 'Q991000015', 'name', 'Another Cycle', 'fetched', true)),
   'works', jsonb_build_array(
-    -- Memory, Sorrow, and Thorn: the novels …
-    tests.work('Q991100001', 'The Dragonbone Chair', 'Q991000010', 1),
-    tests.work('Q991100002', 'Stone of Farewell', 'Q991000010', 2),
+    -- Memory, Sorrow, and Thorn: the novels. Two of them carry a cover (the work's own), so the series
+    -- survives the author page's fold: a group with fewer than two covered works is folded away
+    -- (20261120010000).
+    tests.work('Q991100001', 'The Dragonbone Chair', 'Q991000010', 1, 'novel', 'https://covers.openlibrary.org/b/id/9101-L.jpg'),
+    tests.work('Q991100002', 'Stone of Farewell', 'Q991000010', 2, 'novel', 'https://covers.openlibrary.org/b/id/9102-L.jpg'),
     tests.work('Q991100003', 'To Green Angel Tower', 'Q991000010', 3),
     -- … and their paperback halves.
     tests.work('Q991100011', 'The Dragonbone Chair, part 1', 'Q991000010', 1.1),
@@ -87,7 +93,8 @@ select jsonb_build_object(
     -- Looks like a part, has no parent at its position; or its parent is in another series.
     tests.work('Q991100031', 'Orphan, part 2', 'Q991000015', 1.2),
     tests.work('Q991100032', 'The Dragonbone Chair, part 5', 'Q991000015', 1.5),
-    tests.work('Q991100033', 'Another Novel', 'Q991000015', 1),
+    -- One covered work only: this series folds away on the author page (its works become standalone).
+    tests.work('Q991100033', 'Another Novel', 'Q991000015', 1, 'novel', 'https://covers.openlibrary.org/b/id/9103-L.jpg'),
     -- A decimal that is not "<title>, part N": a sequel's subtitle, a part spelled out.
     tests.work('Q991100034', 'Another Novel, part one', 'Q991000015', 1.1),
     tests.work('Q991100035', 'Another Novel: the Tale', 'Q991000015', 1.2))) as fixture \gset
@@ -190,7 +197,73 @@ select is(
   1, 'and no other half');
 reset role;
 
-select is(private.drop_split_volumes(), '{"links": 0, "works": 0}'::jsonb, 'run again, it finds nothing');
+-- The fold itself (20261120010000): a series with fewer than two covered works is no group on the author
+-- page, and its works fold into standalone/other rather than disappearing with it.
+select tests.act_as(:'ada_id');
+select is(
+  (select count(*)::int from jsonb_array_elements(public.author_page('Q991000001') -> 'series') g
+    where g ->> 'name' = 'Another Cycle'),
+  0, 'a series with one covered work is not a group on the author page');
+select is(
+  (select jsonb_agg(w ->> 'title' order by w ->> 'title')
+     from jsonb_array_elements(public.author_page('Q991000001') -> 'standalone') w
+    where w ->> 'title' in ('Another Novel', 'Orphan, part 2', 'The Dragonbone Chair, part 5')),
+  '["Another Novel", "Orphan, part 2", "The Dragonbone Chair, part 5"]'::jsonb,
+  'and its novels are standalone works, not gone');
+reset role;
 
+-- `p_order` (20261120010000): 'most-read' orders the standalone works by their Open Library want-to-read
+-- count before year and title; any other value, and the default, keeps the year-and-title order. The two
+-- works' want-to-read order is the reverse of their first_year order, so the two orders differ.
+reset role;
+set local role service_role;
+select public.enrich_save('{"works":[
+  {"wikidata":"Q991100041","title":"Older and Quiet","year":1990,"kind":"novel","wantToReadCount":3,
+   "authors":[{"wikidata":"Q991000001","name":"Tad Williams"}]},
+  {"wikidata":"Q991100042","title":"Newer and Popular","year":2020,"kind":"novel","wantToReadCount":900,
+   "authors":[{"wikidata":"Q991000001","name":"Tad Williams"}]}]}');
+reset role;
+select tests.act_as(:'ada_id');
+select is(
+  (select jsonb_agg(w ->> 'title') from jsonb_array_elements(public.author_page('Q991000001', 'en', 'most-read') -> 'standalone') w
+    where w ->> 'title' in ('Older and Quiet', 'Newer and Popular')),
+  '["Newer and Popular", "Older and Quiet"]'::jsonb,
+  'most-read puts the higher want-to-read count first, though it is the newer work');
+select is(
+  (select jsonb_agg(w ->> 'title') from jsonb_array_elements(public.author_page('Q991000001') -> 'standalone') w
+    where w ->> 'title' in ('Older and Quiet', 'Newer and Popular')),
+  '["Older and Quiet", "Newer and Popular"]'::jsonb,
+  'the default order is unchanged: year, then title');
+select is(
+  (select jsonb_agg(w ->> 'title') from jsonb_array_elements(public.author_page('Q991000001', 'en', 'nonsense') -> 'standalone') w
+    where w ->> 'title' in ('Older and Quiet', 'Newer and Popular')),
+  '["Older and Quiet", "Newer and Popular"]'::jsonb,
+  'and an unknown order keeps the default');
+reset role;
+-- `covered` is the card's own `coverUrl` (20261120010000), so every branch of the card's chain counts,
+-- not only her Book and the work's own cover. These two works carry no cover of their own and no German
+-- edition: only the English edition's cover, which the card falls back to. As `de` the group is covered.
+reset role;
+set local role service_role;
+select public.enrich_save('{"series":[
+  {"wikidata":"Q991000016","name":"The English Only Cycle","fetched":true}],"works":[
+  {"wikidata":"Q991100051","title":"Erstes Buch","titles":{"de":"Erstes Buch"},"year":2001,"kind":"novel",
+   "editions":{"en":{"cover_url":"https://covers.openlibrary.org/b/id/9151-L.jpg"}},
+   "authors":[{"wikidata":"Q991000001","name":"Tad Williams"}],
+   "series":[{"series":{"wikidata":"Q991000016"},"position":1,"source":"wikidata"}]},
+  {"wikidata":"Q991100052","title":"Zweites Buch","titles":{"de":"Zweites Buch"},"year":2002,"kind":"novel",
+   "editions":{"en":{"cover_url":"https://covers.openlibrary.org/b/id/9152-L.jpg"}},
+   "authors":[{"wikidata":"Q991000001","name":"Tad Williams"}],
+   "series":[{"series":{"wikidata":"Q991000016"},"position":2,"source":"wikidata"}]}]}');
+reset role;
+select tests.act_as(:'ada_id');
+select is(
+  (select jsonb_agg(w ->> 'coverUrl') from jsonb_array_elements(public.author_page('Q991000001', 'de') -> 'series') g,
+          jsonb_array_elements(g -> 'works') w where g ->> 'name' = 'The English Only Cycle'),
+  '["https://covers.openlibrary.org/b/id/9151-L.jpg", "https://covers.openlibrary.org/b/id/9152-L.jpg"]'::jsonb,
+  'a series covered through the English edition is a group: the count reads the card, not a coalesce of its own');
+reset role;
+
+select is(private.drop_split_volumes(), '{"links": 0, "works": 0}'::jsonb, 'run again, it finds nothing');
 select * from finish();
 rollback;
