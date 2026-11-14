@@ -87,21 +87,6 @@ export function mergeBubble(list: BuddyBubble[], incoming: BuddyBubble, { live =
 /** A message that became a tombstone: no body, no picture, no sound, no reactions; it reads as text, as the database says. */
 export const tombstoneOf = (bubble: BuddyBubble, at: string): BuddyBubble => ({ ...bubble, kind: 'text', body: '', media: null, voice: null, reactions: [], deletedAt: bubble.deletedAt ?? at })
 
-/** Her reaction at once, before the database says: `emoji` replaces the one she had (null takes it back; the same one again takes it back too, as the database does). */
-export function reactedBy(reactions: readonly BuddyReaction[], emoji: string | null): BuddyReaction[] {
-  const had = reactions.find((r) => r.mine)?.emoji ?? null
-  const next = emoji === had ? null : emoji
-  const out = reactions
-    .map((r) => (r.emoji === had ? { ...r, count: r.count - 1, mine: false } : { ...r }))
-    .filter((r) => r.count > 0)
-  if (!next) return out
-  const there = out.find((r) => r.emoji === next)
-  if (there) {
-    there.count += 1
-    there.mine = true
-  } else out.push({ emoji: next, count: 1, mine: true })
-  return out
-}
 
 /** The numbers of a thread of a read (the room when `sectionId` is null). */
 export function countsOf(read: BuddyRead, sectionId: string | null): { count: number; unread: number } | null {

@@ -131,6 +131,28 @@ export function sameAuthorRun(before: Pick<ThreadItem, 'mine' | 'kind' | 'author
   return sameSide(before, item) && before.authorId === item.authorId
 }
 
+/** One row of reactions on a message: whose it is (`mine`), which it is, how many. */
+export type ReactionRow = { emoji: string; count: number; mine: boolean }
+
+/**
+ * Her reaction at once, before the database says: `emoji` replaces the one she had (null takes it back; the same one again takes it back too,
+ * as the database does). Counts decrement, rows at zero drop.
+ */
+export function toggledReaction<T extends ReactionRow>(reactions: readonly T[], emoji: string | null): T[] {
+  const had = reactions.find((r) => r.mine)?.emoji ?? null
+  const next = emoji === had ? null : emoji
+  const out = reactions
+    .map((r) => (r.emoji === had ? { ...r, count: r.count - 1, mine: false } : { ...r }))
+    .filter((r) => r.count > 0)
+  if (!next) return out
+  const there = out.find((r) => r.emoji === next)
+  if (there) {
+    there.count += 1
+    there.mine = true
+  } else out.push({ emoji: next, count: 1, mine: true } as T)
+  return out
+}
+
 /** The words a quote needs that are the app's. */
 export type QuoteWords = { deleted: string; someone: string; you: string; voice?: string }
 

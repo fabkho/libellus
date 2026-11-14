@@ -156,19 +156,6 @@ export function mergeNote(list: NoteBubble[], incoming: NoteBubble): boolean {
 export const tombstoneNote = (bubble: NoteBubble, at: string): NoteBubble => ({ ...bubble, kind: 'text', body: '', voice: null, reactions: [], quote: bubble.quote, editedAt: null, deletedAt: bubble.deletedAt ?? at })
 
 
-/** Her reaction at once, before the database says (the same rule as a buddy read's: another emoji replaces hers, the same one takes it back). */
-export function reactedNote(reactions: readonly NoteReaction[], emoji: string | null): NoteReaction[] {
-  const had = reactions.find((r) => r.mine)?.emoji ?? null
-  const next = emoji === had ? null : emoji
-  const out = reactions.map((r) => (r.emoji === had ? { ...r, count: r.count - 1, mine: false } : { ...r })).filter((r) => r.count > 0)
-  if (!next) return out
-  const there = out.find((r) => r.emoji === next)
-  if (there) {
-    there.count += 1
-    there.mine = true
-  } else out.push({ emoji: next, count: 1, mine: true })
-  return out
-}
 
 // ------------------------------------------------------------------ the thread as drawn
 

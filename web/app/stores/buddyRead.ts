@@ -32,13 +32,13 @@ import {
   countsOf,
   mergeBubble,
   pendingBubble,
-  reactedBy,
   sentBubble,
   tombstoneOf,
   voiceJob,
   voiceOfJob,
   type BuddyBubble,
 } from '~/utils/buddyRead'
+import { toggledReaction } from '~/utils/roomThread'
 
 /**
  * Buddy reads, her side (data/buddyReads.ts, docs/plans/buddy-read-shared.md): the reads she is in, the thread of the room and of every
@@ -623,7 +623,7 @@ export const useBuddyReadStore = defineStore('buddyRead', () => {
     if (!r) return 'offline'
     const bubble = messagesOf(readId, sectionId).find((m) => m.id === messageId)
     const before = bubble?.reactions
-    if (bubble) bubble.reactions = reactedBy(bubble.reactions, emoji)
+    if (bubble) bubble.reactions = toggledReaction(bubble.reactions, emoji)
     const answer = await r.react(messageId, emoji)
     if (answer.error && bubble && before) bubble.reactions = before
     return answer.error

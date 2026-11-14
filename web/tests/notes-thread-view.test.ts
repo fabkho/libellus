@@ -12,7 +12,6 @@ import {
   noteJob,
   noteQuoteOf,
   pendingNote,
-  reactedNote,
   sentNote,
   summaryRows,
   tombstoneNote,
@@ -146,13 +145,6 @@ describe('what is on its way', () => {
     expect(gone).toMatchObject({ body: '', reactions: [], visibility: 'public', deletedAt: '2026-11-13T12:00:00Z' })
   })
 
-  it('puts her reaction on at once, replaces it with another and takes it back', () => {
-    const one = reactedNote([], '❤️')
-    expect(one).toEqual([{ emoji: '❤️', count: 1, mine: true }])
-    expect(reactedNote(one, '🔥')).toEqual([{ emoji: '🔥', count: 1, mine: true }])
-    expect(reactedNote(one, '❤️')).toEqual([])
-    expect(reactedNote([{ emoji: '❤️', count: 3, mine: false }], '❤️')).toEqual([{ emoji: '❤️', count: 4, mine: true }])
-  })
 })
 
 describe('the chapter list', () => {
