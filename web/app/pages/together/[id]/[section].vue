@@ -35,7 +35,7 @@ import { isReadId, isSectionSegment, roomPath, sectionOfSegment } from '~/utils/
 import { buddyErrorKey } from '~/utils/buddyRead'
 import { sectionTitle } from '~/utils/buddySectionTitle'
 import { isRetryableBuddyError } from '~/data/buddyReads'
-import { quoteOf, roomItems, sameAuthorRun, VOICE_UNSIGNED, type ThreadItem } from '~/utils/roomThread'
+import { quoteOf, roomItems, sameAuthorRun, type ThreadItem } from '~/utils/roomThread'
 import { useBuddyReadStore } from '~/stores/buddyRead'
 import { useSessionStore } from '~/stores/session'
 
@@ -301,67 +301,20 @@ function answer(key: string) {
 // ------------------------------------------------------------------ playing a voice message
 
 const voicePlayer = useVoicePlayer()
-// Leaving the thread silences the voice that is playing.
-onBeforeUnmount(() => voicePlayer.stop())
-
-/** The base's double-tap window (`UiBubble`): a second press inside it likes. */
-const DOUBLE_TAP_MS = 300
-type Press = { at: number; started: boolean; liked: boolean }
-const lastPress = new Map<string, Press>()
-
-/**
- * The press on the play button of a **stored voice message of somebody else's**, taken before the base's own (the capture phase of the thread's root:
- * the base would play the placeholder it was given, `VOICE_UNSIGNED`, because nothing was signed when the thread loaded). Here the first press asks for
- * the URL (`store.voiceUrl`, five minutes, kept for four) and plays it; a second press inside the double-tap window likes the message, as on any bubble
- * (and stops the sound the first one started: a double tap likes, it does not play). A press with the keyboard (no `detail`) only plays or pauses: its
- * way to react is the bubble's React button. Her own recording (played from the device's copy), a failed send and the double tap on the card itself are the
- * base's.
- */
-function voicePress(event: MouseEvent) {
-  const button = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-testid$=".voicePlay"]')
-  if (!button) return
-  const key = button.closest<HTMLElement>('[data-key]')?.dataset.key
-  const item = key ? items.value.find((i) => i.key === key) : undefined
-  if (!item?.voice || item.delivery !== 'sent' || !item.media?.path || store.previewOf(item.key)) return
-  event.stopPropagation()
-  event.preventDefault()
-  if (view.value?.open !== true) return
-  const now = Date.now()
-  const before = lastPress.get(item.key)
-  const canLike = !archived.value && !!item.id && event.detail > 0
-  if (canLike && before && now - before.at <= DOUBLE_TAP_MS) {
-    lastPress.delete(item.key)
-    // The first press may still be waiting for its URL: it is told not to play when it comes.
-    before.liked = true
-    if (before.started) voicePlayer.stop()
-    void react(item.id!, EMOJIS[0])
-    return
-  }
-  const press: Press = { at: now, started: false, liked: false }
-  lastPress.set(item.key, press)
-  void playVoice(item, press)
-}
-
-async function playVoice(item: ThreadItem, press: Press) {
-  notice.value = null
-  const path = item.media!.path!
-  // Her press again on the one that is playing (or paused): the base's player pauses or resumes it, with no new URL.
-  if (voicePlayer.current.key === item.key && !voicePlayer.current.failed) {
-    const playing = voicePlayer.current.playing
-    voicePlayer.toggle(item.key, VOICE_UNSIGNED)
-    press.started = !playing
-    return
-  }
-  const answer = await store.voiceUrl(path)
-  if (answer.error) {
-    notice.value = answer.error === 'offline' ? t(buddyErrorKey('offline')) : t('together.thread.voice.playFailed')
-    return
-  }
-  // A second press came while the URL was on its way: that was a double tap, which likes and does not play.
-  if (press.liked) return
-  voicePlayer.toggle(item.key, answer.data)
-  press.started = true
-}
+/** The whole press-to-play interaction, once for both threads (`composables/useVoicePress.ts`): what differs here is the ❤️ of the bar, an archived room (nothing may be liked), the veil, and the two sentences. */
+const { onPress: voicePress } = useVoicePress({
+  items: () => items.value,
+  isOpen: () => view.value?.open === true,
+  canLike: () => !archived.value,
+  likeEmoji: EMOJIS[0]!,
+  like: (id, emoji) => void react(id, emoji),
+  notice: (message) => (notice.value = message),
+  isPreview: (key) => !!store.previewOf(key),
+  voiceUrl: (path) => store.voiceUrl(path),
+  offlineWord: () => t(buddyErrorKey('offline')),
+  failedWord: () => t('together.thread.voice.playFailed'),
+  voicePlayer,
+})
 
 // ------------------------------------------------------------------ the veil
 
