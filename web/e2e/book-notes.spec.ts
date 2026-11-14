@@ -568,6 +568,11 @@ test('the Notes page and a chapter pass axe in the dark room, and in German at 3
     const box = await ida.getByTestId('notesThread.split').boundingBox()
     expect(box!.x).toBeGreaterThanOrEqual(0)
     expect(box!.x + box!.width).toBeLessThanOrEqual(360)
+    // The Book page's rows (V4: Notes and Read together under About) in German at 360 px neither wrap off the screen nor push it sideways.
+    await goto(ida, `/book/${bookId}`)
+    await expect(ida.getByTestId('book.notes.section')).toContainText(de.notes.section.friends)
+    await expect(ida.getByTestId('book.together.start')).toContainText(de.together.entry.start)
+    await expectNoSideScroll(ida, 'the Book page in German, with its Notes and Read together rows')
 
     // Anna wrote the notes herself, and Ida's is hers alone: nothing to say on Anna's Book page (her own notes are never counted there).
     await goto(anna, `/book/${bookId}`)
