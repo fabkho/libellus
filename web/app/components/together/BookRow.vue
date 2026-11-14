@@ -10,7 +10,7 @@
 // *Notes* (components/notes/BookButton.vue) stands beside it in the same row when the Book has a Notes page: two quiet half-width buttons, and what each says under them is full width; without one the action has the row to itself.
 //
 // Props: `book` (the page's Book), `entry` (her Library entry of it, or null). Test ids: `book.together` (the block), `book.together.start`, `book.together.open`,
-// `book.together.summary`, `book.together.adds`, `book.together.unavailable`, and the sheet's own (`buddySetup`).
+// `book.together.summary`, `book.together.unavailable`, and the sheet's own (`buddySetup`).
 import type { Book, BookSnapshot } from '~/data/books'
 import type { LibraryEntry } from '~/data/library'
 import { useBuddyInvitesStore } from '~/stores/buddyInvites'
@@ -73,9 +73,6 @@ onMounted(() => void invites.load({ force: true }))
       <p class="mt-xs text-center text-caption text-ink-muted wrap-anywhere" data-testid="book.together.summary">
         {{ readers }}<span aria-hidden="true"> · </span><span class="sr-only">, </span>{{ whereText }}
       </p>
-    </template>
-    <template v-else-if="action?.kind === 'start'">
-      <p v-if="action.adds" class="mt-xxs text-center text-caption text-ink-muted" data-testid="book.together.adds">{{ t('together.entry.adds') }}</p>
     </template>
     <p v-else-if="action?.kind === 'unavailable'" id="book-together-why" class="mt-xs text-center text-caption text-ink-muted" data-testid="book.together.unavailable">{{ t('together.entry.unavailable') }}</p>
     <LazyTogetherSetupSheet v-if="asked" v-model:open="open" :entry="entry" :book="book" :friend="friend" />

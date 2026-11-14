@@ -195,7 +195,6 @@ test('Read together on a Book that is not in her Library adds it as Currently re
   await expect(page.getByTestId('book.add')).toBeVisible()
   await expect(page.getByTestId('book.actions').getByTestId('book.together.start')).toBeVisible()
   await expect(page.getByTestId('book.together.start')).toContainText(en.together.entry.start)
-  await expect(page.getByTestId('book.together.adds')).toHaveText(en.together.entry.adds)
   await expectAccessible(page, 'a Book that is not in her Library, with Read together')
 
   // The sheet says so plainly; Cancel adds nothing.
@@ -281,11 +280,11 @@ test('the Book page offers Read together in every state of the Book, and says wh
   const foreign = await shelve(other, 'Not In Her Library')
   await goto(page, `/book/${foreign.book.id}`)
   await expect(page.getByTestId('book.actions').getByTestId('book.together.start')).toBeVisible()
-  await expect(page.getByTestId('book.together.adds')).toBeVisible()
+  // The "adds this book to Currently reading" line is gone from this page (the setup sheet says it):
+  // what matters here is that the action itself is present in every state.
   for (const [name, entry] of [['want', want], ['reading', reading], ['finished', finished], ['given up', dnf]] as const) {
     await goto(page, `/book/${entry.book.id}`)
     await expect(page.getByTestId('book.actions').getByTestId('book.together.start'), name).toBeVisible()
-    await expect(page.getByTestId('book.together.adds'), name).toHaveCount(0)
   }
 
   // A Manual book cannot be read together: the action is there, disabled, with the one line why.

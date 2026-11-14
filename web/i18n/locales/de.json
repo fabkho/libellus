@@ -2407,7 +2407,6 @@
     "entry": {
       "start": "Gemeinsam lesen",
       "hint": "Lies dieses Buch mit Freunden, Abschnitt für Abschnitt.",
-      "adds": "Mit dem Start des Buddy-Reads kommt dieses Buch zu „Lese ich gerade“.",
       "unavailable": "Ein selbst hinzugefügtes Buch kann nicht gemeinsam gelesen werden.",
       "openRoom": "Buddy-Read öffnen",
       "moreLabel": "Optionen für Buddy-Read: {title}",

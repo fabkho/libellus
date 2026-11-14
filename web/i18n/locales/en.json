@@ -2407,7 +2407,6 @@
     "entry": {
       "start": "Read together",
       "hint": "Read this book with friends, a Section at a time.",
-      "adds": "Starting a buddy read adds this book to Currently reading.",
       "unavailable": "A book you added yourself can’t be read together.",
       "openRoom": "Open the buddy read",
       "moreLabel": "Buddy read options: {title}",
