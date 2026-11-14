@@ -102,7 +102,7 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
     (`components/home/{Together,TogetherMenu}.vue`). The setup sheet (`components/together/SetupSheet.vue`) is built when she presses an action, not with the page,
     and adds a Book that is not in her Library as Currently reading when she presses Start (`stores/library.ts` `addReading`). View models: `utils/buddyEntry.ts`;
     `tests/buddy-entry.test.ts` pins where they sit. Home reads the list on focus (`onMounted` and `onActivated`, no Realtime).
-  - The link `/t/<token>` needs the sign-in (`utils/publicPath.ts` is untouched) and is kept through it by `utils/pendingBuddyRead.ts`; an open link shows the join card.
+  - The link `/t/<token>` needs the sign-in (`utils/publicPath.ts` is untouched) and is kept through it by `utils/pendingLink.ts` (the one owner of share, follow and buddy read links kept through the sign-in); an open link shows the join card.
 - **Mobile first: VoiceOver, touch and gestures before desktop/keyboard** (every swipe, drag and long press has a single-tap alternative; text at 200 % reflows).
 - No full typechecks (`nuxi typecheck`, `tsc --noEmit`) unless asked. Run the targeted test instead.
 - Never read `.env`. Pass `NUXT_PUBLIC_*` as exported env vars when a command needs them.

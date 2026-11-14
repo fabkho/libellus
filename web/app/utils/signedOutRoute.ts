@@ -1,8 +1,6 @@
 import { DEVICE_LIBRARY_KEY } from '../data/deviceLibrary'
 import type { DeviceStorage } from '../data/localData'
-import { buddyReadTokenIn, keepBuddyRead } from './pendingBuddyRead'
-import { followTokenIn, keepFollow } from './pendingFollow'
-import { keepShare } from './pendingShare'
+import { keepPending, pendingLinkPath, pendingPath, pendingTokenIn, type PendingKind, type PendingValue } from './pendingLink'
 import { isPublicPath } from './publicPath'
 
 /**
@@ -23,6 +21,24 @@ export const withoutSlash = (path: string) => (path.length > 1 ? path.replace(/\
 
 const first = (value: unknown): string | null => (Array.isArray(value) ? first(value[0]) : typeof value === 'string' ? value : null)
 
+/** What the device holds of each kind, as the middleware reads it before it navigates. */
+export type PendingWaiting = { readonly [K in PendingKind]: PendingValue[K] | null }
+
+/**
+ * Where a signed-in member is sent for what she opened while signed out, or null for no move. The order is the rule
+ * and it lives here with the rest of "where a visitor goes": a share first (issue #91), then a follow link (social v1,
+ * pages/f/[token].vue), then a buddy read link (W3, pages/t/[token].vue). The ones after wait for the next navigation.
+ * Nothing opens on `/share` (the page is taking a share in), and a link she is already on resolves itself: its page
+ * spends the kept copy.
+ */
+export function pendingLinkToOpen(path: string, waiting: PendingWaiting): string | null {
+  if (path === '/share') return null
+  if (waiting.share) return pendingPath('share', waiting.share)
+  if (waiting.follow) return pendingLinkPath('follow', path) ? null : pendingPath('follow', waiting.follow)
+  if (waiting.buddyRead) return pendingLinkPath('buddyRead', path) ? null : pendingPath('buddyRead', waiting.buddyRead)
+  return null
+}
+
 /**
  * The address a signed-out visitor is sent to from `to`, or undefined to let her stay (the access screens,
  * a public page). Keeps what she came for through the sign-in as the middleware always did: a share
@@ -41,14 +57,14 @@ export function signedOutDestination(
   if (path === '/share' && storage) {
     const shared = { title: first(to.query.title), text: first(to.query.text), url: first(to.query.url), ebooks: first(to.query.ebooks) }
     // Shared ebook files wait in the service worker's cache meanwhile (#131).
-    if (shared.title || shared.text || shared.url || shared.ebooks) keepShare(storage, shared)
+    if (shared.title || shared.text || shared.url || shared.ebooks) keepPending(storage, 'share', shared)
   }
 
-  const followed = followTokenIn(path)
-  if (followed && storage) keepFollow(storage, followed)
+  const followed = pendingTokenIn('follow', path)
+  if (followed && storage) keepPending(storage, 'follow', followed)
 
-  const joining = buddyReadTokenIn(path)
-  if (joining && storage) keepBuddyRead(storage, joining)
+  const joining = pendingTokenIn('buddyRead', path)
+  if (joining && storage) keepPending(storage, 'buddyRead', joining)
 
   if (!isAuthRoute) return pending ? '/verify' : '/sign-in'
   if (path === '/verify' && !pending) return '/sign-in'

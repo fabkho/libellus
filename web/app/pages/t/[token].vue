@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // A buddy read link (W3): `/t/<token>`, the address the Host sends her link as, the twin of `/f/<token>` (pages/f/[token].vue). Behind the sign-in:
-// signed out, the token is kept through it (utils/pendingBuddyRead.ts, middleware/auth.global.ts) and she comes back here.
+// signed out, the token is kept through it (utils/pendingLink.ts, middleware/auth.global.ts) and she comes back here.
 //
 // What it shows, in order: the join card (`buddy_read_target`): the Book, who hosts it, who is in, how many Sections and the day it
 // starts, with Join and Not now. Join → `join_buddy_read`, then "Which copy are you reading?" (components/together/EntryPicker.vue: which of her entries
@@ -11,7 +11,7 @@ import type { BuddyErrorCode, BuddyTarget } from '~/data/buddyReads'
 import { useBuddyReadStore } from '~/stores/buddyRead'
 import { buddyErrorKey } from '~/utils/buddyRead'
 import { roomPath } from '~/utils/buddyRoute'
-import { isBuddyReadToken, PENDING_BUDDY_READ_KEY } from '~/utils/pendingBuddyRead'
+import { forgetPending, isPendingToken } from '~/utils/pendingLink'
 
 definePageMeta({ layout: false, screen: 'buddyLink' })
 
@@ -36,8 +36,8 @@ async function open() {
   outcome.value = 'loading'
   refusal.value = null
   // The link she is on is the one that counts: a kept one from before is spent.
-  window.localStorage.removeItem(PENDING_BUDDY_READ_KEY)
-  if (!isBuddyReadToken(token.value)) return void (outcome.value = 'missing')
+  forgetPending(window.localStorage, 'buddyRead')
+  if (!isPendingToken(token.value)) return void (outcome.value = 'missing')
   if (!online.value) return void (outcome.value = 'offline')
 
   const mine = token.value

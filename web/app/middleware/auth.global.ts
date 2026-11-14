@@ -1,9 +1,7 @@
 import { useSessionStore } from '~/stores/session'
-import { buddyReadToOpen, peekBuddyRead } from '~/utils/pendingBuddyRead'
-import { followToOpen, peekFollow } from '~/utils/pendingFollow'
-import { peekShare } from '~/utils/pendingShare'
+import { peekPending } from '~/utils/pendingLink'
 import { isPublicPath } from '~/utils/publicPath'
-import { AUTH_ROUTES, signedOutDestination, withoutSlash } from '~/utils/signedOutRoute'
+import { AUTH_ROUTES, pendingLinkToOpen, signedOutDestination, withoutSlash } from '~/utils/signedOutRoute'
 
 /**
  * Everything else is behind the code. Signed-in members have no business on
@@ -21,14 +19,15 @@ export default defineNuxtRouteMiddleware((to) => {
   const session = useSessionStore()
 
   if (session.status === 'signedIn') {
-    if (import.meta.client && path !== '/share' && peekShare(window.localStorage)) return navigateTo('/share', { replace: true })
-    // A follow link (social v1, pages/f/[token].vue) kept the same way opens after a share waiting.
+    // What she opened signed out opens now, one at a time, in the order signedOutRoute.ts names.
     if (import.meta.client) {
-      const follow = followToOpen(path, peekFollow(window.localStorage), !!peekShare(window.localStorage))
-      if (follow) return navigateTo(follow, { replace: true })
-      // A buddy read link (W3, pages/t/[token].vue) kept the same way: after a share or a follow link that waits.
-      const joining = buddyReadToOpen(path, peekBuddyRead(window.localStorage), !!peekShare(window.localStorage) || !!peekFollow(window.localStorage))
-      if (joining) return navigateTo(joining, { replace: true })
+      const storage = window.localStorage
+      const open = pendingLinkToOpen(path, {
+        share: peekPending(storage, 'share'),
+        follow: peekPending(storage, 'follow'),
+        buddyRead: peekPending(storage, 'buddyRead'),
+      })
+      if (open) return navigateTo(open, { replace: true })
     }
     return AUTH_ROUTES.includes(path) ? navigateTo('/') : undefined
   }
