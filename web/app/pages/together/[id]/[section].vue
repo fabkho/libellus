@@ -34,7 +34,8 @@ import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
 import { isReadId, isSectionSegment, roomPath, sectionOfSegment } from '~/utils/buddyRoute'
 import { buddyErrorKey } from '~/utils/buddyRead'
 import { sectionTitle } from '~/utils/buddySectionTitle'
-import { quoteOf, sameAuthorRun, threadItems, VOICE_UNSIGNED, type ThreadItem } from '~/utils/buddyThread'
+import { isRetryableBuddyError } from '~/data/buddyReads'
+import { quoteOf, roomItems, sameAuthorRun, VOICE_UNSIGNED, type ThreadItem } from '~/utils/roomThread'
 import { useBuddyReadStore } from '~/stores/buddyRead'
 import { useSessionStore } from '~/stores/session'
 
@@ -132,11 +133,12 @@ useFocusHeading(() => missing.value || status.value === 'ready' || view.value?.v
 
 const nameOf = (memberId: string | null) => read.value?.members.find((m) => m.id === memberId)?.name?.trim() || null
 const items = computed<ThreadItem[]>(() =>
-  threadItems(store.messagesOf(readId.value, sectionId.value), {
+  roomItems(store.messagesOf(readId.value, sectionId.value), {
     me: me.value,
     open: view.value?.open === true,
     nameOf,
-    errorWord: (code) => t(buddyErrorKey(code)),
+    errorWord: (code) => t(buddyErrorKey(code as BuddyErrorCode)),
+    retryable: (code) => isRetryableBuddyError(code as BuddyErrorCode),
     previewOf: store.previewOf,
   }),
 )

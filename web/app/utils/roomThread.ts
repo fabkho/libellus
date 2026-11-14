@@ -3,7 +3,7 @@ import { REPORT_REASONS, type ReportReason } from '~/data/buddyReads'
 import type { VoiceInfo } from '~/data/buddyVoice'
 
 /**
- * A room's thread as its screen draws it, the parts a buddy read (pages/together/[id]/[section].vue, utils/buddyThread.ts) and a Book's notes
+ * A room's thread as its screen draws it, the parts a buddy read (pages/together/[id]/[section].vue) and a Book's notes
  * (pages/notes/[book]/[chapter].vue, utils/noteThread.ts) both use: the stored bubbles of a store turned into what the base's `UiChatThread` and `UiBubble` take (`BubbleMessage`), plus what only a buddy
  * read adds: who wrote it, the message it answers and the tombstone. Pure functions on plain data, so Vitest
  * drives them in Node.

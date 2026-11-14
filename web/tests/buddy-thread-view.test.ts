@@ -4,49 +4,50 @@ import { currentChoice, markerChoices, roomRows, titleSaysNumber, trackOf, track
 import { sectionTitle } from '@/utils/buddySectionTitle'
 import { isReadId, isSectionSegment, sectionOfSegment, threadPath } from '@/utils/buddyRoute'
 import { sentBubble, type BuddyBubble } from '@/utils/buddyRead'
-import { quoteOf, reportInput, sameAuthorRun, threadItems, type ThreadContext } from '@/utils/buddyThread'
+import { isRetryableBuddyError, type BuddyErrorCode } from '@/data/buddyReads'
+import { quoteOf, reportInput, roomItems, sameAuthorRun, type RoomThreadContext } from '@/utils/roomThread'
 
 /** What the room and a thread draw (utils/buddyRoom.ts, buddyThread.ts, buddyRoute.ts): the veil, the tombstone, the quote, the track, the report. No database, no store. */
 
 const bubble = (id: string, over: Partial<BuddyBubble> = {}): BuddyBubble =>
   sentBubble({ id, conversationId: 'r', threadId: 's', senderId: 'ben', clientId: `c-${id}`, kind: 'text', body: `Words of ${id}`, createdAt: `2026-11-13T10:00:00.${id.padStart(6, '0')}+00:00`, replyTo: null, spoiler: false, media: null, authorName: 'Ben', deletedAt: null, reactions: [], ...over })
 
-const ctx = (over: Partial<ThreadContext> = {}): ThreadContext => ({ me: 'ada', open: true, nameOf: (id) => (id === 'ben' ? 'Ben' : null), errorWord: (code) => `word:${code}`, ...over })
+const ctx = (over: Partial<RoomThreadContext> = {}): RoomThreadContext => ({ me: 'ada', open: true, nameOf: (id) => (id === 'ben' ? 'Ben' : null), errorWord: (code) => `word:${code}`, retryable: (code) => isRetryableBuddyError(code as BuddyErrorCode), ...over })
 
 describe('the veil in a thread', () => {
   it('has no message at all in a Section that is not open, whatever the store holds', () => {
     const held = [bubble('1'), bubble('2', { spoiler: true })]
-    expect(threadItems(held, ctx({ open: false }))).toEqual([])
-    expect(threadItems(held, ctx({ open: true }))).toHaveLength(2)
+    expect(roomItems(held, ctx({ open: false }))).toEqual([])
+    expect(roomItems(held, ctx({ open: true }))).toHaveLength(2)
   })
 
   it('draws a comment that was flagged Spoiler once (the mark is gone from the app) as any other message, with its words', () => {
-    const items = threadItems([bubble('1', { spoiler: true, body: 'The ending!' }), bubble('2', { spoiler: true, senderId: 'ada' })], ctx())
+    const items = roomItems([bubble('1', { spoiler: true, body: 'The ending!' }), bubble('2', { spoiler: true, senderId: 'ada' })], ctx())
     expect(items.map((i) => [i.kind, i.body])).toEqual([['text', 'The ending!'], ['text', 'Words of 2']])
     expect(items.every((i) => !('veiled' in i) && !('spoiler' in i))).toBe(true)
   })
 
   it('keeps a message’s key from its bubble to its stored row (the client id), and its id null until it is stored', () => {
     const sending = { ...bubble('9', { senderId: 'ada', clientId: 'mine', id: 'local:mine' }), state: 'sending' as const }
-    const [item] = threadItems([sending], ctx())
+    const [item] = roomItems([sending], ctx())
     expect(item).toMatchObject({ key: 'mine', id: null, mine: true, delivery: 'sending' })
-    const [stored] = threadItems([bubble('9', { senderId: 'ada', clientId: 'mine' })], ctx())
+    const [stored] = roomItems([bubble('9', { senderId: 'ada', clientId: 'mine' })], ctx())
     expect(stored).toMatchObject({ key: 'mine', id: '9', delivery: 'sent' })
   })
 
   it('words a refused message with the app’s sentence for its code', () => {
     const failed = { ...bubble('3', { senderId: 'ada' }), state: 'failed' as const, error: 'buddy_read_archived' as const }
-    expect(threadItems([failed], ctx())[0]).toMatchObject({ delivery: 'failed', error: 'word:buddy_read_archived' })
+    expect(roomItems([failed], ctx())[0]).toMatchObject({ delivery: 'failed', error: 'word:buddy_read_archived' })
   })
 
   it('turns a deleted message into a system line with no words and no reactions: "Message removed" is drawn by the screen', () => {
     const gone = bubble('4', { deletedAt: '2026-11-13T11:00:00Z', body: 'still here?', reactions: [{ emoji: '🔥', count: 2, mine: true }], spoiler: true })
-    const [item] = threadItems([gone], ctx())
+    const [item] = roomItems([gone], ctx())
     expect(item).toMatchObject({ kind: 'system', removed: true, body: '', reactions: [], myReaction: null })
   })
 
   it('names the author from the message, else from the members; a reaction of hers is her own', () => {
-    const [a, b] = threadItems([bubble('5', { authorName: null }), bubble('6', { reactions: [{ emoji: '❤️', count: 1, mine: true }] })], ctx())
+    const [a, b] = roomItems([bubble('5', { authorName: null }), bubble('6', { reactions: [{ emoji: '❤️', count: 1, mine: true }] })], ctx())
     expect(a!.author).toBe('Ben')
     expect(b).toMatchObject({ myReaction: '❤️', reactions: [{ emoji: '❤️', count: 1, mine: true }] })
   })
@@ -54,7 +55,7 @@ describe('the veil in a thread', () => {
 
 describe('a quote', () => {
   const words = { deleted: 'Message deleted', someone: 'A reader', you: 'You' }
-  const items = threadItems([bubble('1', { body: '  The   ending\nwas  great ' }), bubble('2', { spoiler: true }), bubble('3', { deletedAt: 'x' }), bubble('4', { senderId: 'ada' })], ctx())
+  const items = roomItems([bubble('1', { body: '  The   ending\nwas  great ' }), bubble('2', { spoiler: true }), bubble('3', { deletedAt: 'x' }), bubble('4', { senderId: 'ada' })], ctx())
 
   it('shows who wrote it and its first words on one line', () => {
     expect(quoteOf(items, '1', words)).toEqual({ id: '1', mine: false, name: 'Ben', preview: 'The ending was great' })
@@ -185,17 +186,17 @@ describe('a message that was refused', () => {
 
   it('is permanent when a second try cannot change why (removed, blocked, archived, invalid), and has no id to answer or react to', () => {
     for (const code of ['buddy_read_archived', 'not_found', 'message_body_invalid'] as const) {
-      expect(threadItems([failed(code)], ctx())[0], code).toMatchObject({ delivery: 'failed', permanent: true, id: null, error: `word:${code}` })
+      expect(roomItems([failed(code)], ctx())[0], code).toMatchObject({ delivery: 'failed', permanent: true, id: null, error: `word:${code}` })
     }
   })
 
   it('may be tried again when it was the connection, the limit or a failure nobody explained', () => {
-    for (const code of ['unknown', 'message_rate_limited', 'busy'] as const) expect(threadItems([failed(code)], ctx())[0]!.permanent, code).toBe(false)
+    for (const code of ['unknown', 'message_rate_limited', 'busy'] as const) expect(roomItems([failed(code)], ctx())[0]!.permanent, code).toBe(false)
   })
 
   it('is never permanent while it is on its way or stored', () => {
     const sending = { ...bubble('8', { senderId: 'ada' }), state: 'sending' as const }
-    expect(threadItems([sending, bubble('9')], ctx()).map((i) => i.permanent)).toEqual([false, false])
+    expect(roomItems([sending, bubble('9')], ctx()).map((i) => i.permanent)).toEqual([false, false])
   })
 })
 
@@ -240,9 +241,9 @@ describe('what a row says about its number, and a Section in the viewer’s word
 
 describe('the runs of a thread (UiChatThread `sameRun`)', () => {
   // The base's `follows`: a row follows the one before it when it is an item and `sameRun(before, item)` holds (a day separator in between ends the run).
-  const run = (items: ReturnType<typeof threadItems>) => items.map((item, i) => (i > 0 && sameAuthorRun(items[i - 1]!, item) ? 'follows' : 'starts'))
+  const run = (items: ReturnType<typeof roomItems>) => items.map((item, i) => (i > 0 && sameAuthorRun(items[i - 1]!, item) ? 'follows' : 'starts'))
   const of = (...senders: string[]) =>
-    threadItems(senders.map((who, i) => bubble(String(i + 1), { senderId: who, authorName: who })), ctx({ me: 'ada' }))
+    roomItems(senders.map((who, i) => bubble(String(i + 1), { senderId: who, authorName: who })), ctx({ me: 'ada' }))
 
   it('starts a run when another person writes, even if both are somebody else’s: three members, interleaved', () => {
     // Bram twice, Mara twice, Bram, Mara, Ada twice (hers), Mara.
@@ -255,13 +256,13 @@ describe('the runs of a thread (UiChatThread `sameRun`)', () => {
   })
 
   it('breaks a run at a tombstone, before and after it, whoever wrote it', () => {
-    const items = threadItems([bubble('1'), bubble('2', { deletedAt: 'x' }), bubble('3'), bubble('4', { senderId: 'mara', authorName: 'Mara' })], ctx())
+    const items = roomItems([bubble('1'), bubble('2', { deletedAt: 'x' }), bubble('3'), bubble('4', { senderId: 'mara', authorName: 'Mara' })], ctx())
     expect(items.map((i) => i.kind)).toEqual(['text', 'system', 'text', 'text'])
     expect(run(items)).toEqual(['starts', 'starts', 'starts', 'starts'])
   })
 
   it('treats a member who has gone as one author among others: two of her messages are one run, not the next member’s', () => {
-    const items = threadItems([bubble('1', { senderId: null, authorName: null }), bubble('2', { senderId: null, authorName: null }), bubble('3', { senderId: 'mara', authorName: 'Mara' })], ctx())
+    const items = roomItems([bubble('1', { senderId: null, authorName: null }), bubble('2', { senderId: null, authorName: null }), bubble('3', { senderId: 'mara', authorName: 'Mara' })], ctx())
     expect(run(items)).toEqual(['starts', 'follows', 'starts'])
   })
 })
