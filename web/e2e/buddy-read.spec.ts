@@ -190,12 +190,12 @@ test('Read together on a Book that is not in her Library adds it as Currently re
   const theirs = await shelve(anna, 'The Entry Book')
   const bookId = theirs.book.id
 
-  // The Book page of a Book she does not hold: the action is there, in the action area, not behind a menu.
+  // The Book page of a Book she does not hold: the action is there, and Read together is a row of the page — under About, out of the action area (V4,
+  // docs/plans/book-actions.md) — not behind a menu.
   await goto(page, `/book/${bookId}`)
   await expect(page.getByTestId('book.add')).toBeVisible()
-  await expect(page.getByTestId('book.actions').getByTestId('book.together.start')).toBeVisible()
+  await expect(page.getByTestId('book.together').getByTestId('book.together.start')).toBeVisible()
   await expect(page.getByTestId('book.together.start')).toContainText(en.together.entry.start)
-  await expect(page.getByTestId('book.together.adds')).toHaveText(en.together.entry.adds)
   await expectAccessible(page, 'a Book that is not in her Library, with Read together')
 
   // The sheet says so plainly; Cancel adds nothing.
@@ -276,16 +276,14 @@ test('the Book page offers Read together in every state of the Book, and says wh
   const manual = await createManualBooks(ida.client).addManualBook({ title: runTitle('My Own Book'), author: 'Ida Beispiel' }, { status: 'reading', startedOn: today })
   if (manual.error || !manual.data) throw new Error(`Fixture failed: ${String(manual.error)}`)
 
-  // Not in her Library, Want to read, Currently reading, Finished, given up: the action is in the action area every time.
+  // Not in her Library, Want to read, Currently reading, Finished, given up: the row is on the page every time (V4: under About, not in the action area).
   const other = await signUpMember()
   const foreign = await shelve(other, 'Not In Her Library')
   await goto(page, `/book/${foreign.book.id}`)
-  await expect(page.getByTestId('book.actions').getByTestId('book.together.start')).toBeVisible()
-  await expect(page.getByTestId('book.together.adds')).toBeVisible()
+  await expect(page.getByTestId('book.together').getByTestId('book.together.start')).toBeVisible()
   for (const [name, entry] of [['want', want], ['reading', reading], ['finished', finished], ['given up', dnf]] as const) {
     await goto(page, `/book/${entry.book.id}`)
-    await expect(page.getByTestId('book.actions').getByTestId('book.together.start'), name).toBeVisible()
-    await expect(page.getByTestId('book.together.adds'), name).toHaveCount(0)
+    await expect(page.getByTestId('book.together').getByTestId('book.together.start'), name).toBeVisible()
   }
 
   // A Manual book cannot be read together: the action is there, disabled, with the one line why.

@@ -37,6 +37,19 @@ export function bookEntryAction(
   return read ? { kind: 'open', read } : { kind: 'start', adds: !held }
 }
 
+/**
+ * What the Book page's buddy read **row** is (V4, docs/plans/book-actions.md): the same three states as the action, as the row draws them — a row that links
+ * to the room she is in, a row that opens the setup sheet, or a row that is off for a Manual book. The label is the state's own: `bookEntryRow` only says which
+ * of the three the row is, the words are the component's (`together.entry.openRoom` / `.start`). Null while the Book is unknown: no row.
+ */
+export type BookEntryRow = { kind: 'open'; read: BuddyCard } | { kind: 'start'; adds: boolean } | { kind: 'unavailable' }
+
+/** The row for an action: the action itself, said as a row (one of the three, never null for a known Book). */
+export function bookEntryRow(action: BookEntryAction | null): BookEntryRow | null {
+  if (!action) return null
+  return action.kind === 'open' ? { kind: 'open', read: action.read } : action.kind === 'start' ? { kind: 'start', adds: action.adds } : { kind: 'unavailable' }
+}
+
 /** The rows of Home's card: her active reads, those with news first; the server's order within each group. */
 export function homeReads(reads: readonly BuddyCard[] | null | undefined): BuddyCard[] {
   const active = activeReads(reads)

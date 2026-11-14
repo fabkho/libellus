@@ -1,8 +1,14 @@
 <script setup lang="ts">
-// The *Notes* section of a Book's page (docs/plans/book-notes.md part 5; docs/parity.md, *Notes, the Book page section*), below the actions, and only when there is something to say:
-// **From friends** (up to three faces, "Ben and Jo · 14 notes · chapters 1–9") and **Public** (a globe, "6 notes from 3 members"), each a link to the Notes page. A row is absent when its count
-// is 0, the section when both are. The numbers are `notes_summary(book)`: only what she may see, never her own, nothing of the words. Read when the page opens, fresh each time through the
-// small store (stores/notesSummary.ts: no chat layer, no Realtime; tests/notes-entry.test.ts). Test ids: `book.notes.section`, `book.notes.friends`, `book.notes.public`.
+// The *Notes* rows of a Book's page (docs/plans/book-notes.md part 5; docs/plans/book-actions.md, V4; docs/parity.md, *Notes, the Book page section*),
+// **below the About text** and above the Read together row — a section row in their own right, not a half-width button beside Read together any more:
+// **From friends** (up to three faces, "Ben and Jo · 14 notes · chapters 1–9") and **Public** (a globe, "6 notes from 3 members"), each a link to the Notes
+// page. A row is absent when its count is 0, and with both absent the section gives way to the plain **Notes** row (components/notes/BookButton.vue,
+// `book.notes`), so the way in is always here; a Manual book's row is off, with the one line why. A search result that is not in the Catalogue yet has no
+// Notes page: nothing at all.
+//
+// The numbers are `notes_summary(book)`: only what she may see, never her own, nothing of the words. Read when the page opens, fresh each time through the
+// small store (stores/notesSummary.ts: no chat layer, no Realtime; tests/notes-entry.test.ts). Test ids: `book.notes.section` (the section, only when it has
+// a row), `book.notes.friends`, `book.notes.public`; the plain row's are BookButton.vue's.
 import type { Book, BookSnapshot } from '~/data/books'
 import { friendsNameParts } from '~/utils/friendsNames'
 import { notesPath } from '~/utils/notesRoute'
@@ -15,6 +21,8 @@ const store = useNotesSummaryStore()
 
 const bookId = computed(() => ('id' in props.book && props.book.source !== 'manual' ? props.book.id : null))
 const rows = computed(() => summaryRows(store.of(bookId.value)))
+/** Something of her friends' or the public's to count: the two rows, and the section's heading. */
+const hasRows = computed(() => Boolean(bookId.value) && Boolean(rows.value.friends || rows.value.public))
 
 watch(bookId, (id) => id && void store.load(id), { immediate: true })
 
@@ -33,7 +41,7 @@ const faceCard = (a: { id: string; name: string | null; photo: string | null }) 
 </script>
 
 <template>
-  <section v-if="bookId && (rows.friends || rows.public)" class="relative px-ml pt-xl" aria-labelledby="book-notes-title" data-testid="book.notes.section">
+  <section v-if="hasRows && bookId" class="relative px-ml pt-xl" aria-labelledby="book-notes-title" data-testid="book.notes.section">
     <h2 id="book-notes-title" class="eyebrow mb-ms">{{ t('notes.title') }}</h2>
     <UiRowGroup>
       <NuxtLink
@@ -64,4 +72,6 @@ const faceCard = (a: { id: string; name: string | null; photo: string | null }) 
       </NuxtLink>
     </UiRowGroup>
   </section>
+  <!-- Nothing counted yet, or a Manual book: the one plain Notes row is the way in (and says why when it is off). -->
+  <NotesBookButton v-else :book="book" />
 </template>
