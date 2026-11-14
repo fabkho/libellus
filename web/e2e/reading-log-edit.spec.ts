@@ -175,6 +175,23 @@ test('a row is a button: it opens the sheet on that day; edited, the log, the pa
   await expect(page.getByTestId('home.progressValue')).toHaveText('p. 120 of 480')
 })
 
+/**
+ * The pair's place (docs/parity.md, the Book page's layout; the owner's report on V4): *Notes* and *Read together* are **one box** directly under the
+ * action area and the About text, and it comes **above the reading log** — not two sections at the page's foot, under the Collections row and the history.
+ * Read off where each one is drawn, not off the source, so a later move of the rows fails here.
+ */
+test('on the book page, the Notes and Read together pair is one box under About, above the reading log', async ({ page }) => {
+  await reader(page)
+  const pair = page.getByTestId('book.actionPair')
+  // One container with both ways in, in the mock's order: what she and her friends wrote on the Book, then with whom to read it.
+  await expect(pair.getByTestId('book.notes')).toBeVisible()
+  await expect(pair.getByTestId('book.together').getByTestId('book.together.start')).toBeVisible()
+  const top = async (testId: string) => (await page.getByTestId(testId).boundingBox())!.y
+  expect(await top('book.notes')).toBeGreaterThan(await top('book.actions'))
+  expect(await top('book.together')).toBeGreaterThan(await top('book.notes'))
+  expect(await top('book.readingLog')).toBeGreaterThan(await top('book.together'))
+})
+
 test('Add day opens the sheet on the newest day without an entry, and the new day joins the log', async ({ page }) => {
   const { session } = await reader(page)
   const add = page.getByTestId('book.logAdd')

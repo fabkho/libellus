@@ -9,8 +9,9 @@
 // reading actions and nothing else** (V4, docs/plans/book-actions.md): one
 // filled primary, and with an ebook on this device (#131) Read now above it and
 // the state's own action stepped back to a quiet one. Notes and Read together are
-// not buttons here any more: they are rows of their own under About
-// (components/notes/BookSection.vue, components/together/BookRow.vue). Opened
+// not buttons here any more: they are the pair under About, one box with two ways in (components/book/ActionPair.vue: the
+// Notes rows of components/notes/BookSection.vue and the Read together row of components/together/BookRow.vue), and the
+// reading log comes under it. Opened
 // from search (a Catalogue Book by id, or a result that is not in the Catalogue
 // yet by its source id) and from the Library. Where a Book came from is never
 // shown. Under the action, when the member has linked an ebook file on this
@@ -420,17 +421,6 @@ function back() {
       <span class="skeleton wave block h-(--size-button) w-full rounded-pill" :style="{ '--wave': 0.5 }" />
     </div>
 
-
-    <BookProgressLog v-if="entry?.status === 'reading'" :entry="entry" />
-    <CollectionsBookRow v-if="book" :book="book" :entry="entry" :book-key="key" />
-
-    <BookHistory v-if="entry" :entry="entry" />
-    <BookEditSessionSheet />
-    <BookOptionsSheet v-if="book" v-model:open="optionsOpen" :entry="entry" :shown="book" :page="routeKey" @removed="back" />
-    <BookEditionSheet @changed="editionChanged" />
-    <!-- The reader, loaded on its first opening (the engine is its own chunk). -->
-    <LazyReader v-if="readerOpen && entry && ebook" :entry="entry" :record="ebook" :hero="heroEl" @closed="reader.close()" />
-
     <section v-if="description" class="relative px-ml pt-xl" data-testid="book.about">
       <h2 class="eyebrow mb-ms">{{ t('book.about') }}</h2>
       <p class="text-subhead whitespace-pre-line text-ink-muted wrap-anywhere" :class="long && !expanded && 'clamped'" data-testid="book.description">
@@ -451,11 +441,26 @@ function back() {
       <span v-for="i in 4" :key="i" class="line subhead-line" :class="i === 4 ? 'w-2/3' : 'w-full'"><span class="skeleton wave w-full" :style="{ '--wave': 0.6 + i * 0.1 }" /></span>
     </section>
 
-    <!-- V4 (docs/plans/book-actions.md): *Notes* and *Read together* are rows of their own, under the About text and in the order the mock draws them —
-         what she and her friends wrote on the Book first, then with whom to read it. Each is one link (or, without a read, one press that opens the setup
-         sheet) in the same language: the icon, the label, one line of what it says, the chevron. -->
-    <NotesBookSection v-if="book" :book="book" />
-    <TogetherBookRow v-if="book" :book="book" :entry="entry" />
+    <!-- V4 (docs/plans/book-actions.md; docs/parity.md, the Book page's layout): *Notes* and *Read together* are the pair directly under the About text and
+         above the reading log — one box with two ways in (components/book/ActionPair.vue owns the fill, the radius, the hairline edge and the hairline
+         between its rows), in the order the mock draws them: what she and her friends wrote on the Book first (components/notes/BookSection.vue, or the
+         plain row of components/notes/BookButton.vue), then with whom to read it (components/together/BookRow.vue). Each is one link (or, without a read,
+         one press that opens the setup sheet) in the same language: the icon, the label, one line of what it says, the chevron. Both carry the same
+         `v-if="book"` the group does, so a Book that is not known yet draws no box and no row. -->
+    <BookActionPair v-if="book">
+      <NotesBookSection v-if="book" :book="book" />
+      <TogetherBookRow v-if="book" :book="book" :entry="entry" />
+    </BookActionPair>
+
+    <BookProgressLog v-if="entry?.status === 'reading'" :entry="entry" />
+    <CollectionsBookRow v-if="book" :book="book" :entry="entry" :book-key="key" />
+
+    <BookHistory v-if="entry" :entry="entry" />
+    <BookEditSessionSheet />
+    <BookOptionsSheet v-if="book" v-model:open="optionsOpen" :entry="entry" :shown="book" :page="routeKey" @removed="back" />
+    <BookEditionSheet @changed="editionChanged" />
+    <!-- The reader, loaded on its first opening (the engine is its own chunk). -->
+    <LazyReader v-if="readerOpen && entry && ebook" :entry="entry" :record="ebook" :hero="heroEl" @closed="reader.close()" />
 
     <!-- In your friends (social v2a, §1.5): the people she follows who have this Book, under its description and right above More from the author. -->
     <BookReaders v-if="book" :book="book" />

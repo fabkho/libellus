@@ -111,6 +111,16 @@ describe('her reads of a Book', () => {
     const about = page.indexOf('data-testid="book.about"')
     expect(page.indexOf('<NotesBookSection', about)).toBeGreaterThan(about)
     expect(page.indexOf('<TogetherBookRow', about)).toBeGreaterThan(page.indexOf('<NotesBookSection', about))
+    // The two are one box (components/book/ActionPair.vue) directly above the reading log, not at the page's foot: the pair reads as one
+    // thing with two ways in, and it comes before everything the log, the Collections row and the history say.
+    const pair = page.indexOf('<BookActionPair')
+    expect(pair).toBeGreaterThan(about)
+    expect(page.indexOf('<NotesBookSection', pair)).toBeGreaterThan(pair)
+    expect(page.indexOf('<TogetherBookRow', pair)).toBeGreaterThan(pair)
+    expect(page.indexOf('</BookActionPair>')).toBeGreaterThan(page.indexOf('<TogetherBookRow'))
+    expect(page.indexOf('<BookProgressLog')).toBeGreaterThan(page.indexOf('</BookActionPair>'))
+    expect(page.indexOf('<CollectionsBookRow')).toBeGreaterThan(page.indexOf('<BookProgressLog'))
+    expect(page.indexOf('<BookHistory')).toBeGreaterThan(page.indexOf('<CollectionsBookRow'))
   })
 })
 
