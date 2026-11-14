@@ -1,0 +1,61 @@
+/* Static mock-ups for docs/plans/book-actions.md. Not app code: the tokens are a copy
+   (tokens.css, from web/app/assets/css/tokens.generated.css), the classes below imitate the app's
+   components (UiButton primary + quiet, TogetherBookRow, NotesBookButton, BookProgress) closely
+   enough to judge layout, density and copy at 390 and 360 px.
+   One file per variant (v1..v4); each file holds all five states A–E stacked as phone-width
+   panels so variants open side by side and states compare vertically. */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,500;1,6..72,400&display=block');
+@import url('tokens.css');
+
+/* every state panel is a phone-width screen; height follows content, the page scrolls */
+body { display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 28px 0 80px; }
+.phone { height: auto; padding-bottom: 30px; }
+.phone.narrow .screen { padding-left: 16px; padding-right: 16px; }
+
+.screen { padding: 0 20px; }
+.state-tag { display: flex; align-items: baseline; gap: 8px; padding: 66px 0 0; margin-bottom: 14px; }
+.state-tag .k { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; color: var(--color-accent-ink); font-weight: 500; }
+.state-tag .d { font-size: 12.5px; color: var(--color-ink-faint); }
+
+/* compact hero: cover + title + author + facts, identical in every state */
+.hero { display: flex; gap: 14px; align-items: center; }
+.cover.bk { width: 54px; }
+.cover.bk .t { font-size: 8px; } .cover.bk .a { font-size: 4.5px; }
+.hero h1 { font-family: var(--font-serif); font-weight: 500; font-size: 21px; line-height: 25px; letter-spacing: -0.01em; }
+.hero .au { font-size: 14px; color: var(--color-ink-muted); margin-top: 2px; }
+.hero .facts { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-ink-faint); margin-top: 5px; }
+
+/* the state line (book.state / book.notInLibrary) */
+.sline { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 18px;
+  margin: 16px 0 10px; font-size: 13px; color: var(--color-ink-muted); text-align: center; }
+.sline.lamp i { width: 8px; height: 8px; border-radius: 999px; background: var(--color-accent); flex: none; }
+.sline .stars { color: var(--color-star); letter-spacing: 1px; font-size: 12px; }
+.sline .dot { color: var(--color-ink-ghost); }
+.sline .since { font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-faint); }
+
+/* BookProgress figures + bar (imitates components/book/Progress.vue) */
+.figs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 2px; }
+.figs dt { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-ink-faint); }
+.figs dd { font-size: 16px; letter-spacing: -0.01em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.figs dd small { display: block; font-family: var(--font-mono); font-size: 10px; color: var(--color-ink-faint); margin-top: 1px; }
+.pbar { height: 3px; border-radius: 3px; background: var(--color-hairline-strong); margin-top: 10px; }
+.pbar i { display: block; width: 35%; height: 100%; border-radius: 3px; background: var(--color-accent); }
+
+/* buttons: UiButton primary + quiet (height 50 = --size-button) */
+.btn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px;
+  border-radius: 999px; font-size: 16px; }
+.btn.primary { background: var(--color-ink); color: var(--color-on-ink); font-weight: 500; }
+.btn.quiet { background: var(--color-fill-strong); color: var(--color-ink); }
+.btn svg, .ico { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.6;
+  stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.btn:focus-visible, .iconbtn:focus-visible, .textbtn:focus-visible, .secrow:focus-visible {
+  outline: 2px solid var(--color-accent-ink); outline-offset: 2px; }
+.actions { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+
+/* visually hidden accessible names (the app's sr-only) */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* About stub: identical everywhere, shows what the cluster pushes below the fold */
+.about { margin-top: 20px; }
+.about p { font-size: 14.5px; line-height: 21px; color: var(--color-ink-muted); margin-top: 6px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Book actions V2: one primary, one row of three</title>
+<link rel="stylesheet" href="base.css" />
+<link rel="stylesheet" href="actions.css" />
+<style>
+  .thirds { display: grid; gap: 8px; }
+  .thirds.three { grid-template-columns: repeat(3, 1fr); }
+  .thirds.two { grid-template-columns: repeat(2, 1fr); }
+  .third svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.6;
+    stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .third { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    min-height: 72px; padding: 10px 6px; border-radius: 18px; background: var(--color-fill-strong);
+    color: var(--color-ink); font-size: 12.5px; line-height: 1.3; text-align: center; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="screen">
+  <p class="state-tag"><span class="k">STATE A</span><span class="d">not in her Library</span></p>
+<div class="hero">
+    <div class="cover bk c3"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div>
+    <div><h1>The Salt Orchard</h1>
+    <p class="au">Ilse Varga</p>
+    <p class="facts" data-en="2023 · 384 pages" data-de="2023 · 384 Seiten"></p></div>
+  </div>
+<p class="sline" data-en="Not in your Library yet" data-de="Noch nicht in deiner Bibliothek"></p>
+
+  <div class="actions" data-state="A">
+<div class="btn primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-en="Add to Library" data-de="Zur Bibliothek hinzufügen"></span></div>
+<div class="thirds two"><button class="third" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h9l3 3v13H6z"/><path d="M9 11h6M9 15h4"/></svg><span data-en="Notes" data-de="Notizen"></span></button><button class="third" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v9H9l-4 3z"/></svg><span data-en="Read together" data-de="Gemeinsam lesen"></span></button></div>
+  </div>
+<div class="about"><h2 class="eyebrow" data-en="About" data-de="Über das Buch"></h2>
+    <p data-en="A salt-marsh family saga in nine tides: what the sea takes, the orchard keeps. Winner of the 2024 Harbour Prize."
+       data-de="Eine Salzwiesen-Familiensaga in neun Gezeiten: Was das Meer nimmt, behält der Obstgarten. Gewinner des Hafenpreises 2024."></p></div>
+  </div>
+</div>
+<div class="phone">
+  <div class="screen">
+  <p class="state-tag"><span class="k">STATE B</span><span class="d">want to read, no ebook</span></p>
+<div class="hero">
+    <div class="cover bk c3"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div>
+    <div><h1>The Salt Orchard</h1>
+    <p class="au">Ilse Varga</p>
+    <p class="facts" data-en="2023 · 384 pages" data-de="2023 · 384 Seiten"></p></div>
+  </div>
+<p class="sline"><span data-en="Want to read" data-de="Möchte ich lesen"></span><span class="dot">·</span><span class="since" data-en="Since 3 Nov" data-de="Seit 3. Nov."></span></p>
+
+  <div class="actions" data-state="B">
+<div class="btn primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg><span data-en="Start reading" data-de="Lesen beginnen"></span></div>
+<div class="thirds two"><button class="third" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h9l3 3v13H6z"/><path d="M9 11h6M9 15h4"/></svg><span data-en="Notes" data-de="Notizen"></span></button><button class="third" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v9H9l-4 3z"/></svg><span data-en="Read together" data-de="Gemeinsam lesen"></span></button></div>
+  </div>
+<div class="about"><h2 class="eyebrow" data-en="About" data-de="Über das Buch"></h2>
+    <p data-en="A salt-marsh family saga in nine tides: what the sea takes, the orchard keeps. Winner of the 2024 Harbour Prize."
+       data-de="Eine Salzwiesen-Familiensaga in neun Gezeiten: Was das Meer nimmt, behält der Obstgarten. Gewinner des Hafenpreises 2024."></p></div>
+  </div>
+</div>
+<div class="phone">
+  <div class="screen">
+  <p class="state-tag"><span class="k">STATE C</span><span class="d">reading, no ebook</span></p>
+<div class="hero">
+    <div class="cover bk c3"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div>
+    <div><h1>The Salt Orchard</h1>
+    <p class="au">Ilse Varga</p>
+    <p class="facts" data-en="2023 · 384 pages" data-de="2023 · 384 Seiten"></p></div>
+  </div>
+<p class="sline lamp"><i aria-hidden="true"></i><span data-en="Currently reading" data-de="Lese ich gerade"></span><span class="dot">·</span><span class="since" data-en="Since 3 Nov" data-de="Seit 3. Nov."></span></p>
+<dl class="figs">
+<div><dt data-en="Page" data-de="Seite"></dt><dd><span data-en="p. 134" data-de="S. 134"></span><small data-en="of 384" data-de="von 384"></small></dd></div>
+<div><dt data-en="Done" data-de="Geschafft"></dt><dd><span data-en="35 %" data-de="35 %"></span></dd></div>
+<div><dt data-en="A day" data-de="Am Tag"></dt><dd><span data-en="18" data-de="18"></span><small data-en="pages" data-de="Seiten"></small></dd></div>
+<div><dt data-en="To go" data-de="Noch"></dt><dd><span data-en="22" data-de="22"></span><small data-en="days" data-de="Tage"></small></dd></div>
+</dl><div class="pbar" aria-hidden="true"><i></i></div>
+  <div class="actions" data-state="C">
+<div class="btn primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"/></svg><span data-en="Update progress" data-de="Fortschritt aktualisieren"></span></div>
+<div class="thirds two"><button class="third" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h9l3 3v13H6z"/><path d="M9 11h6M9 15h4"/></svg><span data-en="Notes" data-de="Notizen"></span></button><button class="third" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v9H9l-4 3z"/></svg><span data-en="Read together" data-de="Gemeinsam lesen"></span></button></div>
+  </div>
+<div class="about"><h2 class="eyebrow" data-en="About" data-de="Über das Buch"></h2>
+    <p data-en="A salt-marsh family saga in nine tides: what the sea takes, the orchard keeps. Winner of the 2024 Harbour Prize."
+       data-de="Eine Salzwiesen-Familiensaga in neun Gezeiten: Was das Meer nimmt, behält der Obstgarten. Gewinner des Hafenpreises 2024."></p></div>
+  </div>
+</div>
+<div class="phone">
+  <div class="screen">
+  <p class="state-tag"><span class="k">STATE D</span><span class="d">reading, ebook on the device</span></p>
+<div class="hero">
+    <div class="cover bk c3"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div>
+    <div><h1>The Salt Orchard</h1>
+    <p class="au">Ilse Varga</p>
+    <p class="facts" data-en="2023 · 384 pages" data-de="2023 · 384 Seiten"></p></div>
+  </div>
+<p class="sline lamp"><i aria-hidden="true"></i><span data-en="Currently reading" data-de="Lese ich gerade"></span><span class="dot">·</span><span class="since" data-en="Since 3 Nov" data-de="Seit 3. Nov."></span></p>
+<dl class="figs">
+<div><dt data-en="Page" data-de="Seite"></dt><dd><span data-en="p. 134" data-de="S. 134"></span><small data-en="of 384" data-de="von 384"></small></dd></div>
+<div><dt data-en="Done" data-de="Geschafft"></dt><dd><span data-en="35 %" data-de="35 %"></span></dd></div>
+<div><dt data-en="A day" data-de="Am Tag"></dt><dd><span data-en="18" data-de="18"></span><small data-en="pages" data-de="Seiten"></small></dd></div>
+<div><dt data-en="To go" data-de="Noch"></dt><dd><span data-en="22" data-de="22"></span><small data-en="days" data-de="Tage"></small></dd></div>
+</dl><div class="pbar" aria-hidden="true"><i></i></div>
+  <div class="actions" data-state="D">
+<div class="btn primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6c3-1.2 6-1.2 8 1v13c-2-2.2-5-2.2-8-1zM20 6c-3-1.2-6-1.2-8 1v13c2-2.2 5-2.2 8-1z"/></svg><span data-en="Read now" data-de="Jetzt lesen"></span></div>
+<div class="thirds three"><button class="third" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"/></svg><span data-en="Update progress" data-de="Fortschritt aktualisieren"></span></button><button class="third" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h9l3 3v13H6z"/><path d="M9 11h6M9 15h4"/></svg><span data-en="Notes" data-de="Notizen"></span></button><button class="third" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v9H9l-4 3z"/></svg><span data-en="Read together" data-de="Gemeinsam lesen"></span></button></div>
+  </div>
+<div class="about"><h2 class="eyebrow" data-en="About" data-de="Über das Buch"></h2>
+    <p data-en="A salt-marsh family saga in nine tides: what the sea takes, the orchard keeps. Winner of the 2024 Harbour Prize."
+       data-de="Eine Salzwiesen-Familiensaga in neun Gezeiten: Was das Meer nimmt, behält der Obstgarten. Gewinner des Hafenpreises 2024."></p></div>
+  </div>
+</div>
+<div class="phone">
+  <div class="screen">
+  <p class="state-tag"><span class="k">STATE E</span><span class="d">finished</span></p>
+<div class="hero">
+    <div class="cover bk c3"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div>
+    <div><h1>The Salt Orchard</h1>
+    <p class="au">Ilse Varga</p>
+    <p class="facts" data-en="2023 · 384 pages" data-de="2023 · 384 Seiten"></p></div>
+  </div>
+<p class="sline"><span class="stars" aria-hidden="true">★★★★☆</span><span data-en="Finished" data-de="Gelesen"></span><span class="dot">·</span><span class="since" data-en="Since 3 Nov" data-de="Seit 3. Nov."></span></p>
+
+  <div class="actions" data-state="E">
+<div class="btn primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h13l-3-3M20 15H7l3 3"/></svg><span data-en="Read again" data-de="Nochmal lesen"></span></div>
+<div class="thirds two"><button class="third" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h9l3 3v13H6z"/><path d="M9 11h6M9 15h4"/></svg><span data-en="Notes" data-de="Notizen"></span></button><button class="third" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v9H9l-4 3z"/></svg><span data-en="Read together" data-de="Gemeinsam lesen"></span></button></div>
+  </div>
+<div class="about"><h2 class="eyebrow" data-en="About" data-de="Über das Buch"></h2>
+    <p data-en="A salt-marsh family saga in nine tides: what the sea takes, the orchard keeps. Winner of the 2024 Harbour Prize."
+       data-de="Eine Salzwiesen-Familiensaga in neun Gezeiten: Was das Meer nimmt, behält der Obstgarten. Gewinner des Hafenpreises 2024."></p></div>
+  </div>
+</div>
+<script src="mock.js"></script>
+</body>
+</html>
