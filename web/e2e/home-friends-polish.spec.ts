@@ -50,7 +50,7 @@ async function reading(member: Member, title: string, pageCount: number | null, 
 
 const card = (page: Page, title: string) => page.getByTestId('home.readingCard').filter({ hasText: runTitle(title) })
 
-test('Home: the card says the percent, never a page as a percent, and has no "since" line', async ({ page }) => {
+test('Home: the card says how far once, under the bar, never a page as a percent, and has no "since" line', async ({ page }) => {
   const member = await signedIn(page)
   await reading(member, 'Percent', 300, 126)
   await reading(member, 'Start', 300, 0)
@@ -60,14 +60,20 @@ test('Home: the card says the percent, never a page as a percent, and has no "si
   await expect(page.getByTestId('home.readingCard')).toHaveCount(4)
 
   const percent = card(page, 'Percent')
-  await expect(percent.getByTestId('home.entryPercent')).toHaveText('42 %')
+  // How far is said once, in the bar's caption: the whole percent and the place, one line under the bar.
+  await expect(percent.getByTestId('home.progress')).toHaveText('42 % · p. 126 of 300')
+  await expect(percent.getByTestId('home.progressPercent')).toHaveText('42 %')
   await expect(percent.getByTestId('home.progressValue')).toHaveText('p. 126 of 300')
   await expect(percent.getByTestId('home.progressBar')).toHaveAttribute('aria-valuetext', '42 % · p. 126 of 300')
-  await expect(card(page, 'Start').getByTestId('home.entryPercent')).toHaveText('0 %')
-  await expect(card(page, 'End').getByTestId('home.entryPercent')).toHaveText('100 %')
+  // Nothing above the bar says it: the title link carries the title and the author only.
+  await expect(percent.getByTestId('home.entry')).not.toContainText('42 %')
+  await expect(card(page, 'Start').getByTestId('home.progress')).toHaveText('0 % · p. 0 of 300')
+  // At the last page the caption is "The end.": the bar is full, so the percent would be the same thing twice.
+  await expect(card(page, 'End').getByTestId('home.theEnd')).toHaveText('The end.')
+  await expect(card(page, 'End').getByTestId('home.progressPercent')).toHaveCount(0)
   // No page count: a page says nothing about how far, so no percent.
-  await expect(card(page, 'Nocount').getByTestId('home.entryPercent')).toHaveCount(0)
-  await expect(card(page, 'Nocount').getByTestId('home.progressValue')).toHaveText('p. 40')
+  await expect(card(page, 'Nocount').getByTestId('home.progressPercent')).toHaveCount(0)
+  await expect(card(page, 'Nocount').getByTestId('home.progress')).toHaveText('p. 40')
 
   await expect(page.getByTestId('home.entrySince')).toHaveCount(0)
   for (const text of await page.getByTestId('home.readingCard').allInnerTexts()) expect(text).not.toMatch(/since|seit/i)
@@ -76,13 +82,14 @@ test('Home: the card says the percent, never a page as a percent, and has no "si
 test.describe('German', () => {
   test.use({ locale: 'de-DE' })
 
-  test('Home: the same card in German says "42 %" and no "seit"', async ({ page }) => {
+  test('Home: the same card in German says "42 %" under the bar and no "seit"', async ({ page }) => {
     const member = await signedIn(page)
     await reading(member, 'Prozent', 300, 126)
     await page.reload()
     const prozent = card(page, 'Prozent')
-    await expect(prozent.getByTestId('home.entryPercent')).toHaveText(de.book.progress.percent.replace('{percent}', '42'))
-    await expect(prozent.getByTestId('home.entryPercent')).toHaveText('42 %')
+    await expect(prozent.getByTestId('home.progressPercent')).toHaveText(de.book.progress.percent.replace('{percent}', '42'))
+    await expect(prozent.getByTestId('home.progressPercent')).toHaveText('42 %')
+    await expect(prozent.getByTestId('home.progress')).toHaveText('42 % · S. 126 von 300')
     await expect(page.getByTestId('home.entrySince')).toHaveCount(0)
     expect(await page.getByTestId('home.readingCard').innerText()).not.toMatch(/seit|since/i)
   })
