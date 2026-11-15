@@ -352,6 +352,22 @@ function play(direction: Direction) {
   measureRoom()
   gliding?.finish()
   gliding = null
+  // TEMPORARY probe (remove with the fix): what the morph measures, per call. Read by
+  // e2e/search-morph-remeasure.spec.ts, which asks whether a mid-open viewport resize moves this geometry.
+  if (import.meta.client) {
+    const log = ((window as unknown as { __morphLog?: unknown[] }).__morphLog ??= [])
+    const box = palette.value?.getBoundingClientRect()
+    log.push({
+      call: log.length + 1,
+      direction,
+      at,
+      reduced,
+      viewportHeight: window.innerHeight,
+      paletteTop: box ? Math.round(box.top) : null,
+      paletteHeight: box ? Math.round(box.height) : null,
+      clipPath: palette.value ? getComputedStyle(palette.value).clipPath : null,
+    })
+  }
 
   chrome.value = reduced ? 'tabs' : 'morph'
   running = direction
