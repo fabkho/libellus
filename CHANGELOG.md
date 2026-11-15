@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.44.2](https://github.com/fabkho/libellus/compare/v1.44.1...v1.44.2) (2026-11-15)
+
+
+### Fixes
+
+* **book:** the preview from a work knows its author ([#564](https://github.com/fabkho/libellus/issues/564)) ([70442e2](https://github.com/fabkho/libellus/commit/70442e20a7a855f37a5aef0f48311161652e2649))
+* **search:** the morph re-measures when the keyboard resizes the page ([#571](https://github.com/fabkho/libellus/issues/571)) ([34e4735](https://github.com/fabkho/libellus/commit/34e47350f04e5f86745580a112f256d7e8710dec))
+
 ## [1.44.1](https://github.com/fabkho/libellus/compare/v1.44.0...v1.44.1) (2026-11-15)
 
 
