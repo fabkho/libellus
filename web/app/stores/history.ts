@@ -15,6 +15,7 @@ import { useBookStore } from '~/stores/book'
 import { useCollectionsStore } from '~/stores/collections'
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
+import { useStatsStore } from '~/stores/stats'
 import { useSyncStore } from '~/stores/sync'
 
 /** The read the Edit sheet (or the delete question) is about, and the entry it belongs to. */
@@ -37,6 +38,7 @@ export const useHistoryStore = defineStore('history', () => {
   const collections = useCollectionsStore()
   const session = useSessionStore()
   const sync = useSyncStore()
+  const stats = useStatsStore()
 
   // --------------------------------------------------------------- the reads
 
@@ -110,9 +112,17 @@ export const useHistoryStore = defineStore('history', () => {
   const draft = reactive<SessionEdit>({ startedOn: '', endedOn: '', rating: null, review: '', reviewSpoilers: false, abandonReason: '' })
   const editBusy = ref(false)
   const editError = ref<LibraryErrorCode | null>(null)
+  /**
+   * Her page count set in the sheet did not reach the database, and the same Save's dates, Rating and
+   * review did: the sheet says so rather than closing. Gone with the next try, as `editError` is.
+   */
+  const totalFailed = ref(false)
 
   // A change of mind is a new try: the last refusal no longer applies.
-  watch(draft, () => (editError.value = null))
+  watch(draft, () => {
+    editError.value = null
+    totalFailed.value = false
+  })
   // "Contains spoilers" goes with the review: emptied, the flag is off again (its switch is hidden then).
   watch(
     () => draft.review,
@@ -125,20 +135,28 @@ export const useHistoryStore = defineStore('history', () => {
     editing.value = { entry, session: read }
     Object.assign(draft, sessionEditOf(read))
     editError.value = null
+    totalFailed.value = false
   }
 
   function closeEdit() {
     if (!editBusy.value) editing.value = null
   }
 
-  /** Saves the edit. Returns the entry as it is now, or null with `editError` set. */
-  async function confirmEdit(): Promise<LibraryEntry | null> {
+  /**
+   * Saves the edit. Returns the entry as it is now, or null with `editError` set (or `totalFailed`,
+   * when the read was saved and her page count was not). `total` is her own page count for this read
+   * when the sheet's field changed: it is `set_read_total`'s, a second call after the read's own
+   * (`update_session` has no page count), sent only once the read's edit has landed — one failure at a
+   * time. `null` there takes the count back to the edition's.
+   */
+  async function confirmEdit(total?: { pageCount: number | null }): Promise<LibraryEntry | null> {
     const target = editing.value
     const repo = library.library()
     if (!target || !repo || editBusy.value) return null
     editError.value = checkSessionEdit(target.session, draft, isoDay())
     if (editError.value) return null
     editBusy.value = true
+    totalFailed.value = false
     try {
       const result = await repo.updateSession(target.entry.id, target.session, draft)
       if (result.error) {
@@ -152,6 +170,12 @@ export const useHistoryStore = defineStore('history', () => {
       if (shown) sessions.set(target.entry.id, shown.map((read) => (read.id === edited.id ? edited : read)))
       await load(target.entry.id)
       recount()
+      // Her page count on this read: the dates, the Rating and the review are saved by now, so a refusal
+      // here leaves the sheet open saying as much rather than closing over a count it did not write.
+      if (total && !(await stats.setTotal(target.session.id, target.entry.id, total.pageCount))) {
+        totalFailed.value = true
+        return result.data
+      }
       editing.value = null
       return result.data
     } finally {
@@ -310,6 +334,7 @@ export const useHistoryStore = defineStore('history', () => {
     draft,
     editBusy,
     editError,
+    totalFailed,
     openEdit,
     closeEdit,
     confirmEdit,

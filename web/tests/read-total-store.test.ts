@@ -48,7 +48,12 @@ vi.mock('~/data/stats', async (original) => ({
   }),
 }))
 vi.mock('~/stores/session', () => ({ useSessionStore: () => session }))
-vi.mock('~/stores/library', () => ({ useLibraryStore: () => ({ changes: 0, roster: 0, library: () => libraryRepository }) }))
+// The Library store as `setTotal` uses it: the repository, and the entry the database answered with laid
+// over what the Book's page, the lists and the device keep (`entryChanged`, so her count shows there too).
+const changed: LibraryEntry[] = []
+vi.mock('~/stores/library', () => ({
+  useLibraryStore: () => ({ changes: 0, roster: 0, library: () => libraryRepository, entryChanged: (entry: LibraryEntry) => void changed.push(entry) }),
+}))
 vi.mock('~/stores/sync', () => ({ useSyncStore: () => ({ pending: 0, waiting: false, queue: { open: () => false }, holds: () => false }) }))
 
 function memoryLocalStorage() {
@@ -101,6 +106,7 @@ beforeEach(() => {
   online.value = true
   session.member = { id: 'ada', email: 'ada@x.test' }
   Object.assign(calls, { record: 0, setReadTotal: 0 })
+  changed.length = 0
   totalArgs = null
   totalAnswer = async () => ({ data: entry('e1'), error: null })
   storage.removeItem('libellus.stats')
@@ -132,6 +138,8 @@ describe('her own page count (stores/stats.ts, setTotal)', () => {
     expect(stats.record!.reads[1]).toMatchObject({ sessionId: 's2', pages: 180 })
     // Saved for the device, so the figures stand offline and on the next start.
     expect(readStats(storage, 'ada')!.reads[0]).toMatchObject({ sessionId: 's1', pages: 272 })
+    // And the entry the screens keep (the Book's page, the lists) is the one the write answered with.
+    expect(changed.at(-1)).toMatchObject({ id: 'e1' })
   })
 
   it('clears the override back to the edition\'s count (null) the same way', async () => {

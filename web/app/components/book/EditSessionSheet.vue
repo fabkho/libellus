@@ -10,6 +10,7 @@
 // back to Want to read. A failure stays in the sheet with its reason and Save
 // tries again.
 import { ABANDON_REASON_MAX_LENGTH, REVIEW_MAX_LENGTH } from '~/data/library'
+import { PAGE_CEILING, ownTotal, pageCountOf } from '~/data/progress'
 import { useHistoryStore } from '~/stores/history'
 
 // Direct, as this screen asked before own covers: only the Library's row and the reel go through `/cover` (docs/plans/owned-covers.md §5).
@@ -41,6 +42,70 @@ watch(
 const entry = computed(() => target.value?.entry ?? null)
 const outcome = computed(() => target.value?.session.outcome ?? null)
 
+// ---------------------------------------------------- Her own page count (issue #60)
+//
+// A finished read's count is hers to correct here as its dates are: the count that counts for the entry
+// (`pageCountOf`: her override, else the edition's) fills the field, so the sheet opens on "144" and she
+// edits it. It is NOT the shared edition's (`books.page_count` is never written) and it is NOT part of
+// `SessionEdit`: `update_session` has no page count, so an edit that changes it makes a second call,
+// `stats.setTotal` → `set_read_total`, once the read's own edit has landed. Empty is no override, which
+// the database stores as the edition's count again. An abandoned read has no total to speak of and an
+// open one sets it through Update progress, so the field is the finished read's.
+// The field's text, always: a `type="number"` input hands its model a number (Vue casts it), and what the
+// sheet compares and sends is the text as typed.
+const pageCountText = ref('')
+function typedPageCount(value: string | number | null | undefined) {
+  pageCountText.value = value === null || value === undefined ? '' : String(value)
+}
+const pageCountError = ref<string | null>(null)
+
+/** Fills the field from the count that counts for this entry (once the sheet opens on a read). */
+watch(
+  [open, target],
+  ([isOpen]) => {
+    if (!isOpen) return
+    const count = entry.value && outcome.value === 'finished' ? pageCountOf(entry.value) : null
+    pageCountText.value = count === null ? '' : String(count)
+    pageCountError.value = null
+  },
+  { immediate: true },
+)
+
+/** The edition's own count: what she is overriding, never what she writes. */
+const editionCount = computed(() => entry.value?.book.pageCount ?? null)
+/** What the field holds, as the number to send: empty (or unreadable) is null, the edition's count again. */
+const pageCountTyped = computed(() => {
+  const text = pageCountText.value.trim()
+  if (text === '') return null
+  const count = Number(text)
+  return Number.isInteger(count) && count >= 1 && count <= PAGE_CEILING ? count : NaN
+})
+/** The quiet line under the field: what an empty one leaves, and which edition it is following. */
+const pageCountHint = computed(() => {
+  const edition = editionCount.value
+  if (edition) return t('editSession.pageCountHint', { count: edition })
+  return t('editSession.pageCountHintNone')
+})
+
+/** What the edit would store of her count, as the database keeps it (a total that only repeats the edition's is none). */
+const pageCountNext = computed(() => ownTotal(pageCountTyped.value, editionCount.value))
+
+/**
+ * Save: the read's own edit first (its failure is the authoritative one), then her page count — only when it
+ * would store something else than what is there now (`page_count_override`), so an edit of the dates alone
+ * never writes the count, and clearing a field that had no override writes nothing either.
+ */
+function save() {
+  pageCountError.value = null
+  const typed = pageCountTyped.value
+  if (Number.isNaN(typed)) {
+    pageCountError.value = t('editSession.pageCountInvalid')
+    return
+  }
+  const changed = outcome.value === 'finished' && pageCountNext.value !== (entry.value?.pageCountOverride ?? null)
+  void history.confirmEdit(changed ? { pageCount: pageCountNext.value } : undefined)
+}
+
 const today = computed(() => (open.value ? isoDay() : ''))
 const dateError = computed(() =>
   ['date_invalid', 'date_in_future', 'ended_before_started'].includes(history.editError ?? ''),
@@ -49,10 +114,8 @@ const label = computed(() =>
   history.editBusy ? t('editSession.busy') : history.editError ? t('editSession.retry') : t('editSession.action'),
 )
 const reviewId = useId()
-watch(open, (isOpen) => {
-  if (isOpen) spoilers.value = false
-})
 const reasonId = useId()
+const pageCountId = useId()
 
 // Deleting a read: the question, and what it costs when it is the only read.
 const confirming = computed({
@@ -119,6 +182,29 @@ watch(
       </div>
 
       <template v-if="outcome === 'finished'">
+        <!-- Her own page count for this read (issue #60), under the days it ran: it belongs with what the
+             read was, not with its Rating. The edition's own count is the shared Book's and is never
+             written; a count equal to it is stored as none, which the database does. -->
+        <div class="mt-lg">
+          <UiField
+            :id="pageCountId"
+            :model-value="pageCountText"
+            type="number"
+            inputmode="numeric"
+            min="1"
+            max="99999"
+            autocomplete="off"
+            :label="t('editSession.pageCount')"
+            :hint="pageCountHint"
+            :error="pageCountError"
+            error-testid="editSession.pageCountError"
+            :disabled="history.editBusy"
+            class="figures"
+            data-testid="editSession.pageCount"
+            @update:model-value="typedPageCount"
+          />
+        </div>
+
         <UiRatingInput v-model="history.draft.rating" class="mt-md" :disabled="history.editBusy" testid="editSession.rating" />
 
         <div class="mt-lg">
@@ -155,9 +241,14 @@ watch(
       <p v-if="history.editError" class="mt-ms px-xs text-caption text-error" role="alert" data-testid="editSession.error">
         {{ t(`library.error.${history.editError}`) }}
       </p>
+      <!-- The read was saved and her page count was not (a refusal, or no connection to queue it): said plainly,
+           because the dates, the Rating and the review are kept and only the count is not. -->
+      <p v-else-if="history.totalFailed" class="mt-ms px-xs text-caption text-error" role="alert" data-testid="editSession.totalError">
+        {{ t('editSession.pageCountFailed') }}
+      </p>
 
       <div class="mt-lg">
-        <UiButton block :disabled="history.editBusy" :aria-busy="history.editBusy" data-testid="editSession.submit" @click="history.confirmEdit()">
+        <UiButton block :disabled="history.editBusy" :aria-busy="history.editBusy" data-testid="editSession.submit" @click="save()">
           <UiIcon name="check" :size="18" bold />{{ label }}
         </UiButton>
       </div>
