@@ -11,6 +11,7 @@ import {
   readingSinceOf,
   readsInMonth,
   readsWithoutPages,
+  withTotal,
   readsWithStars,
   starOf,
   type StatsRead,
@@ -108,6 +109,33 @@ describe('readsWithoutPages', () => {
     expect(readsWithoutPages(reads, 2025).map((r) => r.sessionId)).toEqual(['Unnumbered again', 'Uncounted'])
     // All (the default): every finished one, a read logged without an end date counting here alone.
     expect(readsWithoutPages(reads).map((r) => r.sessionId)).toEqual(['No end date', 'Unnumbered again', 'Uncounted', 'Answered'])
+  })
+})
+describe('withTotal', () => {
+  const reads = [
+    statsRead('Paged', '2025-03-02', 300),
+    statsRead('Uncounted', '2025-04-09', null),
+    statsRead('Counted', '2025-05-01', null),
+  ]
+
+  it('sets her own page count on the read, and the read leaves the list without a count', () => {
+    const totalled = withTotal(reads, 'Uncounted', 250)
+    expect(totalled.find((r) => r.sessionId === 'Uncounted')).toMatchObject({ pages: 250 })
+    expect(readsWithoutPages(totalled, 2025).map((r) => r.sessionId)).toEqual(['Counted'])
+    expect(figuresOf(totalled, 2025)).toMatchObject({ pagesMissing: 1, pages: 550 })
+  })
+
+  it('clears it again with null, and the read is back among the ones without a count', () => {
+    const totalled = withTotal(reads, 'Uncounted', 250)
+    const cleared = withTotal(totalled, 'Uncounted', null)
+    expect(cleared.find((r) => r.sessionId === 'Uncounted')).toMatchObject({ pages: null })
+    expect(readsWithoutPages(cleared, 2025).map((r) => r.sessionId)).toEqual(['Counted', 'Uncounted'])
+  })
+
+  it('leaves every other read alone, and an unknown read changes nothing', () => {
+    const totalled = withTotal(reads, 'Uncounted', 250)
+    expect(totalled.filter((r) => r.sessionId !== 'Uncounted')).toEqual(reads.filter((r) => r.sessionId !== 'Uncounted'))
+    expect(withTotal(reads, 'Nobody', 250)).toEqual(reads)
   })
 })
 describe('figuresOf, from reads alone', () => {

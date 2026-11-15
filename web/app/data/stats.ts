@@ -298,6 +298,16 @@ export function withRating(reads: readonly StatsRead[], sessionId: string, ratin
   return reads.map((read) => (read.sessionId === sessionId ? { ...read, rating } : read))
 }
 
+/**
+ * The reads with one of them given her own page count (the pagesMissing sheet's quick total): the record a
+ * total set there leaves behind, before the member's sessions are read again. Everything on the Profile
+ * follows from it at once (the figures, the pagesMissing list) without a reload; the database is the
+ * authority once the write lands.
+ */
+export function withTotal(reads: readonly StatsRead[], sessionId: string, pages: number | null): StatsRead[] {
+  return reads.map((read) => (read.sessionId === sessionId ? { ...read, pages } : read))
+}
+
 function median(values: number[]): number | null {
   if (!values.length) return null
   const sorted = [...values].sort((a, b) => a - b)
