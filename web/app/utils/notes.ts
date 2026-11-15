@@ -5,7 +5,7 @@ import { notePath, type VoiceJobMedia, type VoiceMime } from '~/data/noteVoice'
 import type { NoteErrorCode, NoteMessage, NoteQuote, NoteReaction, NotesChapter, NotesRoom, NoteVisibility, NotesSummary } from '~/data/notes'
 import { isNoteLevel } from '~/utils/noteVisibility'
 import { isChapterSegment, notesPath, WHOLE_SEGMENT } from '~/utils/notesRoute'
-import { roomItems, type RoomThreadContext, type ThreadItem } from '~/utils/roomThread'
+import { quoteOf, roomItems, type QuoteSource, type QuoteWords, type RoomThreadContext, type ThreadItem } from '~/utils/roomThread'
 
 /**
  * Notes on a Book, the glue between the repository (data/notes.ts), the chat layer (`@fabkho/chat`) and the store (stores/notes.ts): pure functions on
@@ -192,32 +192,25 @@ export function noteItems(bubbles: readonly NoteBubble[], ctx: NoteThreadContext
   })
 }
 
-/** The words a quote needs that are the app's. */
-export type NoteQuoteWords = { deleted: string; someone: string; you: string; hidden: string; voice: string }
-
 /**
- * The quote over a note, as the base draws it. A note she can read quotes its author and first words; the other two shapes
- * have no id, so the base does not offer a jump to them: `hidden` ("A note you can't see") and `removed`. Which of the three is the server's call;
- * a note still on its way has only the id it answers, found among the items.
+ * Where a note's quote comes from, as `roomThread`'s `quoteOf` takes it: the server's three shapes when it has one (`notes.ts`'s `NoteQuote`, which
+ * carries no id for the two it withholds), else the message it answers among the items (`replyTo`: a note still on its way).
  */
-export function noteQuoteOf(item: Pick<NoteItem, 'quote' | 'replyTo'>, items: readonly NoteItem[], me: string | null, words: NoteQuoteWords): BubbleQuote | null {
+export function quoteSourceOf(item: Pick<NoteItem, 'quote' | 'replyTo'>, me: string | null): QuoteSource | null {
   const quote = item.quote
-  if (quote?.kind === 'hidden') return { id: null, mine: false, name: '', preview: words.hidden }
-  if (quote?.kind === 'removed') return { id: null, mine: false, name: '', preview: words.deleted }
-  if (quote?.kind === 'note') {
-    const present = items.some((i) => i.id === quote.id)
-    return { id: present ? quote.id : null, mine: quote.author.id === me, name: quote.author.id === me ? words.you : (quote.author.name?.trim() || words.someone), preview: quote.voice ? words.voice : quote.excerpt }
-  }
-  if (!item.replyTo) return null
-  const original = items.find((i) => i.id === item.replyTo)
-  if (!original) return { id: null, mine: false, name: '', preview: words.hidden }
-  const preview = original.removed ? words.deleted : original.voice ? words.voice : original.body.replace(/\s+/g, ' ').trim().slice(0, 120)
-  return { id: original.removed ? null : original.id, mine: original.mine, name: original.mine ? words.you : (original.author ?? words.someone), preview }
+  if (quote?.kind === 'hidden') return { kind: 'hidden' }
+  if (quote?.kind === 'removed') return { kind: 'removed' }
+  if (quote?.kind === 'note') return { kind: 'note', id: quote.id, mine: quote.author.id === me, author: quote.author.name, excerpt: quote.excerpt, voice: quote.voice }
+  return item.replyTo ? { kind: 'reply', replyTo: item.replyTo } : null
 }
 
-/** The quote shown in the composer while she answers `item`: who and the first words, never more than the base draws. */
-export function replyChipOf(item: NoteItem, words: Pick<NoteQuoteWords, 'someone' | 'you' | 'voice'>): { name: string; preview: string } {
-  return { name: item.mine ? words.you : (item.author ?? words.someone), preview: item.voice ? words.voice : item.body.replace(/\s+/g, ' ').trim().slice(0, 120) }
+/**
+ * The quote over a note, as the base draws it: the server's answer to what it answers when it has one, else the item the reply names while the
+ * note is still on its way. The rules — which shapes jump, which words they say, the voice case — are `roomThread`'s (`quoteOf`), shared with a
+ * buddy read's thread; what is here is only how Notes reads its own row.
+ */
+export function noteQuoteOf(item: Pick<NoteItem, 'quote' | 'replyTo'>, items: readonly NoteItem[], me: string | null, words: QuoteWords): BubbleQuote | null {
+  return quoteOf(items, quoteSourceOf(item, me), words)
 }
 
 // ------------------------------------------------------------------ the chapter list
