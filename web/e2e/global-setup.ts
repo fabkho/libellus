@@ -12,7 +12,9 @@ export default async function globalSetup(config: FullConfig) {
   const browser = await webkit.launch()
   try {
     const page = await browser.newPage()
-    for (const path of ['/sign-in', '/sign-up', '/verify', '/']) {
+    // The legal pages too: `nuxt dev` compiling one under a test rejected a module script the page was
+    // not loading (`Importing a module script failed`, legal.spec.ts), so warm them before any test runs.
+    for (const path of ['/sign-in', '/sign-up', '/verify', '/', '/privacy', '/imprint']) {
       await page.goto(`${baseURL}${path}`, { waitUntil: 'networkidle', timeout: 60_000 }).catch(() => {})
     }
   } finally {
