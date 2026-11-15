@@ -139,33 +139,51 @@ const totalsEditable = computed(() => props.quickTotal && !props.foreign)
 /** The reads whose total is on its way, by session: the field waits for it (never two writes in one row). */
 const totalling = reactive(new Set<string>())
 
-/** What the field holds: the count the read has, or nothing when it has none. */
-const totalOf = (read: StatsRead) => read.pages ?? ''
+/**
+ * What she has typed in a row's field and not sent yet, by session: the field's own model, so a record landing
+ * under it (the sheet re-rendering) never throws her typing away.
+ */
+const drafts = reactive(new Map<string, string>())
+
+/** What the field holds: what she typed, else the count the read has (nothing when it has none). */
+const totalOf = (read: StatsRead) => drafts.get(read.sessionId) ?? (read.pages === null ? '' : String(read.pages))
+
+/** A keystroke in a row's field: kept, and sent when she confirms it. */
+function typed(read: StatsRead, event: Event) {
+  drafts.set(read.sessionId, (event.target as HTMLInputElement).value)
+}
 
 /**
  * A total set in the field, or the field emptied (`null`: the edition's count again). The override is written
  * (`library_entries.page_count_override` only, never the edition's count) and the list and figures behind the
  * sheet follow at once; a number the database would refuse is not sent, the field goes back to what it had.
  */
-async function setTotal(read: StatsRead, event: Event) {
-  const field = event.target as HTMLInputElement
-  const text = field.value.trim()
+async function setTotal(read: StatsRead) {
+  const text = (drafts.get(read.sessionId) ?? totalOf(read)).trim()
+  if (totalling.has(read.sessionId)) return
   const pageCount = text === '' ? null : Number(text)
   if (pageCount !== null && (!Number.isInteger(pageCount) || pageCount < 1 || pageCount > 99999)) {
-    field.value = String(totalOf(read))
+    drafts.delete(read.sessionId)
     return
   }
-  if (totalling.has(read.sessionId)) return
+  if (String(pageCount ?? '') === String(read.pages ?? '')) {
+    drafts.delete(read.sessionId)
+    return
+  }
   totalling.add(read.sessionId)
   const ok = await stats.setTotal(read.sessionId, read.entryId, pageCount)
   totalling.delete(read.sessionId)
-  // A refused write (`progress_invalid`, `entry_not_found`) leaves the read as it was: the field says so too.
-  if (!ok) field.value = String(totalOf(read))
+  // Either way the row says what the record says now: hers written, or the record unmoved by a refusal.
+  drafts.delete(read.sessionId)
+  // A refusal (`progress_invalid`, `entry_not_found`, offline with nowhere to queue it) is the store's to keep:
+  // the record stays as it was, and the field shows it, so nothing claims a total the database does not have.
+  void ok
 }
 
-/** Enter is the field's done: the change it would send on leaving the field is the same one. */
-function entered(event: Event) {
-  ;(event.target as HTMLInputElement).blur()
+/** Enter is the field's done, and so is leaving it: both send what is in it, once. */
+function entered(read: StatsRead, event: Event) {
+  const field = event.target as HTMLInputElement
+  void setTotal(read).then(() => field.blur())
 }
 
 /** What a list with no Books says: `empty`, or, rated the last of them away, that everything is rated. */
@@ -202,8 +220,9 @@ const emptyText = computed(() => props.empty ?? (rateable.value ? t('profile.she
               :aria-label="t('profile.figures.pagesMissingYourTotal', { title: read.book.title })"
               :disabled="totalling.has(read.sessionId)"
               :data-testid="`${testid}.total`"
-              @change="setTotal(read, $event)"
-              @keydown.enter.prevent="entered"
+              @input="typed(read, $event)"
+              @change="setTotal(read)"
+              @keydown.enter.prevent="entered(read, $event)"
             >
           </div>
         </div>
