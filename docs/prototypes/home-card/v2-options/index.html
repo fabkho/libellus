@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Home reading card — three rows under the bar</title>
+<link rel="stylesheet" href="../base.css" />
+<style>
+  /* An index only: it frames the three options, it is not a card. Swing by ?theme=dark&lang=de as the
+     other mocks do — mock.js sets the theme and swaps the data-en / data-de text. */
+  body { display: block; padding: 40px 0 80px; }
+  .wrap { width: min(920px, calc(100vw - 48px)); margin: 0 auto; }
+  h1 { font-family: var(--font-serif); font-size: 26px; line-height: 32px; font-weight: 500; color: var(--color-ink); }
+  .lede { margin-top: 10px; font-size: 14px; line-height: 20px; color: var(--color-ink-muted); max-width: 66ch; }
+  .lede + .lede { margin-top: 8px; }
+  .order { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-faint); }
+  .order span { padding: 4px 8px; border-radius: var(--radius-pill); background: var(--color-fill-strong); }
+  .opts { display: grid; gap: 22px; margin-top: 28px; }
+  .opt { border-radius: var(--radius-lg); background: var(--color-surface-raised); padding: 18px;
+    box-shadow: 0 0 0 0.5px var(--color-hairline); }
+  .opt h2 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-accent-ink); font-weight: 500; }
+  .opt h3 { margin-top: 6px; font-family: var(--font-serif); font-size: 19px; line-height: 25px; font-weight: 500; color: var(--color-ink); }
+  .opt p { margin-top: 8px; font-size: 13.5px; line-height: 19px; color: var(--color-ink-muted); max-width: 78ch; }
+  .opt a { display: inline-block; margin-top: 12px; font-family: var(--font-mono); font-size: 11.5px;
+    color: var(--color-accent-ink); text-decoration: underline; text-underline-offset: 3px; }
+  .facts { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; font-family: var(--font-mono); font-size: 11px; }
+  .facts span { padding: 3px 8px; border-radius: var(--radius-pill); box-shadow: inset 0 0 0 0.5px var(--color-hairline-strong); color: var(--color-ink-muted); }
+  .facts span.bad { color: var(--color-accent-ink); box-shadow: inset 0 0 0 0.5px var(--color-accent); }
+  .facts span.good { color: var(--color-ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Three ways to place the numbers</h1>
+  <p class="lede">Each file is the card with the order you asked for: cover, title, author, and then the
+    numbers around the progress line. No dot, no &ldquo;p.&rdquo;, no pace line. Every file carries the same
+    seven states (A mid-read, B percent only, C 0&nbsp;%, D &ldquo;The end.&rdquo;, E +24, F German at
+    360&nbsp;px, L the Library tab) in both themes.</p>
+  <p class="lede">At 360&nbsp;px the text column is 202&nbsp;px wide and &ldquo;Aktualisieren&rdquo; alone takes
+    104&nbsp;px of it. A and B keep the numbers on one row with the action and each pays for it differently;
+    D takes the count out of that row altogether.</p>
+  <div class="order"><span>title</span><span>author</span><span>count</span><span>progress line</span><span>percent &middot; action</span></div>
+
+  <div class="opts">
+    <div class="opt">
+      <h2>Option A</h2>
+      <h3>One row, exactly as asked — and it breaks in German</h3>
+      <p>Percent at 20&nbsp;px, count at 11&nbsp;px, Update at the right edge, no wrap allowed. Right in every
+        English state and 151&nbsp;px tall. In German the count is pushed under the button — the two collide
+        instead of making room. Kept visible as the honest baseline, not as a recommendation.</p>
+      <div class="facts"><span>151 px</span><span>count 11 px</span><span class="bad">collides in German</span><span>cover balances</span></div>
+      <a href="row-a-one-line.html">open row-a-one-line.html &rarr;</a>
+    </div>
+
+    <div class="opt">
+      <h2>Option B</h2>
+      <h3>One row that is allowed to wrap</h3>
+      <p>The same row with wrap on, so the button drops under the numbers instead of over them when the language
+        needs the room. Nothing overlaps or truncates. The cost is height in German: two lines on every card,
+        164&nbsp;px, and the cover stops spanning them.</p>
+      <div class="facts"><span>151 px English</span><span>count 11 px</span><span class="good">never collides</span><span class="bad">164 px in German</span></div>
+      <a href="row-b-wraps.html">open row-b-wraps.html &rarr;</a>
+    </div>
+
+    <div class="opt">
+      <h2>Option D</h2>
+      <h3>The count above the bar, small; the percent alone below it</h3>
+      <p>The new one. The count sits above the progress line at 10&nbsp;px — about half the size of the author
+        beside it — so the bar reads as &ldquo;126 of 300&rdquo; before you have even read the number. The percent
+        then stands alone under the bar at 20&nbsp;px, with Update at the right edge. Nothing shares the button's
+        row, so German cannot collide and the card holds 151&nbsp;px in every state in both languages.</p>
+      <div class="facts"><span class="good">151 px in every state</span><span>count 10 px</span><span class="good">no wrap, neither language</span><span class="good">cover balances</span></div>
+      <a href="row-d-count-above.html">open row-d-count-above.html &rarr;</a>
+    </div>
+  </div>
+</div>
+<script src="../mock.js"></script>
+</body>
+</html>
