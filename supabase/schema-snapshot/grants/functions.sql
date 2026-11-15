@@ -371,6 +371,8 @@ grant execute on function public.set_progress_day(uuid,date,integer,integer) to 
 grant execute on function public.set_progress_day(uuid,date,integer,integer) to service_role;
 grant execute on function public.set_read_as(uuid,text) to authenticated;
 grant execute on function public.set_read_as(uuid,text) to service_role;
+grant execute on function public.set_read_total(uuid,integer) to authenticated;
+grant execute on function public.set_read_total(uuid,integer) to service_role;
 grant execute on function public.set_reading_page(boolean) to authenticated;
 grant execute on function public.set_reading_page(boolean) to service_role;
 grant execute on function public.set_reading_page_sections(jsonb) to authenticated;

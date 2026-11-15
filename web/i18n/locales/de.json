@@ -116,7 +116,8 @@
       "rename_collection": "Umbenannt",
       "delete_collection": "Gelöscht",
       "save_reader_highlight": "Markierung",
-      "set_entry_hidden": "Sichtbarkeit für Follower"
+      "set_entry_hidden": "Sichtbarkeit für Follower",
+      "set_read_total": "Eigene Seitenzahl"
     }
   },
   "account": {

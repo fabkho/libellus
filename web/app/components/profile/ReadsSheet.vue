@@ -191,7 +191,7 @@ const emptyText = computed(() => props.empty ?? (rateable.value ? t('profile.she
             @rate="(stars) => rate(read, stars)"
           />
           <!-- Her own page count on this read (the pagesMissing sheet, issue #60): empty is the edition's count. -->
-          <label v-if="totalsEditable" class="total flex items-center gap-sm text-meta text-ink-faint" :data-testid="`${testid}.total`">
+          <div v-if="totalsEditable" class="total flex items-center">
             <input
               type="number"
               inputmode="numeric"
@@ -201,10 +201,11 @@ const emptyText = computed(() => props.empty ?? (rateable.value ? t('profile.she
               :value="totalOf(read)"
               :aria-label="t('profile.figures.pagesMissingYourTotal', { title: read.book.title })"
               :disabled="totalling.has(read.sessionId)"
+              :data-testid="`${testid}.total`"
               @change="setTotal(read, $event)"
               @keydown.enter.prevent="entered"
             >
-          </label>
+          </div>
         </div>
       </UiListMotion>
     </div>

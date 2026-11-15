@@ -116,7 +116,8 @@
       "rename_collection": "Renamed",
       "delete_collection": "Deleted",
       "save_reader_highlight": "Highlight",
-      "set_entry_hidden": "Visibility to followers"
+      "set_entry_hidden": "Visibility to followers",
+      "set_read_total": "Her own page count"
     }
   },
   "account": {

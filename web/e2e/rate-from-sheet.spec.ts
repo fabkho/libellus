@@ -5,7 +5,7 @@ import en from '../i18n/locales/en.json' with { type: 'json' }
 import type { BookSnapshot } from '../app/data/books'
 import { createLibrary } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
-import { runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
+import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
 import { expectAccessible, openProfile, recordedApple, signedIn, untilStill } from './support'
 
@@ -30,13 +30,16 @@ function inEnglish(value: string, count: number) {
   return (count === 1 ? value.split(' | ')[0] : value.split(' | ').at(-1)).replaceAll('{count}', String(count))
 }
 
-function book(title: string): BookSnapshot {
+/** A template of en.json with its blanks filled ("Your page count for Noumenon"). */
+const fill = (template: string, values: Record<string, string | number>) => template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key]))
+
+function book(title: string, pageCount: number | null = 272): BookSnapshot {
   return {
     title: runTitle(title),
     authors: ['Susanna Clarke'],
     isbn13: null,
     isbn10: null,
-    pageCount: 272,
+    pageCount,
     year: 2020,
     language: 'en',
     publisher: TEST_PUBLISHER,
@@ -109,6 +112,61 @@ test('the unrated sheet rates in place: rows leave, figures follow, Undo takes o
   await page.getByTestId('profileReads.cancel').click()
   await expect(page.getByTestId('profile.average')).toHaveText('3.3')
   await expect(page.getByTestId('profile.unrated')).toHaveCount(0)
+})
+
+/**
+ * Her own page count on a finished read (issue #60): the Books whose editions have no count are the
+ * Pages card's "N without a count", and the sheet behind that line carries a field on every row. A
+ * count typed there is her override — the entry's `page_count_override`, never the edition's
+ * `books.page_count` — so the row leaves the list and the line behind the sheet decrements at once.
+ */
+test('the pagesMissing sheet sets her own page count: the row leaves and the line decrements', async ({ page }) => {
+  const member = await signedIn(page)
+  const library = createLibrary(member.client)
+  // Two finished reads whose editions have no page count, newest end first (Noumenon, then The Lathe of Heaven).
+  for (const [title, back] of [
+    ['The Lathe of Heaven', -12],
+    ['Noumenon', -4],
+  ] as const) {
+    await library.addToLibrary(book(title, null), { status: 'finished', startedOn: addDays(today, back - 9), endedOn: addDays(today, back) })
+  }
+  await openProfile(page)
+
+  const line = page.getByTestId('profile.pagesMissing')
+  await expect(line).toHaveText(inEnglish(en.profile.figures.pagesMissing, 2))
+  await line.click()
+  const rows = page.getByTestId('profileReads.row')
+  await expect(rows).toHaveCount(2)
+
+  // Every row carries her own field, named by its Book and holding the count the read has (none: empty).
+  const first = rows.first()
+  await expect(first.getByTestId('profile.readTitle')).toHaveText(runTitle('Noumenon'))
+  const field = first.getByTestId('profileReads.total')
+  await expect(field).toHaveAttribute('aria-label', fill(en.profile.figures.pagesMissingYourTotal, { title: runTitle('Noumenon') }))
+  await expect(field).toHaveValue('')
+
+  // A count typed and confirmed: the row leaves the list, and the line behind the sheet decrements.
+  await field.fill('312')
+  await field.press('Enter')
+  await expect(rows).toHaveCount(1)
+  await expect(page.getByTestId('profile.pagesMissing')).toHaveText(inEnglish(en.profile.figures.pagesMissing, 1))
+
+  // The override is hers and the edition's count is untouched: a shared row is never written.
+  const stored = await sql<{ page_count_override: number | null; book_count: number | null }>(
+    `select e.page_count_override, b.page_count as book_count
+       from public.library_entries e join public.books b on b.id = e.book_id
+      where e.member_id = $1 and b.title = $2`,
+    [member.id, runTitle('Noumenon')],
+  )
+  expect(stored).toEqual([{ page_count_override: 312, book_count: null }])
+
+  // The next row, and the sheet has nothing left: the Pages line is no longer something to open.
+  const last = rows.first()
+  await last.getByTestId('profileReads.total').fill('120')
+  await last.getByTestId('profileReads.total').press('Enter')
+  await expect(rows).toHaveCount(0)
+  await page.getByTestId('profileReads.cancel').click()
+  await expect(page.getByTestId('profile.pagesMissing')).toHaveCount(0)
 })
 
 const SIZES = [
