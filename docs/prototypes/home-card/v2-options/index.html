@@ -30,47 +30,46 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Three rows under the bar</h1>
-  <p class="lede">Each file is the card with the order you asked for: cover, title, author, the progress line, then
-    one row with <b>42 %</b>, <b>126 of 300</b> and the action at the right edge. No dot, no &ldquo;p.&rdquo;, no pace
-    line. Every file carries the same seven states (A mid-read, B percent only, C 0 %, D &ldquo;The end.&rdquo;,
-    E +24, F German at 360 px, L the Library tab) in both themes.</p>
-  <p class="lede">The three differ in one decision only: <b>what happens when the row cannot hold the German
-    word.</b> At 360 px the row is 202 px wide, the numbers take 124&ndash;138 px and
-    &ldquo;Aktualisieren&rdquo; alone takes 104 px. Something has to give, and each file gives something different.</p>
-  <div class="order"><span>title</span><span>author</span><span>progress line</span><span>42 % &middot; 126 of 300 &middot; action</span></div>
+  <h1>Three ways to place the numbers</h1>
+  <p class="lede">Each file is the card with the order you asked for: cover, title, author, and then the
+    numbers around the progress line. No dot, no &ldquo;p.&rdquo;, no pace line. Every file carries the same
+    seven states (A mid-read, B percent only, C 0&nbsp;%, D &ldquo;The end.&rdquo;, E +24, F German at
+    360&nbsp;px, L the Library tab) in both themes.</p>
+  <p class="lede">At 360&nbsp;px the text column is 202&nbsp;px wide and &ldquo;Aktualisieren&rdquo; alone takes
+    104&nbsp;px of it. A and B keep the numbers on one row with the action and each pays for it differently;
+    D takes the count out of that row altogether.</p>
+  <div class="order"><span>title</span><span>author</span><span>count</span><span>progress line</span><span>percent &middot; action</span></div>
 
   <div class="opts">
     <div class="opt">
       <h2>Option A</h2>
       <h3>One row, exactly as asked — and it breaks in German</h3>
-      <p>The plain reading of your note, with no allowance made. It measures 151 px in English and looks right in
-        every English state. In German the count is pushed under the button &mdash; the label and the count
-        collide instead of making room. Shown as the honest baseline, not as a recommendation.</p>
-      <div class="facts"><span>151 px</span><span>no German wrap</span><span class="bad">collides in 4 of 7 German states</span><span>cover balances</span></div>
+      <p>Percent at 20&nbsp;px, count at 11&nbsp;px, Update at the right edge, no wrap allowed. Right in every
+        English state and 151&nbsp;px tall. In German the count is pushed under the button — the two collide
+        instead of making room. Kept visible as the honest baseline, not as a recommendation.</p>
+      <div class="facts"><span>151 px</span><span>count 11 px</span><span class="bad">collides in German</span><span>cover balances</span></div>
       <a href="row-a-one-line.html">open row-a-one-line.html &rarr;</a>
     </div>
 
     <div class="opt">
       <h2>Option B</h2>
       <h3>One row that is allowed to wrap</h3>
-      <p>The same row, with wrap turned on, so the button drops under the numbers instead of over them when the
-        language needs the room. Nothing ever overlaps or truncates. The cost is German height: the label alone is
-        104 px of the row, so German pays two lines on every card and the cover stops spanning them.</p>
-      <div class="facts"><span>151 px English</span><span>164 px German</span><span class="good">never collides</span><span class="bad">cover stops spanning</span></div>
+      <p>The same row with wrap on, so the button drops under the numbers instead of over them when the language
+        needs the room. Nothing overlaps or truncates. The cost is height in German: two lines on every card,
+        164&nbsp;px, and the cover stops spanning them.</p>
+      <div class="facts"><span>151 px English</span><span>count 11 px</span><span class="good">never collides</span><span class="bad">164 px in German</span></div>
       <a href="row-b-wraps.html">open row-b-wraps.html &rarr;</a>
     </div>
 
     <div class="opt">
-      <h2>Option C</h2>
-      <h3>One row at every width — the action becomes an icon</h3>
-      <p>The only one that keeps your row and the 151 px card in both languages: the action gives up its word for a
-        pencil (a check at the end, an arrow for Undo), which frees the 104 px the German label needed. The numbers
-        never move, the cover spans every state, and the row is literally what you described. The cost is the one
-        the earlier mocks already logged for icon-only actions: an unlabelled control needs an accessible name and
-        a moment of recognition.</p>
-      <div class="facts"><span class="good">151 px in every state</span><span class="good">no wrap, neither language</span><span class="good">cover balances</span><span class="bad">unlabelled action</span></div>
-      <a href="row-c-icon.html">open row-c-icon.html &rarr;</a>
+      <h2>Option D</h2>
+      <h3>The count above the bar, small; the percent alone below it</h3>
+      <p>The new one. The count sits above the progress line at 10&nbsp;px — about half the size of the author
+        beside it — so the bar reads as &ldquo;126 of 300&rdquo; before you have even read the number. The percent
+        then stands alone under the bar at 20&nbsp;px, with Update at the right edge. Nothing shares the button's
+        row, so German cannot collide and the card holds 151&nbsp;px in every state in both languages.</p>
+      <div class="facts"><span class="good">151 px in every state</span><span>count 10 px</span><span class="good">no wrap, neither language</span><span class="good">cover balances</span></div>
+      <a href="row-d-count-above.html">open row-d-count-above.html &rarr;</a>
     </div>
   </div>
 </div>

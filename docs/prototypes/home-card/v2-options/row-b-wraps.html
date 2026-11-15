@@ -2,18 +2,19 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>Home reading card V2 — b-row-wraps</title>
+<title>Home reading card V2 — row-b-wraps</title>
 <link rel="stylesheet" href="../base.css" />
 <link rel="stylesheet" href="../card.css" />
 <style>
-  /* b-row-wraps. Cover, serif title, author, the bar, then the numbers and the one action on one row.
-     The pace line is gone, the cover keeps its size, and there is no dot and no "p.". */
+  /* row-b-wraps. Cover, serif title, author, and the numbers around the bar. The pace line is gone,
+     the cover keeps its size, and there is no dot and no "p.". The count's size is --num-size. */
+  :root { --num-size: 11px; --num-line: 14px; }
 
+  .place, .num { font-size: var(--num-size); line-height: var(--num-line); color: var(--color-ink-faint); white-space: nowrap; }
+  .gain { font-size: var(--num-size); line-height: var(--num-line); color: var(--color-accent-ink); white-space: nowrap; }
   .prog { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
   .prog .pct { font-size: 20px; line-height: 24px; letter-spacing: -0.02em; color: var(--color-ink); white-space: nowrap; }
-  .prog .gain { font-size: var(--text-caption); line-height: var(--text-caption--line-height); letter-spacing: 0;
-    color: var(--color-accent-ink); margin-left: 2px; }
-  .prog .place { font-size: 13px; line-height: 16px; color: var(--color-ink-faint); white-space: nowrap; }
+  .prog .gain { margin-left: 2px; }
   .prog .lastpage { font-family: var(--font-sans); font-size: var(--text-body); line-height: var(--text-body--line-height);
     letter-spacing: var(--text-body--letter-spacing); color: var(--color-ink); }
   .card .foot { padding-top: var(--spacing-sm); align-items: center; justify-content: space-between;
@@ -33,15 +34,15 @@
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
         
+        
         <div class="barwrap"><div class="bar"><i style="width:42%"></i></div></div>
         <div class="foot">
           <div class="prog"><span class="pct figures">42 %</span><span class="place figures" data-en="126 of 300" data-de="126 von 300"></span></div>
           <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
         </div>
       </div>
-      
     </article>
-    <p class="panelnote">The same row, allowed to wrap. English keeps one line at 151 px; German at 390 px already needs two lines (164 px), and at 360 px German the Update drops under the numbers (164 px) instead of colliding. Nothing overlaps, nothing is truncated — but "Aktualisieren" alone is 104 px of a 202 px row, so German pays two lines on every card.</p>
+    <p class="panelnote">The same row, allowed to wrap. Nothing ever overlaps. English holds one line at 151 px; German needs two and the card grows to 164 px, so the cover stops spanning it.</p>
   </div>
 </div>
 <div class="phone">
@@ -55,15 +56,15 @@
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
         
+        
         <div class="barwrap"><div class="bar"><i style="width:45%"></i></div></div>
         <div class="foot">
           <div class="prog"><span class="pct figures">45 %</span></div>
           <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
         </div>
       </div>
-      
     </article>
-    <p class="panelnote">The same row, allowed to wrap. English keeps one line at 151 px; German at 390 px already needs two lines (164 px), and at 360 px German the Update drops under the numbers (164 px) instead of colliding. Nothing overlaps, nothing is truncated — but "Aktualisieren" alone is 104 px of a 202 px row, so German pays two lines on every card.</p>
+    <p class="panelnote">The same row, allowed to wrap. Nothing ever overlaps. English holds one line at 151 px; German needs two and the card grows to 164 px, so the cover stops spanning it.</p>
   </div>
 </div>
 <div class="phone">
@@ -77,15 +78,15 @@
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span></span>
         
+        
         <div class="barwrap"><div class="bar"><i style="width:0%"></i></div></div>
         <div class="foot">
           <div class="prog"><span class="pct figures">0 %</span><span class="place figures" data-en="0 of 300" data-de="0 von 300"></span></div>
           <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
         </div>
       </div>
-      
     </article>
-    <p class="panelnote">The same row, allowed to wrap. English keeps one line at 151 px; German at 390 px already needs two lines (164 px), and at 360 px German the Update drops under the numbers (164 px) instead of colliding. Nothing overlaps, nothing is truncated — but "Aktualisieren" alone is 104 px of a 202 px row, so German pays two lines on every card.</p>
+    <p class="panelnote">The same row, allowed to wrap. Nothing ever overlaps. English holds one line at 151 px; German needs two and the card grows to 164 px, so the cover stops spanning it.</p>
   </div>
 </div>
 <div class="phone">
@@ -99,15 +100,15 @@
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
         
+        
         <div class="barwrap"><div class="bar"><i style="width:100%"></i></div></div>
         <div class="foot">
           <div class="prog"><span class="lastpage" data-en="The end." data-de="Ende."></span></div>
           <button class="btn primary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span data-en="Finish" data-de="Beenden"></span></button>
         </div>
       </div>
-      
     </article>
-    <p class="panelnote">The same row, allowed to wrap. English keeps one line at 151 px; German at 390 px already needs two lines (164 px), and at 360 px German the Update drops under the numbers (164 px) instead of colliding. Nothing overlaps, nothing is truncated — but "Aktualisieren" alone is 104 px of a 202 px row, so German pays two lines on every card.</p>
+    <p class="panelnote">The same row, allowed to wrap. Nothing ever overlaps. English holds one line at 151 px; German needs two and the card grows to 164 px, so the cover stops spanning it.</p>
   </div>
 </div>
 <div class="phone">
@@ -121,15 +122,15 @@
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
         
+        
         <div class="barwrap"><div class="bar"><i style="width:50%"></i></div></div>
         <div class="foot">
-          <div class="prog"><span class="pct figures">50 %</span><span class="gain figures">+24</span><span class="place figures" data-en="150 of 300" data-de="150 von 300"></span></div>
+          <div class="prog"><span class="pct figures">50 %</span><span class="num gain figures">+24</span><span class="place figures" data-en="150 of 300" data-de="150 von 300"></span></div>
           <button class="btn quiet" type="button" data-en="Undo" data-de="Rückgängig"></button>
         </div>
       </div>
-      
     </article>
-    <p class="panelnote">The same row, allowed to wrap. English keeps one line at 151 px; German at 390 px already needs two lines (164 px), and at 360 px German the Update drops under the numbers (164 px) instead of colliding. Nothing overlaps, nothing is truncated — but "Aktualisieren" alone is 104 px of a 202 px row, so German pays two lines on every card.</p>
+    <p class="panelnote">The same row, allowed to wrap. Nothing ever overlaps. English holds one line at 151 px; German needs two and the card grows to 164 px, so the cover stops spanning it.</p>
   </div>
 </div>
 <div class="phone narrow">
@@ -143,15 +144,15 @@
         <span class="title">Der Salzgarten</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
         
+        
         <div class="barwrap"><div class="bar"><i style="width:42%"></i></div></div>
         <div class="foot">
           <div class="prog"><span class="pct figures">42 %</span><span class="place figures">126 von 300</span></div>
           <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
         </div>
       </div>
-      
     </article>
-    <p class="panelnote">The same row, allowed to wrap. English keeps one line at 151 px; German at 390 px already needs two lines (164 px), and at 360 px German the Update drops under the numbers (164 px) instead of colliding. Nothing overlaps, nothing is truncated — but "Aktualisieren" alone is 104 px of a 202 px row, so German pays two lines on every card.</p>
+    <p class="panelnote">The same row, allowed to wrap. Nothing ever overlaps. English holds one line at 151 px; German needs two and the card grows to 164 px, so the cover stops spanning it.</p>
   </div>
 </div>
 <div class="phone">
@@ -165,15 +166,15 @@
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
         <span class="since figures" data-en="Since 3 Nov · day 12" data-de="Seit 3. Nov. · Tag 12"></span>
+        
         <div class="barwrap"><div class="bar"><i style="width:42%"></i></div></div>
         <div class="foot">
           <div class="prog"><span class="pct figures">42 %</span><span class="place figures" data-en="126 of 300" data-de="126 von 300"></span></div>
           <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
         </div>
       </div>
-      
     </article>
-    <p class="panelnote">The same row, allowed to wrap. English keeps one line at 151 px; German at 390 px already needs two lines (164 px), and at 360 px German the Update drops under the numbers (164 px) instead of colliding. Nothing overlaps, nothing is truncated — but "Aktualisieren" alone is 104 px of a 202 px row, so German pays two lines on every card.</p>
+    <p class="panelnote">The same row, allowed to wrap. Nothing ever overlaps. English holds one line at 151 px; German needs two and the card grows to 164 px, so the cover stops spanning it.</p>
   </div>
 </div>
 <script src="../mock.js"></script>
