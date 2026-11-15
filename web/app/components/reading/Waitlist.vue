@@ -2,7 +2,7 @@
 // The waitlist form at the end of a reading page and a Book card (issue #171). BetterReads is
 // invite-only and the page creates no account: a visitor leaves her address and the owner invites
 // her when there is room (no e-mail is sent from here; the owner reads the list in Profile → Account
-// → Waitlist). One field and one button, then what the address is used for. The page's token goes
+// → Waitlist). The heading, the subheading, one field and one button. The page's token goes
 // along so the database can tell whose page it was (it keeps nothing of the token). `website` is a
 // honeypot: a field no person sees (hidden from everyone, out of the tab order) that a bot fills.
 // States: ready; sending; "You're on the list" (a polite status that replaces the form; the same answer
@@ -92,8 +92,6 @@ const failure = computed(() => (problem.value === 'rate_limited' ? t('readingPag
           {{ sending ? t('readingPage.waitlist.joining') : problem === 'unknown' ? t('readingPage.waitlist.retry') : t('readingPage.waitlist.join') }}
         </UiButton>
       </form>
-
-      <p class="text-footnote text-ink-faint" data-testid="readingPage.waitlistConsent">{{ t('readingPage.waitlist.consent') }}</p>
     </template>
   </section>
 </template>
