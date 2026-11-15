@@ -640,6 +640,43 @@ public surface (docs/covers.md, "Google Books covers").
 `Lookups` and `enrich`; Books already added keep their facts, and their Google cover addresses keep loading from Google (clear one with
 `update public.books set cover_url = null where cover_url like 'https://books.google.com/%'`).
 
+## Filling an edition's page count where it is null
+
+A finished read with no page count is a read the Profile's Pages card counts as "without a count" (`readsWithoutPages`,
+`web/app/data/stats.ts`). Most of them are Books whose edition nobody ever told the database how thick it is. `books.page_count` is
+the **edition's** count — a shared Catalogue row every member holding that edition reads — so filling a null helps every one of them
+and moves no figure that is already known. That is the whole safety argument, and it is why the write is null-only.
+
+**The write**: `private.set_edition_page_count(p_book uuid, p_page_count integer) returns boolean`
+(`supabase/migrations/20261121010000_set_edition_page_count.sql`). It runs one statement,
+`update public.books set page_count = p_page_count where id = p_book and page_count is null`, answers `true` only when a row
+changed, and refuses a count outside 1…99999 (`page_count_invalid`, the same range `update_progress` takes). It is not a member's
+function: no execute for `anon` or `authenticated`, and `private` has no usage grant for those roles anyway. It never reads or writes
+`library_entries.page_count_override` — the member's own total for her entry is hers, and is a different fact.
+
+**The one-off run** (`web/scripts/backfill-page-counts.ts`), dry run by default:
+
+```sh
+cd web
+pnpm tsx scripts/backfill-page-counts.ts                       # dry run: asks Google, writes nothing
+pnpm tsx scripts/backfill-page-counts.ts --apply               # fills the nulls it was told about
+SUPABASE_WORKDIR=/tmp/libellus-some-stack pnpm tsx scripts/backfill-page-counts.ts --db-url <the stack's DB_URL> --function-url <its API_URL>
+```
+
+It reads the candidates (a finished read with neither an entry override nor an edition count, on a Catalogue Book with an ISBN),
+asks the `google-books` function `{ action: 'isbn' }` once per Book — 17 requests for the owner's 2026-11-15 list, noise beside the
+900-a-day budget, and its ≤1-day cache answers a second run for free — and stops at the first `unavailable` instead of asking the
+rest against a closed door. It ends with one line: candidates, with an ISBN, asked, answered, without a count, written, already
+filled, left. Running it twice writes nothing the second time.
+
+Both the read and the write go over a database connection, not PostgREST: the function is in `private`, which the API does not
+expose (`[api] schemas` in `supabase/config.toml`). The Google side still goes through the function, so its cache, budget and
+breaker stay the function's. A Book Google does not know, or knows without saying how many pages it has, is a normal outcome: it
+stays a candidate, and stays for the manual path (a member setting her own total on the entry).
+
+**The residue**: a Book with no ISBN at all (an Apple import before Apple carried one) cannot be asked about. That is what the manual
+total on the entry is for, not this backfill.
+
 ## The import queue and the shared pace
 
 Two small tables keep the import and its upstreams from running into their limits (`supabase/migrations/20261030010000_edge_pace.sql`, `20261030020000_import_queue.sql`):
