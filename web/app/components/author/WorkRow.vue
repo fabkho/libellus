@@ -106,7 +106,7 @@ function press() {
   if (!k) return
   books.seedCover(k, workCover(props.work))
   // What this row knows of the Book is the page's first frame (utils/bookPreview.ts): its title and cover at once, the rest behind skeletons.
-  rememberPreview(k, previewFromWork(props.work, props.series))
+  rememberPreview(k, previewFromWork(props.work, props.series, props.author))
   books.prefetch(k)
 }
 
@@ -118,7 +118,7 @@ async function want() {
   opening.value = true
   try {
     books.seedCover(k, workCover(props.work))
-    rememberPreview(k, previewFromWork(props.work, props.series))
+    rememberPreview(k, previewFromWork(props.work, props.series, props.author))
     await books.load(k)
     const found = books.page(k)
     if (found?.book && !found.entry) library.openAdd(found.book)

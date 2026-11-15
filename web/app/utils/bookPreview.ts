@@ -54,11 +54,14 @@ export function forgetPreviews() {
   previews.clear()
 }
 
-/** A work as a row of a series or an author lists it: its title and cover, and where it stands when the row said. */
-export function previewFromWork(work: WorkCard, series: SeriesLine | null = null): BookPreview {
+/**
+ * A work as a row of a series or an author lists it: its title and cover, its author when the row knew her name, and
+ * where it stands when the row said.
+ */
+export function previewFromWork(work: WorkCard, series: SeriesLine | null = null, author: string | null = null): BookPreview {
   return {
     title: work.title,
-    authors: [],
+    authors: author ? [author] : [],
     coverUrl: work.coverUrl ?? null,
     coverKey: work.coverKey ?? null,
     coverWidths: work.coverWidths ?? null,

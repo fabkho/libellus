@@ -41,6 +41,11 @@ describe('the book preview cache', () => {
     expect(preview.pageCount).toBeUndefined()
   })
 
+  it('takes the author the row that opened it knew, and none when it knew none', () => {
+    expect(previewFromWork(work(), null, 'Ilse Varga').authors).toEqual(['Ilse Varga'])
+    expect(previewFromWork(work()).authors).toEqual([])
+  })
+
   it('takes everything a card that carries the Book has: authors, page count, the cover with its blur and colours', () => {
     const preview = previewFromBook({
       id: 'b1',
