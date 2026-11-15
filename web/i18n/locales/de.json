@@ -116,7 +116,8 @@
       "rename_collection": "Umbenannt",
       "delete_collection": "Gelöscht",
       "save_reader_highlight": "Markierung",
-      "set_entry_hidden": "Sichtbarkeit für Follower"
+      "set_entry_hidden": "Sichtbarkeit für Follower",
+      "set_read_total": "Eigene Seitenzahl"
     }
   },
   "account": {
@@ -181,6 +182,7 @@
       "dnf": "{count} abgebrochen",
       "pagesMissing": "{count} ohne Seitenzahl",
       "pagesMissingOpen": "{count} ohne Seitenzahl: Bücher anzeigen",
+      "pagesMissingYourTotal": "Deine Seitenzahl für {title}",
       "pagesPerBook": "{count} pro Buch",
       "unrated": "{count} noch nicht bewertet",
       "unratedOpen": "{count} noch nicht bewertet: Bücher anzeigen",

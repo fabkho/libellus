@@ -173,6 +173,14 @@ begin
         p_hidden => (v_args ->> 'p_hidden')::boolean
       );
 
+    when 'set_read_total' then
+      -- Her own page count on an entry, a finished one included: the override only, never the edition's
+      -- count and never recorded progress. A total that only repeats the edition's is stored as none.
+      perform public.set_read_total(
+        p_entry_id   => (v_args ->> 'p_entry_id')::uuid,
+        p_page_count => (v_args ->> 'p_page_count')::integer
+      );
+
     else
       raise exception 'action_invalid' using errcode = '22023';
   end case;

@@ -116,7 +116,8 @@
       "rename_collection": "Renamed",
       "delete_collection": "Deleted",
       "save_reader_highlight": "Highlight",
-      "set_entry_hidden": "Visibility to followers"
+      "set_entry_hidden": "Visibility to followers",
+      "set_read_total": "Her own page count"
     }
   },
   "account": {
@@ -181,6 +182,7 @@
       "dnf": "{count} DNF",
       "pagesMissing": "{count} without a count",
       "pagesMissingOpen": "{count} without a count: show the books",
+      "pagesMissingYourTotal": "Your page count for {title}",
       "pagesPerBook": "{count} a book",
       "unrated": "{count} not rated yet",
       "unratedOpen": "{count} not rated yet: show the books",
