@@ -190,3 +190,110 @@ Proposed display guards (cheap, no new data):
   work title is the 1934 book's; silent otherwise, never fuzzy).
 - Everything else shows, however large the gap. The 20y+ cases that survive are
   overwhelmingly real reprints — that is the feature, not the bug.
+
+## 3. The two gap groups
+
+### 149 enriched-but-no-year: fixable by retry, some never
+
+Covered in §1; the decision table:
+
+| Sub-case | Fix | Cost |
+|---|---|---|
+| OL record has since gained `first_publish_date`, or search index has `first_publish_year` the record lacks | Daily `enrich-refresh` re-runs enrich and `enrich_work` overwrites `first_year` when the payload carries one (`…_enrichment_queue.sql:488,698`) — or one targeted re-queue | One OL fetch per work |
+| Wikidata has P577 but the link was missing (no P648, title search missed) | Same refresh/re-queue with today's links | Same |
+| Neither source dates the work (recent/small-press trade: the sample titles look exactly like this) | Not fixable from current sources | Needs a new source or time |
+
+Which of the 149 is which: **unverified, needs a read-only query from the coordinator**
+(re-fetch the 149 work records' `first_publish_date` today). Expectation, not a number:
+recent trade books skew to the third row.
+
+A Wikidata lookup for a work that only has an `openlibrary_key`: candidates already
+exist — `P648=<work key>` search (`enrich.ts:228`) — so no new lookup is needed, just the
+re-run. Cost per book is one enrich pass (seconds, polite client); the daily refresh
+already pays it on a 30-day cycle.
+
+### 128 with no work row: why matching failed, what can close
+
+`enrich_save` writes `book_works` only when the payload has a work object; `matched_by`
+falls back to `'openlibrary'` when a work exists but no path set it (`enrich.ts:391`).
+No row means every path missed. From the code (`enrich.ts:187-207`), the causes in order:
+
+1. **No ISBN and no OL keys, title search missed** — Apple imports (no ISBN path guard
+   beyond title: `enrich.ts:199-201`) and catalogue rows without identifiers. Fixable if
+   identifiers arrive later (catalogue-check backfills keys; then refresh matches).
+2. **ISBN exists but OL files it under the wrong edition and the title guard rejects it**
+   (`enrich.ts:195`) — correctly unmatched, stays unmatched until OL fixes its filing.
+3. **Title search found nothing** (`docs.find`, `enrich.ts:204`): first-author name
+   missing or folded differently, or OL has no record. Retrying later may work as OL grows.
+4. **Owner books (manual, `owner_id is not null`)**: `book_work_key` returns null for them
+   by design (`20261116010000_book_notes.sql:322-335`); enrich skips non-catalogue books
+   (`enrich_save` deletes the queue entry for `owner_id is not null`). **Structurally
+   cannot** — no work, ever, by design.
+
+Share of (4) in the 128: unverified, needs a read-only query. If the owner's catalogue is
+mostly catalogue books, (1)–(3) dominate and the group shrinks slowly with refresh; (4)
+never does.
+
+## 4. The display rule, with the guards
+
+First assessment's rule was `firstYear ?? year`. With §2's guards (G1: impossible,
+`firstYear > year`; G2: folded-title mismatch against work title):
+
+| `firstYear` | edition `year` | guard says | hero shows | edition line |
+|---|---|---|---|---|
+| set, ≤ `year`, titles agree | set | clean | **`firstYear`** | "This edition: {publisher}, {year}" |
+| set, > `year` | set | G1 impossible (Dream Again + 5 siblings) | **`year`** (work year suppressed) | same edition line |
+| set, titles disagree | set | G2 suspicious (Unhoneymooners *if* stored title is the 1934 book's) | **`year`** (work year suppressed) | same edition line |
+| set, titles disagree, stored title unavailable | set | cannot judge | **`firstYear`** (show; flag nothing — honest gap, §6) | same edition line |
+| set | null | nothing to compare | **`firstYear`** | publisher only / nothing |
+| null (149 or 128) | set | gap, not error | **`year`** (today's behaviour — never a hole where today shows a date) | nothing new (nothing to contrast) |
+| null | null | both unknown | nothing (today's behaviour) | nothing |
+
+Notes:
+
+- A work year *younger* than the edition's is never trusted (G1): a reprint of a work
+  whose OL record is wrong is indistinguishable from a wrong link at display time, and
+  showing it would print an absurdity ("first published 2020" on a 1900 edition). The
+  edition year is always at least true of the copy in hand.
+- A large gap that passes both guards shows — the 20y+ survivors are the feature (real
+  reprints: 1984 → 1949, Time Machine → 1895). Suppressing them would re-hide the
+  owner's ask.
+- Both-null and yearless-work cases keep today's rendering exactly: the rule only ever
+  *replaces* a shown year with a better one, never removes one.
+
+## 5. Recommendation
+
+**Show `firstYear` guarded by G1+G2, fallback `year` — the first assessment's option A
+with the §2 guards.** One optional read-path column, one fallback expression, one new
+edition line; no migration; every null case renders as today. Pair with the match-time
+title guard on the OL key/ISBN path (one `titlesMatch` check in `enrich.ts`, future work,
+not this proposal) — that is the intervention that actually shrinks the wrong-link set
+without punishing reprints.
+
+### Needs the owner
+
+1. **Translation question (still open, now confirmed from code)**: P577 on the work item
+   is the *original-language* first publication — Wikidata models translations as edition
+   items under P629, and enrich climbs to the parent (`enrich.ts:241-244`). So a German
+   edition of an English novel shows the English first year. Confirm: hero shows original
+   first publication in all languages, or does he want first-in-his-language (a different
+   feature: "First published 1969 · German first edition")?
+2. **Edition line placement**: under the description (proposed) vs in the facts row.
+3. **Library rows**: one screen now (Book page); decide later whether rows/cards follow.
+
+## 6. What could not be verified
+
+No production query was run or attempted. Per the rule, no percentage beyond the brief's.
+
+1. Which of the 149 are (1/2) vs (3) in §3 — needs a read-only re-fetch of the 149 work
+   records' `first_publish_date` today (coordinator).
+2. Share of owner/manual books in the 128 (cause 4 vs 1–3) — needs a read-only count.
+3. Whether the stored `works.title` of the two known-bad links is actually the wrong
+   book's title (G2 catches them only if so) — needs a read-only look at the two rows.
+4. How often a work item carries several P577 dates with preferred-rank putting a
+   translation first — code reads first-preferred; frequency unverified.
+5. `matched_by` values predate the current three-way set? The check constraint allows
+   only `openlibrary | isbn | title` (`public.book_works`), so no.
+6. Whether `enrich-refresh` is actually scheduled in production (the `cron.schedule` at
+   `…_enrichment_queue.sql:697-698` runs only where pg_cron is available) — if not, the
+   149 wait indefinitely and a manual re-queue is the fix path.
