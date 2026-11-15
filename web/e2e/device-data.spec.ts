@@ -105,8 +105,10 @@ test('a session that died is forgotten, and the next member on the device sees n
   // Nothing of hers is left: not her Library's copy, nor the covers she browsed, nor her ebook copy.
   const left = await deviceDump(page)
   expect(left.storage).not.toMatch(/secret diary|Ada Private/)
-  // Here /ada/ is right: it must find nothing left, whatever the build's hash.
-  expect(left.cached.filter((entry) => /ada/.test(entry))).toEqual([])
+  // Her two recorded entries are gone, whatever the build's hash: the precache URL carries the build id,
+  // and a build whose hash happens to contain "ada" (f5f1dddb-…-ada2-…) would match a /ada/ filter here —
+  // the same lottery the assertion above was fixed for. Ask about the named entries, not the substring.
+  expect(left.cached.filter((entry) => !entry.startsWith('workbox-precache'))).toEqual([])
   expect(await ebookCopies(page)).toBe(0)
 
   // Another member signs in on the same device: only her own Library shows.
