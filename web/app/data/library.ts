@@ -630,6 +630,14 @@ export type Library = {
     day?: string,
   ) => Promise<Result<LibraryEntry>>
   /**
+   * Sets the member's own page count on an entry (her total for every read of it, issue #60), even on a
+   * finished one: `set_read_total` writes only `page_count_override`. `null` takes it back to the
+   * edition's; a total that only repeats the edition's is stored as none by the database. Recorded
+   * history stays as it was. Refused with `progress_invalid` and `entry_not_found`. Waits in the outbox
+   * offline.
+   */
+  setReadTotal: (entryId: string, pageCount: number | null) => Promise<Result<LibraryEntry>>
+  /**
    * Progress on an earlier day (docs/plans/backdated-progress.md): where the member ended `day` (`YYYY-MM-DD`) of
    * her open read, as a page or a percent. One row per day: a day that has one moves its end, a new one is added;
    * the value is clamped between the neighbouring days, the next day then starts where this one ends, and the read's
@@ -969,6 +977,17 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       if (!online()) return OFFLINE
       const updated = await client.rpc('update_progress', args)
       if (isNoAnswer(updated)) return unansweredEntry('update_progress', args, entryId)
+      if (updated.error) return { data: null, error: mapLibraryError(updated.error) }
+      return reread(entryId)
+    },
+
+    async setReadTotal(entryId, pageCount) {
+      const args = { p_entry_id: entryId, p_page_count: pageCount }
+      const waiting = await queuedEntry('set_read_total', args, entryId)
+      if (waiting) return waiting
+      if (!online()) return OFFLINE
+      const updated = await client.rpc('set_read_total', args)
+      if (isNoAnswer(updated)) return unansweredEntry('set_read_total', args, entryId)
       if (updated.error) return { data: null, error: mapLibraryError(updated.error) }
       return reread(entryId)
     },
