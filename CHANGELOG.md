@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.45.0](https://github.com/fabkho/libellus/compare/v1.44.2...v1.45.0) (2026-11-15)
+
+
+### Features
+
+* **book:** the hero shows when the work was first published ([#576](https://github.com/fabkho/libellus/issues/576)) ([4207ac3](https://github.com/fabkho/libellus/commit/4207ac35bfc664e9659ef9545889741215fba845))
+* **page-counts:** fill the edition's page count where it is null ([#570](https://github.com/fabkho/libellus/issues/570)) ([3a923c8](https://github.com/fabkho/libellus/commit/3a923c8327eb9f85c404c2beb0a6eab588b2a81a))
+* **profile:** set her own page count on a finished read ([#575](https://github.com/fabkho/libellus/issues/575)) ([b2aa025](https://github.com/fabkho/libellus/commit/b2aa02571333c405edc878cf65189c9ad828312b))
+
 ## [1.44.2](https://github.com/fabkho/libellus/compare/v1.44.1...v1.44.2) (2026-11-15)
 
 
