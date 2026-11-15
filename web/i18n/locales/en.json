@@ -1035,7 +1035,12 @@
     "action": "Save",
     "busy": "Saving…",
     "retry": "Try again",
-    "delete": "Delete this read"
+    "delete": "Delete this read",
+    "pageCount": "Your page count for this read",
+    "pageCountHint": "Leave it empty to follow the edition’s {count} pages.",
+    "pageCountHintNone": "Leave it empty to follow the edition’s count.",
+    "pageCountInvalid": "A page count is a whole number above zero.",
+    "pageCountFailed": "Your dates, rating and review are saved. Your page count was not."
   },
   "deleteSession": {
     "title": "Delete this read?",

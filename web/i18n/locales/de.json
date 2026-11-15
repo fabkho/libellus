@@ -1035,7 +1035,12 @@
     "action": "Speichern",
     "busy": "Speichere …",
     "retry": "Nochmal versuchen",
-    "delete": "Diese Lektüre löschen"
+    "delete": "Diese Lektüre löschen",
+    "pageCount": "Deine Seitenzahl für diese Lektüre",
+    "pageCountHint": "Leer lassen, um der Ausgabe mit {count} Seiten zu folgen.",
+    "pageCountHintNone": "Leer lassen, um der Seitenzahl der Ausgabe zu folgen.",
+    "pageCountInvalid": "Die Seitenzahl ist eine ganze Zahl über null.",
+    "pageCountFailed": "Datum, Bewertung und Rezension sind gespeichert. Deine Seitenzahl nicht."
   },
   "deleteSession": {
     "title": "Diese Lektüre löschen?",

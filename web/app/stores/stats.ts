@@ -151,6 +151,9 @@ export const useStatsStore = defineStore('stats', () => {
     if (!repo) return false
     const result = await repo.setReadTotal(entryId, pageCount)
     if (result.error) return false
+    // The entry as the database now has it: the Book's page, the Library lists and the device's copy follow
+    // her count without a reload (the Edit sheet is on the Book's page, not on the Profile whose record is below).
+    library.entryChanged(result.data)
     const kept = record.value
     if (kept) {
       record.value = { ...kept, reads: withTotal(kept.reads, sessionId, pageCount) }
