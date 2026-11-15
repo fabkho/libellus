@@ -2,29 +2,48 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>Home reading card V2 — hierarchy: the percent is the fact, the place is the detail</title>
+<title>Home reading card V2 — the bar carries its own numbers</title>
 <link rel="stylesheet" href="base.css" />
 <link rel="stylesheet" href="card.css" />
 <style>
-  /* V2, revised. The pace line is gone (the owner asked for that twice), and the numbers below the bar
-     finally have a hierarchy: the percent is the fact at 20 px ink, the place is the detail at 13 px faint,
-     beside it on the same baseline — no dot, no "p.", which was V2's win and stays.
-     What changed from the first V2, and why: the numbers open the bottom cluster instead of sharing a row
-     with the action. Stacked or beside the button, the row could not hold "42 %  126 von 300" and
-     "Aktualisieren" at 360 px German (138 px + 104 px in a 202 px column), and the place ran under the
-     button. The bar and its one action now close the card on their own row — the action keeps the
-     bottom-right corner it has today — and the numbers get the whole line above them. */
-  .prog { display: flex; align-items: baseline; gap: var(--spacing-sm); min-width: 0; margin-top: auto; }
+  /* V2, final. Cover, serif title, author, then the bar with the book's own two numbers pinned to it:
+     the page you are on sits over the tip of the fill, and the book's total is flush with the bar's
+     right end, so the line reads "you are here, out of this many" without a sentence. The percent then
+     stands alone under the bar with the one action at the right edge. The pace line is gone, and no
+     punctuation anywhere — no dot, no "p.".
+
+     Why the numbers are where they are: at 360 px the text column is 202 px and "Aktualisieren" alone
+     takes 104 px, so a count sharing the row with the button can never fit beside it in German. Pinning
+     the count to the bar takes it out of that row entirely — and says more than a phrase did, because
+     the number now moves with the progress instead of sitting in a fixed column. */
+  :root { --num-size: 10px; --num-line: 13px; }
+
+  .mark { font-size: var(--num-size); line-height: var(--num-line); color: var(--color-ink-faint); white-space: nowrap;
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+  .gain { font-size: var(--num-size); line-height: var(--num-line); color: var(--color-accent-ink); white-space: nowrap; }
+
+  /* the bar's block: two numbers above it, the percent and the action below it */
+  .barwrap { position: relative; margin-top: auto; padding-top: var(--spacing-md); }
+  .barmarks { position: relative; height: var(--num-line); }
+  .mark { position: absolute; bottom: 0; }
+  .mark.cur { transform: translateX(-50%); }        /* centred on the fill's tip */
+  .mark.cur.left { transform: none; }               /* at the very start it hangs from the bar's left end */
+  .mark.cur.right { transform: none; left: auto !important; right: 0; }
+  .mark.total { right: 0; }                         /* flush with the bar's right end */
+  /* the hairline that pins the label to the tip: it ends exactly on the bar's top edge */
+  .mark.cur::after { content: ''; position: absolute; left: 50%; bottom: -4px; width: 0.5px; height: 4px;
+    background: var(--color-hairline-strong); transform: translateX(-50%); }
+  .mark.cur.left::after { left: 0; }
+  .mark.cur.right::after { left: auto; right: 0; }
+
+  .bar { margin-top: var(--spacing-xs); }
+
+  .prog { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
   .prog .pct { font-size: 20px; line-height: 24px; letter-spacing: -0.02em; color: var(--color-ink); white-space: nowrap; }
-  .prog .gain { font-size: var(--text-caption); line-height: var(--text-caption--line-height); letter-spacing: 0;
-    color: var(--color-accent-ink); margin-left: 2px; }
-  .prog .place { font-size: 13px; line-height: 16px; color: var(--color-ink-faint); white-space: nowrap; }
   /* at the last page the headline is the sentence, so it takes the body size the card already gives it */
   .prog .lastpage { font-family: var(--font-sans); font-size: var(--text-body);
     line-height: var(--text-body--line-height); letter-spacing: var(--text-body--letter-spacing); color: var(--color-ink); }
-  /* the bar and the card's one action, on the last row */
-  .col .barrow { display: flex; align-items: center; gap: var(--spacing-ms); padding-top: var(--spacing-sm); }
-  .col .barrow .bar { flex: 1; min-width: 0; }
+  .foot { padding-top: var(--spacing-xs); }
 </style>
 </head>
 <body>
@@ -40,14 +59,17 @@
       <div class="col">
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
-        <div class="prog">
-          <span class="pct figures">42 %</span>
-          <span class="place figures" data-en="126 of 300" data-de="126 von 300"></span>
+        <div class="barwrap">
+          <div class="barmarks"><span class="mark cur figures" style="left:42%">126</span><span class="mark total figures">300</span></div>
+          <div class="bar"><i style="width:42%"></i></div>
         </div>
-        <div class="barrow"><div class="bar"><i style="width:42%"></i></div><button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button></div>
+        <div class="foot">
+          <div class="prog"><span class="pct figures">42 %</span></div>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+        </div>
       </div>
     </article>
-    <p class="panelnote">The owner's own fix, and the one that measures best: <b>151 px</b>, down from today's 154 and from the first V2's 162. The cover spans the card again — 14 px above it, 14 px below. No dot, no "p."</p>
+    <p class="panelnote">The page you are on sits over the tip of the fill with a hairline tick joining it to the bar; the total is flush with the bar's right end. <b>151 px</b>, and the cover spans the card again — 14 px above it, 14 px below.</p>
   </div>
 </div>
 
@@ -62,13 +84,16 @@
       <div class="col">
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
-        <div class="prog">
-          <span class="pct figures">45 %</span>
+        <div class="barwrap">
+          <div class="bar"><i style="width:45%"></i></div>
         </div>
-        <div class="barrow"><div class="bar"><i style="width:45%"></i></div><button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button></div>
+        <div class="foot">
+          <div class="prog"><span class="pct figures">45 %</span></div>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+        </div>
       </div>
     </article>
-    <p class="panelnote">No edition page count, so the percent stands alone at headline size and the row keeps its air — still a real percent, never a page wearing a percent.</p>
+    <p class="panelnote">No page count on the edition, so the bar carries no numbers and the percent stands alone — still a real percent, never a page wearing a percent. This is also the shortest the card gets, which is why its air gathers above the bar.</p>
   </div>
 </div>
 
@@ -83,14 +108,17 @@
       <div class="col">
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span></span>
-        <div class="prog">
-          <span class="pct figures">0 %</span>
-          <span class="place figures" data-en="0 of 300" data-de="0 von 300"></span>
+        <div class="barwrap">
+          <div class="barmarks"><span class="mark cur left figures" style="left:0%">0</span><span class="mark total figures">300</span></div>
+          <div class="bar"><i style="width:0%"></i></div>
         </div>
-        <div class="barrow"><div class="bar"><i style="width:0%"></i></div><button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button></div>
+        <div class="foot">
+          <div class="prog"><span class="pct figures">0 %</span></div>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+        </div>
       </div>
     </article>
-    <p class="panelnote">Nothing read yet: "0 %" and "0 of 300" now share one line, so the opening state says zero once per readout instead of twice down the card.</p>
+    <p class="panelnote">At the very start the tick cannot sit over a tip that is the bar's left edge, so the label hangs from the end instead of off the card: <b>0</b> and <b>300</b> mark the bar's two ends, nothing more.</p>
   </div>
 </div>
 
@@ -105,13 +133,16 @@
       <div class="col">
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
-        <div class="prog">
-          <span class="lastpage" data-en="The end." data-de="Ende."></span>
+        <div class="barwrap">
+          <div class="bar"><i style="width:100%"></i></div>
         </div>
-        <div class="barrow"><div class="bar"><i style="width:100%"></i></div><button class="btn primary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span data-en="Finish" data-de="Beenden"></span></button></div>
+        <div class="foot">
+          <div class="prog"><span class="lastpage" data-en="The end." data-de="Ende."></span></div>
+          <button class="btn primary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span data-en="Finish" data-de="Beenden"></span></button>
+        </div>
       </div>
     </article>
-    <p class="panelnote">"The end." takes the percent's slot at body size, and Finish takes the action's corner at full width — the one state where the card says its piece in words and the bar is simply full.</p>
+    <p class="panelnote">Finished: the bar is full, so there is nothing left for the numbers to point at, and "The end." takes the percent's slot at body size. Finish keeps the action's corner.</p>
   </div>
 </div>
 
@@ -126,15 +157,17 @@
       <div class="col">
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
-        <div class="prog">
-          <span class="pct figures">50 %</span>
-          <span class="gain figures">+24</span>
-          <span class="place figures" data-en="150 of 300" data-de="150 von 300"></span>
+        <div class="barwrap">
+          <div class="barmarks"><span class="mark cur figures" style="left:50%">150</span><span class="mark total figures">300</span></div>
+          <div class="bar"><i style="width:50%"></i></div>
         </div>
-        <div class="barrow"><div class="bar"><i style="width:50%"></i></div><button class="btn quiet" type="button" data-en="Undo" data-de="Rückgängig"></button></div>
+        <div class="foot">
+          <div class="prog"><span class="pct figures">50 %</span><span class="gain figures">+24</span></div>
+          <button class="btn quiet" type="button" data-en="Undo" data-de="Rückgängig"></button>
+        </div>
       </div>
     </article>
-    <p class="panelnote">The gain sits between the fact and the detail in the accent — a badge on the percent, not a third run of figures glued on with a dot. The row is still one line at 360 px.</p>
+    <p class="panelnote">The gain rides just after the percent in the accent — a badge on the fact, small enough to read as an aside. The tick has moved with the fill, which is the point of putting the number there.</p>
   </div>
 </div>
 
@@ -149,18 +182,21 @@
       <div class="col">
         <span class="title">Der Salzgarten</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
-        <div class="prog">
-          <span class="pct figures">42 %</span>
-          <span class="place figures">126 von 300</span>
+        <div class="barwrap">
+          <div class="barmarks"><span class="mark cur figures" style="left:42%">126</span><span class="mark total figures">300</span></div>
+          <div class="bar"><i style="width:42%"></i></div>
         </div>
-        <div class="barrow"><div class="bar"><i style="width:42%"></i></div><button class="btn quiet" type="button">Aktualisieren</button></div>
+        <div class="foot">
+          <div class="prog"><span class="pct figures">42 %</span></div>
+          <button class="btn quiet" type="button">Aktualisieren</button>
+        </div>
       </div>
     </article>
-    <p class="panelnote">The state that decided the layout. "42 %  126 von 300" is 138 px and "Aktualisieren" 104 px inside a 202 px column: on one row they cannot both fit, which is why the numbers own their line. Nothing wraps, and the card is still <b>151 px</b>.</p>
+    <p class="panelnote">The state that decides it. The numbers are bare numerals, so German and English say them identically — there is no "von" to fit and nothing to wrap, and "Aktualisieren" has the row to itself. <b>151 px</b>.</p>
   </div>
 </div>
 
-<!-- L. the Library's reading tab -->
+<!-- L. the Library's reading tab — the same card, not a cousin -->
 <div class="phone">
   <div class="screen">
     <p class="state-tag"><span class="k">STATE L</span><span class="d">the same card on the Library's reading tab</span></p>
@@ -172,14 +208,17 @@
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
         <span class="since figures" data-en="Since 3 Nov · day 12" data-de="Seit 3. Nov. · Tag 12"></span>
-        <div class="prog">
-          <span class="pct figures">42 %</span>
-          <span class="place figures" data-en="126 of 300" data-de="126 von 300"></span>
+        <div class="barwrap">
+          <div class="barmarks"><span class="mark cur figures" style="left:42%">126</span><span class="mark total figures">300</span></div>
+          <div class="bar"><i style="width:42%"></i></div>
         </div>
-        <div class="barrow"><div class="bar"><i style="width:42%"></i></div><button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button></div>
+        <div class="foot">
+          <div class="prog"><span class="pct figures">42 %</span></div>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+        </div>
       </div>
     </article>
-    <p class="panelnote">On the Library the "since" line keeps the pace line's slot, and the numbers take the fourth line — so the component carries one quiet mono line plus the bar, the headline and Update. The <b>md</b> cover is the design constant here: it is 108 px against a 164 px card, the same dead space the Library card has today without a bar at all.</p>
+    <p class="panelnote">The Library's reading tab now carries <b>this exact card</b>: same bar, same pinned numbers, same percent, same Update. The old Library card had no bar and no numbers at all and a Finish where this has Update — one component, two screens. Its "since" line takes the pace line's old slot. The <b>md</b> cover is the Library's design constant, so the card ends below it; that is the only difference left between the two screens and it is the cover's rule, not this card's.</p>
   </div>
 </div>
 

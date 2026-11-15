@@ -6,17 +6,25 @@
 <link rel="stylesheet" href="../base.css" />
 <link rel="stylesheet" href="../card.css" />
 <style>
-  /* row-d-count-above. Cover, serif title, author, and the numbers around the bar. The pace line is gone,
-     the cover keeps its size, and there is no dot and no "p.". The count's size is --num-size. */
+  /* row-d-count-above. Cover, serif title, author, then the bar with the book's two numbers pinned to its ends.
+     The percent and the one action close the card. No dot, no "p.", no pace line.
+     The numbers are bare numerals, so they need no new translation; the bar's accessible label keeps
+     the full "126 of 300" (book.progress.page). */
   :root { --num-size: 10px; --num-line: 13px; }
 
-  .place, .num { font-size: var(--num-size); line-height: var(--num-line); color: var(--color-ink-faint); white-space: nowrap; }
+  .place, .num, .mark { font-size: var(--num-size); line-height: var(--num-line); color: var(--color-ink-faint); white-space: nowrap; }
   .gain { font-size: var(--num-size); line-height: var(--num-line); color: var(--color-accent-ink); white-space: nowrap; }
-  .place { margin-top: var(--spacing-sm); }
-  .card .col .barwrap { padding-top: var(--spacing-xs); }
+  /* the bar's row: its two numbers above it, the percent and the action below it */
+  .card .col .barwrap { position: relative; margin-top: auto; padding-top: var(--spacing-md); }
+  .barmarks { position: relative; height: var(--num-line); }
+  .mark { position: absolute; bottom: 0; color: var(--color-ink-faint); }
+  .mark.cur { transform: translateX(-50%); }       /* centred on the fill's tip */
+  .mark.cur.left { transform: none; }
+  .mark.cur.right { transform: none; left: auto !important; right: 0; }
+  .mark.total { right: 0; }
+  .bar { margin-top: var(--spacing-xs); }
   .prog { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
   .prog .pct { font-size: 20px; line-height: 24px; letter-spacing: -0.02em; color: var(--color-ink); white-space: nowrap; }
-  .prog .gain { margin-left: 2px; }
   .prog .lastpage { font-family: var(--font-sans); font-size: var(--text-body); line-height: var(--text-body--line-height);
     letter-spacing: var(--text-body--letter-spacing); color: var(--color-ink); }
   .card .foot { padding-top: var(--spacing-sm); align-items: center; justify-content: space-between; gap: var(--spacing-ms); }
@@ -34,15 +42,20 @@
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
         
-        <span class="place"><span class="place figures" data-en="126 of 300" data-de="126 von 300"></span></span>
-        <div class="barwrap"><div class="bar"><i style="width:42%"></i></div></div>
+        <div class="barwrap">
+          <div class="barmarks">
+            <span class="mark cur figures" style="left:42%">126</span>
+            <span class="mark total figures">300</span>
+          </div>
+          <div class="bar"><i style="width:42%"></i></div>
+        </div>
         <div class="foot">
           <div class="prog"><span class="pct figures">42 %</span></div>
-          <button class="btn num-act quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
         </div>
       </div>
     </article>
-    <p class="panelnote">The count above the bar at 10 px, the percent alone under it. The bar is labelled by its total and the fact sits beneath it, so nothing shares a line with the button and German cannot collide. 151 px in every state, in both languages.</p>
+    <p class="panelnote">The count pinned to the bar itself: <b>126</b> sits directly over the tip of the fill, <b>300</b> is flush with the bar’s right end. The number travels with the progress instead of living in a fixed column, and the percent stays alone under the bar with the action at the right edge. 151 px, no wrap in either language.</p>
   </div>
 </div>
 <div class="phone">
@@ -56,15 +69,17 @@
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
         
-        
-        <div class="barwrap"><div class="bar"><i style="width:45%"></i></div></div>
+        <div class="barwrap">
+          
+          <div class="bar"><i style="width:45%"></i></div>
+        </div>
         <div class="foot">
           <div class="prog"><span class="pct figures">45 %</span></div>
-          <button class="btn num-act quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
         </div>
       </div>
     </article>
-    <p class="panelnote">The count above the bar at 10 px, the percent alone under it. The bar is labelled by its total and the fact sits beneath it, so nothing shares a line with the button and German cannot collide. 151 px in every state, in both languages.</p>
+    <p class="panelnote">The count pinned to the bar itself: <b>126</b> sits directly over the tip of the fill, <b>300</b> is flush with the bar’s right end. The number travels with the progress instead of living in a fixed column, and the percent stays alone under the bar with the action at the right edge. 151 px, no wrap in either language.</p>
   </div>
 </div>
 <div class="phone">
@@ -78,15 +93,20 @@
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span></span>
         
-        <span class="place"><span class="place figures" data-en="0 of 300" data-de="0 von 300"></span></span>
-        <div class="barwrap"><div class="bar"><i style="width:0%"></i></div></div>
+        <div class="barwrap">
+          <div class="barmarks">
+            <span class="mark cur left figures" style="left:0%">0</span>
+            <span class="mark total figures">300</span>
+          </div>
+          <div class="bar"><i style="width:0%"></i></div>
+        </div>
         <div class="foot">
           <div class="prog"><span class="pct figures">0 %</span></div>
-          <button class="btn num-act quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
         </div>
       </div>
     </article>
-    <p class="panelnote">The count above the bar at 10 px, the percent alone under it. The bar is labelled by its total and the fact sits beneath it, so nothing shares a line with the button and German cannot collide. 151 px in every state, in both languages.</p>
+    <p class="panelnote">The count pinned to the bar itself: <b>126</b> sits directly over the tip of the fill, <b>300</b> is flush with the bar’s right end. The number travels with the progress instead of living in a fixed column, and the percent stays alone under the bar with the action at the right edge. 151 px, no wrap in either language.</p>
   </div>
 </div>
 <div class="phone">
@@ -100,15 +120,17 @@
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
         
-        
-        <div class="barwrap"><div class="bar"><i style="width:100%"></i></div></div>
+        <div class="barwrap">
+          
+          <div class="bar"><i style="width:100%"></i></div>
+        </div>
         <div class="foot">
           <div class="prog"><span class="lastpage" data-en="The end." data-de="Ende."></span></div>
-          <button class="btn num-act primary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span data-en="Finish" data-de="Beenden"></span></button>
+          <button class="btn primary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span data-en="Finish" data-de="Beenden"></span></button>
         </div>
       </div>
     </article>
-    <p class="panelnote">The count above the bar at 10 px, the percent alone under it. The bar is labelled by its total and the fact sits beneath it, so nothing shares a line with the button and German cannot collide. 151 px in every state, in both languages.</p>
+    <p class="panelnote">The count pinned to the bar itself: <b>126</b> sits directly over the tip of the fill, <b>300</b> is flush with the bar’s right end. The number travels with the progress instead of living in a fixed column, and the percent stays alone under the bar with the action at the right edge. 151 px, no wrap in either language.</p>
   </div>
 </div>
 <div class="phone">
@@ -122,15 +144,20 @@
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
         
-        <span class="place"><span class="place figures" data-en="150 of 300" data-de="150 von 300"></span></span>
-        <div class="barwrap"><div class="bar"><i style="width:50%"></i></div></div>
+        <div class="barwrap">
+          <div class="barmarks">
+            <span class="mark cur figures" style="left:50%">150</span>
+            <span class="mark total figures">300</span>
+          </div>
+          <div class="bar"><i style="width:50%"></i></div>
+        </div>
         <div class="foot">
-          <div class="prog"><span class="pct figures">50 %</span><span class="num gain figures">+24</span></div>
-          <button class="btn num-act quiet" type="button" data-en="Undo" data-de="Rückgängig"></button>
+          <div class="prog"><span class="pct figures">50 %</span><span class="gain figures">+24</span></div>
+          <button class="btn quiet" type="button" data-en="Undo" data-de="Rückgängig"></button>
         </div>
       </div>
     </article>
-    <p class="panelnote">The count above the bar at 10 px, the percent alone under it. The bar is labelled by its total and the fact sits beneath it, so nothing shares a line with the button and German cannot collide. 151 px in every state, in both languages.</p>
+    <p class="panelnote">The count pinned to the bar itself: <b>126</b> sits directly over the tip of the fill, <b>300</b> is flush with the bar’s right end. The number travels with the progress instead of living in a fixed column, and the percent stays alone under the bar with the action at the right edge. 151 px, no wrap in either language.</p>
   </div>
 </div>
 <div class="phone narrow">
@@ -144,15 +171,20 @@
         <span class="title">Der Salzgarten</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
         
-        <span class="place"><span class="place figures">126 von 300</span></span>
-        <div class="barwrap"><div class="bar"><i style="width:42%"></i></div></div>
+        <div class="barwrap">
+          <div class="barmarks">
+            <span class="mark cur figures" style="left:42%">126</span>
+            <span class="mark total figures">300</span>
+          </div>
+          <div class="bar"><i style="width:42%"></i></div>
+        </div>
         <div class="foot">
           <div class="prog"><span class="pct figures">42 %</span></div>
-          <button class="btn num-act quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
         </div>
       </div>
     </article>
-    <p class="panelnote">The count above the bar at 10 px, the percent alone under it. The bar is labelled by its total and the fact sits beneath it, so nothing shares a line with the button and German cannot collide. 151 px in every state, in both languages.</p>
+    <p class="panelnote">The count pinned to the bar itself: <b>126</b> sits directly over the tip of the fill, <b>300</b> is flush with the bar’s right end. The number travels with the progress instead of living in a fixed column, and the percent stays alone under the bar with the action at the right edge. 151 px, no wrap in either language.</p>
   </div>
 </div>
 <div class="phone">
@@ -166,15 +198,20 @@
         <span class="title">The Salt Orchard</span>
         <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
         <span class="since figures" data-en="Since 3 Nov · day 12" data-de="Seit 3. Nov. · Tag 12"></span>
-        <span class="place"><span class="place figures" data-en="126 of 300" data-de="126 von 300"></span></span>
-        <div class="barwrap"><div class="bar"><i style="width:42%"></i></div></div>
+        <div class="barwrap">
+          <div class="barmarks">
+            <span class="mark cur figures" style="left:42%">126</span>
+            <span class="mark total figures">300</span>
+          </div>
+          <div class="bar"><i style="width:42%"></i></div>
+        </div>
         <div class="foot">
           <div class="prog"><span class="pct figures">42 %</span></div>
-          <button class="btn num-act quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
         </div>
       </div>
     </article>
-    <p class="panelnote">The count above the bar at 10 px, the percent alone under it. The bar is labelled by its total and the fact sits beneath it, so nothing shares a line with the button and German cannot collide. 151 px in every state, in both languages.</p>
+    <p class="panelnote">The count pinned to the bar itself: <b>126</b> sits directly over the tip of the fill, <b>300</b> is flush with the bar’s right end. The number travels with the progress instead of living in a fixed column, and the percent stays alone under the bar with the action at the right edge. 151 px, no wrap in either language.</p>
   </div>
 </div>
 <script src="../mock.js"></script>
