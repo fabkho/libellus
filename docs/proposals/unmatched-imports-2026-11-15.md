@@ -185,3 +185,188 @@ the P212 chain for a strictly worse bridge.
 - Not (c): the sources do carry what a work can be matched from — the ISBN itself, on
   Wikidata. The 96 are not condemned to edition-year forever; but the hit rate needs
   the live calls in §6 before anyone promises a number.
+
+## 3. What the chain would cost
+
+Per book, primary chain (b) — all Wikidata, no key, no quota:
+
+| # | Call | Cost |
+|---|---|---|
+| 1 | `wdSearch('haswbstatement:P212=<isbn13>')` (CirrusSearch) | 1 Wikidata HTTP request |
+| 2 | `wdEntities(candidate ids, ['labels','claims'])` | 1 request per 50 ids (`sources.ts:34-43` chunks of 50) — 1 for our candidates |
+| 3 | If the item `isEdition`, `wdEntities([editionOf[0]])` for the parent | 1 more request worst case (`enrich.ts:241-245`) |
+
+**Worst case ~3 Wikidata requests per book, zero budget.** Wikidata has no key and no
+counter anywhere in this codebase; the only throttle is politeness —
+`enrich/http.ts` issues one request at a time per host, spaced apart
+(`http.ts:8-14`, intervals at `http.ts:51-59`, default 200). For 96 books that is
+~200–300 requests, i.e. minutes of wall clock inside a backfill, no quota touched.
+
+Fallback (a), only for the P212-misses, per book:
+
+- **Google:** one `google-books` `action:isbn` with `purpose:'enrich'`. Cache first:
+  `google_books_cache` (`20261115010000_google_books.sql:5-13`, table at `:30-44`)
+  serves a found answer up to 24 h (`MAX_FOUND_TTL_SECONDS`, `handler.ts:117`) and a
+  miss for 6 h (`MISS_TTL_SECONDS`, `handler.ts:119`). A live call counts against
+  `DAILY_BUDGET = 900` **and** the enrich slice `ENRICH_DAILY_BUDGET = 300`
+  (`handler.ts:102,108,221,323`). 96 uncached ISBNs = 96/300 — **a third of a day's
+  enrich slice, fitting in one day but sharing it** with the existing step-4b genre
+  calls (`enrich.ts:336-348`), which fire for every genre-less book after a big import.
+- **DNB:** one SRU call per ISBN. No response cache is wired in the dnb-lookup
+  handler/client (no cache table referenced there, unlike google-books); every call
+  goes out behind the shared pace of 5 requests/second across instances
+  (`dnb-lookup/client.ts:3`, `index.ts:36-37`) — 96 books ≈ 20 s minimum spacing.
+  Member throttles (30/min, import 120/min, `handler.ts:59-73`) do not apply to the
+  service role.
+
+**One run of 96 fits comfortably inside existing budgets** — worst case a third of
+one day's enrich slice plus a few hundred free Wikidata calls. No new quota, secret,
+table, or function is needed for the probe or the backfill. Schedule it off the genre
+backfill's peak, or split across two days, and it disturbs nothing.
+
+## 4. The proposal
+
+**A permanent enrich path (small), plus a one-off re-enqueue of the 96 through
+existing machinery. No migration. No new script.**
+
+### 4.1 The path: one clause in `enrich.ts` step 2
+
+In `supabase/functions/enrich/enrich.ts`, where Wikidata candidates are gathered
+(`enrich.ts:224-233`): after the `P648` candidates fail and alongside the title
+search, add — only when the Book has an ISBN and still has no candidates:
+
+```ts
+if (!candidates.length && book.isbn13)
+  candidates.push(...(await sources.wdSearch(`haswbstatement:P212=${book.isbn13}`, 5)))
+if (!candidates.length && book.isbn10)
+  candidates.push(...(await sources.wdSearch(`haswbstatement:P957=${book.isbn10}`, 5)))
+```
+
+Everything downstream already exists: the edition→parent walk (`enrich.ts:241-245`),
+the title guard that discards wrong-item hits (`enrich.ts:246-253`), the
+`matchedBy = 'title'` fallback, and `parseWork`/`isEdition` in `wikidata.ts`
+(`wikidata.ts:266-300,346-348`). No change to `wikidata.ts`, `sources.ts`, or any
+function contract — `searchUrl`/`wdSearch` are fully generic.
+
+- **Files:** `supabase/functions/enrich/enrich.ts` (~10 lines),
+  `supabase/functions/enrich/enrich_test.ts` + one fixture (follow the
+  `record_fixtures.ts` / `fixtures/` pattern) for: P212 hit → edition → parent work
+  with P577; P212 miss → existing behaviour unchanged.
+- **Size:** a clause plus tests. Half a day including review.
+- **No migration:** write `matched_by = 'isbn'`. The CHECK constraint already allows
+  it (`20261011011000_authors_works_series.sql:209`:
+  `matched_by in ('openlibrary', 'isbn', 'title')`), the payload type already allows
+  it (`enrich.ts:87`), and — decisively — `private.book_work_key` maps `'isbn'` (and
+  `'openlibrary'`) to a `'w:'` work key while `'title'` falls through to `'b:'`
+  (`20261116010000_book_notes.sql:322-332`). Do **not** add a new provenance value:
+  `'isbn'` is accurate (the work was found by its ISBN) and keeps the work key working.
+  A new value would need a migration for zero information gain.
+
+### 4.2 The backfill: existing machinery, not a new script
+
+No new script is needed. `public.enrich_backfill(p_limit)` queues Catalogue Books
+never enriched and `public.enrich_request(uuid)` queues one Book
+(`20261011012000_enrichment_queue.sql:265,636`), drained by `enrich_claim` in the
+function or locally via `supabase/functions/enrich/backfill.ts` (resumable, polite,
+report-first — that file's header documents the recipe). Queue the 96 by id,
+drain, read the coverage report.
+
+- Correction to the brief: the named precedent `web/scripts/backfill-page-counts.ts`
+  **does not exist in this checkout** (`ls web/scripts` shows `cover-*`,
+  `export-regal`, `import-*`, `reado`, no `backfill-*`; repo-wide grep for the name
+  finds nothing). `enrich/backfill.ts` is the actual precedent — resumable,
+  `--report`-first, same-shape guarantees the brief asked for. Do not recreate the
+  missing file; use the enrich one.
+- Google/DNB edition spelling as a permanent path: **not recommended now.** Keep the
+  fallback manual — for the P212-misses only, resolve the edition via DNB (authoritative
+  for these ISBNs) and retry the existing title+P50 search with its spelling. If the
+  P212 yield disappoints, that is the follow-up; do not pay its complexity upfront.
+
+### 4.3 What the page shows if a book stays unmatched
+
+Today's behaviour, unchanged: no `book_works` row → no `first_year` → the Book page
+shows the edition's year. The 28 manual Books stay there by construction (§0.1); any
+of the 96 the chain misses joins them with no regression and no special-casing.
+
+## 5. Is it worth it? (estimate — no production data behind it)
+
+Explicitly a judgement, not a measurement:
+
+| Source | Expected recall on these 96 | Basis (guess) |
+|---|---|---|
+| Google Books edition resolve | ~9/10 | In-print German trade ISBNs are Google's bread and butter |
+| DNB edition resolve | ~all 96 | Legal deposit covers BoD/LYX/Knaur; SRU `num=` is exact-match |
+| Wikidata P212 → edition item → P629 work with P577 | **~1/3 to ~1/2** | The weak link: 2022–2025 German indie romance is thinly modelled on Wikidata |
+
+Expected work links: **roughly 30–60 of the 96**, with the rest staying edition-year.
+Even the low end is worth it: the one-off cost is a third of one day's enrich slice
+(or split across days for free), the permanent fix is ~10 lines plus tests, and it
+keeps paying — every future German import stops leaking through the same hole.
+There is no cheaper way to buy work links: the alternative (a German-market source
+with work-level ids) does not exist in this stack, and building one dwarfs the prize.
+
+## 6. Prepared live calls (for the coordinator — nothing run)
+
+Ten ISBNs: `9783734726989 9783736319844 9783736320888 9783426528631 9783426528624
+9783426528617 9783426528648 9783736321342 9783736321359 9783736321335`.
+
+**A. Google Books** (counts the enrich slice; `$SERVICE_KEY` filled by the runner,
+never printed — ten calls ≈ 3% of the slice):
+
+```sh
+curl -s -X POST "$SUPABASE_URL/functions/v1/google-books" \
+  -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" \
+  -H 'content-type: application/json' \
+  -d '{"action":"isbn","isbn13":"9783734726989","purpose":"enrich"}'
+```
+
+`found` → edition resolvable (title/authors spelling usable for the title fallback);
+`not_found` → Google lacks it, try DNB; `unavailable` → note `reason`
+(`not_configured`/`budget`/`blocked`/`error`) and stop — a `budget` answer poisons
+the whole probe.
+
+**B. DNB** (same shape, paced 5/s, no cache — space the ten ~1 s apart):
+
+```sh
+curl -s -X POST "$SUPABASE_URL/functions/v1/dnb-lookup" \
+  -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" \
+  -H 'content-type: application/json' \
+  -d '{"action":"isbn","isbn13":"9783734726989"}'
+```
+
+`found` → authoritative title/authors/year for the ISBN; `not_found` here would be
+surprising (legal deposit) and worth reporting verbatim.
+
+**C. Wikidata P212** (no auth, browser-ready — the chain's actual entry):
+
+```text
+https://www.wikidata.org/w/api.php?action=query&list=search&srsearch=haswbstatement:P212%3D9783734726989&srlimit=5&format=json
+```
+
+Any hit → fetch its claims and follow P629, checking P577:
+
+```text
+https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q…&props=claims%7Clabels&languages=en%7Cde&format=json
+```
+
+Hit with P629 whose parent has P577 → the chain yields a year for that ISBN.
+Hit with no P629 → dead edition item (report it; the title fallback is the only
+route). No hits → P212 misses for that ISBN; count them — that count *is* the
+coverage estimate §5 guessed at.
+
+## 7. What could not be verified
+
+- **Live hit rates everywhere.** No API was called from here; §5 is a marked estimate.
+  The ten calls above turn it into a number in minutes.
+- **Which of the 96 lack an Open Library `/isbn/…​.json` vs fail the title guard.**
+  Both look identical from production reads (no `book_works` row); only the function
+  logs distinguish them. Irrelevant to the fix — the P212 path covers both.
+- **CirrusSearch `haswbstatement:P212` recall.** The operator is documented Wikidata
+  search syntax and the codebase already relies on `haswbstatement:P648/P50`
+  (`enrich.ts:225,232`); P212 indexing completeness for edition items is assumed, not
+  shown.
+- **Whether step-4b genre calls already cached these ISBNs** in `google_books_cache`
+  (a hit would make the Google leg of the probe free). Readable from the table, not
+  read here.
+- **The brief's `web/scripts/backfill-page-counts.ts` precedent is absent** (§4.2) —
+  either renamed or never landed. `enrich/backfill.ts` covers the same shape.
