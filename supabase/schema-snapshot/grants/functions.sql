@@ -6,6 +6,7 @@ grant execute on function private.cover_storable(text) to service_role;
 grant execute on function private.member_topic(uuid) to authenticated;
 grant execute on function private.note_voice_readable(text) to authenticated;
 grant execute on function private.note_voice_writable(text) to authenticated;
+grant execute on function private.set_edition_page_count(uuid,integer) to service_role;
 grant execute on function public."like"(uuid) to authenticated;
 grant execute on function public."like"(uuid) to service_role;
 grant execute on function public.abandon_reading(uuid,date,text) to authenticated;
