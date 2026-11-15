@@ -1,0 +1,219 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Home reading card V3 — restructured: the bar carries the percent</title>
+<link rel="stylesheet" href="base.css" />
+<link rel="stylesheet" href="card.css" />
+<style>
+  /* V3: the bold one. The card gets shorter and denser — cover md instead of lg, the title a step down
+     in size, the author under it — and the bar becomes a meter that holds the percent itself: a 22 px
+     track with the figure inside its right end. The place is a compact "126 / 300" under the bar, the
+     pace is a glyph and one number, and the action is an icon-only control in the corner the card
+     already reserves for its "more" menu. Every label is a string the app can already say. */
+  .card { gap: var(--spacing-ms); padding: var(--spacing-inset); }
+  .coverwrap { align-self: flex-start; }
+  .col { padding-top: 0; }
+  .title { font-size: var(--text-callout); line-height: 20px; letter-spacing: -0.015em; padding-right: 30px; }
+  .authrow { margin-top: 1px; }
+  .au { font-size: var(--text-caption); line-height: var(--text-caption--line-height); }
+
+  /* the meter: the bar is the card's loudest shape now, and the percent lives inside it */
+  .meter { position: relative; display: flex; align-items: center; height: 22px; margin-top: var(--spacing-ms);
+    border-radius: var(--radius-pill); background: var(--color-fill-strong); overflow: hidden; }
+  .meter .fill { position: absolute; inset: 0 auto 0 0; background: var(--color-accent); opacity: 0.85; }
+  .meter .pct { position: relative; margin-left: auto; padding-right: var(--spacing-sm);
+    font-size: var(--text-footnote); line-height: 1; letter-spacing: 0.01em; color: var(--color-ink); }
+  .meter .pct .gain { margin-left: 6px; font-size: 10px; color: var(--color-accent-ink); }
+  /* 0 %: nothing filled, so the figure steps back to faint — an empty bar should not shout a zero */
+  .meter.zero .pct { color: var(--color-ink-faint); }
+  /* the last page: the track is full, the figure has left for "The end." */
+  .meter.done .fill { opacity: 1; }
+
+  /* the figures under the bar: the place, right-aligned, and the pace as one glyph and one number */
+  .facts { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-sm);
+    padding-top: 7px; }
+  .facts .place { font-size: 10.5px; line-height: 13px; color: var(--color-ink-faint); }
+  .facts .place b { font-weight: 400; color: var(--color-ink-muted); }
+  .facts .theend { font-size: var(--text-body); line-height: var(--text-body--line-height);
+    letter-spacing: var(--text-body--letter-spacing); color: var(--color-ink); }
+  .paceg { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; line-height: 13px;
+    color: var(--color-ink-faint); }
+  .paceg svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round; opacity: 0.8; }
+
+  /* the action: icon only, in the card's corner (UiIcon at 20, in a 44 px target) */
+  .iconact { position: absolute; top: -2px; right: -2px; z-index: 2; display: flex; align-items: center;
+    justify-content: center; width: var(--size-touch); height: var(--size-touch); color: var(--color-ink-muted); }
+  .iconact::before { content: ''; position: absolute; width: 32px; height: 32px; border-radius: var(--radius-pill);
+    background: var(--color-fill-strong); }
+  .iconact svg { position: relative; width: 17px; height: 17px; stroke: currentColor; fill: none;
+    stroke-width: var(--stroke-icon); stroke-linecap: round; stroke-linejoin: round; }
+  .iconact.lit::before { background: var(--color-ink); }
+  .iconact.lit { color: var(--color-on-ink); }
+  .iconact.lit svg { stroke-width: var(--stroke-icon-bold); }
+</style>
+</head>
+<body>
+
+<!-- A. mid-read, page-based -->
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE A</span><span class="d">mid-read, the edition has a page count</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow md c2"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <button class="iconact" type="button" aria-label="Update"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg></button>
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        <div class="meter"><span class="fill" style="width:42%"></span><span class="pct figures">42 %</span></div>
+        <div class="facts">
+          <span class="paceg" title="18 a day · 22 days"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l6-6 4 4 6-7"/><path d="M15 8h5v5"/></svg>18</span>
+          <span class="place figures"><b>126</b> / 300</span>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">The bar is a meter now: the percent sits inside its right end, the place under it as "126 / 300", the pace as a glyph and one number, Update as a pencil in the corner.</p>
+  </div>
+</div>
+
+<!-- B. mid-read, no page count on the edition -->
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE B</span><span class="d">mid-read, the edition has no page count (percent only)</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow md c4"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <button class="iconact" type="button" aria-label="Update"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg></button>
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        <div class="meter"><span class="fill" style="width:45%"></span><span class="pct figures">45 %</span></div>
+        <div class="facts">
+          <span class="paceg" title="7 % a day · 22 days"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l6-6 4 4 6-7"/><path d="M15 8h5v5"/></svg>7</span>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">No page count: the place line drops out and the row keeps only the pace glyph, which now reads in percent.</p>
+  </div>
+</div>
+
+<!-- C. just started -->
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE C</span><span class="d">just started, 0 %</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow md c1"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <button class="iconact" type="button" aria-label="Update"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg></button>
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span></span>
+        <div class="meter zero"><span class="fill" style="width:0%"></span><span class="pct figures">0 %</span></div>
+        <div class="facts">
+          <span class="place figures"><b>0</b> / 300</span>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">At zero the meter is an empty track and the 0 % steps back to faint ink — the empty bar does the saying.</p>
+  </div>
+</div>
+
+<!-- D. the last page -->
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE D</span><span class="d">at the last page: the card's own end state</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow md c2"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <button class="iconact lit" type="button" aria-label="Finish"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg></button>
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        <div class="meter done"><span class="fill" style="width:100%"></span></div>
+        <div class="facts">
+          <span class="theend" data-en="The end." data-de="Ende."></span>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">At the last page the track is full and empty of figures, and "The end." takes the row under it; Finish becomes the lit check in the corner.</p>
+  </div>
+</div>
+
+<!-- E. the +24 gain after a save -->
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE E</span><span class="d">just after a save: +24, and Undo for five seconds</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow md c2"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <button class="iconact" type="button" aria-label="Undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8H5V4"/><path d="M5 8a8 8 0 1 1 1.5 8"/></svg></button>
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        <div class="meter"><span class="fill" style="width:50%"></span><span class="pct figures">50 %<span class="gain">+24</span></span></div>
+        <div class="facts">
+          <span class="paceg" title="18 a day · 22 days"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l6-6 4 4 6-7"/><path d="M15 8h5v5"/></svg>18</span>
+          <span class="place figures"><b>150</b> / 300</span>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">The gain sits inside the meter beside the figure, and the corner control becomes Undo — no third row appears.</p>
+  </div>
+</div>
+
+<!-- F. German at 360 px -->
+<div class="phone narrow">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE F</span><span class="d">German at 360 px (always German, whatever the toggle)</span></p>
+    <div class="sechead"><h2 class="eyebrow">Lese ich gerade</h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow md c2"><span class="t">Der Salzgarten</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <button class="iconact" type="button" aria-label="Aktualisieren"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg></button>
+        <span class="title">Der Salzgarten</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        <div class="meter"><span class="fill" style="width:42%"></span><span class="pct figures">42 %</span></div>
+        <div class="facts">
+          <span class="paceg" title="18 pro Tag · 22 Tage"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l6-6 4 4 6-7"/><path d="M15 8h5v5"/></svg>18</span>
+          <span class="place figures"><b>126</b> / 300</span>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">Nothing in the German card can wrap: the widest word is gone with the button, and "126 / 300" is language-neutral.</p>
+  </div>
+</div>
+
+<!-- L. the Library's reading tab -->
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE L</span><span class="d">the same card on the Library's reading tab</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">2</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow md c2"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <button class="iconact" type="button" aria-label="Update"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg></button>
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        <div class="meter"><span class="fill" style="width:42%"></span><span class="pct figures">42 %</span></div>
+        <div class="facts">
+          <span class="since figures" style="margin: 0" data-en="Since 3 Nov · day 12" data-de="Seit 3. Nov. · Tag 12"></span>
+          <span class="place figures"><b>126</b> / 300</span>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">On the Library the same card carries its "Since 3 Nov · day 12" in the pace glyph's slot and the place on the right: one card, two quiet left-hand facts.</p>
+  </div>
+</div>
+
+<script src="mock.js"></script>
+</body>
+</html>

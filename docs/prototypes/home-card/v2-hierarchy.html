@@ -1,0 +1,208 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Home reading card V2 — hierarchy: the percent is the fact, the place is the detail</title>
+<link rel="stylesheet" href="base.css" />
+<link rel="stylesheet" href="card.css" />
+<style>
+  /* V2: the pace line stays. The caption under the bar stops being two equal readouts glued by a dot:
+     the percent becomes the headline (20 px mono, full ink) and the place a quiet detail under it
+     (10.5 px mono, faint), with no "p." — the number and "of 300" carry it. The action keeps its
+     bottom-right corner and is aligned to the caption block's foot. */
+  .card .foot { align-items: center; }
+  .hier { display: flex; min-width: 0; flex-direction: column; gap: var(--spacing-xxs); }
+  .hier .big { display: flex; align-items: baseline; gap: var(--spacing-sm); font-size: 20px; line-height: 24px;
+    letter-spacing: -0.02em; color: var(--color-ink); }
+  .hier .big .gain { font-size: var(--text-caption); line-height: var(--text-caption--line-height); letter-spacing: 0;
+    color: var(--color-accent-ink); }
+  .hier .place { font-size: 10.5px; line-height: 14px; color: var(--color-ink-faint); }
+  /* at the last page the headline is the sentence, so it takes the body size the card already gives it */
+  .hier .big .lastpage { font-family: var(--font-sans); font-size: var(--text-body);
+    line-height: var(--text-body--line-height); letter-spacing: var(--text-body--letter-spacing); color: var(--color-ink); }
+</style>
+</head>
+<body>
+
+<!-- A. mid-read, page-based -->
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE A</span><span class="d">mid-read, the edition has a page count</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow lg c2"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        <span class="pace" data-en="18 a day · 22 days" data-de="18 pro Tag · 22 Tage"></span>
+        <div class="barwrap"><div class="bar"><i style="width:42%"></i></div></div>
+        <div class="foot">
+          <div class="hier">
+            <span class="big figures">42 %</span>
+            <span class="place figures" data-en="126 of 300" data-de="126 von 300"></span>
+          </div>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">Two sizes and two inks instead of one: 20 px ink for the fact, 10.5 px faint for where it is. No dot, no "p." — <b>new key required</b> for "126 of 300" without the "p." (<code>book.progress.pageShort</code>).</p>
+  </div>
+</div>
+
+<!-- B. mid-read, no page count on the edition -->
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE B</span><span class="d">mid-read, the edition has no page count (percent only)</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow lg c4"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        <span class="pace" data-en="18 a day · 22 days" data-de="18 pro Tag · 22 Tage"></span>
+        <div class="barwrap"><div class="bar"><i style="width:45%"></i></div></div>
+        <div class="foot">
+          <div class="hier">
+            <span class="big figures">45 %</span>
+          </div>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">The percent alone, now at headline size: this state looks the most deliberate in V2.</p>
+  </div>
+</div>
+
+<!-- C. just started -->
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE C</span><span class="d">just started, 0 %</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow lg c1"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span></span>
+        <div class="barwrap"><div class="bar"><i style="width:0%"></i></div></div>
+        <div class="foot">
+          <div class="hier">
+            <span class="big figures">0 %</span>
+            <span class="place figures" data-en="0 of 300" data-de="0 von 300"></span>
+          </div>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">Nothing read yet: the place line under a 0 % headline is the one place V2 still says a zero twice.</p>
+  </div>
+</div>
+
+<!-- D. the last page -->
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE D</span><span class="d">at the last page: the card's own end state</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow lg c2"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        <span class="pace" data-en="12 days · 51 a day" data-de="12 Tage · 51 pro Tag"></span>
+        <div class="barwrap"><div class="bar"><i style="width:100%"></i></div></div>
+        <div class="foot">
+          <div class="hier">
+            <span class="big"><span class="lastpage" data-en="The end." data-de="Ende."></span></span>
+          </div>
+          <button class="btn primary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span data-en="Finish" data-de="Beenden"></span></button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">"The end." drops back to body size inside the headline slot, so the hierarchy collapses in the one state that has no figures.</p>
+  </div>
+</div>
+
+<!-- E. the +24 gain after a save -->
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE E</span><span class="d">just after a save: +24, and Undo for five seconds</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow lg c2"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        <span class="pace" data-en="18 a day · 22 days" data-de="18 pro Tag · 22 Tage"></span>
+        <div class="barwrap"><div class="bar"><i style="width:50%"></i></div></div>
+        <div class="foot">
+          <div class="hier">
+            <span class="big figures">50 %<span class="gain">+24</span></span>
+            <span class="place figures" data-en="150 of 300" data-de="150 von 300"></span>
+          </div>
+          <button class="btn quiet" type="button" data-en="Undo" data-de="Rückgängig"></button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">The gain rides beside the headline in the accent, a badge on the fact rather than a third run of figures.</p>
+  </div>
+</div>
+
+<!-- F. German at 360 px -->
+<div class="phone narrow">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE F</span><span class="d">German at 360 px (always German, whatever the toggle)</span></p>
+    <div class="sechead"><h2 class="eyebrow">Lese ich gerade</h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow lg c2"><span class="t">Der Salzgarten</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">Der Salzgarten</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        <span class="pace">18 pro Tag · 22 Tage</span>
+        <div class="barwrap"><div class="bar"><i style="width:42%"></i></div></div>
+        <div class="foot">
+          <div class="hier">
+            <span class="big figures">42 %</span>
+            <span class="place figures">126 von 300</span>
+          </div>
+          <button class="btn quiet" type="button">Aktualisieren</button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">"126 von 300" is 69 px at 10.5 px mono: it sits on one line beside "Aktualisieren" at 360 px.</p>
+  </div>
+</div>
+
+<!-- L. the Library's reading tab -->
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE L</span><span class="d">the same card on the Library's reading tab</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">2</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow md c2"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        <span class="since figures" data-en="Since 3 Nov · day 12" data-de="Seit 3. Nov. · Tag 12"></span>
+        <div class="barwrap"><div class="bar"><i style="width:42%"></i></div></div>
+        <div class="foot">
+          <div class="hier">
+            <span class="big figures">42 %</span>
+            <span class="place figures" data-en="126 of 300" data-de="126 von 300"></span>
+          </div>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">On the Library the "since" line keeps the pace line's slot, so the same component swaps one quiet mono line for another and keeps the bar, the headline and Update.</p>
+  </div>
+</div>
+
+<script src="mock.js"></script>
+</body>
+</html>
