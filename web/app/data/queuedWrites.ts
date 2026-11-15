@@ -31,6 +31,8 @@ export const QUEUED_ACTIONS = [
   'finish_reading',
   'abandon_reading',
   'update_progress',
+  // Her own page count, also on a finished entry (set_read_total): one flag on her own entry.
+  'set_read_total',
   // Progress on an earlier day (backdated progress): one day of the open read, set or removed; replayed in order.
   'set_progress_day',
   'delete_progress_day',
@@ -256,6 +258,12 @@ export function applyWrite(entry: LibraryEntry | null, write: QueuedWrite): Libr
         next = { ...next, progressPage: page, progressPercent: percent, progressUpdatedAt: queuedAt }
       }
       return { ...entry, pageCountOverride, latestSession: next }
+    }
+    case 'set_read_total': {
+      // A total that only repeats the edition's is no override (as the database has it). Recorded
+      // progress stays as it was: the database never clamps, so neither does the device's copy.
+      const total = number(args.p_page_count)
+      return { ...entry, pageCountOverride: total === entry.book.pageCount ? null : total }
     }
     case 'set_progress_day':
     case 'delete_progress_day': {
