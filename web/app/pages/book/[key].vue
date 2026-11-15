@@ -31,6 +31,7 @@ import { useReadingStore } from '~/stores/reading'
 import { bookPageKey, followEdition } from '~/utils/bookPageKey'
 import { onIdle } from '~/utils/idle'
 import { previewOf } from '~/utils/bookPreview'
+import { editionLine, firstPublishedYear } from '~/utils/publishedYear'
 import { afterMotion } from '#layers/ui/app/utils/motion'
 import { loadReader, prefetchReader } from '~/utils/readerChunks'
 
@@ -162,12 +163,27 @@ const facts = computed(() => {
   if (!b) return preview?.pageCount ? [t('book.pages', { count: preview.pageCount })] : []
   // The format that counts: her own word on her edition, else what its source said.
   const format = formatOf(b, entry.value?.formatOverride)
+  // When the work was first published, not when this copy was printed (utils/publishedYear.ts: the edition's year falls
+  // back where there is no trustworthy work, and says so in the edition line under About).
+  const published = firstPublishedYear(b)
   return [
-    b.year ? String(b.year) : null,
+    published ? String(published) : null,
     b.pageCount ? t('book.pages', { count: b.pageCount }) : null,
     format ? t(`book.formatFact.${format}`) : null,
     b.publisher,
   ].filter((fact): fact is string => Boolean(fact))
+})
+/**
+ * The edition line under About ("This edition: Penguin, 2023"): what the facts row's year deliberately stops saying now
+ * that it is the work's first publication. `editionLine` decides when it adds something (utils/publishedYear.ts), and
+ * the one key it uses collapses a publisher or a year that is unknown.
+ */
+const printedAs = computed(() => {
+  const parts = book.value ? editionLine(book.value) : null
+  if (!parts) return ''
+  if (parts.publisher && parts.year) return t('book.thisEdition', parts)
+  if (parts.publisher) return t('book.thisEditionPublisherOnly', parts)
+  return t('book.thisEditionYearOnly', parts)
 })
 const latest = computed(() => entry.value?.latestSession ?? null)
 /** Finished because the read was given up, not because the book was done. */
@@ -440,6 +456,10 @@ function back() {
       <span class="line eyebrow-line mb-ms w-1/4"><span class="skeleton wave w-full" :style="{ '--wave': 0.6 }" /></span>
       <span v-for="i in 4" :key="i" class="line subhead-line" :class="i === 4 ? 'w-2/3' : 'w-full'"><span class="skeleton wave w-full" :style="{ '--wave': 0.6 + i * 0.1 }" /></span>
     </section>
+    <!-- Which edition this is and when it was printed, where the facts row no longer says it: that year is the work's
+         first publication now (utils/publishedYear.ts, `printedAs`). Its own line rather than part of About, because a
+         Book without a description (a Catalogue row the check has not written yet) still has an edition to name. -->
+    <p v-if="printedAs" class="relative px-ml mt-ms text-caption text-ink-faint" data-testid="book.thisEdition">{{ printedAs }}</p>
 
     <!-- V4 (docs/plans/book-actions.md; docs/parity.md, the Book page's layout): *Notes* and *Read together* are the pair directly under the About text and
          above the reading log — one box with two ways in (components/book/ActionPair.vue owns the fill, the radius, the hairline edge and the hairline

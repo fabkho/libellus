@@ -1363,6 +1363,21 @@
           "de"
         ]
       },
+      "book.thisEdition": {
+        "aacaf506201082b5": [
+          "de"
+        ]
+      },
+      "book.thisEditionPublisherOnly": {
+        "af8483fc2b0418e8": [
+          "de"
+        ]
+      },
+      "book.thisEditionYearOnly": {
+        "71ad4b634347385a": [
+          "de"
+        ]
+      },
       "book.title": {
         "909cb81127c5e194": [
           "de"
