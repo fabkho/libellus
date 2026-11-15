@@ -144,6 +144,9 @@ test('the pagesMissing sheet sets her own page count: the row leaves and the lin
   const field = first.getByTestId('profileReads.total')
   await expect(field).toHaveAttribute('aria-label', fill(en.profile.figures.pagesMissingYourTotal, { title: runTitle('Noumenon') }))
   await expect(field).toHaveValue('')
+  // The sheet's one control is a number field of her own, so the scan has something to check that the
+  // earlier pagesMissing sheet (a plain list) never carried.
+  await expectAccessible(page, 'the pagesMissing sheet with her own page count field')
 
   // A count typed and confirmed: the row leaves the list, and the line behind the sheet decrements.
   await field.fill('312')
