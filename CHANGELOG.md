@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.44.1](https://github.com/fabkho/libellus/compare/v1.44.0...v1.44.1) (2026-11-15)
+
+
+### Fixes
+
+* **book:** the Notes and Read together pair above the log, coupled as mocked ([#560](https://github.com/fabkho/libellus/issues/560)) ([04eaf79](https://github.com/fabkho/libellus/commit/04eaf79a6af2c6af961fb50d9144e2be59e33d18))
+* **e2e:** the owner's sign-in outlasts the code cooldown instead of throwing ([#553](https://github.com/fabkho/libellus/issues/553)) ([d143685](https://github.com/fabkho/libellus/commit/d143685195b1a973200aaf5f6d367560229c0834))
+* **home:** the reading card says how far once, under the bar ([#561](https://github.com/fabkho/libellus/issues/561)) ([44c49eb](https://github.com/fabkho/libellus/commit/44c49eb355bed3ddfa269f03c9cc3d7418f104db))
+
 ## [1.44.0](https://github.com/fabkho/libellus/compare/v1.43.0...v1.44.0) (2026-11-14)
 
 
