@@ -181,6 +181,7 @@
       "dnf": "{count} abgebrochen",
       "pagesMissing": "{count} ohne Seitenzahl",
       "pagesMissingOpen": "{count} ohne Seitenzahl: Bücher anzeigen",
+      "pagesMissingYourTotal": "Deine Seitenzahl für {title}",
       "pagesPerBook": "{count} pro Buch",
       "unrated": "{count} noch nicht bewertet",
       "unratedOpen": "{count} noch nicht bewertet: Bücher anzeigen",

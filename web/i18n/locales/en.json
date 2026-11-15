@@ -181,6 +181,7 @@
       "dnf": "{count} DNF",
       "pagesMissing": "{count} without a count",
       "pagesMissingOpen": "{count} without a count: show the books",
+      "pagesMissingYourTotal": "Your page count for {title}",
       "pagesPerBook": "{count} a book",
       "unrated": "{count} not rated yet",
       "unratedOpen": "{count} not rated yet: show the books",

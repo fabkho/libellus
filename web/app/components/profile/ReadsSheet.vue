@@ -25,6 +25,13 @@
 // the Book page's own path (`history.rateSession` → `update_session`, offline into the outbox like every Rating).
 // Right after one, a pill at the foot offers Undo for 5 s, as Home's card offers it (ReadingCard.vue); rated the
 // last of them away and the sheet says so (`profile.sheet.emptyRated`).
+//
+// `quickTotal` (issue #60, her own pagesMissing sheet only, never a member's): every row carries a small
+// number field holding the page count that read has, and what she types there is her own count for it —
+// the override only (`library_entries.page_count_override`, never the edition's `books.page_count` and
+// never recorded progress), through `stats.setTotal` and the same outbox as every other write. The read
+// leaves the list and the "N without a count" line behind the sheet decrements at once; an emptied field
+// clears the override back to the edition's count.
 import type { StatsRead } from '~/data/stats'
 import type { SheetRestore } from '#layers/ui/app/utils/sheetRestore'
 import { moreRows, nextPage, openingRows } from '~/utils/pageRows'
@@ -39,12 +46,13 @@ const props = withDefaults(
     withYear?: boolean
     foreign?: boolean
     quickRate?: boolean
+    quickTotal?: boolean
     testid?: string
     restore?: SheetRestore | null
     loading?: boolean
     empty?: string
   }>(),
-  { withYear: false, foreign: false, quickRate: false, testid: 'profileReads', restore: null, loading: false, empty: undefined },
+  { withYear: false, foreign: false, quickRate: false, quickTotal: false, testid: 'profileReads', restore: null, loading: false, empty: undefined },
 )
 
 const { t } = useI18n()
@@ -119,6 +127,47 @@ function undoIt() {
 }
 onBeforeUnmount(() => clearTimeout(undoTimer))
 
+// --------------------------------------------------------------- her own total
+
+/**
+ * Her own page count on a read of the pagesMissing sheet (issue #60): a small number field under the row,
+ * holding the count the read has (its edition's, or the one she set before), empty for the edition's again.
+ * Her own sheet only, never a member's.
+ */
+const totalsEditable = computed(() => props.quickTotal && !props.foreign)
+
+/** The reads whose total is on its way, by session: the field waits for it (never two writes in one row). */
+const totalling = reactive(new Set<string>())
+
+/** What the field holds: the count the read has, or nothing when it has none. */
+const totalOf = (read: StatsRead) => read.pages ?? ''
+
+/**
+ * A total set in the field, or the field emptied (`null`: the edition's count again). The override is written
+ * (`library_entries.page_count_override` only, never the edition's count) and the list and figures behind the
+ * sheet follow at once; a number the database would refuse is not sent, the field goes back to what it had.
+ */
+async function setTotal(read: StatsRead, event: Event) {
+  const field = event.target as HTMLInputElement
+  const text = field.value.trim()
+  const pageCount = text === '' ? null : Number(text)
+  if (pageCount !== null && (!Number.isInteger(pageCount) || pageCount < 1 || pageCount > 99999)) {
+    field.value = String(totalOf(read))
+    return
+  }
+  if (totalling.has(read.sessionId)) return
+  totalling.add(read.sessionId)
+  const ok = await stats.setTotal(read.sessionId, read.entryId, pageCount)
+  totalling.delete(read.sessionId)
+  // A refused write (`progress_invalid`, `entry_not_found`) leaves the read as it was: the field says so too.
+  if (!ok) field.value = String(totalOf(read))
+}
+
+/** Enter is the field's done: the change it would send on leaving the field is the same one. */
+function entered(event: Event) {
+  ;(event.target as HTMLInputElement).blur()
+}
+
 /** What a list with no Books says: `empty`, or, rated the last of them away, that everything is rated. */
 const emptyText = computed(() => props.empty ?? (rateable.value ? t('profile.sheet.emptyRated') : undefined))
 </script>
@@ -141,6 +190,21 @@ const emptyText = computed(() => props.empty ?? (rateable.value ? t('profile.she
             :testid="`${testid}.rate`"
             @rate="(stars) => rate(read, stars)"
           />
+          <!-- Her own page count on this read (the pagesMissing sheet, issue #60): empty is the edition's count. -->
+          <label v-if="totalsEditable" class="total flex items-center gap-sm text-meta text-ink-faint" :data-testid="`${testid}.total`">
+            <input
+              type="number"
+              inputmode="numeric"
+              min="1"
+              max="99999"
+              class="figures w-18 rounded-sm border-hairline bg-transparent px-xs py-xxs text-callout text-ink tabular-nums"
+              :value="totalOf(read)"
+              :aria-label="t('profile.figures.pagesMissingYourTotal', { title: read.book.title })"
+              :disabled="totalling.has(read.sessionId)"
+              @change="setTotal(read, $event)"
+              @keydown.enter.prevent="entered"
+            >
+          </label>
         </div>
       </UiListMotion>
     </div>
@@ -181,5 +245,11 @@ const emptyText = computed(() => props.empty ?? (rateable.value ? t('profile.she
 .toast-enter-from,
 .toast-leave-to {
   opacity: 0;
+}
+
+/* The total's field: under the row's own text column, as the stars (RateRow.vue). */
+.total {
+  padding-bottom: var(--spacing-sm);
+  padding-left: calc(var(--size-cover-sm) + var(--spacing-inset));
 }
 </style>

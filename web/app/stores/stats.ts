@@ -3,7 +3,7 @@ import type { GenreId } from '~/data/enrich/genres'
 import type { LibraryErrorCode } from '~/data/library'
 import { readStats, saveStats } from '~/data/deviceLibrary'
 import { defaultRange, type ChartRange } from '~/data/statsChart'
-import { createStats, withRating, type ReadingRecord, type Stats, type StatsYear } from '~/data/stats'
+import { createStats, withRating, withTotal, type ReadingRecord, type Stats, type StatsYear } from '~/data/stats'
 
 /**
  * A sheet of the Profile or a year in review: a month's books, a week's (`start` its Monday), a star row's, the reads without a page count, a
@@ -140,6 +140,25 @@ export const useStatsStore = defineStore('stats', () => {
     const member = session.member?.id
     if (import.meta.client && member) saveStats(window.localStorage, member, record.value)
   }
+
+  /**
+   * Her own page count, set in the pagesMissing sheet (issue #60): the override lands in the record at once,
+   * so the figures and the list behind the sheet follow without a reload — on the device copy too. The next
+   * read of the member's sessions is the authority again.
+   */
+  async function setTotal(sessionId: string, entryId: string, pageCount: number | null): Promise<boolean> {
+    const repo = library.library()
+    if (!repo) return false
+    const result = await repo.setReadTotal(entryId, pageCount)
+    if (result.error) return false
+    const kept = record.value
+    if (kept) {
+      record.value = { ...kept, reads: withTotal(kept.reads, sessionId, pageCount) }
+      const member = session.member?.id
+      if (import.meta.client && member) saveStats(window.localStorage, member, record.value)
+    }
+    return true
+  }
   function reset() {
     freshness.invalidate()
     record.value = null
@@ -175,5 +194,5 @@ export const useStatsStore = defineStore('stats', () => {
     if (now && loadError.value === 'offline') void load()
   })
 
-  return { record, loadError, year, chart, keptSheet, load, rated, reset }
+  return { record, loadError, year, chart, keptSheet, load, rated, setTotal, reset }
 })
