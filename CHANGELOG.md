@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.46.0](https://github.com/fabkho/libellus/compare/v1.45.0...v1.46.0) (2026-11-15)
+
+
+### Features
+
+* **book:** her page count in the Edit read sheet ([#579](https://github.com/fabkho/libellus/issues/579)) ([e26606c](https://github.com/fabkho/libellus/commit/e26606c275506c11b70b766e6f2cf9ae0543ab7f))
+
 ## [1.45.0](https://github.com/fabkho/libellus/compare/v1.44.2...v1.45.0) (2026-11-15)
 
 
