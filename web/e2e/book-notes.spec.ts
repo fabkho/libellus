@@ -304,6 +304,9 @@ test('with Everyone paused the menu has two choices, a public note counts as Fri
 test('Mo reports a public note, the owner removes it from the inbox and it reads “Removed by the moderator” for all; a block hides both sides @full', { tag: '@full' }, async ({ page: ida, browser }) => {
   test.slow()
   const { context, idaMember, pages, members: [moMember] } = await members(browser, ida, ['Mo'])
+  // The shard's stack is shared and swept once, not between attempts: an earlier attempt's report would
+  // make the inbox row ambiguous on a retry, and its error would hide this run's real one.
+  await sql(`delete from public.feedback where kind = 'report' and body like $1`, ['%It is an advertisement%'])
   const [mo] = pages as [Page]
   const ownerContext = await browser.newContext(test.info().project.use as BrowserContextOptions)
   try {

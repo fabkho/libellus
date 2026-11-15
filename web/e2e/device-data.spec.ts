@@ -83,7 +83,12 @@ test('a session that died is forgotten, and the next member on the device sees n
   })
   const before = await deviceDump(page)
   expect(before.storage).toContain('secret diary')
-  expect(before.cached.filter((entry) => /ada/.test(entry))).toHaveLength(2)
+  // The entries she just put there, by name: everything matching /ada/ also caught a workbox precache URL
+  // once the build's hash contained "beada" (…/builds/meta/…-fa9beada538d.json), a failure about the build
+  // and not about the device.
+  const hers = 'libellus-covers /cover-of-ada.jpg'
+  const herPortrait = 'libellus-portraits /portrait-of-ada.jpg'
+  expect(before.cached).toEqual(expect.arrayContaining([hers, herPortrait]))
 
   // Her refresh token dies on the server and her access token has run out: the next start cannot renew it.
   await ada.client.auth.signOut({ scope: 'global' })
@@ -100,6 +105,7 @@ test('a session that died is forgotten, and the next member on the device sees n
   // Nothing of hers is left: not her Library's copy, nor the covers she browsed, nor her ebook copy.
   const left = await deviceDump(page)
   expect(left.storage).not.toMatch(/secret diary|Ada Private/)
+  // Here /ada/ is right: it must find nothing left, whatever the build's hash.
   expect(left.cached.filter((entry) => /ada/.test(entry))).toEqual([])
   expect(await ebookCopies(page)).toBe(0)
 
