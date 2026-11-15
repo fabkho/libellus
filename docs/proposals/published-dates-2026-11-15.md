@@ -135,6 +135,132 @@ No production query was run. Everything below is what the code implies.
   (hero stops using it).
 - A work whose `first_year` is null: needs the fallback (§3) or the hero goes
   dateless.
+
+## 3. What it would take to show both
+
+### Read path
+
+The Book page's `Book` comes from PostgREST on `books` (`BOOK_COLUMNS` /
+`LIST_BOOK_COLUMNS`, `web/app/data/library.ts:380-393`; mapped at
+`bookFromRow`, `library.ts:434-439`: `year: row.published_year`). `first_year`
+lives on `works`, reachable only via `book_works`. Three ways to carry it:
+
+1. **PostgREST embed** — add `works:book_works(work:works(first_year))`-style
+   columns to `LIST_BOOK_COLUMNS`/`BOOK_COLUMNS`. No migration (client-side
+   column list; `tests/library.test.ts` compares the lists against the table —
+   that test will need its expectation extended, not weakened). Cheapest, rides
+   the existing `repo.book()` call in `stores/book.ts` `resolve`.
+2. **`work_card` join** — `work_card` already returns the work's year, but it
+   is the author-page/series card shape (`web/app/data/enrich/works.ts`),
+   keyed by work, not the page's Book. Wrong tool; do not reuse.
+3. **Separate lookup by work** — a second query (`book_work_key` then
+   `works.first_year`). Two round trips for what one embed does. Fallback
+   option only.
+
+Option 1 is the proposal: extend the column lists, map `firstYear` onto `Book`
+/ `BookSnapshot` next to `year`.
+
+`BookSnapshot.year` stays the edition's year; a new optional `firstYear`
+carries the work's. Keeping both on the type means every other screen keeps
+today's behaviour until it opts in.
+
+### Write path
+
+Nothing to write: `works.first_year` is filled by enrich (`enrich_work`) for
+every matched work. Gaps are structural (§2): Manual books and title-only
+matches have no work row. Filling those needs an enrich run against a member's
+own data — out of scope for display; the UI must handle null (below). No new
+Wikidata lookup is proposed: where enrich matched, the year is there; where it
+did not, a display-time lookup would be a new pipeline, not a line.
+
+### UI
+
+- **Hero** (`web/app/pages/book/[key].vue:158-172`, `facts` computed): the
+  first fact becomes `b.firstYear ?? b.year` — the work's year, falling back
+  to the edition's when the work's is unknown (today's behaviour, never a hole
+  where today shows a date). Label unchanged (bare year in the dotted row).
+- **Edition line**: a new quiet line under the description ("About"):
+  "This edition: {publisher}, {year}" — publisher and year both already on
+  `Book`. New i18n keys: `book.thisEdition` (EN) / same key DE
+  ("Diese Ausgabe: {publisher}, {year}"), with publisher-less and year-less
+  variants collapsing to what is known (mirror the facts row's drop-null
+  pattern). Component: inline in `[key].vue` under About, not a new
+  `book/Facts` component — there is none; the facts row is inline in the page.
+- **Null matrix**: `firstYear` set → hero shows it, edition line shows
+  edition's year. `firstYear` null, `year` set → hero shows `year` (today),
+  edition line shows nothing new (nothing to contrast). Both null → today's
+  behaviour (facts row drops the year).
+
+### Other screens showing a Book's year
+
+`b.year` is drawn in: search `ResultRow` (`web/app/components/search/ResultRow.vue:74-76`,
+edition's year plus `otherEdition` hint — correct as-is, it identifies the
+edition found); author-page `WorkRow` (already the work's year via
+`work_card` — correct as-is); Library rows/cards (edition's year of her copy —
+arguably correct, it is *her* edition). The owner asked about the Book page;
+the fix is one screen (the page) plus the shared `Book` type carrying one new
+optional field. Whether Library rows should also show the work's year is a
+follow-up, not this change.
+
+## 4. Cost and breakage
+
+- **Migration**: none. Read path is a client column-list extension plus
+  `create or replace` on no function at all. `LIST_BOOK_COLUMNS`/`BOOK_COLUMNS`
+  live in `web/app/data/library.ts`.
+- **One screen**, not every screen (§3, last paragraph).
+- **Tests that assert the hero year**: not enumerated — **unverified**. Grep
+  for specs covering `[key].vue` facts/`bookFromRow` year mapping before
+  implementing; they will need updating for the new `firstYear` field (additive,
+  so existing assertions on `year` keep passing; only hero-content assertions
+  change).
+- **Offline cache**: the device keeps lists apart from descriptions
+  (`stores/library.ts`); a new optional column flows through the same rows.
+  Old cached rows lack it — the `??` fallback covers that.
+
+## 5. Options and recommendation
+
+**A. Hero shows `firstYear`, edition line below** (what the owner described).
+Cost: one optional field on the read path, one fallback expression, one new
+line with two i18n keys. The distinction he asked for becomes visible
+everywhere the page is seen. When `firstYear` is null the hero silently shows
+the edition's year — honest enough, but a purist notes the hero then means two
+different things depending on data availability.
+
+**B. Hero keeps `year`, labelled** ("This edition 2023" in the facts row, or a
+second date beside it). No plumbing at all — but the hero then carries two
+dates in a row designed for one, and the owner's actual complaint (the year he
+sees is not the work's) is answered with more text rather than the right
+number. Cheap and wrong-shaped.
+
+**C. Hero shows whichever is older.** No new plumbing if both are already
+present — but they are not both present on this path, so it needs the same
+read-path work as A while silently conflating the two things the owner just
+distinguished. A 2023 reprint of a 1956 novel would show 1956 without saying
+which date it is; where the OL fallback already stored the work's year in
+`published_year`, it adds nothing. **Probably wrong even though cheapest.**
+
+**Recommendation: A.** It is the owner's ask, the plumbing is one optional
+column, and the fallback keeps every null case reading well. Pair it with the
+edition line always showing the edition's year (not conditional on a mismatch),
+so the page never implies a precision it does not have.
+
+### Needs the owner
+
+1. **Translated works**: original-language first vs first-in-his-language (§2).
+   Name it on the edition line later ("First published 1969 · German first
+   edition" is a different feature); for now the hero shows P577 as stored.
+2. **Edition line placement**: under the description (proposed) vs in the
+   facts row. Proposed: under About, quiet, with publisher.
+3. Whether Library rows should follow (no — one screen now, decide later).
+
+## What I could not verify
+
+- Which upstream field fills DNB's `published_year` (handler not read past the type).
+- What `catalogue_check_save` writes back to `published_year` on existing rows.
+- What year Manual books (`add_manual_book`) and imports (`import_book_for`) carry.
+- The C3 note's location (cited paths do not contain it in this checkout).
+- Which specs assert the hero year (grep before implementing).
+- Any percentage of anything: no production read was run or attempted.
 - **Translated works: which "first" does he want?** P577 on the work item is
   usually the *original-language* first publication (e.g. 1969 German, not the
   1972 English translation he may own). The work record may carry several
