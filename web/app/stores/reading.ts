@@ -18,7 +18,6 @@ import {
   type ProgressValue,
 } from '~/data/progress'
 import { dayBoundsOf, type DayBounds } from '~/data/progressDays'
-import type { ReadAs } from '~/data/readAs'
 import { isoDay } from '~/utils/dates'
 import { useLibraryStore } from '~/stores/library'
 import { useProgressDaysStore, type DayOp } from '~/stores/progressDays'
@@ -121,8 +120,6 @@ export const useReadingStore = defineStore('reading', () => {
   watch(review, (text) => {
     if (!text.trim()) reviewSpoilers.value = false
   })
-  /** How she read it (issue #169): her word as the sheet shows it; null = not said (the edition's default counts). */
-  const finishReadAs = ref<ReadAs | null>(null)
   const finishBusy = ref(false)
   const finishError = ref<LibraryErrorCode | null>(null)
   /** The entry the choices above were made for: reopening its sheet keeps them. */
@@ -137,7 +134,6 @@ export const useReadingStore = defineStore('reading', () => {
     rating.value = null
     review.value = ''
     reviewSpoilers.value = false
-    finishReadAs.value = entry.readAs ?? null
   }
 
   function closeFinish() {
@@ -164,8 +160,6 @@ export const useReadingStore = defineStore('reading', () => {
         return null
       }
       library.entryChanged(result.data)
-      // Her word on how she read it goes along when it changed (it needs the connection; the finish itself waits for one).
-      if (isOnline() && finishReadAs.value !== (entry.readAs ?? null)) await library.setReadAs(result.data, finishReadAs.value)
       finishing.value = null
       draftFor = null
       return library.entryById(result.data.id) ?? result.data
@@ -611,7 +605,6 @@ export const useReadingStore = defineStore('reading', () => {
     rating,
     review,
     reviewSpoilers,
-    finishReadAs,
     finishBusy,
     finishError,
     openFinish,

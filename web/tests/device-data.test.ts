@@ -123,7 +123,7 @@ function memberAUsedTheDevice() {
   saveLibrary(local, { member: A, lists: { ...emptyLists, reading: [{ id: 'e1', book: { title: 'PRIVATE TITLE OF ADA' } } as never] }, readInYear: null })
   saveDescriptions(local, A.id, { b1: 'PRIVATE DESCRIPTION OF ADA' })
   saveEbooksSnapshot(local, A.id, { records: [{ id: 'f1', state: 'linked', name: 'ADAS-PRIVATE-BOOK.epub' } as never], missing: new Set(), folder: null })
-  saveLibraryViews(local, A.id, { ...newLibraryViews(), reading: { ...newLibraryViews().reading, readAs: ['ebook'] } })
+  saveLibraryViews(local, A.id, { ...newLibraryViews(), reading: { ...newLibraryViews().reading, authors: ['PRIVATE AUTHOR OF ADA'] } })
   writeImportHint(local, A.id, 'dismissed')
   // The rest of what is kept under `libellus.`, as the stores write it.
   for (const key of [DEVICE_COLLECTIONS_KEY, DEVICE_STATS_KEY, DEVICE_ENRICH_KEY, DEVICE_GENRES_KEY, DEVICE_FEED_KEY, DEVICE_LINK_TEMPLATES_KEY]) {

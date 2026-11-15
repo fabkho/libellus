@@ -67,9 +67,10 @@ export type LibraryEntry = {
    */
   formatOverride?: BookFormat | null
   /**
-   * How the member read it (issue #169): physical, ebook or audiobook, null = not said
-   * (`readAsOf` in `readAs.ts` gives the one that counts: the edition's format is the
-   * default). Absent on a copy from before it existed.
+   * How the member read it (issue #169): physical, ebook or audiobook, null = not said.
+   * The app no longer sets it (the edition's format is the answer, `formatOverride`):
+   * the column is kept and only read back, so the rows written before the control went
+   * still have their word. See `readAs.ts`.
    */
   readAs?: ReadAs | null
   /**
@@ -731,12 +732,6 @@ export type Library = {
    */
   deleteSession: (entryId: string, sessionId: string) => Promise<Result<LibraryEntry>>
   /**
-   * Sets how the member read the entry (issue #169): physical, ebook or audiobook; null takes
-   * her word back (the edition's format is the default again, `readAsOf`). Needs the
-   * connection, like Change edition. Returns the entry. Refused with `read_as_invalid`.
-   */
-  setReadAs: (entryId: string, readAs: ReadAs | null) => Promise<Result<LibraryEntry>>
-  /**
    * Hides the entry from her followers, or shows it again (social v1): a hidden Book is gone for
    * everyone but her. Can wait offline like the other writes (`set_entry_hidden` in the outbox);
    * returns the entry as it will be. Refused `entry_not_found` for an entry that is not hers.
@@ -1120,14 +1115,6 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       const deleted = await client.rpc('delete_session', { p_session_id: sessionId })
       if (isNoAnswer(deleted)) return OFFLINE
       if (deleted.error) return { data: null, error: mapLibraryError(deleted.error) }
-      return reread(entryId)
-    },
-
-    async setReadAs(entryId, readAs) {
-      if (!online()) return OFFLINE
-      const set = await client.rpc('set_read_as', { p_entry_id: entryId, p_read_as: readAs })
-      if (isNoAnswer(set)) return OFFLINE
-      if (set.error) return { data: null, error: mapLibraryError(set.error) }
       return reread(entryId)
     },
 
