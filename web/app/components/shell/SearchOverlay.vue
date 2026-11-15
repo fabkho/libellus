@@ -172,6 +172,12 @@ const STAGE = {
 let animations: Animation[] = []
 let running: Direction | null = null
 
+/** Heights that count as a resize: a keyboard arriving or leaving, not a wobble. */
+const RESIZE_PX = 24
+/** The layout viewport's height when the morph measured it last (the re-play guard below). */
+let measuredHeight = 0
+/** Mid-open resizes already replayed for this opening (a keyboard arrives once). */
+let replays = 0
 /** Where the current animations have got to, as a share of the opening. */
 function shown(): number | null {
   const first = animations[0]
@@ -352,6 +358,8 @@ function play(direction: Direction) {
   measureRoom()
   gliding?.finish()
   gliding = null
+  if (direction === 'open') replays = 0
+  measuredHeight = window.innerHeight
 
   chrome.value = reduced ? 'tabs' : 'morph'
   running = direction
@@ -449,6 +457,20 @@ watch(
     }
   },
 )
+// The keyboard (`interactive-widget=resizes-content` on Chrome Android: the
+// *page* shrinks, `useKeyboardInset` reads 0) or its leaving moves every fixed
+// box, including the capsule the morph was measured against. Re-measure once:
+// `play()` cancels the stale run and starts again from the progress on screen.
+function remeasureOnResize() {
+  if (!search.isOpen || running !== 'open' || replays > 0) return
+  if (Math.abs(window.innerHeight - measuredHeight) < RESIZE_PX) return
+  replays += 1
+  play('open')
+}
+if (import.meta.client) {
+  window.addEventListener('resize', remeasureOnResize)
+  onUnmounted(() => window.removeEventListener('resize', remeasureOnResize))
+}
 // Going to another page closes the search, but only a navigation that started
 // while it was open (a result, a tab in the palette). One that started before
 // (a tab tapped just before Search, its page still loading) lands behind the
