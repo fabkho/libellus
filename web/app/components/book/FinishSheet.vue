@@ -18,7 +18,6 @@ const coverHosts = { ...useCoverHosts(), proxy: false }
 const { t, n } = useI18n()
 const { relativeDay } = useDays()
 const reading = useReadingStore()
-const online = useOnline()
 // Starting, finishing and DNF work offline too: they wait to sync (#93).
 
 const open = computed({
@@ -89,9 +88,6 @@ const summary = computed(() => {
       </UiRowGroup>
 
       <UiRatingInput v-model="reading.rating" class="mt-md" :disabled="reading.finishBusy" testid="finish.rating" />
-
-      <!-- How she read it (#169); it needs the connection, so offline the finish goes without it. -->
-      <BookReadAs v-if="online" v-model="reading.finishReadAs" :entry="entry" class="mt-lg" testid="finish.readAs" />
 
       <div class="mt-lg">
         <UiTextArea

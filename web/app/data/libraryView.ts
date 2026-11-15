@@ -1,6 +1,5 @@
 import { isNotFinished, type EntryStatus, type LibraryEntry } from './library'
 import { pageCountOf } from './progress'
-import { isReadAs, readAsOf, type ReadAs } from './readAs'
 
 /**
  * How the Library is looked at (issue #169, shared decisions in #166): the
@@ -23,7 +22,7 @@ export type SortDir = 'asc' | 'desc'
 export type Sort = { key: SortKey; dir: SortDir }
 
 /** The facets a list can be filtered by. `genre` needs a `GenreLookup`. */
-export type Facet = 'status' | 'readAs' | 'author' | 'rating' | 'year' | 'pages' | 'genre'
+export type Facet = 'status' | 'author' | 'rating' | 'year' | 'pages' | 'genre'
 
 /**
  * Finished's own status filter (it was the All / DNF pills): the entries whose latest read was
@@ -31,9 +30,6 @@ export type Facet = 'status' | 'readAs' | 'author' | 'rating' | 'year' | 'pages'
  */
 export type FinishedStatus = 'finished' | 'notFinished'
 export const FINISHED_STATUSES: readonly FinishedStatus[] = ['finished', 'notFinished']
-
-/** A Read as value, or `unset` for the entries that have none (and whose edition's format does not say). */
-export type ReadAsChoice = ReadAs | 'unset'
 
 /** Rating: only the entries not rated, or at least this many quarter stars (4, 8, 12, 16, 20). */
 export type RatingChoice = 'unrated' | number
@@ -46,7 +42,6 @@ export type ListView = {
   sort: Sort
   /** Finished only: which of its entries. */
   status: FinishedStatus | null
-  readAs: ReadAsChoice[]
   authors: string[]
   rating: RatingChoice | null
   /** Years the read ended in (`YYYY`), `''` for a read without an end date. */
@@ -68,9 +63,9 @@ export const SORTS: Record<EntryStatus, readonly SortKey[]> = {
 
 /** The facets each Status offers, in the order the sheet lists them. */
 export const FACETS: Record<EntryStatus, readonly Facet[]> = {
-  want_to_read: ['readAs', 'author', 'pages', 'genre'],
-  reading: ['readAs', 'author', 'pages', 'genre'],
-  finished: ['status', 'readAs', 'author', 'rating', 'year', 'pages', 'genre'],
+  want_to_read: ['author', 'pages', 'genre'],
+  reading: ['author', 'pages', 'genre'],
+  finished: ['status', 'author', 'rating', 'year', 'pages', 'genre'],
 }
 
 /** Which way a sort goes when it is chosen: dates and ratings newest and best first, words A to Z. */
@@ -87,7 +82,7 @@ export function defaultSort(status: EntryStatus): Sort {
 }
 
 export function newListView(status: EntryStatus): ListView {
-  return { sort: defaultSort(status), status: null, readAs: [], authors: [], rating: null, years: [], pages: { min: null, max: null }, genres: [] }
+  return { sort: defaultSort(status), status: null, authors: [], rating: null, years: [], pages: { min: null, max: null }, genres: [] }
 }
 
 export function newLibraryViews(): LibraryViews {
@@ -115,7 +110,6 @@ export function activeFilters(status: EntryStatus, view: ListView, { genres = fa
   const active: ActiveFilter[] = []
   for (const facet of FACETS[status]) {
     if (facet === 'status' && view.status != null) active.push({ facet, value: view.status })
-    if (facet === 'readAs') active.push(...view.readAs.map((value) => ({ facet, value })))
     if (facet === 'author') active.push(...view.authors.map((value) => ({ facet, value })))
     if (facet === 'rating' && view.rating !== null) active.push({ facet, value: String(view.rating) })
     if (facet === 'year') active.push(...view.years.map((value) => ({ facet, value })))
@@ -130,8 +124,6 @@ export function withoutFilter(view: ListView, { facet, value }: ActiveFilter): L
   switch (facet) {
     case 'status':
       return { ...view, status: null }
-    case 'readAs':
-      return { ...view, readAs: view.readAs.filter((v) => v !== value) }
     case 'author':
       return { ...view, authors: view.authors.filter((v) => v !== value) }
     case 'rating':
@@ -165,7 +157,6 @@ export const yearReadOf = (entry: LibraryEntry) => entry.latestSession?.endedOn?
 export function matches(entry: LibraryEntry, status: EntryStatus, view: ListView, { genres = null }: MatchOptions = {}): boolean {
   const facets = FACETS[status]
   if (facets.includes('status') && view.status != null && isNotFinished(entry) !== (view.status === 'notFinished')) return false
-  if (facets.includes('readAs') && view.readAs.length && !view.readAs.includes(readAsOf(entry) ?? 'unset')) return false
   if (facets.includes('author') && view.authors.length && !entry.book.authors.some((a) => view.authors.includes(a))) return false
   if (facets.includes('rating') && view.rating !== null) {
     const rating = entry.latestSession?.rating ?? null
@@ -265,13 +256,6 @@ export function yearOptions(entries: readonly LibraryEntry[]): FacetOption[] {
   return tally(entries.map(yearReadOf)).sort((a, b) => (a.value && b.value ? b.value.localeCompare(a.value) : a.value ? -1 : b.value ? 1 : 0))
 }
 
-/** The Read as values of the entries, in the order of `READ_AS`, `unset` last; only those that occur. */
-export function readAsOptions(entries: readonly LibraryEntry[]): FacetOption[] {
-  const counts = tally(entries.map((entry) => readAsOf(entry) ?? 'unset'))
-  const rank = (value: string) => (value === 'unset' ? 3 : ['physical', 'ebook', 'audiobook'].indexOf(value))
-  return counts.sort((a, b) => rank(a.value) - rank(b.value))
-}
-
 /** The genres of the entries' Books through the seam, most books first. Empty without a lookup. */
 export function genreOptions(entries: readonly LibraryEntry[], lookup: GenreLookup | null): FacetOption[] {
   if (!lookup) return []
@@ -307,7 +291,6 @@ export function listViewFromJson(status: EntryStatus, json: unknown): ListView {
     const key = sort.key as SortKey
     if (SORTS[status].includes(key)) view.sort = { key, dir: sort.dir }
   }
-  view.readAs = strings(json.readAs).filter((v): v is ReadAsChoice => isReadAs(v) || v === 'unset')
   view.authors = strings(json.authors)
   const rating = json.rating
   if (rating === 'unrated' || (typeof rating === 'number' && RATING_MINIMUMS.includes(rating))) view.rating = rating

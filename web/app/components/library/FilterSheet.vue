@@ -1,17 +1,16 @@
 <script setup lang="ts">
 // Filter (issue #169): every facet the Status list can be filtered by, as quiet pills in one
-// sheet: Read as, Author, Rating, Year read, Pages, and Genre once the Catalogue has genres
+// sheet: Author, Rating, Year read, Pages, and Genre once the Catalogue has genres
 // (#168; no section until the store has a lookup). The sheet works on a copy of the list's
 // view: the live count at the top and the action ("Apply") show what it would leave, Cancel
-// leaves the Library as it was. A facet with nothing to choose from (no Read as set on any
-// book here, no year read) is not offered.
+// leaves the Library as it was. A facet with nothing to choose from (no author here, no year
+// read) is not offered.
 import type { EntryStatus, LibraryEntry } from '~/data/library'
 import {
   arrange,
   authorOptions,
   FACETS,
   genreOptions,
-  readAsOptions,
   RATING_MINIMUMS,
   statusOptions,
   yearOptions,
@@ -20,7 +19,6 @@ import {
   type GenreLookup,
   type ListView,
   type RatingChoice,
-  type ReadAsChoice,
 } from '~/data/libraryView'
 
 const props = defineProps<{ status: EntryStatus; entries: readonly LibraryEntry[]; view: ListView; genres: GenreLookup | null }>()
@@ -34,7 +32,7 @@ const draft = ref<ListView>(clone(props.view))
 const query = ref('')
 
 function clone(view: ListView): ListView {
-  return { ...view, readAs: [...view.readAs], authors: [...view.authors], years: [...view.years], pages: { ...view.pages }, genres: [...view.genres] }
+  return { ...view, authors: [...view.authors], years: [...view.years], pages: { ...view.pages }, genres: [...view.genres] }
 }
 
 watch(open, (now) => {
@@ -52,7 +50,6 @@ function withChosen(options: { value: string; count: number }[], chosen: readonl
 
 const facets = computed<Facet[]>(() => FACETS[props.status].filter((facet) => facet !== 'genre' || props.genres))
 const statuses = computed(() => withChosen(statusOptions(props.entries), draft.value.status ? [draft.value.status] : []))
-const readAs = computed(() => withChosen(readAsOptions(props.entries), draft.value.readAs))
 const years = computed(() => withChosen(yearOptions(props.entries), draft.value.years))
 const genreChoices = computed(() => withChosen(genreOptions(props.entries, props.genres), draft.value.genres))
 const authors = computed(() => {
@@ -66,7 +63,6 @@ const authors = computed(() => {
 /** Whether a facet has anything to choose from. */
 function offered(facet: Facet): boolean {
   if (facet === 'status') return statuses.value.some((o) => o.value === 'notFinished') || draft.value.status !== null
-  if (facet === 'readAs') return readAs.value.some((o) => o.value !== 'unset') || draft.value.readAs.length > 0
   if (facet === 'author') return authors.value.total > 1 || draft.value.authors.length > 0
   if (facet === 'year') return years.value.length > 1 || draft.value.years.length > 0
   if (facet === 'genre') return genreChoices.value.length > 0
@@ -78,9 +74,6 @@ function toggle<T extends string>(list: T[], value: T): T[] {
 }
 function chooseStatus(value: string) {
   draft.value = { ...draft.value, status: draft.value.status === value ? null : (value as FinishedStatus) }
-}
-function toggleReadAs(value: string) {
-  draft.value = { ...draft.value, readAs: toggle(draft.value.readAs, value as ReadAsChoice) }
 }
 function toggleAuthor(value: string) {
   draft.value = { ...draft.value, authors: toggle(draft.value.authors, value) }
@@ -110,7 +103,6 @@ const maxText = computed({ get: () => draft.value.pages.max?.toString() ?? '', s
 const anySet = computed(
   () =>
     draft.value.status !== null ||
-    draft.value.readAs.length > 0 ||
     draft.value.authors.length > 0 ||
     draft.value.rating !== null ||
     draft.value.years.length > 0 ||
@@ -119,7 +111,7 @@ const anySet = computed(
     draft.value.genres.length > 0,
 )
 function clearAll() {
-  draft.value = { ...draft.value, status: null, readAs: [], authors: [], rating: null, years: [], pages: { min: null, max: null }, genres: [] }
+  draft.value = { ...draft.value, status: null, authors: [], rating: null, years: [], pages: { min: null, max: null }, genres: [] }
   query.value = ''
 }
 
@@ -129,10 +121,9 @@ function apply() {
 }
 
 const statusLabel = (value: string) => t(`library.view.status.${value}`)
-const readAsLabel = (value: string) => t(`library.view.readAs.${value}`)
 const yearLabel = (value: string) => value || t('library.undated')
 const genreLabel = (value: string) => (te(`genre.${value}`) ? t(`genre.${value}`) : value)
-const sectionIds = Object.fromEntries(['readAs', 'author', 'rating', 'year', 'pages', 'genre'].map((facet) => [facet, useId()]))
+const sectionIds = Object.fromEntries(['author', 'rating', 'year', 'pages', 'genre'].map((facet) => [facet, useId()]))
 </script>
 
 <template>
@@ -161,19 +152,6 @@ const sectionIds = Object.fromEntries(['readAs', 'author', 'rating', 'year', 'pa
               @click="chooseStatus(option.value)"
             >
               {{ statusLabel(option.value) }}
-            </UiPill>
-          </div>
-
-          <div v-else-if="facet === 'readAs'" class="flex flex-wrap gap-sm">
-            <UiPill
-              v-for="option in readAs"
-              :key="option.value"
-              :pressed="draft.readAs.includes(option.value as ReadAsChoice)"
-              :count="option.count"
-              :data-testid="`libraryFilter.readAs.${option.value}`"
-              @click="toggleReadAs(option.value)"
-            >
-              {{ readAsLabel(option.value) }}
             </UiPill>
           </div>
 

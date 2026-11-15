@@ -47,7 +47,7 @@ test('a member starts a book, finishes it with 3.75 stars and a review, and find
   await expect(page.getByTestId('start')).toBeHidden()
 
   // Currently reading: the lamp is lit, the page's one action is Update progress, and Finish
-  // and DNF wait in its sheet, not on the page (nor does Read as: it is in the options).
+  // and DNF wait in its sheet, not on the page.
   await expect(page.getByTestId('book.status')).toHaveText(en.status.reading)
   await expect(page.getByTestId('book.since')).toContainText('day 1')
   await expect(page.getByTestId('book.start')).toBeHidden()
@@ -57,7 +57,6 @@ test('a member starts a book, finishes it with 3.75 stars and a review, and find
   await expect(page.getByTestId('book.actions').getByRole('button')).toHaveCount(1)
   await expect(page.getByTestId('book.actions').getByTestId('book.updateProgress')).toBeVisible()
   await expect(page.getByTestId('book.together').getByTestId('book.together.start')).toBeVisible()
-  await expect(page.getByTestId('book.readAs')).toHaveCount(0)
   await page.getByTestId('book.updateProgress').click()
   await expect(page.getByTestId('progress.finish')).toHaveText(en.book.finish)
   await expect(page.getByTestId('progress.abandon')).toHaveText(en.book.abandon)
