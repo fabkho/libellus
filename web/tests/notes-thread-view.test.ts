@@ -6,19 +6,19 @@ import {
   chapterPath,
   chapterRows,
   currentChapterChoice,
-  isChapterSegment,
   mergeNote,
   noteItems,
   noteJob,
   noteQuoteOf,
   pendingNote,
   sentNote,
-  summaryRows,
   tombstoneNote,
   visibilityOfJob,
   type NoteBubble,
   type NoteThreadContext,
 } from '@/utils/notes'
+import { isChapterSegment } from '@/utils/notesRoute'
+import { summaryRows } from '@/utils/notesSummary'
 import { sameAuthorRun } from '@/utils/roomThread'
 
 /** What the Notes page and a chapter draw (utils/notes.ts, utils/roomThread.ts): the veil, the quote shapes, the tombstones, the chapter rows. No database, no store. */
