@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Home reading card V2 — a-beside</title>
+<link rel="stylesheet" href="../base.css" />
+<link rel="stylesheet" href="../card.css" />
+<style>
+  /* Home reading card V2 — a-beside */
+  /* The pace line is gone: cover, title, author, bar, the numbers, the one action. */
+  .card .foot { align-items: center; }
+  .prog { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+  .prog .pct { font-size: 20px; line-height: 24px; letter-spacing: -0.02em; color: var(--color-ink); white-space: nowrap; }
+  .prog .gain { font-size: var(--text-caption); line-height: var(--text-caption--line-height); letter-spacing: 0;
+    color: var(--color-accent-ink); margin-left: 2px; }
+  .prog .place { font-size: 13px; line-height: 16px; color: var(--color-ink-faint); white-space: nowrap; }
+  .prog .lastpage { font-family: var(--font-sans); font-size: var(--text-body); line-height: var(--text-body--line-height);
+    letter-spacing: var(--text-body--letter-spacing); color: var(--color-ink); }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE A</span><span class="d">mid-read, the edition has a page count</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow lg c2"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        
+        <div class="barwrap"><div class="bar"><i style="width:42%"></i></div></div>
+        <div class="foot">
+          <div class="prog"><span class="pct figures">42 %</span><span class="place figures" data-en="126 of 300" data-de="126 von 300"></span></div>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">The owner’s literal fix: the place beside the percent on the action’s row. Fine at 390 px English, but see state F — the place runs under the button at 360 px German.</p>
+  </div>
+</div>
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE B</span><span class="d">mid-read, the edition has no page count (percent only)</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow lg c4"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        
+        <div class="barwrap"><div class="bar"><i style="width:45%"></i></div></div>
+        <div class="foot">
+          <div class="prog"><span class="pct figures">45 %</span></div>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote"></p>
+  </div>
+</div>
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE C</span><span class="d">just started, 0 %</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow lg c1"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span></span>
+        
+        <div class="barwrap"><div class="bar"><i style="width:0%"></i></div></div>
+        <div class="foot">
+          <div class="prog"><span class="pct figures">0 %</span><span class="place figures" data-en="0 of 300" data-de="0 von 300"></span></div>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote"></p>
+  </div>
+</div>
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE D</span><span class="d">at the last page: the card’s own end state</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow lg c2"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        
+        <div class="barwrap"><div class="bar"><i style="width:100%"></i></div></div>
+        <div class="foot">
+          <div class="prog"><span class="lastpage" data-en="The end." data-de="Ende."></span></div>
+          <button class="btn primary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg><span data-en="Finish" data-de="Beenden"></span></button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote"></p>
+  </div>
+</div>
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE E</span><span class="d">just after a save: +24, and Undo for five seconds</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow lg c2"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        
+        <div class="barwrap"><div class="bar"><i style="width:50%"></i></div></div>
+        <div class="foot">
+          <div class="prog"><span class="pct figures">50 %</span><span class="gain figures">+24</span><span class="place figures" data-en="150 of 300" data-de="150 von 300"></span></div>
+          <button class="btn quiet" type="button" data-en="Undo" data-de="Rückgängig"></button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote"></p>
+  </div>
+</div>
+<div class="phone narrow">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE F</span><span class="d">German at 360 px (always German, whatever the toggle)</span></p>
+    <div class="sechead"><h2 class="eyebrow">Lese ich gerade</h2><span class="eyebrow cnt figures">3</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow lg c2"><span class="t">Der Salzgarten</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">Der Salzgarten</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        
+        <div class="barwrap"><div class="bar"><i style="width:42%"></i></div></div>
+        <div class="foot">
+          <div class="prog"><span class="pct figures">42 %</span><span class="place figures">126 von 300</span></div>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote">At 360 px German the numbers need 138 px and “Aktualisieren” 104 px inside a 202 px column: the place collides with the button. This is why the shipped V2 moved the action to the bar’s row.</p>
+  </div>
+</div>
+<div class="phone">
+  <div class="screen">
+    <p class="state-tag"><span class="k">STATE L</span><span class="d">the same card on the Library’s reading tab</span></p>
+    <div class="sechead"><h2 class="eyebrow" data-en="Currently reading" data-de="Lese ich gerade"></h2><span class="eyebrow cnt figures">2</span></div>
+    <article class="card">
+      <div class="amb"></div>
+      <div class="coverwrap"><div class="cover glow md c2"><span class="t">The Salt Orchard</span><span class="a">Ilse Varga</span></div></div>
+      <div class="col">
+        <span class="title">The Salt Orchard</span>
+        <span class="authrow"><span class="au">Ilse Varga</span><span class="ebmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h7v15H4zM20 5h-7v15h7z"/></svg></span></span>
+        <span class="since figures" data-en="Since 3 Nov · day 12" data-de="Seit 3. Nov. · Tag 12"></span>
+        <div class="barwrap"><div class="bar"><i style="width:42%"></i></div></div>
+        <div class="foot">
+          <div class="prog"><span class="pct figures">42 %</span><span class="place figures" data-en="126 of 300" data-de="126 von 300"></span></div>
+          <button class="btn quiet" type="button" data-en="Update" data-de="Aktualisieren"></button>
+        </div>
+      </div>
+    </article>
+    <p class="panelnote"></p>
+  </div>
+</div>
+<script src="../mock.js"></script>
+</body>
+</html>

@@ -40,6 +40,9 @@ three figures on one line (`50 % · p. 150 of 300 · +24`).
 
 ## V2 — hierarchy: the percent is the fact, the place is the detail (`v2-hierarchy.html`)
 
+*As first delivered. The file has since been revised in place — see "The owner's choice, and the revision
+that shipped" below, which supersedes the pace-line and placement notes in this section.*
+
 **Idea.** Keep the pace line. The percent becomes a 20 px ink headline; the place becomes a 10.5 px faint
 line under it, and the `p.` and the `·` are gone — the number and its total carry the meaning without a
 sentence abbreviation.
@@ -59,6 +62,86 @@ State D loses its hierarchy — `The end.` has to drop back to body size in the 
 **One variant worth noting:** the same file's state L shows the component carrying either the pace line or
 the Library's `Since 3 Nov · day 12` in the same slot.
 
+---
+
+## The owner's choice, and the revision that shipped (15 Nov)
+
+**He chose V2, with one objection.** Quoted in full, because every decision below follows from it:
+
+> "Yes, I like V2. The only thing I don't like about it is that now the page count is beneath the
+> percentage, and this causes the whole card to grow, and the whole card is now larger than the cover of
+> the book, and therefore we have more space under the cover than above it. We have to prevent this. Maybe
+> we can move the page count to the right of the percentage to get this in harmony again."
+
+He asked for the pace line gone in the same conversation — *"in at least one mock, I want to completely
+remove the line under the author where we currently see 43 pages a day and one day to go. I think this
+line is pretty useless here."* — so the revision does both: V2's typography, V1's deletion, rebuilt rather
+than bolted together.
+
+**The mechanism he saw.** The card grew because the first V2 stacked two lines where the old caption had
+one: 154 → 162 px. The cover is `align-self: flex-start` with a fixed `--size-cover-lg` width and its own
+aspect ratio (`card.css:35`), so it holds its 123 px height while the text column grows past it — the cover
+then no longer spans the card, and the extra 8 px shows up entirely below it (25 px under, 14 px above).
+
+**Measured heights, before and after.** State A, 390 px, WebKit, both languages, at 2x:
+
+| Card | Height | Cover above / below | Notes |
+| --- | --- | --- | --- |
+| Today (before #569) | 154 px | 14 / 17 | the baseline the owner compares against |
+| V2 as delivered (#569) | 162 px | 14 / **25** | the stack; this is the objection |
+| **V2 revised (shipped)** | **151 px** | **14 / 14** | pace line gone, numbers beside each other |
+
+### Where the place goes: what was tried, and what won
+
+Four placements, each measured in states A, E and F in both languages. The decisive state is **F, German
+at 360 px**, where the numbers need 138 px and `Aktualisieren` needs 104 px inside a **202 px** column —
+312 px of words in 202 px of row.
+
+| Placement | A | E | F (German 360) | Verdict |
+| --- | --- | --- | --- | --- |
+| Place beside the percent, action on the same row (`v2-options/a-place-beside-the-action.html`) | 151 px | 151 px | 151 px | **rejected**: the place collides with the button in 5 of 14 renderings — every German one |
+| Place stacked tightly under the percent (`v2-options/b-place-stacked-under.html`) | 151 px | **157 px** | 151 px | **rejected**: state E (three runs of figures) breaks the 154 px line |
+| Place beside the percent, action moved to the bar's row | 151 px | 151 px | 151 px | **shipped** |
+| Place right-aligned to the row, action on the bar's row | 151 px | 151 px | 151 px | rejected on looks: reads as two disconnected columns, not a fact and its detail |
+
+**What shipped, and why.** The numbers open the bottom cluster — `42 %` at 20 px ink, `126 of 300` at
+13 px faint on the same baseline, a `--spacing-sm` gap and no punctuation between them — and the bar and
+its one action close the card on the last row. That is the owner's own proposal (the place to the right
+of the percent) with one correction the measurements forced: the **action** had to leave that row, not the
+place. It keeps the bottom-right corner it has today, and the numbers get a full line instead of a
+starved one.
+
+The alternative he suggested implicitly — the place stacked tightly under the percent — was built and
+rejected on numbers, not taste: it holds 151 px in state A but grows to 157 px in state E, over the line.
+
+**Height is the acceptance criterion, not a nicety.** Every layout above reports its A and E in the table;
+the two that do not ship are the two that leave 154 px behind.
+
+**The cover balances again.** At 151 px the `lg` cover (123 px) spans the card exactly: 14 px above it,
+14 px below — the card's own `p-inset`. `align-self: flex-start` stays as it is, and the cover's size is
+untouched: it is a design constant across the app and did not need to move once the card stopped growing.
+
+**State L is the one place the cover does not span.** The Library card's cover is `md` (108 px) and the
+card is 164 px, so 42 px sits below it. That is the Library card as it is today — the dead space is there
+already, without a bar or a progress row at all — and it is out of scope for a Home card revision. It is
+recorded here rather than fixed by scaling a constant.
+
+### i18n
+
+**One new key**, as expected: `book.progress.pageShort` — `{page} of {count}` / `{page} von {count}`, with
+no `p.`. It must be a sibling of `book.progress.page` (`p. {page} of {count}` / `S. {page} von {count}`),
+which stays: the `p.` earns its keep in the Update sheet and on the Book page, where the number stands
+alone. **German needs the same key, with German wording** — `126 von 300`, not a copy of the English —
+because `von` is the word the language uses, and the key is a template rather than a translated literal.
+
+**Retired on Home, kept in the bundle:** `home.days` goes with the pace line on `ReadingCard.vue`;
+`book.progress.paceLine` and `book.progress.endLine` stay, because the Book page's chart caption still
+uses them.
+
+**The percent stays a real percent.** State B shows `45 %` and never `45`: the card's existing rule (a page
+is never shown as a percent) is unchanged by this revision.
+
+---
 ---
 
 ## V3 — restructured: the bar carries the percent (`v3-restructured.html`)
@@ -97,6 +180,12 @@ Pairing it with V1's `margin-top: auto` bottom cluster gives the card back the a
 frees — V1 and V2 compose cleanly, since V1 is a subtraction and V2 is a typographic change to what
 remains.
 
+**Superseded by the owner's choice: V2 was picked, and revised as described above.** The pairing proposed
+here (V2's hierarchy plus V1's deletion) is what shipped, with the numbers beside each other rather than
+stacked and the action on the bar's row — 151 px, cover balanced. The three original files stay as the
+record of the choice; `v2-hierarchy.html` is now the revised card, and `v2-options/` holds the two
+placements that were measured and turned down.
+
 V3 is the one to keep in a drawer for the day the card is allowed to stop looking like today's card.
 
 ---
@@ -111,9 +200,11 @@ V3 is the one to keep in a drawer for the day the card is allowed to stop lookin
   because `book.progress.page` is also shown in the Update sheet and on the Book page, where the `p.`
   earns its keep. `book.progress.pageShort`. V3's `126 / 300` is language-neutral and needs no string at
   all, but it does need the `figurePage` label for assistive tech.
+  **Confirmed for the shipped V2:** German gets the same key with German wording, `{page} von {count}`
+  (`126 von 300`) — `von` is the word German uses; the English wording is never copied across.
 - **A key that could retire:** if V1's deletion ships, `book.progress.paceLine` and `book.progress.endLine`
   are still used by the Book page's chart caption, so keep them; `home.days` on `ReadingCard.vue` is the
-  only Home use and goes with the line.
+  only Home use and goes with the line. The shipped V2 takes the deletion, so this applies.
 - **V3's icon-only action** needs an accessible name for each of the three: `book.progress.updateShort`
   serves Update, but Finish and Undo need `book.finish` / `book.progress.undo` on a 44 px target.
 - **The Library card.** The brief did not ask for it; the owner did, mid-brief: `library/ReadingCard.vue`
@@ -124,3 +215,13 @@ V3 is the one to keep in a drawer for the day the card is allowed to stop lookin
 - Reuse `docs/prototypes/book-actions/`'s harness: `tokens.css` and `base.css` are copies, `mock.js` is the
   same with the `?w=` line dropped (panels carry `.narrow` themselves), `shoot.cjs` shoots every panel in
   both themes into `docs/images/home-card/`.
+- **The shipped V2's structure**, for whoever builds it: a `.prog` row (`margin-top: auto` so it opens the
+  bottom cluster) holding `42 %` at 20 px ink and `126 of 300` at 13 px `ink-faint` on the same baseline,
+  a `--spacing-sm` gap and **no punctuation at all**; then a `.barrow` row holding the 2 px bar (`flex: 1`)
+  and the one action, which keeps the bottom-right corner it has today. The action had to leave the
+  numbers' row, not the place: at 360 px German the numbers need 138 px of a 202 px column and
+  `Aktualisieren` another 104 px. `align-self: flex-start` on the cover and `--size-cover-lg` are both
+  unchanged — with the card back at 151 px the 123 px cover spans it again.
+- **`v2-options/`** holds the two placements that were measured and turned down, for the record:
+  `a-place-beside-the-action.html` (the place collides with the button in every German rendering) and
+  `b-place-stacked-under.html` (state E grows to 157 px). `shoot.cjs` does not shoot them.
