@@ -15,8 +15,6 @@ import { quoteOf, roomItems, type QuoteSource, type QuoteWords, type RoomThreadC
 
 // ------------------------------------------------------------------ addresses and keys
 
-export { isBookId, isChapterSegment, notesPath, WHOLE_SEGMENT } from '~/utils/notesRoute'
-
 export const chapterSegment = (chapter: Pick<NotesChapter, 'kind' | 'position'>): string => (chapter.kind === 'end' ? WHOLE_SEGMENT : String(chapter.position))
 
 export const chapterPath = (bookId: string, chapter: Pick<NotesChapter, 'kind' | 'position'>): string => `${notesPath(bookId)}/${chapterSegment(chapter)}`
@@ -27,8 +25,6 @@ export function chapterOfSegment(room: Pick<NotesRoom, 'chapters'> | null | unde
   if (segment === WHOLE_SEGMENT) return room.chapters.find((c) => c.kind === 'end') ?? null
   return room.chapters.find((c) => c.kind === 'part' && c.position === Number(segment)) ?? null
 }
-
-export { notesPeekKey, notesQueueKey, NOTES_QUEUE_PREFIX, NOTES_STORAGE_PREFIX } from '~/utils/notesStorage'
 
 /** The message-file key a refusal is worded under (en.json, `notes.error.<code>`): every code has one (tests/notes-errors.test.ts). */
 export const noteErrorKey = (code: NoteErrorCode): string => `notes.error.${code}`
@@ -274,6 +270,3 @@ export function currentChapterChoice(me: NotesRoom['me']): string {
   return me.finished ? 'finished' : `c${me.chapter}`
 }
 
-// ------------------------------------------------------------------ the Book page
-
-export { summaryRows, type SummaryRows } from '~/utils/notesSummary'
