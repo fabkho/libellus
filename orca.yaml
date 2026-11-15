@@ -1,0 +1,12 @@
+# Run by Orca right after it creates a worktree for this repository (`--setup run`, or the repo's
+# "run-by-default" setup policy). A worktree is a fresh checkout with no node_modules, and every
+# verification command (pnpm test, pnpm build, tsc) needs them — without this, a worker finds out
+# the hard way on its first test run. Installing from the local pnpm store takes a few seconds;
+# --prefer-offline only falls back to the network when the store is cold. Orca's runner already
+# wraps this in bash with `set -e`, so a failed install fails the setup tab loudly.
+#
+# There is no package.json in the repository root: the app and all of its dependencies live in web/.
+scripts:
+  setup: |
+    cd web
+    pnpm install --prefer-offline
