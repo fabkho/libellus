@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
-import { createLibrary, LIST_BOOK_COLUMNS } from '@/data/library'
+import { BOOK_COLUMNS, createLibrary, LIST_BOOK_COLUMNS } from '@/data/library'
 import { signUpMember } from './support/member'
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
 
@@ -220,5 +220,10 @@ describe('the lists carry no description (perf F4)', () => {
     )
     const listed = LIST_BOOK_COLUMNS.split(', ').filter((name) => !name.includes(':'))
     expect(columns.map((row) => row.column_name).filter((name) => !['description', 'owner_id', 'checked_at', 'check_failed', 'check_unknown'].includes(name)).sort()).toEqual([...listed].sort())
+    // …and the embeds it carries, named one by one: the cached Goodreads rating (#69) and the year the work was first
+    // published, which the Book page's hero shows (utils/publishedYear.ts, BOOK_COLUMNS carries the same two).
+    const embeds = LIST_BOOK_COLUMNS.split(', ').filter((name) => name.includes(':'))
+    expect(embeds).toEqual(['goodreads:goodreads_rating(*)', 'works:book_works(work:works(first_year))'])
+    expect(BOOK_COLUMNS.endsWith(embeds.join(', '))).toBe(true)
   })
 })

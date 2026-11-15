@@ -92,6 +92,14 @@ export type Book = BookSnapshot & {
   goodreads?: GoodreadsRating | null
   /** A Book the server check could not confirm, as another member's record carries it: no title, authors or cover (utils/unverifiedBook.ts). */
   unverified?: true
+  /**
+   * The year the *work* was first published (`works.first_year`, Wikidata's P577 on the work item, else Open
+   * Library's earliest catalogued edition), when the row was read with the `book_works` embed. Not the edition's
+   * year: `year` is that, and every screen but the Book page's hero keeps showing it. Absent on a row read without
+   * the embed (a device's cached Library from before it existed) and null where enrich never matched a work, which
+   * is a third of the Catalogue (a Manual book, an edition no source knows).
+   */
+  firstYear?: number | null
 }
 
 /**

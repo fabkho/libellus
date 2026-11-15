@@ -339,6 +339,9 @@ export function addWithArguments({ status = 'want_to_read', startedOn, endedOn, 
 
 export type Result<T> = { data: T; error: null } | { data: null; error: LibraryErrorCode }
 
+/** `book_works` → `works`, as the embed carries it (`BookRow.works`): the work's first publication year, no more. */
+type LinkedWork = { work: { first_year: number | null } | null }
+
 /** The `books` row, as PostgREST returns it. */
 export type BookRow = {
   id: string
@@ -370,10 +373,21 @@ export type BookRow = {
   goodreads?: GoodreadsRow | null
   /** A Book the server check could not confirm, as the social answers carry it (`member_reading_record`): nothing else of it is known. */
   unverified?: boolean | null
+  /**
+   * The work the Book belongs to, as `BOOK_COLUMNS`/`LIST_BOOK_COLUMNS` embed it. PostgREST answers a **to-one**: the
+   * embed's key (`book_works.book_id`) is the table's primary key, so a Book has at most one work and the object comes
+   * back as one. An array is tolerated too, because the shape PostgREST picks is its own reading of the constraints.
+   */
+  works?: LinkedWork | LinkedWork[] | null
 }
 
-/** A `books` row with its cached Goodreads rating (issue #69), so a Library kept for offline has it. */
-export const BOOK_COLUMNS = '*, goodreads:goodreads_rating(*)'
+/**
+ * A `books` row with its cached Goodreads rating (issue #69), so a Library kept for offline has it, and the year the
+ * work it belongs to was first published (`book_works` → `works.first_year`, which a member may read; the Book page's
+ * hero shows it, utils/publishedYear.ts). The embed is a to-one (`book_works.book_id` is its primary key) and comes
+ * back as one object; `firstYearOf` reads that, and an array too, so a change in the shape cannot empty the hero.
+ */
+export const BOOK_COLUMNS = '*, goodreads:goodreads_rating(*), works:book_works(work:works(first_year))'
 
 /**
  * A Book as the lists carry it (the three Status lists, the Library read for search, a Collection's
@@ -381,10 +395,11 @@ export const BOOK_COLUMNS = '*, goodreads:goodreads_rating(*)'
  * That is about 65 % of a Book's JSON (1,226 characters on average, perf assessment F4) and only the
  * book page shows it. The device keeps it apart (`stores/library.ts`, `descriptions`) and the book page
  * asks for it with `book`. A column added to `books` is added here too: tests/library.test.ts compares
- * the two lists against the table.
+ * the two lists against the table. The one embed it carries is `BOOK_COLUMNS`'s too: the work's first
+ * publication year (`book_works` → `works.first_year`, utils/publishedYear.ts).
  */
 export const LIST_BOOK_COLUMNS =
-  'id, title, authors, isbn13, isbn10, page_count, published_year, language, publisher, cover_url, cover_thumbhash, cover_dominant, cover_secondary, cover_key, cover_widths, source, apple_id, openlibrary_edition_key, openlibrary_work_key, created_at, format, goodreads:goodreads_rating(*)'
+  'id, title, authors, isbn13, isbn10, page_count, published_year, language, publisher, cover_url, cover_thumbhash, cover_dominant, cover_secondary, cover_key, cover_widths, source, apple_id, openlibrary_edition_key, openlibrary_work_key, created_at, format, goodreads:goodreads_rating(*), works:book_works(work:works(first_year))'
 
 /** How many Books' descriptions one request asks for (the ids are in the address). */
 export const DESCRIPTION_BATCH = 40
@@ -424,6 +439,19 @@ export type EntryRow = {
 /** An entry with its Book and its latest session (`latest_session`, a to-one computed relationship). */
 export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, format_override, read_as, hidden, book:books!inner(${LIST_BOOK_COLUMNS}), latest:latest_session(*)`
 
+/**
+ * The year the work behind a Book was first published, from the `book_works` embed (`first_year` on `works`).
+ *
+ * Absent or null for the Books enrich never matched — a Manual book, an edition no source knows, a third of the
+ * Catalogue — which every reader treats as "not known", never as an error. PostgREST answers this embed as one object
+ * (`book_works.book_id` is its primary key); an array is read too, so a change in how it reads the constraint does not
+ * quietly empty the hero (`BookRow.works`).
+ */
+export function firstYearOf(row: Pick<BookRow, 'works'>): number | null {
+  const linked = Array.isArray(row.works) ? row.works[0] : row.works
+  return linked?.work?.first_year ?? null
+}
+
 export function bookFromRow(row: BookRow): Book {
   return {
     id: row.id,
@@ -435,6 +463,9 @@ export function bookFromRow(row: BookRow): Book {
     isbn10: row.isbn10,
     pageCount: row.page_count,
     year: row.published_year,
+    // The work's own first publication year, when the row was read with the embed (`firstYearOf`): the Book page's
+    // hero shows it where it can be trusted (utils/publishedYear.ts), every other screen keeps `year`.
+    firstYear: firstYearOf(row),
     language: row.language,
     publisher: row.publisher,
     // A list's row has none (`LIST_BOOK_COLUMNS`): null here, the device's descriptions know it.
