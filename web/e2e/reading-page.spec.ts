@@ -85,9 +85,10 @@ test.describe('a reading page, signed out', () => {
     await expectNoSideScroll(page, 'reading page')
     await expectAccessibleDark(page, 'reading page')
 
-    // The footer: the waitlist form, and a way in for whoever has a code.
+    // The footer: the waitlist form and nothing else — no tagline above it (its subheading stays), no invite-code way in.
+    await expect(page.getByTestId('readingPage.footer').locator('> *')).toHaveCount(1)
     await expect(page.getByTestId('readingPage.waitlist')).toContainText(en.readingPage.waitlist.text)
-    await expect(page.getByTestId('readingPage.signUp')).toHaveText(en.readingPage.footer.signUp)
+    await expect(page.getByTestId('readingPage.signUp')).toHaveCount(0)
 
     await page.getByTestId('readingPage.finishedBook').filter({ hasText: loved.book.title }).click()
     await expect(page).toHaveURL(new RegExp(`/r/${token}/book/${loved.book.id}$`))
@@ -139,7 +140,6 @@ test.describe('the waitlist on a reading page, signed out', () => {
     await page.goto(`/r/${token}`)
     const form = page.getByTestId('readingPage.waitlistForm')
     await expect(page.getByTestId('readingPage.waitlist')).toContainText(en.readingPage.waitlist.text)
-    await expect(page.getByTestId('readingPage.waitlistConsent')).toHaveText(en.readingPage.waitlist.consent)
     await expect(page.getByTestId('readingPage.waitlistJoin')).toHaveText(en.readingPage.waitlist.join)
     // The honeypot is out of reach for a person.
     await expect(page.getByTestId('readingPage.waitlistWebsite')).toHaveAttribute('tabindex', '-1')

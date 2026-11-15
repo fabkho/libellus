@@ -1753,10 +1753,6 @@
     "offline": "You’re offline. The page shows once you’re back.",
     "error": "The page could not be loaded.",
     "retry": "Try again",
-    "footer": {
-      "tagline": "BetterReads — track what you read",
-      "signUp": "Have an invite code? Sign up"
-    },
     "waitlist": {
       "title": "Want in?",
       "text": "BetterReads is invite-only for now. Leave your email and we’ll send you an invite when there’s room.",
@@ -1766,7 +1762,6 @@
       "join": "Join the waitlist",
       "joining": "Joining…",
       "retry": "Try again",
-      "consent": "We’ll only use it to send you an invite; ask us to delete it any time.",
       "invalid": "That doesn’t look like an email address.",
       "rateLimited": "Too many tries just now. Please try again in a while.",
       "error": "You could not be added. Try again.",

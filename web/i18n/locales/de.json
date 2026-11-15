@@ -1753,10 +1753,6 @@
     "offline": "Du bist offline. Die Seite wird geladen, sobald du wieder online bist.",
     "error": "Die Seite konnte nicht geladen werden.",
     "retry": "Nochmal versuchen",
-    "footer": {
-      "tagline": "BetterReads — behalte deine Bücher im Blick",
-      "signUp": "Hast du einen Einladungscode? Registrieren"
-    },
     "waitlist": {
       "title": "Dabei sein?",
       "text": "BetterReads ist zurzeit nur mit Einladung zugänglich. Trag deine E-Mail ein und wir schicken dir eine Einladung, sobald ein Platz frei ist.",
@@ -1766,7 +1762,6 @@
       "join": "Auf die Warteliste",
       "joining": "Wird eingetragen …",
       "retry": "Nochmal versuchen",
-      "consent": "Wir nutzen sie nur für deine Einladung; du kannst uns jederzeit bitten, sie zu löschen.",
       "invalid": "Das sieht nicht nach einer E-Mail-Adresse aus.",
       "rateLimited": "Gerade zu viele Versuche. Versuch es bald nochmal.",
       "error": "Du konntest nicht eingetragen werden. Versuch es nochmal.",
