@@ -65,13 +65,20 @@ test('a member starts a book, finishes it with 3.75 stars and a review, and find
   await page.keyboard.press('Escape')
   await expect(page.getByTestId('progress')).toBeHidden()
 
-  // In the Library it is a card under Currently reading, with Finish on it.
+  // In the Library it is the same card Home shows (the owner's decision, docs/proposals/home-card-mocks-2026-11-15.md):
+  // the bar, the numbers and the percent, and Update as its one action. There is no Finish on the card itself, since
+  // the card is one component on both screens and a read is finished through its own action (#68); Finish is one
+  // press in, in the progress sheet that Update opens.
   await page.getByTestId('shell.tab.library').click()
   await page.getByTestId('library.segment.reading').click()
   await expect(page.getByTestId('library.segment.reading')).toContainText('1')
   await expect(page.getByTestId('library.readingCard')).toHaveCount(1)
   await expect(page.getByTestId('library.entryTitle')).toHaveText(['Piranesi'])
-  await page.getByTestId('library.finish').click()
+  await expect(page.getByTestId('library.entrySince')).toContainText('day 1')
+  await expect(page.getByTestId('library.finish')).toHaveCount(0)
+  await page.getByTestId('library.update').click()
+  await expect(page.getByTestId('progress')).toBeVisible()
+  await page.getByTestId('progress.finish').click()
 
   // The Finish sheet: today, no Rating yet, an empty review.
   const sheet = page.getByTestId('finish')
