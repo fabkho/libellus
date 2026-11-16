@@ -357,10 +357,14 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await goto(page, `/friends/${ida.id}/${today.slice(0, 4)}`)
     await expect(page.getByTestId('memberYear.title')).toBeVisible()
     await expectAccessible(page, "a member's year")
-    // Her shelf, from the card her profile draws (wave E): only a build with Regal has one.
+    // Her shelf (wave E): Regal's row, drawn in place on her profile as it is on the Profile's own Your shelf — no tap to
+    // see it, the row itself is `member.shelfRow` (it used to be the link card that opened the page). Show all opens her
+    // shelf, the full-screen Stack. Only a build with Regal has either.
     if (/^(1|true)$/i.test(process.env.LIBELLUS_REGAL?.trim() ?? '')) {
       await goto(page, `/friends/${ida.id}`)
-      await page.getByTestId('member.shelfRow').click()
+      await expect(page.getByTestId('member.shelfRow')).toBeVisible()
+      await expectAccessible(page, 'a member, her shelf on it')
+      await page.getByTestId('member.shelfAll').click()
       await expect(page.getByTestId('memberShelf.stage')).toBeVisible()
       await expectAccessible(page, "a member's shelf")
     }
