@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.48.0](https://github.com/fabkho/libellus/compare/v1.47.0...v1.48.0) (2026-11-16)
+
+
+### Features
+
+* **social:** her shelf is the same 3D row as your own ([#587](https://github.com/fabkho/libellus/issues/587)) ([ea50e6e](https://github.com/fabkho/libellus/commit/ea50e6e14023ad6127f7c0498c8027f0fb9396f7))
+
 ## [1.47.0](https://github.com/fabkho/libellus/compare/v1.46.0...v1.47.0) (2026-11-16)
 
 
