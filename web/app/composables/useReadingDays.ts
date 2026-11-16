@@ -7,7 +7,6 @@ import {
   paceOf,
   progressShownOf,
   readingLogOf,
-  readSummaryOf,
   unitOf,
   valueIn,
   type DayAmount,
@@ -66,12 +65,6 @@ export function useReadingDays(entry: () => LibraryEntry | null) {
   const daysLeft = computed(() => daysLeftOf(pace.value, position.value, end.value))
   const lastTime = computed(() => lastTimeOf(days.value ?? [], today(), pageCount.value))
   const log = computed(() => readingLogOf(days.value ?? [], pageCount.value))
-  /** The read so far (start to today) spread over its days: the card's line at the end. */
-  const sofar = computed(() => {
-    const startedOn = entry()?.latestSession?.startedOn
-    return startedOn ? readSummaryOf(startedOn, today(), pageCount.value) : null
-  })
-
   // ------------------------------------------------------------------ words
 
   /** "Today", "Yesterday", "Fri" within the week, else "3 Oct". */
@@ -92,19 +85,6 @@ export function useReadingDays(entry: () => LibraryEntry | null) {
   /** "24 pages", "5 %". */
   const amountWords = (amount: number) =>
     unit.value === 'page' ? t('book.progress.amountPages', { count: n(amount) }, amount) : t('book.progress.amountPercent', { count: amount })
-  /** "18 a day", "7 % a day". */
-  const perDayWords = (amount: number) =>
-    unit.value === 'page' ? t('book.progress.perDay', { count: n(amount) }) : t('book.progress.perDayPercent', { count: amount })
-  /** "22 days". */
-  const daysWords = (count: number) => t('book.progress.days', { count }, count)
-
-  /** The card's line beside the chart: "18 a day · 22 days", or at the end "12 days · 51 a day". */
-  const paceLine = computed(() => {
-    if (atEnd.value && sofar.value) return t('book.progress.endLine', { days: daysWords(sofar.value.days), perDay: perDayWords(sofar.value.perDay) })
-    if (!pace.value) return null
-    return daysLeft.value ? t('book.progress.paceLine', { perDay: perDayWords(pace.value), days: daysWords(daysLeft.value) }) : perDayWords(pace.value)
-  })
-
   return {
     days,
     loaded,
@@ -120,12 +100,8 @@ export function useReadingDays(entry: () => LibraryEntry | null) {
     daysLeft,
     lastTime,
     log,
-    sofar,
     dayWords,
     dayWordsInline,
     amountWords,
-    perDayWords,
-    daysWords,
-    paceLine,
   }
 }

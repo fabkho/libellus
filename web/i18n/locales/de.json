@@ -649,8 +649,6 @@
       "perDay": "{count} pro Tag",
       "perDayPercent": "{count} % pro Tag",
       "days": "1 Tag | {count} Tage",
-      "paceLine": "{perDay} · {days}",
-      "endLine": "{days} · {perDay}",
       "amountPages": "1 Seite | {count} Seiten",
       "amountPercent": "{count} %",
       "dayToday": "Heute",
