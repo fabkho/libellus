@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.47.0](https://github.com/fabkho/libellus/compare/v1.46.0...v1.47.0) (2026-11-16)
+
+
+### Features
+
+* **home:** the reading card in its V2 shape ([#584](https://github.com/fabkho/libellus/issues/584)) ([5245e9a](https://github.com/fabkho/libellus/commit/5245e9ab7cf450abaa9042031490d39ae201890f))
+
 ## [1.46.0](https://github.com/fabkho/libellus/compare/v1.45.0...v1.46.0) (2026-11-15)
 
 
