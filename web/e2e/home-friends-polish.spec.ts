@@ -118,14 +118,18 @@ test.describe('German', () => {
       await expect(prozent.getByTestId('home.progress')).toHaveText('42 %')
       const line = (await prozent.getByTestId('home.progress').boundingBox())!
       expect(line.height).toBeLessThanOrEqual(24)
-      // Nothing on the card runs past its own box: no wrapped "Aktualisieren", no number off the edge.
+      // Nothing that carries words runs past the card's own box: no wrapped "Aktualisieren", no number off the edge.
+      // (The cover's glow is drawn past the edge on purpose and the card clips it, so only text is asked.)
       const overflow = () =>
         prozent.evaluate((el) => {
           const card = el.getBoundingClientRect()
-          return [...el.querySelectorAll<HTMLElement>('*')].filter((n) => {
-            const box = n.getBoundingClientRect()
-            return box.width > 0 && (box.right > card.right + 1 || box.left < card.left - 1)
-          }).map((n) => n.textContent?.trim().slice(0, 30) ?? n.className)
+          return [...el.querySelectorAll<HTMLElement>('*')]
+            .filter((n) => n.childElementCount === 0 && (n.textContent ?? '').trim())
+            .filter((n) => {
+              const box = n.getBoundingClientRect()
+              return box.width > 0 && (box.right > card.right + 1 || box.left < card.left - 1)
+            })
+            .map((n) => n.textContent!.trim().slice(0, 30))
         })
       expect(await overflow()).toEqual([])
       await expect(page.getByTestId('home.entrySince')).toHaveCount(0)

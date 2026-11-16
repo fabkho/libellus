@@ -92,7 +92,7 @@ describe('the buddy read store and the live module are not part of the entry', (
   })
 
   it('keeps Home, the Book page and their buddy read parts free of the big store: they read her list through the small one', () => {
-    for (const file of ['pages/index.vue', 'pages/book/[key].vue', 'pages/friends/index.vue', 'components/home/Together.vue', 'components/together/BookRow.vue', 'components/home/ReadingCard.vue']) {
+    for (const file of ['pages/index.vue', 'pages/book/[key].vue', 'pages/friends/index.vue', 'components/home/Together.vue', 'components/together/BookRow.vue', 'components/reading/Card.vue']) {
       const specs = staticImports(readFileSync(join(app, file), 'utf8'))
       expect(specs.filter((spec) => /stores\/buddyRead(?![A-Za-z])|data\/buddyLive|realtime-client|@fabkho\/chat/.test(spec)), file).toEqual([])
     }
