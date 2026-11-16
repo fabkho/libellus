@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { createAuth, type Auth, type AuthErrorCode, type DeleteAccountError, type MailLocale, type Member } from '~/data/auth'
 import { readSavedMember } from '~/data/deviceLibrary'
-import { forgetMemberData, otherMemberHere } from '~/data/localData'
+import { clearLocalFiles, forgetMemberData, otherMemberHere } from '~/data/localData'
 import { browserPort, disablePush, readPushChoice } from '~/data/pushSubscription'
 import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useSyncStore } from '~/stores/sync'
@@ -24,6 +24,32 @@ const PENDING_KEY = PENDING_SIGN_IN_KEY
 // otp_expiry in supabase/config.toml. After that the stored address only leads
 // to a code that no longer works, so it is dropped rather than restored.
 const PENDING_TTL_MS = 60 * 60 * 1000
+
+/** How long a sign-out waits for the pictures still on their way before the second purge (see `picturesSettled`). */
+const PICTURES_SETTLE_MS = 2000
+
+/**
+ * Resolves once the pictures the page has already asked for have arrived or failed, or after
+ * `budget`: a cover or a portrait fetched just before the session ended would otherwise land in the
+ * cache the worker emptied a moment earlier (`forgetDevice`). Only pictures already on their way are
+ * waited for — one never asked for (a lazy row below the fold) is not fetched by this. Bounded, as a
+ * picture that never comes must not hold the sign-out.
+ */
+async function picturesSettled(budget = PICTURES_SETTLE_MS): Promise<void> {
+  if (typeof document === 'undefined') return
+  const onTheirWay = [...document.images].filter((image) => image.currentSrc && !image.complete)
+  if (!onTheirWay.length) return
+  const arrived = Promise.all(
+    onTheirWay.map(
+      (image) =>
+        new Promise<void>((done) => {
+          image.addEventListener('load', () => done(), { once: true })
+          image.addEventListener('error', () => done(), { once: true })
+        }),
+    ),
+  )
+  await Promise.race([arrived, new Promise<void>((done) => setTimeout(done, budget))])
+}
 
 /**
  * Who is signed in, and which code is in the air. The screens read this and
@@ -392,6 +418,17 @@ export const useSessionStore = defineStore('session', () => {
         },
         { sessionEnded, accountDeleted, memberId, keepForNext, keep: accountDeleted ? [] : [PENDING_SIGN_IN_KEY, ...PENDING_LINK_KEYS] },
       )
+      // The purge has to win the race against a cover that was already on its way when the caches went:
+      // the worker's CacheFirst (nuxt.config.ts) puts the response it had fetched into a cache of the same
+      // name, which `caches.delete` had just emptied, and the device keeps the address of a book she looked
+      // at. So the pictures the page still has in flight are let to land, and the member's caches are emptied
+      // once more. What the worker fetched before that already went with the first purge.
+      await picturesSettled()
+      await clearLocalFiles({
+        storage: navigator.storage,
+        caches: typeof caches === 'undefined' ? null : caches,
+        databases: typeof indexedDB === 'undefined' ? null : indexedDB,
+      })
       // The Friends tab setting went with the rest: back to its default, on.
       useFriendsTabStore().reload()
     }
