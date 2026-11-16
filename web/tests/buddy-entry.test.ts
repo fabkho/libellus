@@ -192,13 +192,13 @@ describe('where the screens put the entry points (read from the sources)', () =>
   })
 
   it('a Currently reading card has the ⋯ for a Catalogue Book, asked of nothing else', () => {
-    const card = read('components/home/ReadingCard.vue')
+    const card = read('components/reading/Card.vue')
     expect(card).toContain('canReadTogether(props.entry.book)')
     expect(card).not.toMatch(/useBuddyReadsOn/)
   })
 
   it('the page, the card, Home’s parts and the row import no buddy read store but the small one, no data layer and no chat layer', () => {
-    for (const file of ['pages/book/[key].vue', 'pages/index.vue', 'components/home/ReadingCard.vue', 'components/home/Together.vue', 'components/together/BookRow.vue']) {
+    for (const file of ['pages/book/[key].vue', 'pages/index.vue', 'components/reading/Card.vue', 'components/home/Together.vue', 'components/together/BookRow.vue']) {
       expect(imports(file).filter((spec) => /stores\/buddyRead(?![A-Za-z])|data\/buddyReads|data\/buddyLive|@fabkho\/chat|#layers\/chat/.test(spec)), file).toEqual([])
     }
   })

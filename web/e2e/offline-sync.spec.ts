@@ -83,13 +83,13 @@ test('progress saved offline survives a reload and syncs once the connection is 
   await page.getByTestId('progress.wheelInput').press('Enter')
   await page.getByTestId('progress.action').click()
   await expect(page.getByTestId('progress')).toBeHidden()
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 64 of 300')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('64')
   await expect(page.getByTestId('shell.syncLabel')).toHaveText(waiting(1))
   expect((await readOf(member.email, 'The Tidal Clock'))[0]!.progress_page).toBeNull()
 
   // Opened again, still offline: the change and the chip are still there.
   await page.reload()
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 64 of 300')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('64')
   await expect(page.getByTestId('shell.syncLabel')).toHaveText(waiting(1))
   // The sheet names what waits.
   await page.getByTestId('shell.sync').click()
@@ -104,7 +104,7 @@ test('progress saved offline survives a reload and syncs once the connection is 
   await network.goOnline()
   await expect(page.getByTestId('shell.sync')).toBeHidden()
   await expect.poll(async () => (await readOf(member.email, 'The Tidal Clock'))[0]!.progress_page).toBe(64)
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 64 of 300')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('64')
 })
 
 /** Saves `page` as the progress of the Book on Home's card. */

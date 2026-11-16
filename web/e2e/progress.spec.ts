@@ -133,7 +133,7 @@ test('a member starts a book, sets page 120 on the wheel, turns it from Home, un
 
   // Home's card: the value, a quiet Update; nothing on it edits by itself.
   await page.getByTestId('shell.tab.home').click()
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 120 of 480')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('120')
   await expect(page.getByTestId('home.progressBar')).toHaveAttribute('aria-valuenow', '25')
   await expect(page.getByTestId('home.finish')).toBeHidden()
   await page.getByTestId('home.update').click()
@@ -147,11 +147,11 @@ test('a member starts a book, sets page 120 on the wheel, turns it from Home, un
   await expect(page.getByTestId('progress')).toBeHidden()
 
   // Saved: "+5" and Undo instead of Update; Undo puts it back.
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 125 of 480')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('125')
   await expect(page.getByTestId('home.progressGain')).toContainText(en.book.progress.gainPages.replace('{count}', '5'))
   await expect(page.getByTestId('home.update')).toBeHidden()
   await page.getByTestId('home.undo').click()
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 120 of 480')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('120')
   await expect(page.getByTestId('home.progressGain')).toBeHidden()
   await expect(page.getByTestId('home.update')).toBeVisible()
   expect((await sessionOf(member.email))[0]!.progress_page).toBe(120)
@@ -163,7 +163,7 @@ test('a member starts a book, sets page 120 on the wheel, turns it from Home, un
   await expect(page.getByTestId('home.undo')).toBeVisible()
   await expect(page.getByTestId('home.undo')).toBeHidden({ timeout: 8_000 })
   await expect(page.getByTestId('home.update')).toBeVisible()
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 300 of 480')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('300')
 
   // Finish in the sheet: the page is saved, then the Finish sheet; the closed read keeps it.
   await page.getByTestId('home.update').click()

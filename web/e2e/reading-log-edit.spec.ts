@@ -172,7 +172,7 @@ test('a row is a button: it opens the sheet on that day; edited, the log, the pa
   await expect(page.getByTestId('book.progressValue')).toHaveText('120')
   expect(await progressOf(session)).toBe(120)
   await page.getByTestId('shell.tab.home').click()
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 120 of 480')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('120')
 })
 
 /**
@@ -278,7 +278,7 @@ test('Remove from a row: the latest day lowers her progress after the confirm, a
   expect(await progressOf(session)).toBe(40)
   await expect(page.getByTestId('book.progressValue')).toHaveText('40')
   await page.getByTestId('shell.tab.home').click()
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 40 of 480')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('40')
 })
 
 test('a day that went back reads "−6" in the quiet ink, not "+-6", and can be edited and removed', async ({ page }) => {
@@ -353,14 +353,14 @@ test('offline, Remove waits (the log drops the day at once) and her progress fol
   // The chip on Home says a change waits; the card keeps its value until the sync.
   await page.getByTestId('shell.tab.home').click()
   await expect(page.getByTestId('shell.syncLabel')).toHaveText(en.sync.chip.replace('{count}', '1'))
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 140 of 480')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('140')
 
   // Back online: it syncs by itself; the day is gone for good and her progress went back.
   await page.context().setOffline(false)
   await expect(page.getByTestId('shell.sync')).toBeHidden()
   await expect.poll(() => daysOf(session)).toEqual([[6, null, 40], [4, 40, 90]])
   expect(await progressOf(session)).toBe(90)
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 90 of 480')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('90')
   await page.getByTestId('home.entry').click()
   await expect(rows(page)).toHaveCount(2)
   await expect(page.getByTestId('book.progressValue')).toHaveText('90')

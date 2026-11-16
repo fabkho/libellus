@@ -94,12 +94,13 @@ watch(
         <span v-if="reading.length" class="eyebrow text-ink-faint" data-testid="home.readingCount">{{ reading.length }}</span>
       </div>
       <UiListMotion class="flex flex-col gap-ms">
-        <HomeReadingCard
+        <ReadingCard
           v-for="(entry, index) in reading"
           :key="entry.id"
           :entry="entry"
           :eager="index < 3"
           :friends="friendsReading[entry.book.id]"
+          read-together
           @together="togetherFor"
         />
       </UiListMotion>

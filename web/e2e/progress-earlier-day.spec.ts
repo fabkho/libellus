@@ -193,7 +193,7 @@ test('yesterday by the pill, an older day by the date input, the range, the effe
   await expect(page.getByTestId('progress')).toBeHidden()
   expect(await daysOf(session)).toEqual([[6, null, 40], [4, 40, 90], [2, 90, 100], [1, 100, 140]])
   expect(await progressOf(session)).toBe(140)
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 140 of 480')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('140')
   // No Undo: it would put back a value from before the day.
   await expect(page.getByTestId('home.undo')).toBeHidden()
 
@@ -242,7 +242,7 @@ test('yesterday by the pill, an older day by the date input, the range, the effe
   await expect(page.getByTestId('progress')).toBeHidden()
   expect(await daysOf(session)).toEqual([[6, null, 40], [5, 40, 65], [4, 65, 90], [2, 90, 100]])
   expect(await progressOf(session)).toBe(100)
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 100 of 480')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('100')
 })
 
 test('removing a day in the middle says where its pages go and leaves her progress alone', async ({ page }) => {
@@ -262,7 +262,7 @@ test('removing a day in the middle says where its pages go and leaves her progre
   // The day after absorbs the pages: 40 → 140.
   expect(await daysOf(session)).toEqual([[6, null, 40], [1, 40, 140]])
   expect(await progressOf(session)).toBe(140)
-  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 140 of 480')
+  await expect(page.getByTestId('home.progressValue')).toHaveText('140')
 })
 
 test('a refusal stays in the sheet and Save tries again, a refused Remove stays in its confirm', async ({ page }) => {

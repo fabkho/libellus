@@ -66,11 +66,15 @@ test('offline the actions that need the connection say so, search finds her own 
   // No connection from here on, and no reload: what the screens say while the device has none.
   await page.context().setOffline(true)
 
-  // Finishing can wait to sync (#93): the shortcut stays, and does not say Offline.
+  // The Library's reading card is Home's card (one component, state L of docs/proposals/home-card-mocks-2026-11-15.md),
+  // so its one action is Update — no Finish of its own any more — and it works offline too: the save and the finish
+  // wait to sync (#93), and neither says Offline.
   await page.getByTestId('library.segment.reading').click()
   await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('The Night Lamp'))
-  await expect(page.getByTestId('library.finish')).toBeEnabled()
-  await expect(page.getByTestId('library.finish')).toHaveText(en.book.finish)
+  await expect(page.getByTestId('library.entrySince')).toContainText('day')
+  await expect(page.getByTestId('library.update')).toBeEnabled()
+  await expect(page.getByTestId('library.update')).toHaveText(en.book.progress.updateShort)
+  await expect(page.getByTestId('library.progressBar')).toBeVisible()
 
   // Search answers from her own Library, and says so once.
   await page.getByTestId('shell.tab.search').click()

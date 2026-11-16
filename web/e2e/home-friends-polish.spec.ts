@@ -60,20 +60,38 @@ test('Home: the card says how far once, under the bar, never a page as a percent
   await expect(page.getByTestId('home.readingCard')).toHaveCount(4)
 
   const percent = card(page, 'Percent')
-  // How far is said once, in the bar's caption: the whole percent and the place, one line under the bar.
-  await expect(percent.getByTestId('home.progress')).toHaveText('42 % · p. 126 of 300')
+  // V2 (docs/prototypes/home-card/v2-hierarchy.html): the bar carries the book's own two numbers, bare — the page
+  // reached over the tip of the fill (`home.progressValue`), the total flush with the bar's right end — and the
+  // whole percent stands alone under it. How far is still said once: the place moved from the caption onto the bar.
+  await expect(percent.getByTestId('home.progressValue')).toHaveText('126')
+  await expect(percent.getByTestId('home.progressTotal')).toHaveText('300')
   await expect(percent.getByTestId('home.progressPercent')).toHaveText('42 %')
-  await expect(percent.getByTestId('home.progressValue')).toHaveText('p. 126 of 300')
+  await expect(percent.getByTestId('home.progress')).toHaveText('42 %')
+  // The whole fact, "of" and all, is still the bar's own words for a screen reader: the bare numerals never take it away.
   await expect(percent.getByTestId('home.progressBar')).toHaveAttribute('aria-valuetext', '42 % · p. 126 of 300')
   // Nothing above the bar says it: the title link carries the title and the author only.
   await expect(percent.getByTestId('home.entry')).not.toContainText('42 %')
-  await expect(card(page, 'Start').getByTestId('home.progress')).toHaveText('0 % · p. 0 of 300')
-  // At the last page the caption is "The end.": the bar is full, so the percent would be the same thing twice.
-  await expect(card(page, 'End').getByTestId('home.theEnd')).toHaveText('The end.')
-  await expect(card(page, 'End').getByTestId('home.progressPercent')).toHaveCount(0)
-  // No page count: a page says nothing about how far, so no percent.
+
+  // 0 %: the tick cannot hang over a tip that *is* the bar's left edge, so the label hangs from that end instead.
+  const start = card(page, 'Start')
+  await expect(start.getByTestId('home.progressValue')).toHaveText('0')
+  await expect(start.getByTestId('home.progressTotal')).toHaveText('300')
+  await expect(start.getByTestId('home.progress')).toHaveText('0 %')
+  const barBox = (await start.getByTestId('home.progressBar').boundingBox())!
+  const markBox = (await start.getByTestId('home.progressValue').boundingBox())!
+  expect(Math.abs(markBox.x - barBox.x)).toBeLessThanOrEqual(1)
+
+  // 100 %: the bar is full, so there is nothing left for the numbers to point at; they go and "The end." says it.
+  const end = card(page, 'End')
+  await expect(end.getByTestId('home.theEnd')).toHaveText('The end.')
+  await expect(end.getByTestId('home.progressValue')).toHaveCount(0)
+  await expect(end.getByTestId('home.progressTotal')).toHaveCount(0)
+  await expect(end.getByTestId('home.progressPercent')).toHaveCount(0)
+
+  // No page count: a page says nothing about how far, so no percent, and the bar has no numbers to carry.
   await expect(card(page, 'Nocount').getByTestId('home.progressPercent')).toHaveCount(0)
-  await expect(card(page, 'Nocount').getByTestId('home.progress')).toHaveText('p. 40')
+  await expect(card(page, 'Nocount').getByTestId('home.progressValue')).toHaveText('p. 40')
+  await expect(card(page, 'Nocount').getByTestId('home.progressTotal')).toHaveCount(0)
 
   await expect(page.getByTestId('home.entrySince')).toHaveCount(0)
   for (const text of await page.getByTestId('home.readingCard').allInnerTexts()) expect(text).not.toMatch(/since|seit/i)
@@ -82,17 +100,42 @@ test('Home: the card says how far once, under the bar, never a page as a percent
 test.describe('German', () => {
   test.use({ locale: 'de-DE' })
 
-  test('Home: the same card in German says "42 %" under the bar and no "seit"', async ({ page }) => {
-    const member = await signedIn(page)
-    await reading(member, 'Prozent', 300, 126)
-    await page.reload()
-    const prozent = card(page, 'Prozent')
-    await expect(prozent.getByTestId('home.progressPercent')).toHaveText(de.book.progress.percent.replace('{percent}', '42'))
-    await expect(prozent.getByTestId('home.progressPercent')).toHaveText('42 %')
-    await expect(prozent.getByTestId('home.progress')).toHaveText('42 % · S. 126 von 300')
-    await expect(page.getByTestId('home.entrySince')).toHaveCount(0)
-    expect(await page.getByTestId('home.readingCard').innerText()).not.toMatch(/seit|since/i)
-  })
+  // The state that decides V2: at 360 px "Aktualisieren" alone takes 104 px of the 202 px text column, so a count
+  // sharing its row could never fit. On the bar the numbers are bare numerals, identical in both languages, and the
+  // button has the row to itself — so nothing wraps and the card is the same height as in English.
+  for (const width of [360, 390]) {
+    test(`Home: the card in German at ${width} px says "42 %" under the bar, carries 126 and 300 on it, and does not wrap`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 })
+      const member = await signedIn(page)
+      await reading(member, 'Prozent', 300, 126)
+      await page.reload()
+      const prozent = card(page, 'Prozent')
+      await expect(prozent.getByTestId('home.progressPercent')).toHaveText(de.book.progress.percent.replace('{percent}', '42'))
+      await expect(prozent.getByTestId('home.progressPercent')).toHaveText('42 %')
+      await expect(prozent.getByTestId('home.progressValue')).toHaveText('126')
+      await expect(prozent.getByTestId('home.progressTotal')).toHaveText('300')
+      // The percent line is the only thing in that row but the button: one line, and the card's own height.
+      await expect(prozent.getByTestId('home.progress')).toHaveText('42 %')
+      const line = (await prozent.getByTestId('home.progress').boundingBox())!
+      expect(line.height).toBeLessThanOrEqual(24)
+      // Nothing that carries words runs past the card's own box: no wrapped "Aktualisieren", no number off the edge.
+      // (The cover's glow is drawn past the edge on purpose and the card clips it, so only text is asked.)
+      const overflow = () =>
+        prozent.evaluate((el) => {
+          const card = el.getBoundingClientRect()
+          return [...el.querySelectorAll<HTMLElement>('*')]
+            .filter((n) => n.childElementCount === 0 && (n.textContent ?? '').trim())
+            .filter((n) => {
+              const box = n.getBoundingClientRect()
+              return box.width > 0 && (box.right > card.right + 1 || box.left < card.left - 1)
+            })
+            .map((n) => n.textContent!.trim().slice(0, 30))
+        })
+      expect(await overflow()).toEqual([])
+      await expect(page.getByTestId('home.entrySince')).toHaveCount(0)
+      expect(await page.getByTestId('home.readingCard').innerText()).not.toMatch(/seit|since/i)
+    })
+  }
 })
 
 for (const [width, height] of [

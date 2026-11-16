@@ -23,6 +23,7 @@ import { useFriendsBooksStore } from '~/stores/friendsBooks'
 definePageMeta({ layout: 'tabs', screen: 'library', keepalive: true })
 
 const { t } = useI18n()
+const { formatDay, dayOfRead } = useDays()
 const library = useLibraryStore()
 const libraryView = useLibraryViewStore()
 // The genre filter's lookup (#168): provided to the view store by the genres store, which the device fills at once.
@@ -31,6 +32,12 @@ const bookGenres = useGenresStore()
 // Followed members who want the same Books (circle_want), by her Book's id; asked when the Library shows.
 const friendsBooks = useFriendsBooksStore()
 const friendsWant = computed(() => friendsBooks.want)
+
+/** The card's own line above its bar: since when this read is going, and which day of it. */
+const sinceOf = (entry: LibraryEntry) => {
+  const startedOn = entry.latestSession?.startedOn
+  return startedOn ? t('book.since', { date: formatDay(startedOn), day: dayOfRead(startedOn) }) : null
+}
 
 const SEGMENTS: readonly EntryStatus[] = ['want_to_read', 'reading', 'finished']
 const segment = ref<EntryStatus>('want_to_read')
@@ -166,7 +173,17 @@ watch(
     </UiListMotion>
 
     <UiListMotion v-else-if="segment === 'reading' && lists.reading.length" class="flex flex-col gap-ms pt-md" data-testid="library.reading">
-      <LibraryReadingCard v-for="(entry, index) in arranged" :key="entry.id" :entry="entry" :eager="index < 4" />
+      <!-- The same card Home's Currently reading shows (the owner's decision, state L of docs/proposals/home-card-mocks-2026-11-15.md):
+           its `since` line takes the slot the pace line held, and the cover keeps the Library's own `md` width. -->
+      <ReadingCard
+        v-for="(entry, index) in arranged"
+        :key="entry.id"
+        :entry="entry"
+        :eager="index < 4"
+        scope="library"
+        cover="md"
+        :since="sinceOf(entry)"
+      />
     </UiListMotion>
 
     <div v-else-if="segment === 'finished' && lists.finished.length" class="flex flex-col" data-testid="library.finished">
