@@ -7,10 +7,12 @@
 //  - a profile she may see (public, or followed): the hero (photo, name, since when, the Library line),
 //    Follow where the account is public and she does not follow yet, then, by her switches, Currently
 //    reading, Want to read (the newest, then See all), Potential buddy reads (worked out from her Library and what this page shows), the year pills and the four figures, the chart by
-//    month or by week (read-only, its own window), Ratings, Records, Authors, Recently finished (the newest 3, then See all) and the Years in review. The Profile's own
-//    blocks, fed from her record. Never her reading days, a progress, an account row or a shelf.
+//    month or by week (read-only, its own window), Ratings, Records, Authors, Recently finished (the newest 3, then See all), her shelf as Regal's row
+//    (her finished reads, drawn in place: the Profile's own Your shelf, with Show all to the whole shelf) and the Years in review. The Profile's own
+//    blocks, fed from her record. Never her reading days, a progress or an account row, and nothing of her Library but what her switches show.
 // A Book opens its page with the cover flying into it, a Manual book opens nothing (it is not in the
 // Catalogue). Read each time the page shows (stores/memberProfile.ts), online only.
+import { memberShelfFromFinished } from '~/data/memberShelf'
 import { figuresOf, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { figuresWithRatings, libraryLine, memberBlocks } from '~/utils/memberProfile'
@@ -111,11 +113,20 @@ const wantAll = computed(() => view.value.want ?? open.value?.want ?? [])
 /**
  * Her shelf's Books (wave E): the finished reads her profile carries, newest first, and only where she
  * shows her *Finished* (the database sends none otherwise, so the row is not there for her either), in
- * a build with Regal (`appConfig.regal`, regal.config.ts): without it there is no shelf to open.
+ * a build with Regal (`appConfig.regal`, regal.config.ts): without it there is no shelf to draw or open.
  */
 const shelfBooks = computed(() => (useAppConfig().regal === true && open.value?.sections.finished ? open.value.finished : []))
-// The covers' hosts, direct as this screen asked before own covers: only the Library's row and the reel go through `/cover`.
-const coverHosts = { ...useCoverHosts(), proxy: false }
+// The covers' hosts and the page's origin, exactly as her shelf page asks for them (`pages/friends/[member]/shelf.vue`):
+// the hosts direct, as this screen asked before own covers, our stored copies made absolute against the origin.
+const covers = { ...useCoverHosts(), proxy: false }
+const origin = useRequestURL().origin
+/**
+ * Her finished Books as her shelf's library document, built on the device and never fetched: the row is handed it, so
+ * her profile asks nothing more of the database than it did, and her own Library is not on this device.
+ */
+const shelfLibrary = computed(() =>
+  shelfBooks.value.length ? memberShelfFromFinished(shelfBooks.value, { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', covers, origin }) : null,
+)
 
 // ------------------------------------------------------------------ sheets
 // A month's books, a star row's, an author's reads of the period, the reads without a page count or the ones
@@ -362,42 +373,28 @@ function back() {
           </div>
         </UiReveal>
 
-        <!-- Her shelf (wave E): the Books she has finished, as a card drawn the way a year's card is (ProfileYearCards):
-             the count, the newest finished cover, its title, opening her shelf. Only when she has finished something, and
-             nothing when her *Finished* switch is off (her profile carries no finished Book then). -->
+        <!-- Her shelf (wave E): the Books she has finished, as Regal's row in a card — the same row as the Profile's own
+             Your shelf (ShelfRowCard, drawn in place, a Book tapped breaks out), built here from her profile's finished
+             reads (data/memberShelf.ts `memberShelfFromFinished`) and handed to the card, never fetched. Show all opens her
+             shelf, the full-screen Stack. Only when she has finished something, and nothing when her *Finished* switch is
+             off (her profile carries no finished Book then). -->
         <UiReveal :show="shelfBooks.length > 0">
           <section aria-labelledby="memberShelfTitle" class="flex flex-col gap-md pb-xl" data-testid="member.shelfSection">
-            <h2 id="memberShelfTitle" class="eyebrow">{{ t('member.shelf') }}</h2>
-            <div class="scrollbar-none -mx-screen flex gap-ms overflow-x-auto px-screen">
-              <NuxtLink
+            <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
+              <h2 id="memberShelfTitle" class="eyebrow">
+                {{ t('member.shelf') }}
+                <span class="figures ml-xs text-ink-faint" data-testid="member.shelfCount">{{ count(shelfBooks.length) }}</span>
+              </h2>
+              <UiSeeAll
+                v-if="shelfBooks.length"
                 :to="`/friends/${id}/shelf`"
-                class="shelf-card relative flex shrink-0 flex-col gap-sm overflow-hidden rounded-lg bg-surface-raised p-inset shadow-raised edge-faint active:opacity-80"
-                data-testid="member.shelfRow"
+                :aria-label="t('member.shelfAllLabel', { name, count: count(shelfBooks.length) }, shelfBooks.length)"
+                data-testid="member.shelfAll"
               >
-                <UiAmbient :colors="shelfBooks[0]?.book.coverColors ?? null" shape="card" />
-                <span class="relative flex items-start justify-between gap-sm">
-                  <span class="flex flex-col gap-xs">
-                    <span class="text-figure tabular-nums">{{ count(shelfBooks.length) }}</span>
-                    <span class="figures text-meta text-ink-muted" data-testid="member.shelfCount">{{ t('shelf.count', { count: count(shelfBooks.length) }, shelfBooks.length) }}</span>
-                  </span>
-                  <UiCover
-                    decorative
-                    v-if="shelfBooks[0]"
-                    :title="shelfBooks[0].book.title"
-                    :authors="shelfBooks[0].book.authors"
-                    v-bind="coverImage(shelfBooks[0].book, 'md', coverHosts)"
-                    :thumbhash="shelfBooks[0].book.coverThumbhash"
-                    :colors="shelfBooks[0].book.coverColors"
-                    size="md"
-                    glow
-                  />
-                </span>
-                <span v-if="shelfBooks[0]" class="relative mt-auto flex flex-col gap-xxs">
-                  <span class="eyebrow">{{ t('member.shelfNewest') }}</span>
-                  <span class="book-title title-wrap text-callout">{{ shelfBooks[0].book.title }}</span>
-                </span>
-              </NuxtLink>
+                {{ t('shelf.card.all') }}
+              </UiSeeAll>
             </div>
+            <ShelfRowCard v-if="shelfLibrary" :limit="SHELF_ROW_LIMIT" :library="shelfLibrary" :label="t('shelf.card.rowLabel')" data-testid="member.shelfRow" />
           </section>
         </UiReveal>
 
@@ -443,10 +440,5 @@ function back() {
 .lock {
   width: var(--size-touch);
   height: var(--size-touch);
-}
-/* Her shelf's card at the size a year's card has (ProfileYearCards), the one card in its sideways row. */
-.shelf-card {
-  width: calc(var(--size-cover-xl) * 1.6);
-  min-height: calc(var(--size-cover-xl) * 1.2);
 }
 </style>

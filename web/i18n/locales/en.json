@@ -2029,7 +2029,7 @@
     "bothReadFirst": "{name} read {count} of them first",
     "shelf": "Shelf",
     "shelfTitle": "{name} · Shelf",
-    "shelfNewest": "Newest",
+    "shelfAllLabel": "Show all {count} book on {name}'s shelf | Show all {count} books on {name}'s shelf",
     "shelfEmpty": "{name} hasn't finished a book you can see."
   },
   "follow": {
