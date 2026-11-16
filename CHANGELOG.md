@@ -5,7 +5,8 @@
 
 ### Features
 
-* **home:** the reading card in its V2 shape ([#584](https://github.com/fabkho/libellus/issues/584)) ([5245e9a](https://github.com/fabkho/libellus/commit/5245e9ab7cf450abaa9042031490d39ae201890f))
+* **home:** the reading card in its V2 shape — its two numbers sit on the bar now, and the Library's reading tab carries the same card ([#584](https://github.com/fabkho/libellus/issues/584)) ([5245e9a](https://github.com/fabkho/libellus/commit/5245e9ab7cf450abaa9042031490d39ae201890f))
+* **book:** the edition's format is the answer, so Read as goes: the control in the ⋮ menu and in the Finish sheet, and the Library's Read as filter, are gone ([#583](https://github.com/fabkho/libellus/issues/583)) ([e4bae42](https://github.com/fabkho/libellus/commit/e4bae428998da44fdfa86769880a12d9226e745e))
 
 ## [1.46.0](https://github.com/fabkho/libellus/compare/v1.45.0...v1.46.0) (2026-11-15)
 
