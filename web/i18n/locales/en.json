@@ -455,19 +455,12 @@
         "clear": "Clear filters"
       },
       "facet": {
-        "readAs": "Read as",
         "author": "Author",
         "rating": "Rating",
         "year": "Year read",
         "pages": "Pages",
         "genre": "Genre",
         "status": "Status"
-      },
-      "readAs": {
-        "physical": "Physical",
-        "ebook": "Ebook",
-        "audiobook": "Audiobook",
-        "unset": "Not set"
       },
       "rating": {
         "top": "5 stars",
@@ -1674,15 +1667,6 @@
       "previous": "Previous page",
       "next": "Next page"
     }
-  },
-  "readAs": {
-    "label": "Read as",
-    "hint": "How you read it",
-    "physical": "Physical",
-    "ebook": "Ebook",
-    "audiobook": "Audiobook",
-    "offline": "Offline",
-    "fromEdition": "From the edition"
   },
   "sharing": {
     "title": "Share",

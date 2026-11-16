@@ -455,19 +455,12 @@
         "clear": "Filter zurücksetzen"
       },
       "facet": {
-        "readAs": "Gelesen als",
         "author": "Autor",
         "rating": "Bewertung",
         "year": "Lesejahr",
         "pages": "Seiten",
         "genre": "Genre",
         "status": "Status"
-      },
-      "readAs": {
-        "physical": "Gedruckt",
-        "ebook": "E-Book",
-        "audiobook": "Hörbuch",
-        "unset": "Nicht festgelegt"
       },
       "rating": {
         "top": "5 Sterne",
@@ -1674,15 +1667,6 @@
       "previous": "Vorherige Seite",
       "next": "Nächste Seite"
     }
-  },
-  "readAs": {
-    "label": "Gelesen als",
-    "hint": "Wie du es gelesen hast",
-    "physical": "Gedruckt",
-    "ebook": "E-Book",
-    "audiobook": "Hörbuch",
-    "offline": "Offline",
-    "fromEdition": "Aus der Ausgabe"
   },
   "sharing": {
     "title": "Teilen",

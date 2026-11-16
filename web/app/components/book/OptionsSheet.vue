@@ -2,8 +2,8 @@
 // The book page's options (D's ⋯ in the top bar; issue #11). On every Book
 // page: Change edition (issue #41, opens its sheet; for a Book that is not in
 // the Library it only looks at the other editions, nothing is saved, and it is
-// the one row such a Book has). For a Book in the Library also Read as, Share,
-// Hide, Series, the ebook and Remove from Library. Remove does not act at
+// the one row such a Book has). For a Book in the Library also Share, Hide,
+// Series, the ebook and Remove from Library. Remove does not act at
 // once: the confirmation says what goes with it (the Book's reads and its
 // places on collections; the collections stay), and only its button removes.
 // `removed` fires once the entry is gone, so the page can leave the Book. The
@@ -156,7 +156,6 @@ async function unlink() {
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
       />
-      <BookReadAs v-if="entry" :entry="entry" testid="bookOptions.readAs" class="mb-md" />
       <UiRowGroup>
         <UiRow v-if="entry" as="button" icon="share" :label="t('bookOptions.share')" data-testid="bookOptions.share" @click="share" />
         <UiSwitchRow

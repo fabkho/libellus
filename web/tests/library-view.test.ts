@@ -8,7 +8,6 @@ import {
   LIBRARY_VIEW_KEY,
   listViewFromJson,
   newListView,
-  readAsOptions,
   statusOptions,
   readLibraryViews,
   saveLibraryViews,
@@ -50,7 +49,6 @@ function entry(title: string, fields: Partial<LibraryEntry> & { authors?: string
     status: 'finished',
     addedAt: '2026-01-01T00:00:00Z',
     pageCountOverride: null,
-    readAs: null,
     latestSession: null,
     book: { id: `b-${title}`, title, authors, pageCount: pages, format } as unknown as LibraryEntry['book'],
     ...rest,
@@ -64,13 +62,14 @@ const titles = (entries: readonly LibraryEntry[]) => entries.map((e) => e.book.t
 
 // A Finished list in the order the database returns it: newest end date first.
 const shelf = [
-  entry('Dune', { authors: ['Frank Herbert'], pages: 612, readAs: 'physical', latestSession: finished('2026-05-02', 20) }),
-  entry('Emma', { authors: ['Jane Austen'], pages: 474, readAs: 'ebook', latestSession: finished('2026-02-10', 12) }),
-  entry('Hyperion', { authors: ['Dan Simmons'], pages: 482, readAs: 'audiobook', latestSession: finished('2025-11-20', null) }),
+  entry('Dune', { authors: ['Frank Herbert'], pages: 612, latestSession: finished('2026-05-02', 20) }),
+  entry('Emma', { authors: ['Jane Austen'], pages: 474, latestSession: finished('2026-02-10', 12) }),
+  entry('Hyperion', { authors: ['Dan Simmons'], pages: 482, latestSession: finished('2025-11-20', null) }),
   entry('Piranesi', { authors: ['Susanna Clarke'], pages: 272, latestSession: finished('2025-03-03', 16) }),
-  entry('Earthsea', { authors: ['Ursula K. Le Guin'], pages: null, readAs: 'physical', latestSession: session({ outcome: 'finished', rating: 8 }) }),
+  entry('Earthsea', { authors: ['Ursula K. Le Guin'], pages: null, latestSession: session({ outcome: 'finished', rating: 8 }) }),
 ]
 
+// The column's own rule, kept with the column (the app no longer asks; `readAs.ts` says why).
 describe('Read as', () => {
   it('is the member\'s own word, else what the edition\'s format implies, else nothing', () => {
     expect(readAsOf(entry('a', { readAs: 'ebook', format: 'hardcover' }))).toBe('ebook')
@@ -94,15 +93,6 @@ describe('filters', () => {
 
   it('leaves the list alone without any filter and in the list\'s own order', () => {
     expect(arrange(shelf, 'finished', newListView('finished'))).toBe(shelf)
-  })
-
-  it('filters by Read as, the edition\'s format counting where she has not said, and "not set"', () => {
-    expect(titles(arrange(shelf, 'finished', view({ readAs: ['physical'] })))).toEqual(['Dune', 'Earthsea'])
-    expect(titles(arrange(shelf, 'finished', view({ readAs: ['ebook', 'audiobook'] })))).toEqual(['Emma', 'Hyperion'])
-    expect(titles(arrange(shelf, 'finished', view({ readAs: ['unset'] })))).toEqual(['Piranesi'])
-    const byFormat = [entry('Kindle', { format: 'ebook' }), entry('Bare')]
-    expect(titles(arrange(byFormat, 'finished', view({ readAs: ['ebook'] })))).toEqual(['Kindle'])
-    expect(titles(arrange(byFormat, 'finished', view({ readAs: ['unset'] })))).toEqual(['Bare'])
   })
 
   it('filters by author, any author of the Book', () => {
@@ -144,7 +134,7 @@ describe('filters', () => {
   })
 
   it('combines filters: every one must pass, a facet with several values any of them', () => {
-    const both = view({ readAs: ['physical'], rating: 16, pages: { min: 500, max: null } })
+    const both = view({ authors: ['Frank Herbert'], rating: 16, pages: { min: 500, max: null } })
     expect(titles(arrange(shelf, 'finished', both))).toEqual(['Dune'])
   })
 
@@ -163,27 +153,23 @@ describe('filters', () => {
   })
 
   it('lists the filters that are set as chips and takes them off one by one or all together', () => {
-    const set = view({ readAs: ['physical', 'ebook'], authors: ['Jane Austen'], rating: 16, pages: { min: 100, max: 200 } })
+    const set = view({ authors: ['Jane Austen'], rating: 16, pages: { min: 100, max: 200 } })
     expect(activeFilters('finished', set)).toEqual([
-      { facet: 'readAs', value: 'physical' },
-      { facet: 'readAs', value: 'ebook' },
       { facet: 'author', value: 'Jane Austen' },
       { facet: 'rating', value: '16' },
       { facet: 'pages', value: 'range' },
     ])
-    expect(withoutFilter(set, { facet: 'readAs', value: 'ebook' }).readAs).toEqual(['physical'])
     expect(withoutFilter(set, { facet: 'pages', value: 'range' }).pages).toEqual({ min: null, max: null })
     const sorted = { ...set, sort: { key: 'title' as const, dir: 'asc' as const } }
     expect(withoutFilters(sorted)).toEqual({ ...newListView('finished'), sort: sorted.sort })
     // Rating is a Finished facet only: Want to read does not list it.
-    expect(activeFilters('want_to_read', set).map((f) => f.facet)).toEqual(['readAs', 'readAs', 'author', 'pages'])
+    expect(activeFilters('want_to_read', set).map((f) => f.facet)).toEqual(['author', 'pages'])
   })
 
-  it('offers what the list has: authors by count, years newest first, Read as in its own order', () => {
+  it('offers what the list has: authors by count, years newest first', () => {
     expect(authorOptions(shelf).map((o) => o.value)).toEqual(['Dan Simmons', 'Frank Herbert', 'Jane Austen', 'Susanna Clarke', 'Ursula K. Le Guin'])
     expect(authorOptions([...shelf, entry('The Dispossessed')])[0]).toEqual({ value: 'Ursula K. Le Guin', count: 2 })
     expect(yearOptions(shelf).map((o) => o.value)).toEqual(['2026', '2025', ''])
-    expect(readAsOptions(shelf).map((o) => o.value)).toEqual(['physical', 'ebook', 'audiobook', 'unset'])
   })
 })
 
@@ -248,8 +234,8 @@ describe('sort', () => {
   })
 
   it('arranges filtered and sorted in one go', () => {
-    const out = arrange(shelf, 'finished', { ...newListView('finished'), readAs: ['physical', 'ebook'], sort: { key: 'title', dir: 'asc' } })
-    expect(titles(out)).toEqual(['Dune', 'Earthsea', 'Emma'])
+    const out = arrange(shelf, 'finished', { ...newListView('finished'), pages: { min: 400, max: null }, sort: { key: 'title', dir: 'asc' } })
+    expect(titles(out)).toEqual(['Dune', 'Emma', 'Hyperion'])
   })
 })
 
@@ -268,7 +254,7 @@ describe('what the device remembers', () => {
   it('keeps each member\'s choice apart and gives it back as it was saved', () => {
     const storage = memory()
     const ida = readLibraryViews(storage, 'ida')
-    ida.finished = { ...ida.finished, status: 'notFinished', readAs: ['audiobook', 'unset'], authors: ['Jane Austen'], rating: 16, years: ['2026', ''], pages: { min: 100, max: null }, sort: { key: 'rating', dir: 'desc' } }
+    ida.finished = { ...ida.finished, status: 'notFinished', authors: ['Jane Austen'], rating: 16, years: ['2026', ''], pages: { min: 100, max: null }, sort: { key: 'rating', dir: 'desc' } }
     saveLibraryViews(storage, 'ida', ida)
     const max = readLibraryViews(storage, 'max')
     max.reading = { ...max.reading, sort: { key: 'title', dir: 'asc' } }
@@ -284,9 +270,9 @@ describe('what the device remembers', () => {
     const storage = memory()
     storage.store.set(LIBRARY_VIEW_KEY, '{nope')
     expect(readLibraryViews(storage, 'ida').finished).toEqual(newListView('finished'))
-    storage.store.set(LIBRARY_VIEW_KEY, JSON.stringify({ ida: { finished: { sort: { key: 'bogus', dir: 'up' }, readAs: ['paper', 'ebook'], rating: 7, years: ['x', '2025'], pages: { min: -3, max: 'a' }, authors: 4 } } }))
+    storage.store.set(LIBRARY_VIEW_KEY, JSON.stringify({ ida: { finished: { sort: { key: 'bogus', dir: 'up' }, rating: 7, years: ['x', '2025'], pages: { min: -3, max: 'a' }, authors: 4 } } }))
     const view = readLibraryViews(storage, 'ida').finished
-    expect(view).toEqual({ ...newListView('finished'), readAs: ['ebook'], years: ['2025'] })
+    expect(view).toEqual({ ...newListView('finished'), years: ['2025'] })
     // A sort the Status does not offer (Rating on Want to read) is forgotten.
     expect(listViewFromJson('want_to_read', { sort: { key: 'rating', dir: 'asc' } }).sort).toEqual(defaultSort('want_to_read'))
   })
