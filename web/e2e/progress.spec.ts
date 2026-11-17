@@ -139,6 +139,7 @@ test('a member starts a book, sets page 120 on the wheel, turns it from Home, un
   await page.getByTestId('home.update').click()
   await expect(wheel).toHaveAttribute('aria-valuenow', '120')
 
+
   // A drag turns it: five rows up is five pages on.
   await drag(page, 'progress.wheel', 5)
   await expect(wheel).toHaveAttribute('aria-valuenow', '125')

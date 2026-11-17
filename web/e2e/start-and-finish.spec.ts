@@ -75,6 +75,15 @@ test('a member starts a book, finishes it with 3.75 stars and a review, and find
   await expect(page.getByTestId('library.entryTitle')).toHaveText(['Piranesi'])
   await expect(page.getByTestId('library.entrySince')).toContainText('day 1')
   await expect(page.getByTestId('library.finish')).toHaveCount(0)
+  // Her cover is centred in the card, the owner's requirement: as much room above it as below. Measured, not read off
+  // a class — `self-start` (the prototype's) pinned it to the top and left all 18 px of slack at the bottom once the
+  // since line made this column taller than the cover. The Library is where it showed; Home's column happens to fit.
+  const card = (await page.getByTestId('library.readingCard').boundingBox())!
+  const cover = (await page.getByTestId('library.readingCard').getByTestId('library.readingCardCover').boundingBox())!
+  const above = cover.y - card.y
+  const below = card.y + card.height - (cover.y + cover.height)
+  expect(Math.abs(above - below), `cover ${above}px from the top, ${below}px from the bottom`).toBeLessThanOrEqual(1)
+  expect(above, 'the cover has room above it').toBeGreaterThan(0)
   await page.getByTestId('library.update').click()
   await expect(page.getByTestId('progress')).toBeVisible()
   await page.getByTestId('progress.finish').click()

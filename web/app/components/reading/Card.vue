@@ -113,7 +113,11 @@ function act() {
     :data-testid="`${scope}.readingCard`"
   >
     <UiAmbient :colors="entry.book.coverColors" shape="card" />
-    <div class="relative shrink-0 self-start">
+    <!-- The cover is centred in the card's height, not pinned to its top: the owner's requirement is the same space
+         above and below it. The prototype pinned it (`align-self: flex-start`, card.css `.coverwrap`) because there its
+         text column is shorter than the cover, so the two looked the same; here the column is usually taller (the
+         since line, the bar, the percent, the action), and a pinned cover left all the slack at the bottom. -->
+    <div class="relative shrink-0 self-center" :data-testid="`${scope}.readingCardCover`">
       <UiPressLink :to="`/book/${entry.book.id}`" v-on="flightOf(`/book/${entry.book.id}`)" class="relative block" tabindex="-1" aria-hidden="true" @press="books.prefetch(entry.book.id)">
         <UiCover
           :title="entry.book.title"
