@@ -14,7 +14,13 @@ import { recordedApple, signedIn, untilStill } from './support'
  * site serves is another build's (it names nothing this build imports). What the running build warms before it
  * imports must be its own list, so the site's list is never even read.
  */
-test.use({ browserName: 'chromium' })
+test.use({
+  browserName: 'chromium',
+  // This flow takes the reader's chunks away on purpose (the routes below answer 404, pretending a release pruned
+  // them), which `noPageErrors` would otherwise refuse as a build that lost a chunk. That refusal is right
+  // everywhere else; here the missing chunk is the point.
+  chunksMayBeMissing: true,
+})
 
 test.beforeEach(async ({ page }) => {
   await recordedApple(page)
