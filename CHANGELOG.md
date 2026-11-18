@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.48.1](https://github.com/fabkho/libellus/compare/v1.48.0...v1.48.1) (2026-11-18)
+
+
+### Fixes
+
+* **e2e:** a cancelled chunk import is not a page error, a lost chunk still is ([#591](https://github.com/fabkho/libellus/issues/591)) ([cb4051d](https://github.com/fabkho/libellus/commit/cb4051d2ce8b72bfdd22728b714fdf88136afafd))
+* **reading:** the cover sits centred in the card, not pinned under its top ([#590](https://github.com/fabkho/libellus/issues/590)) ([b01a6d1](https://github.com/fabkho/libellus/commit/b01a6d17ec13094ae655ad75068972742751c2f0))
+* **security:** the cover cache outlives the sign-out, twice over ([#589](https://github.com/fabkho/libellus/issues/589)) ([7093045](https://github.com/fabkho/libellus/commit/7093045e7ccc3deaed2422c04585bd8092786102))
+
 ## [1.48.0](https://github.com/fabkho/libellus/compare/v1.47.0...v1.48.0) (2026-11-16)
 
 
