@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.48.2](https://github.com/fabkho/libellus/compare/v1.48.1...v1.48.2) (2026-11-18)
+
+
+### Fixes
+
+* **reading:** a long title is cut, not wrapped, so every card is the same height ([#593](https://github.com/fabkho/libellus/issues/593)) ([ade7ecc](https://github.com/fabkho/libellus/commit/ade7ecc647fa0c241eddba0f12d00bca6cbbe497))
+
 ## [1.48.1](https://github.com/fabkho/libellus/compare/v1.48.0...v1.48.1) (2026-11-18)
 
 
