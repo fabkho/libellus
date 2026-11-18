@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.49.0](https://github.com/fabkho/libellus/compare/v1.48.2...v1.49.0) (2026-11-18)
+
+
+### Features
+
+* **update:** the sheet is gone; an update installs itself and arrives on a later start ([#595](https://github.com/fabkho/libellus/issues/595)) ([57c0c79](https://github.com/fabkho/libellus/commit/57c0c795c54431eb1faf9b36073c9330ea6c45cf))
+
 ## [1.48.2](https://github.com/fabkho/libellus/compare/v1.48.1...v1.48.2) (2026-11-18)
 
 
