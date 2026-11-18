@@ -91,7 +91,6 @@ onUnmounted(() => window.removeEventListener('scroll', measureScroll))
     <BookProgressSheet />
     <BookAbandonSheet />
     <ShellWhatsNewSheet />
-    <ShellUpdateSheet />
   </div>
 </template>
 

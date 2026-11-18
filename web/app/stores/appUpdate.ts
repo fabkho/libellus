@@ -15,29 +15,29 @@ export type UpdateResult = 'idle' | 'checking' | 'current' | 'available' | 'fail
 
 /**
  * A new release of the installed app (utils/appUpdate.ts has the logic, docs/parity.md "App update" the
- * rules): what the app knows (`waiting` worker, `outdated` build), when it asks (`pending`: there is
- * something she has not answered, so the plugin raises the sheet as soon as no field has the cursor and no
- * other layer is on screen, plugins/app-update.client.ts), and what the Profile's Account rows show.
+ * rules). **There is no sheet any more** (the owner, 2026-11-18, docs/proposals/app-update-2026-11-18.md):
+ * an update installs itself in the background and the member is told only afterwards, by "What's new", which
+ * is about the version actually running. What is left here is what the app knows (`waiting` worker,
+ * `outdated` build) and the one place a member can ask on purpose, the Profile's Account row.
  *
- * "Later" (`dismiss`) is for this visit only: a later start of the app asks again, because the waiting
- * worker is still there and the build id still differs.
+ * `waiting` and `outdated` are deliberately different, because only one of them can be acted on with
+ * `skipWaiting` off: a `waiting` worker is an update one press will install; an `outdated` build with no
+ * worker is an update on its way, which the browser will fetch and the next start will run. The Account row
+ * says which.
  */
 export const useAppUpdateStore = defineStore('appUpdate', () => {
   /** A new service worker has installed and waits. */
   const waiting = ref(false)
   /** The server deploys another build than this page runs. */
   const outdated = ref(false)
-  /** "Later": quiet until the app starts again. */
-  const dismissed = ref(false)
-  /** The sheet "New version available". */
-  const sheetOpen = ref(false)
   const checking = ref(false)
   const applying = ref(false)
   const result = ref<UpdateResult>('idle')
 
+  /** Either kind of news: what the Account row reports. Never something that takes the screen. */
   const available = computed(() => waiting.value || outdated.value)
-  /** Something to offer that she has not answered and that is not on screen: the plugin opens the sheet when it may. */
-  const pending = computed(() => available.value && !dismissed.value && !sheetOpen.value && !applying.value)
+  /** An update one press will install now (`skipWaiting` off: only a waiting worker can be activated). */
+  const installable = computed(() => waiting.value)
 
   let lastCheckAt: number | null = null
   let inflight: Promise<UpdateCheck> | null = null
@@ -103,29 +103,16 @@ export const useAppUpdateStore = defineStore('appUpdate', () => {
     }
   }
 
-  /** Raises the sheet (the plugin calls it when nobody is typing and nothing else is on screen). */
-  function open() {
-    if (available.value) sheetOpen.value = true
-  }
-
-  /** "Later", or any other way out of the sheet: quiet until the app starts again. */
-  function dismiss() {
-    dismissed.value = true
-    sheetOpen.value = false
-  }
-
-  /** The Account row: she asked, so the sheet comes at once, whatever she dismissed before. */
-  function reopen() {
-    dismissed.value = false
-    open()
-  }
-
-  /** "Update now": the new worker takes over and the page reloads (or, with none, it reloads anyway). */
-  async function apply() {
-    if (applying.value) return
+  /**
+   * The Account row's one press: install a waiting worker and reload into it. With none waiting it does
+   * nothing and says so (`false`) — the build is on its way and the next start runs it; reloading the same
+   * shell is the dead end the owner reported (fifty presses).
+   */
+  async function apply(): Promise<boolean> {
+    if (applying.value) return false
     applying.value = true
     try {
-      await applyUpdate({
+      return await applyUpdate({
         registration: registration(),
         activateWaiting: () => useNuxtApp().$pwa?.updateServiceWorker(true),
         reload: () => window.location.reload(),
@@ -140,18 +127,13 @@ export const useAppUpdateStore = defineStore('appUpdate', () => {
   return {
     waiting,
     outdated,
-    dismissed,
-    sheetOpen,
     checking,
     applying,
     result,
     available,
-    pending,
+    installable,
     markWaiting,
     check,
-    open,
-    dismiss,
-    reopen,
     apply,
   }
 })
