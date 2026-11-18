@@ -1,5 +1,5 @@
-import { computed, nextTick, reactive, ref, type Ref } from 'vue'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { effectScope, nextTick, reactive, readonly, ref } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useThreadScreen, type ThreadItemsContext, type ThreadScreenAdapter, type ThreadScreenOpts } from '@/composables/useThreadScreen'
 import { DOUBLE_TAP_MS, type VoicePressPlayer } from '@/composables/useVoicePress'
 import { isRetryableBuddyError, type BuddyErrorCode } from '@/data/buddyReads'
@@ -10,7 +10,7 @@ import { noteItems, quoteSourceOf, sentNote, type NoteBubble, type NoteItem } fr
 /**
  * The thread screen both pages draw (`composables/useThreadScreen.ts`): a fake adapter and a fake store of bubbles, in Node. No page, no
  * component, no snapshot — what the screen answers its page (the items it draws, the words a refusal gets, what a bar button does, the
- * press on a voice message) and the calls it makes on the adapter.
+ * press on a voice message), what its shell asks when it is mounted, and the calls it makes on the adapter.
  */
 
 // ------------------------------------------------------------------ fixtures
@@ -77,14 +77,14 @@ type Sent = { id: string; reason: string; note: string | null }
 /** A page's adapter over an in-memory list of notes, counting what the screen asks of it. */
 function fakeAdapter(over: Partial<ThreadScreenAdapter<NoteBubble, NoteItem>> = {}) {
   const bubbles = reactive<NoteBubble[]>([])
-  const calls = { older: 0 }
+  const calls = { open: 0, close: 0, peek: 0, loadInitial: 0, refresh: 0, older: 0, retain: 0, released: 0 }
   const sends: { body: string; replyToId: string | null; quote: unknown }[] = []
   const answers: { id: string; emoji: string }[] = []
   const deleted: string[] = []
   const discarded: string[] = []
   const retried: string[] = []
   const reports: Sent[] = []
-  const state = reactive({ open: true, loaded: true, more: false, loading: false, room: true, error: null as string | null, refusal: null as string | null, voiceRefusal: null as string | null })
+  const state = reactive({ open: true, loaded: true, more: false, loading: false, room: true, missing: false, error: null as string | null, refusal: null as string | null, voiceRefusal: null as string | null })
 
   const adapter: ThreadScreenAdapter<NoteBubble, NoteItem> = {
     me: () => 'ada',
@@ -97,10 +97,31 @@ function fakeAdapter(over: Partial<ThreadScreenAdapter<NoteBubble, NoteItem>> = 
     quoteSourceOf: (item, me) => quoteSourceOf(item, me),
     bubblesOf: () => bubbles,
     itemsOf: (held, ctx: ThreadItemsContext) => noteItems(held, ctx),
+    loadInitial: async () => {
+      calls.loadInitial++
+      return state.error
+    },
+    missing: () => state.missing,
+    veiled: () => !state.open,
+    openThread: async () => {
+      calls.open++
+      return state.error
+    },
+    closeThread: () => void calls.close++,
+    refresh: async () => {
+      calls.refresh++
+      return state.error
+    },
     loadOlder: async () => {
       calls.older++
       if (state.more) bubbles.unshift(note(String(bubbles.length + 1)))
     },
+    peek: () => void calls.peek++,
+    retain: async () => {
+      calls.retain++
+      return () => void calls.released++
+    },
+    backTo: () => '/notes/book',
     send: async (body, extra) => {
       sends.push({ body, ...extra })
       if (state.refusal) return { ok: false, error: state.refusal }
@@ -165,7 +186,39 @@ function screen(over: { adapter?: Parameters<typeof fakeAdapter>[0]; opts?: Part
   return { ...fake, ...o, made }
 }
 
-afterEach(() => vi.restoreAllMocks())
+/** A stand-in for the browser's document: the screen asks it for the composer's field and listens for the app coming back. */
+function fakeDocument() {
+  const doc = {
+    visibilityState: 'hidden' as DocumentVisibilityState,
+    listeners: [] as (() => void)[],
+    /** The composer of the screen (`<prefix>.composer`): the screen asks it for the field it focuses. */
+    composer: null as { querySelector: (selector: string) => { focus: () => void } | null } | null,
+    querySelector: () => doc.composer,
+    addEventListener: (_: string, fn: () => void) => void doc.listeners.push(fn),
+    removeEventListener: (_: string, fn: () => void) => void doc.listeners.splice(doc.listeners.indexOf(fn), 1),
+  }
+  return doc
+}
+
+let doc = fakeDocument()
+
+beforeEach(() => {
+  doc = fakeDocument()
+  vi.stubGlobal('document', doc)
+  const online = ref(true)
+  vi.stubGlobal('useOnline', () => readonly(online))
+  vi.stubGlobal('isOnline', () => online.value)
+  // The heading's focus (useFocusHeading) is a page's own: nothing here has an `h1` to move it to.
+  vi.stubGlobal('useFocusHeading', () => {})
+  onlineOf = online
+})
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
+
+/** The connection every mounted screen reads (set by `beforeEach`, as the app's one `useOnline` is). */
+let onlineOf = ref(true)
 
 /** Lets a promise the screen awaited land: one microtask turn is not enough after one it resolved itself. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -229,15 +282,65 @@ describe('a send that was refused', () => {
   })
 })
 
-// ------------------------------------------------------------------ (b) the veil
+// ------------------------------------------------------------------ (b) offline then online
 
-describe('the veil', () => {
+describe('back online', () => {
+  it('re-opens only when there was an error and the thread is open, and nothing when there was none', async () => {
+    for (const [label, wasError, isOpen, expected] of [
+      ['a refused open, the thread open', true, true, 1],
+      ['a refused open, the thread shut', true, false, 0],
+      ['nothing failed, the thread open', false, true, 0],
+    ] as [string, boolean, boolean, number][]) {
+      onlineOf.value = false
+      const fake = fakeAdapter()
+      const made = useThreadScreen(fake.adapter, opts().words)
+      fake.state.room = true
+      fake.state.open = isOpen
+      const scope = effectScope()
+      scope.run(() => made.start())
+      await settle()
+      fake.calls.open = 0
+      // The thread failed to open before the connection went; coming back asks it again, once.
+      made.error.value = wasError ? 'offline' : null
+      onlineOf.value = true
+      await nextTick()
+      await settle()
+      expect(fake.calls.open, label).toBe(expected)
+      scope.stop()
+    }
+  })
+
   it('draws nothing of a thread that is not open, although the store holds it', () => {
     const { made, bubbles, state } = screen()
-    bubbles.push(note('1'), note('2', { body: 'A spoiler' }))
+    bubbles.push(note('1'), note('2'))
     expect(made.items.value).toHaveLength(2)
     state.open = false
     expect(made.items.value).toEqual([])
+  })
+})
+
+// ------------------------------------------------------------------ (c) the veil
+
+describe('the veil', () => {
+  it('is the store’s own, not a second one here: isOpen false is no item at all', () => {
+    const { made, bubbles, state } = screen()
+    bubbles.push(note('1', { body: 'A spoiler' }))
+    state.open = true
+    expect(made.items.value.map((item) => item.body)).toEqual(['A spoiler'])
+    state.open = false
+    expect(made.items.value).toEqual([])
+  })
+
+  it('"Show anyway" peeks once and puts the focus in the composer', async () => {
+    const field = { focus: vi.fn() }
+    const fake = fakeAdapter()
+    const made = useThreadScreen(fake.adapter, opts({ composerTestid: 'notesThread' }))
+    // The composer the base draws: `<prefix>.composer` wraps the field.
+    // The document query finds the composer's field directly (the base draws `<prefix>.composer` around it).
+    doc.composer = field as unknown as { querySelector: (selector: string) => { focus: () => void } | null }
+    await made.showAnyway()
+    expect(fake.calls.peek).toBe(1)
+    expect(field.focus).toHaveBeenCalled()
   })
 })
 
@@ -465,5 +568,133 @@ describe('the action bar', () => {
     made.action('delete', made.items.value[0]!.key)
     expect(made.deleteOpen.value).toBe(false)
     expect(deleted).toEqual([])
+  })
+})
+
+// ------------------------------------------------------------------ the shell
+
+describe('the shell of a thread screen', () => {
+  /** A screen mounted in its own effect scope, as a page mounts it (`onScopeDispose` is the page going). */
+  function mounted(over: Partial<ThreadScreenAdapter<NoteBubble, NoteItem>> = {}, canOpen = true) {
+    const fake = fakeAdapter(over)
+    fake.state.open = canOpen
+    const made = useThreadScreen(fake.adapter, opts().words)
+    const scope = effectScope()
+    scope.run(() => made.start())
+    return { ...fake, made, stop: () => scope.stop() }
+  }
+
+  it('loads the read once, opens the thread when the veil lets her in, and closes it when the screen goes', async () => {
+    const shut = mounted({}, false)
+    await settle()
+    expect(shut.calls.open, 'nothing is opened of a closed Section').toBe(0)
+    // She says "Show anyway": the veil opens, and the thread with it.
+    shut.state.open = true
+    await nextTick()
+    await settle()
+    expect(shut.calls.open).toBe(1)
+    shut.stop()
+    expect(shut.calls.close).toBe(1)
+
+    const open = mounted()
+    await settle()
+    expect(open.calls.open).toBe(1)
+    expect(open.calls.loadInitial, 'the read was already there').toBe(0)
+    open.stop()
+    expect(open.calls.close).toBe(1)
+    // A second stop is a no-op: the scope is stopped once, whatever asked.
+    open.stop()
+    expect(open.calls.close).toBe(1)
+  })
+
+  it('asks the read when the page has not loaded it yet, and never when the address names nothing', async () => {
+    // The room is not there: the screen asks for it, once, before anything else.
+    const fresh = (() => {
+      const fake = fakeAdapter()
+      const made = useThreadScreen(fake.adapter, opts().words)
+      fake.state.room = false
+      const scope = effectScope()
+      scope.run(() => made.start())
+      return { ...fake, made, stop: () => scope.stop() }
+    })()
+    await settle()
+    expect(fresh.calls.loadInitial).toBe(1)
+    fresh.stop()
+
+    // A thread the address does not name (she is not in the read): nothing is asked of the store for it.
+    const gone = (() => {
+      const fake = fakeAdapter()
+      const made = useThreadScreen(fake.adapter, opts().words)
+      fake.state.room = false
+      fake.state.missing = true
+      const scope = effectScope()
+      scope.run(() => made.start())
+      return { ...fake, made, stop: () => scope.stop() }
+    })()
+    await settle()
+    expect(gone.calls.loadInitial).toBe(0)
+    expect(gone.calls.open).toBe(0)
+    gone.stop()
+  })
+
+  it('retains the live channel where the page has one, and releases it when the screen goes', async () => {
+    const first = mounted()
+    await settle()
+    expect(first.calls.retain).toBe(1)
+    expect(first.calls.released).toBe(0)
+    first.stop()
+    expect(first.calls.released).toBe(1)
+
+    // A Book's Notes has no channel: nothing is retained, and nothing is let go.
+    const second = mounted({ retain: undefined })
+    await settle()
+    expect(second.calls.retain).toBe(0)
+    expect(second.calls.released).toBe(0)
+    second.stop()
+  })
+
+  it('reads again when the app comes back to the front, and only where the page has a refresh', async () => {
+    const fake = mounted()
+    await settle()
+    expect(fake.calls.refresh).toBe(0)
+    // Still hidden: nothing is asked.
+    for (const listen of doc.listeners) listen()
+    await settle()
+    expect(fake.calls.refresh).toBe(0)
+    doc.visibilityState = 'visible'
+    for (const listen of doc.listeners) listen()
+    await settle()
+    expect(fake.calls.refresh).toBe(1)
+    fake.stop()
+
+    doc.listeners.length = 0
+    const without = mounted({ refresh: undefined })
+    await settle()
+    // A read's channel keeps itself in line: nothing of this page listens to the document.
+    expect(doc.listeners).toHaveLength(0)
+    expect(without.calls.refresh).toBe(0)
+    without.stop()
+  })
+
+  it('draws the refusal its own open answered as an error, and says "ready" once the thread is in', async () => {
+    const fake = (() => {
+      const f = fakeAdapter()
+      f.state.error = 'offline'
+      f.state.loaded = false
+      const made = useThreadScreen(f.adapter, opts().words)
+      const scope = effectScope()
+      scope.run(() => made.start())
+      return { ...f, made, stop: () => scope.stop() }
+    })()
+    await settle()
+    expect(fake.made.error.value).toBe('offline')
+    expect(fake.made.status.value).toBe('error')
+    // The thread's page came in after all (a second open that worked): the thread is ready.
+    fake.state.error = null
+    fake.state.loaded = true
+    fake.made.error.value = null
+    await nextTick()
+    expect(fake.made.status.value).toBe('ready')
+    fake.stop()
   })
 })

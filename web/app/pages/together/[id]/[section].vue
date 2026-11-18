@@ -35,7 +35,7 @@ import { isReadId, isSectionSegment, roomPath, sectionOfSegment } from '~/utils/
 import { buddyErrorKey } from '~/utils/buddyRead'
 import { sectionTitle } from '~/utils/buddySectionTitle'
 import { isRetryableBuddyError } from '~/data/buddyReads'
-import { sameAuthorRun } from '~/utils/roomThread'
+import { sameAuthorRun, type ThreadItem } from '~/utils/roomThread'
 import { useThreadScreen } from '~/composables/useThreadScreen'
 import { buddyThreadAdapter } from '~/utils/buddyThreadAdapter'
 import { useBuddyReadStore } from '~/stores/buddyRead'
@@ -54,7 +54,6 @@ definePageMeta({
 
 const { t } = useI18n()
 const route = useRoute()
-const router = useRouter()
 const store = useBuddyReadStore()
 const session = useSessionStore()
 const online = useOnline()
@@ -72,62 +71,8 @@ const archived = computed(() => read.value?.status === 'archived')
 /** Live updates are paused: the channel has not been live for a while and the device is online (offline says its own). */
 const paused = computed(() => store.liveStuck && online.value)
 
-const error = ref<BuddyErrorCode | null>(null)
-let release: (() => void) | null = null
-let gone = false
-let opened = false
-
-async function load() {
-  error.value = await store.load(readId.value)
-}
-async function openThread() {
-  if (opened) return
-  opened = true
-  const failed = await store.openThread(readId.value, sectionId.value)
-  if (failed) {
-    opened = false
-    store.closeThread(readId.value, sectionId.value)
-    error.value = failed
-  }
-}
-
-onMounted(async () => {
-  // Never throws: a channel that cannot be had is `store.liveStuck`, said above the thread, and asked for again by the store.
-  const stop = await store.retain(readId.value)
-  if (gone) stop()
-  else release = stop
-})
-onMounted(async () => {
-  if (!read.value) await load()
-})
-// Nothing of a Section is read until it is open to her: her marker reached it, or she said "Show anyway".
-watch(() => view.value?.open === true, (open) => open && void openThread(), { immediate: true })
-onBeforeUnmount(() => {
-  gone = true
-  release?.()
-  if (opened) store.closeThread(readId.value, sectionId.value)
-})
-// Back online after a failure: asked again.
-watch(online, (now) => {
-  if (!now) return
-  if (!read.value) void load()
-  else if (error.value && view.value?.open) {
-    error.value = null
-    void openThread()
-  }
-})
-
-const thread = computed(() => store.threads[threadKey(readId.value, sectionId.value)] ?? null)
-// As the room's: the store forgetting the read (a live refresh, or the thread's own read) is as good as this page's own `not_found`.
+// The address names no thread of this read: she is not in it any more, or the Section is not its own.
 const missing = computed(() => (!read.value && (error.value === 'not_found' || store.forgotten[readId.value] === true)) || (!!read.value && !view.value))
-const status = computed(() => {
-  if (error.value && !thread.value?.loaded) return 'error'
-  if (!read.value) return 'loading'
-  return thread.value?.loaded ? 'ready' : 'loading'
-})
-
-// Entered with the keyboard (Enter on a row of the room), the focus would stay on <body>: it goes to the heading once the thread is drawn.
-useFocusHeading(() => missing.value || status.value === 'ready' || view.value?.veiled === true)
 
 // ------------------------------------------------------------------ the thread screen
 
@@ -153,6 +98,8 @@ const screen = useThreadScreen(
     hasRoom: () => !!read.value && !!view.value,
     me: () => me.value,
     isOpen: () => view.value?.open === true,
+    missing: () => missing.value,
+    veiled: () => view.value?.veiled === true,
     nameOf: (memberId) => read.value?.members.find((m) => m.id === memberId)?.name?.trim() || null,
     errorWord: (code) => t(buddyErrorKey(code as BuddyErrorCode)),
     retryable: (code) => isRetryableBuddyError(code as BuddyErrorCode),
@@ -179,37 +126,14 @@ const screen = useThreadScreen(
   },
 )
 
-const { items, text, replyTo, notice, fresh, hasMore, olderStatus, loadOlder, quoteFor, replyChip, send, sendVoice, retry, discard, react, answer, actionsOf, action, deleteOpen, deleteBusy, deleteError, deleteText, confirmDelete, reportId, reportOpen, onPress: voicePress } = screen
+const { items, text, replyTo, notice, fresh, hasMore, olderStatus, loadOlder, quoteFor, replyChip, send, sendVoice, retry, discard, react, answer, actionsOf, action, deleteOpen, deleteBusy, deleteError, deleteText, confirmDelete, reportId, reportOpen, onPress: voicePress, status, error, showOpen, showAnyway, back } = screen
 
 /** The report sheet's call (components/room/ReportSheet.vue): the buddy store's, answered with the refusal's code. */
 const reportMessage = screen.report
 
-// ------------------------------------------------------------------ the veil
+// The read, the Section opening when her marker lets her in, and the room's live channel kept while this screen shows.
+screen.start()
 
-const showOpen = ref(false)
-/** She said "Show anyway": once the thread is up, focus goes to the composer (the quiet screen she tapped on is gone; focus would be lost at the top of the page). */
-let focusComposerWhenReady = false
-function focusComposer() {
-  if (!focusComposerWhenReady || status.value !== 'ready') return
-  const field = document.querySelector<HTMLElement>('[data-testid="buddyThread.composer"] textarea, [data-testid="buddyThread.composer"] input')
-  if (!field) return
-  focusComposerWhenReady = false
-  field.focus()
-}
-watch(status, () => void nextTick(focusComposer))
-async function showAnyway() {
-  if (!sectionId.value) return
-  focusComposerWhenReady = true
-  store.peek(sectionId.value)
-  await nextTick()
-  await nextTick()
-  focusComposer()
-}
-
-function back() {
-  if (window.history.state?.back) router.back()
-  else void navigateTo(roomPath(readId.value))
-}
 const chat = useTemplateRef<{ jumpTo: (id: string) => Promise<void>; toNewest: () => void }>('chat')
 
 /** The screen's send, and then the thread is at its newest (hers is the message that arrived). */

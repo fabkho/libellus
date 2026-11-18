@@ -20,7 +20,12 @@ import type { PreparedVoice } from '~/data/buddyVoice'
 export type NotesThreadStore = {
   messagesOf: (roomId: string, sectionId: string) => readonly NoteBubble[]
   threads: Record<string, { more: boolean; loading: boolean; loaded: boolean } | undefined>
+  loadPage: (bookId: string) => Promise<NoteErrorCode | null>
+  openThread: (roomId: string, sectionId: string) => Promise<NoteErrorCode | null>
+  closeThread: (roomId: string, sectionId: string) => void
+  refresh: (bookId: string, sectionId: string | null) => Promise<NoteErrorCode | null>
   loadOlder: (roomId: string, sectionId: string) => Promise<NoteErrorCode | null>
+  peek: (roomId: string, sectionId: string) => void
   previewOf: (clientId: string | null) => string | null
   send: (roomId: string, sectionId: string, body: string, visibility: NoteLevel, extra: { replyTo: string | null; quote: NoteQuote | null }) => Promise<{ ok: boolean; error?: NoteErrorCode }>
   sendVoice: (roomId: string, sectionId: string, voice: PreparedVoice, extra: { replyTo: string | null; quote: NoteQuote | null }) => Promise<{ ok: boolean; error?: NoteErrorCode }>
@@ -43,12 +48,18 @@ export type NotesThreadDeps = {
   hasRoom: () => boolean
   me: () => string | null
   isOpen: () => boolean
+  /** The address names no thread of this page (a Book that is not there, a chapter that is not its own). */
+  missing: () => boolean
+  /** A chapter the veil keeps shut. */
+  veiled: () => boolean
   errorWord: (code: ThreadError) => string
   retryable: (code: ThreadError) => boolean
   /** The audience of the note she is writing: the page's own state, never the screen's. */
   level: () => NoteLevel
   /** The microphone's gate (`noteVoiceAllowed`): Only me, and no answer to anybody else's note. */
   voiceAllowed: () => boolean
+  /** Where Back goes when the history has none. */
+  backTo: () => string
 }
 
 export function notesThreadAdapter(deps: NotesThreadDeps): ThreadScreenAdapter<NoteBubble, NoteItem> {
@@ -66,6 +77,8 @@ export function notesThreadAdapter(deps: NotesThreadDeps): ThreadScreenAdapter<N
   return {
     me: deps.me,
     isOpen: deps.isOpen,
+    missing: deps.missing,
+    veiled: deps.veiled,
     paging,
     nameOf: () => null,
     previewOf: (clientId) => store.previewOf(clientId),
@@ -74,7 +87,13 @@ export function notesThreadAdapter(deps: NotesThreadDeps): ThreadScreenAdapter<N
     quoteSourceOf: (item, me) => quoteSourceOf(item, me),
     bubblesOf: () => store.messagesOf(deps.roomId(), deps.chapterId()),
     itemsOf: (bubbles, ctx) => noteItems(bubbles, ctx),
-      loadOlder: () => store.loadOlder(deps.roomId(), deps.chapterId()).then(() => {}),
+    loadInitial: () => store.loadPage(deps.bookId()),
+    openThread: () => store.openThread(deps.roomId(), deps.chapterId()),
+    closeThread: () => store.closeThread(deps.roomId(), deps.chapterId()),
+    refresh: () => store.refresh(deps.bookId(), deps.chapterId()),
+    loadOlder: () => store.loadOlder(deps.roomId(), deps.chapterId()).then(() => {}),
+    peek: () => store.peek(deps.roomId(), deps.chapterId()),
+    backTo: deps.backTo,
     send: (body, extra) => store.send(deps.roomId(), deps.chapterId(), body, deps.level(), { replyTo: extra.replyToId, quote: quoteOfAnswer(extra.quote) }),
     /**
      * Only me is the one audience of a recording: the microphone is not offered anywhere else, and one that arrives anyway (the option

@@ -21,7 +21,6 @@
 import type { BarAction } from '#layers/ui/app/components/ui/ReactionBar.vue'
 import { isRetryableNoteError, NOTE_EMOJI, type NoteQuote } from '~/data/notes'
 import type { ReportReason } from '~/data/buddyReads'
-import { threadKey } from '#layers/chat/app/utils/thread'
 import { isBookId, isChapterSegment, notesPath } from '~/utils/notesRoute'
 import { chapterOfSegment, noteErrorKey, type NoteItem } from '~/utils/notes'
 import { sameAuthorRun } from '~/utils/roomThread'
@@ -47,7 +46,6 @@ definePageMeta({
 
 const { t } = useI18n()
 const route = useRoute()
-const router = useRouter()
 const store = useNotesStore()
 const books = useBookStore()
 const session = useSessionStore()
@@ -63,65 +61,9 @@ const chapter = computed(() => chapterOfSegment(room.value, route.params.chapter
 const view = computed(() => (room.value && chapter.value ? store.view(room.value.id, chapter.value.id) : null))
 const publicEnabled = computed(() => store.publicEnabled)
 
-// ------------------------------------------------------------------ loading
+// ------------------------------------------------------------------ the shell
 
-const error = ref<NoteErrorCode | null>(null)
-let opened = false
-
-async function load() {
-  error.value = await store.loadPage(bookId.value)
-}
-async function openThread() {
-  if (opened || !room.value || !chapter.value) return
-  opened = true
-  const failed = await store.openThread(room.value.id, chapter.value.id)
-  if (failed) {
-    opened = false
-    if (room.value && chapter.value) store.closeThread(room.value.id, chapter.value.id)
-    error.value = failed
-  }
-}
-async function refresh() {
-  if (!chapter.value) return
-  error.value = await store.refresh(bookId.value, chapter.value.id)
-}
-function onVisible() {
-  if (document.visibilityState === 'visible' && online.value && opened) void refresh()
-}
-
-onMounted(async () => {
-  void books.load(bookId.value)
-  void store.loadConfig()
-  document.addEventListener('visibilitychange', onVisible)
-  if (!room.value) await load()
-})
-// Nothing of a chapter is read until it is open to her: the server says so (`open`), or she said "Show anyway".
-watch(() => view.value?.open === true, (open) => open && void openThread(), { immediate: true })
-onBeforeUnmount(() => {
-  document.removeEventListener('visibilitychange', onVisible)
-  if (opened && room.value && chapter.value) store.closeThread(room.value.id, chapter.value.id)
-})
-// Back online after a failure: asked again.
-watch(online, (now) => {
-  if (!now) return
-  if (!room.value) void load()
-  else if (error.value && view.value?.open) {
-    error.value = null
-    opened = false
-    void openThread()
-  }
-})
-
-const thread = computed(() => (room.value && chapter.value ? (store.threads[threadKey(room.value.id, chapter.value.id)] ?? null) : null))
 const missing = computed(() => (!room.value && (error.value === 'not_found' || error.value === 'notes_unavailable')) || (!!room.value && !chapter.value))
-const status = computed(() => {
-  if (error.value && !thread.value?.loaded) return 'error'
-  if (!room.value) return 'loading'
-  return thread.value?.loaded ? 'ready' : 'loading'
-})
-useFocusHeading(() => missing.value || status.value === 'ready' || view.value?.veiled === true)
-
-// ------------------------------------------------------------------ the thread screen
 
 const quoteWords = computed(() => ({
   deleted: t('uiText.chat.reply.deleted'),
@@ -159,6 +101,8 @@ const screen = useThreadScreen(
     hasRoom: () => !!room.value && !!chapter.value,
     me: () => me.value,
     isOpen: () => view.value?.open === true,
+    missing: () => missing.value,
+    veiled: () => view.value?.veiled === true,
     errorWord: (code) => t(noteErrorKey(code as NoteErrorCode)),
     retryable: (code) => isRetryableNoteError(code as NoteErrorCode),
     level: () => level.value,
@@ -183,7 +127,7 @@ const screen = useThreadScreen(
   },
 )
 
-const { items, text, replyTo, notice, fresh, hasMore, olderStatus, loadOlder, quoteFor, replyChip, retry, discard, react, answer, actionsOf, action, deleteOpen, deleteBusy, deleteError, deleteText, confirmDelete, reportId, reportOpen, report, onPress: voicePress } = screen
+const { items, text, replyTo, notice, fresh, hasMore, olderStatus, loadOlder, quoteFor, replyChip, retry, discard, react, answer, actionsOf, action, deleteOpen, deleteBusy, deleteError, deleteText, confirmDelete, reportId, reportOpen, report, onPress: voicePress, status, error, showOpen, showAnyway, back, refresh } = screen
 
 const byKey = computed(() => new Map(items.value.map((i) => [i.key, i])))
 const noteOf = (item: { key: string }): NoteItem => byKey.value.get(item.key)!
@@ -364,32 +308,16 @@ async function confirmBlock() {
   blockOpen.value = false
 }
 
-// ------------------------------------------------------------------ the veil
+// ------------------------------------------------------------------ the screen's own lifecycle
 
-const showOpen = ref(false)
-/** She said "Show anyway": once the thread is up, focus goes to the composer (the quiet screen she tapped on is gone; focus would be lost at the top of the page). */
-let focusComposerWhenReady = false
-function focusComposer() {
-  if (!focusComposerWhenReady || status.value !== 'ready') return
-  const field = document.querySelector<HTMLElement>('[data-testid="notesThread.composer"] textarea, [data-testid="notesThread.composer"] input')
-  if (!field) return
-  focusComposerWhenReady = false
-  field.focus()
-}
-watch(status, () => void nextTick(focusComposer))
-async function showAnyway() {
-  if (!room.value || !chapter.value) return
-  focusComposerWhenReady = true
-  store.peek(room.value.id, chapter.value.id)
-  await nextTick()
-  await nextTick()
-  focusComposer()
-}
-
-function back() {
-  if (window.history.state?.back) router.back()
-  else void navigateTo(notesPath(bookId.value))
-}
+// The Book's Notes page, the chapter opening when the veil lets her in, the first load, the thread read again when the app comes back to
+// the front (this page has no channel): the screen mounts all of it and releases it when the page goes.
+screen.start()
+// What this page asks besides its thread: the Book (its title over the thread) and the Everyone switch.
+onMounted(() => {
+  void books.load(bookId.value)
+  void store.loadConfig()
+})
 </script>
 
 <template>

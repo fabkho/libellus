@@ -1,6 +1,6 @@
 import type { BarAction } from '#layers/ui/app/components/ui/ReactionBar.vue'
 import type { BubbleQuote } from '#layers/ui/app/utils/chat/message'
-import { computed, nextTick, onMounted, onScopeDispose, ref, watch, type ComputedRef, type Ref } from 'vue'
+import { computed, nextTick, onScopeDispose, ref, watch, type ComputedRef, type Ref } from 'vue'
 import { useVoicePress, type VoicePressPlayer } from '~/composables/useVoicePress'
 import type { PreparedVoice } from '~/data/buddyVoice'
 import type { ReportReason } from '~/data/buddyReads'
@@ -17,8 +17,9 @@ import { quoteOf, replyChipOf, type QuoteSource, type QuoteWords, type ThreadIte
  * buttons only its bar has). What stays in a page is what only one of them has: the audience of a note and the level flow, the
  * microphone's gate, the edit flow, an archived read's read-only composer, the banners, the title and the address.
  *
- * A note's audience is never seen here: the notes page closes over its level inside its own `send`/`sendVoice`. The shell of a screen (its
- * load, the thread opening, the channel) is still each page's own for now; it moves behind `start()` next.
+ * A note's audience is never seen here: the notes page closes over its level inside its own `send`/`sendVoice`. The shell of a screen — its
+ * load, the thread opening when the veil lets her in, the channel where a page has one, the connection coming back, the heading's focus and
+ * the teardown — is `start()`.
  */
 
 /** A refusal, as a code: a note's (`NoteErrorCode`) or a buddy read's (`BuddyErrorCode`). The page words it (`adapter.errorWord`). */
@@ -135,6 +136,9 @@ export type ThreadScreenOpts<Item extends ThreadItem> = {
 export type ThreadScreen<Item extends ThreadItem> = {
   /** The messages of the thread, oldest first; none at all while it is not open to her. */
   items: ComputedRef<Item[]>
+  /** The page's or the read's own refusal, as a code (a send that was refused is `notice`, already worded). */
+  error: Ref<ThreadError | null>
+  status: ComputedRef<'loading' | 'ready' | 'error'>
   hasMore: ComputedRef<boolean>
   olderStatus: ComputedRef<'idle' | 'loading'>
   /** The page before the oldest message: whether the list grew. */
@@ -175,6 +179,17 @@ export type ThreadScreen<Item extends ThreadItem> = {
   report: (id: string, reason: ReportReason, note: string | null) => Promise<ThreadError | null>
   /** The press on a voice message's play button (the capture phase of the thread's root). */
   onPress: (event: MouseEvent) => void
+  /** "Show anyway": the sheet's open state, and the one way in. */
+  showOpen: Ref<boolean>
+  showAnyway: () => Promise<void>
+  back: () => void
+  /** Asked again (a Book's Notes, when the app comes back to the front or the page is pressed to refresh). */
+  refresh: () => Promise<void>
+  /**
+   * Mounts the shell — the first load, the thread opening when the veil lets her in, the channel (where the page has one), the
+   * connection coming back, the heading's focus and the teardown on unmount — and returns that teardown.
+   */
+  start: () => () => void
 }
 
 /**
@@ -356,8 +371,129 @@ export function useThreadScreen<Bubble, Item extends ThreadItem>(adapter: Thread
     voicePlayer: opts.voicePlayer,
   })
 
+
+  // ------------------------------------------------------------------ the shell
+
+  const error = ref<ThreadError | null>(null)
+  const status = computed<'loading' | 'ready' | 'error'>(() => {
+    const paging = adapter.paging()
+    if (error.value && !paging.loaded) return 'error'
+    if (!paging.room) return 'loading'
+    return paging.loaded ? 'ready' : 'loading'
+  })
+
+  /** Back to the page's own list when the history has nowhere to go (a link opened straight into the thread). */
+  function back(): void {
+    if (window.history.state?.back) useRouter().back()
+    else void navigateTo(adapter.backTo())
+  }
+
+  async function refresh(): Promise<void> {
+    if (!adapter.refresh) return
+    error.value = await adapter.refresh()
+  }
+
+  async function load(): Promise<void> {
+    error.value = await adapter.loadInitial()
+  }
+
+  /** The live channel is kept while this screen shows and let go when it goes (a buddy read has one; a Book's Notes has none). */
+  let release: (() => void) | null = null
+  let opened = false
+
+  /** Nothing of a Chapter or a Section is read until it is open to her: the store says so, or she said "Show anyway". */
+  async function openThread(): Promise<void> {
+    // The address names no thread of this page (she is not in the read, the chapter is not this Book's): nothing is asked for it.
+    if (opened || adapter.missing()) return
+    opened = true
+    const failed = await adapter.openThread()
+    if (!failed) return
+    opened = false
+    adapter.closeThread()
+    error.value = failed
+  }
+
+  /**
+   * The shell of a thread screen, started once (a page calls it in its setup): the read (or the page) not read yet, the thread opening
+   * when the veil lets her in, the live channel where the page has one, the connection coming back — which asks a refused open again —
+   * the app coming back to the front where the page has no channel, and the heading's focus. Returns the teardown: the last screen lets
+   * the channel and the thread go.
+   *
+   * It asks nothing of a component of its own (an SPA's setup runs before the first paint anyway), so a screen can be driven in Node:
+   * `tests/thread-screen.test.ts` mounts it in an effect scope and stops it the way a page unmounting does.
+   */
+  function start(): () => void {
+    let gone = false
+    /** The document's listener, where the page has no channel (see below). */
+    let onVisible: (() => void) | null = null
+    const stop = () => {
+      if (gone) return
+      gone = true
+      release?.()
+      release = null
+      if (opened) adapter.closeThread()
+      opened = false
+      if (onVisible) document.removeEventListener('visibilitychange', onVisible)
+    }
+    // The page's own effect scope goes when the page unmounts; this is the one place that hears it, a component or not.
+    onScopeDispose(stop)
+
+    if (adapter.retain) {
+      // Never throws: a channel that cannot be had is the store's `liveStuck`, said above the thread, and asked for again by the store.
+      void adapter.retain().then((letGo) => {
+        if (gone) letGo()
+        else release = letGo
+      })
+    }
+    if (!adapter.paging().room && !adapter.missing()) void load()
+    watch(() => adapter.isOpen(), (open) => open && void openThread(), { immediate: true })
+    // Back online after a failure: asked again. Nothing is asked twice when nothing failed.
+    watch(useOnline(), (now) => {
+      if (!now) return
+      if (!adapter.paging().room && !adapter.missing()) void load()
+      else if (error.value && adapter.isOpen()) {
+        error.value = null
+        opened = false
+        void openThread()
+      }
+    })
+    // A page without a channel reads again when the app comes back to the front (its thread would otherwise show what it showed then).
+    if (adapter.refresh) {
+      onVisible = () => {
+        if (document.visibilityState === 'visible' && isOnline()) void refresh()
+      }
+      document.addEventListener('visibilitychange', onVisible)
+    }
+    // The heading takes the focus once it is drawn (useFocusHeading: a pushed screen entered with Enter on a row).
+    useFocusHeading(() => adapter.missing() || status.value === 'ready' || adapter.veiled())
+    return stop
+  }
+
+  // ------------------------------------------------------------------ the veil
+
+  const showOpen = ref(false)
+  /** She said "Show anyway": once the thread is up, focus goes to the composer (the quiet screen she tapped on is gone; focus would be lost at the top of the page). */
+  let focusComposerWhenReady = false
+  function focusComposer() {
+    if (!focusComposerWhenReady || status.value !== 'ready') return
+    const field = document.querySelector<HTMLElement>(`[data-testid="${opts.composerTestid}.composer"] textarea, [data-testid="${opts.composerTestid}.composer"] input`)
+    if (!field) return
+    focusComposerWhenReady = false
+    field.focus()
+  }
+  watch(status, () => void nextTick(focusComposer))
+  async function showAnyway(): Promise<void> {
+    focusComposerWhenReady = true
+    adapter.peek()
+    await nextTick()
+    await nextTick()
+    focusComposer()
+  }
+
   return {
     items,
+    error,
+    status,
     hasMore,
     olderStatus,
     loadOlder,
@@ -385,5 +521,10 @@ export function useThreadScreen<Bubble, Item extends ThreadItem>(adapter: Thread
     reportOpen,
     report: adapter.report,
     onPress,
+    showOpen,
+    showAnyway,
+    back,
+    refresh,
+    start,
   }
 }

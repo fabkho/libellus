@@ -12,7 +12,7 @@ import type { PreparedVoice } from '@/data/buddyVoice'
 /**
  * The two adapters the shared thread screen talks to (`utils/notesThreadAdapter.ts`, `utils/buddyThreadAdapter.ts`), over a fake store:
  * that a page's own addressing is closed over here and nowhere else, and that the two things a page decides — the audience of a note and
- * the voice gate, an archived room's read-only bar — never leak into the screen.
+ * the voice gate, the read's retain and release, an archived room's read-only bar — never leak into the screen.
  */
 
 const voice = { blob: new Blob([], { type: 'audio/webm' }), mime: 'audio/webm', durationMs: 1500, peaks: [1, 2] } as unknown as PreparedVoice
@@ -34,7 +34,12 @@ function fakeNotes(over: Partial<NotesThreadStore> = {}) {
   const store = {
     messagesOf: spy<[string, string], unknown[]>([]),
     threads: {} as NotesThreadStore['threads'],
+    loadPage: spy<[string], Promise<NoteErrorCode | null>>(Promise.resolve(null)),
+    openThread: spy<[string, string], Promise<NoteErrorCode | null>>(Promise.resolve(null)),
+    closeThread: spy<[string, string], void>(undefined),
+    refresh: spy<[string, string | null], Promise<NoteErrorCode | null>>(Promise.resolve(null)),
     loadOlder: spy<[string, string], Promise<NoteErrorCode | null>>(Promise.resolve(null)),
+    peek: spy<[string, string], void>(undefined),
     previewOf: spy<[string | null], string | null>(null),
     send: spy<[string, string, string, string, { replyTo: string | null; quote: unknown }], Promise<{ ok: boolean; error?: NoteErrorCode }>>(Promise.resolve({ ok: true })),
     sendVoice: spy<[string, string, PreparedVoice, { replyTo: string | null; quote: unknown }], Promise<{ ok: boolean; error?: NoteErrorCode }>>(Promise.resolve({ ok: true })),
@@ -54,10 +59,13 @@ function fakeNotes(over: Partial<NotesThreadStore> = {}) {
     hasRoom: () => true,
     me: () => 'ada',
     isOpen: () => true,
+    missing: () => false,
+    veiled: () => false,
     errorWord: (code: string) => `word:${code}`,
     retryable: isRetryableNoteError as (code: string) => boolean,
     level: () => level.value,
     voiceAllowed: () => allowed.value,
+    backTo: () => '/notes/book-1',
   }
   const level = ref<'private' | 'friends' | 'public'>('friends')
   const allowed = ref(false)
@@ -65,10 +73,16 @@ function fakeNotes(over: Partial<NotesThreadStore> = {}) {
 }
 
 function fakeBuddy(over: Partial<BuddyThreadStore> = {}) {
+  const releases: number[] = []
   const store = {
     threads: {} as BuddyThreadStore['threads'],
     messagesOf: spy<[string, string | null], unknown[]>([]),
+    load: spy<[string], Promise<BuddyErrorCode | null>>(Promise.resolve(null)),
+    openThread: spy<[string, string | null], Promise<BuddyErrorCode | null>>(Promise.resolve(null)),
+    closeThread: spy<[string, string | null], void>(undefined),
     loadOlder: spy<[string, string | null], Promise<BuddyErrorCode | null>>(Promise.resolve(null)),
+    peek: spy<[string], void>(undefined),
+    retain: vi.fn(async () => () => void releases.push(1)),
     previewOf: spy<[string | null], string | null>(null),
     send: spy<[string, string | null, string, { replyTo: string | null }], Promise<{ ok: boolean; error?: BuddyErrorCode }>>(Promise.resolve({ ok: true })),
     sendVoice: spy<[string, string | null, PreparedVoice, { replyTo: string | null }], Promise<{ ok: boolean; error?: BuddyErrorCode }>>(Promise.resolve({ ok: true })),
@@ -89,11 +103,14 @@ function fakeBuddy(over: Partial<BuddyThreadStore> = {}) {
     hasRoom: () => true,
     me: () => 'ada',
     isOpen: () => true,
+    missing: () => false,
+    veiled: () => false,
     nameOf: (id: string | null) => (id === 'ben' ? 'Ben' : null),
     errorWord: (code: string) => `word:${code}`,
     retryable: (code: string) => isRetryableBuddyError(code as BuddyErrorCode),
+    backTo: () => '/together/read-1',
   }
-  return { store, deps, adapter: buddyThreadAdapter(deps), section }
+  return { store, deps, adapter: buddyThreadAdapter(deps), section, releases }
 }
 
 const call = <T>(calls: T[]) => calls.at(-1)!
@@ -101,14 +118,22 @@ const call = <T>(calls: T[]) => calls.at(-1)!
 describe('the Notes adapter', () => {
   it('addresses every call to its own room and chapter, never to a Section it was not given', async () => {
     const { adapter, store } = fakeNotes()
+    await adapter.loadInitial()
+    await adapter.openThread()
+    adapter.closeThread()
     await adapter.loadOlder()
+    adapter.peek()
     await adapter.send('Hello', { replyToId: 'n1', quote: null })
     adapter.discard('c1')
     await adapter.retry('c1')
     await adapter.react('n1', '🔥')
     await adapter.deleteMessage('n1')
 
+    expect(call(store.loadPage.calls)).toEqual(['book-1'])
+    for (const call of store.openThread.calls) expect(call).toEqual(['room-1', 'ch5'])
+    expect(call(store.closeThread.calls)).toEqual(['room-1', 'ch5'])
     expect(call(store.loadOlder.calls)).toEqual(['room-1', 'ch5'])
+    expect(call(store.peek.calls)).toEqual(['room-1', 'ch5'])
     expect(call(store.discard.calls)).toEqual(['room-1', 'ch5', 'c1'])
     expect(call(store.retry.calls)).toEqual(['room-1', 'ch5', 'c1'])
     expect(call(store.react.calls)).toEqual(['room-1', 'ch5', 'n1', '🔥'])
@@ -139,19 +164,22 @@ describe('the Notes adapter', () => {
     expect(call(store.sendVoice.calls)).toEqual(['room-1', 'ch5', voice, { replyTo: null, quote: null }])
   })
 
-  it('reads the pages of its own thread, and whether the page it hangs on is there', () => {
+  it('reads the pages of its own thread, and its own refresh', async () => {
     const { adapter, store } = fakeNotes()
     store.threads[threadKey('room-1', 'ch5')] = { messages: [], loaded: true, more: true, loading: false, marked: null }
     expect(adapter.paging()).toEqual({ more: true, loading: false, loaded: true, room: true })
     store.threads = {}
     expect(adapter.paging()).toEqual({ more: false, loading: false, loaded: false, room: true })
+    await adapter.refresh?.()
+    expect(call(store.refresh.calls)).toEqual(['book-1', 'ch5'])
   })
 
-  it('words a note’s refusals by the notes’ own keys', () => {
+  it('words a note’s refusals by the notes’ own keys, and has no channel to retain', () => {
     const { adapter } = fakeNotes()
     expect(adapter.errorWord('note_wider_than_parent')).toBe(`word:note_wider_than_parent`)
     expect(adapter.retryable('rate_limited')).toBe(true)
     expect(adapter.retryable('note_wider_than_parent')).toBe(false)
+    expect(adapter.retain).toBeUndefined()
     expect(noteErrorKey('voice_private_only' as NoteErrorCode)).toBe('notes.error.voice_private_only')
   })
 })
@@ -159,25 +187,46 @@ describe('the Notes adapter', () => {
 describe('the buddy read adapter', () => {
   it('addresses every call to its own read and Section, the room’s own thread included', async () => {
     const { adapter, store, section } = fakeBuddy()
+    await adapter.loadInitial()
+    await adapter.openThread()
+    adapter.closeThread()
     await adapter.send('Hello', { replyToId: null, quote: null })
     adapter.discard('c1')
     await adapter.deleteMessage('m1')
+    expect(call(store.load.calls)).toEqual(['read-1'])
+    expect(call(store.openThread.calls)).toEqual(['read-1', 's1'])
+    expect(call(store.closeThread.calls)).toEqual(['read-1', 's1'])
     expect(call(store.deleteMessage.calls)).toEqual(['read-1', 's1', 'm1'])
 
     // The room: the same read, no Section (`threadKey(read, null)`).
     section.value = null
-    await adapter.send('Hello', { replyToId: null, quote: null })
-    expect(call(store.send.calls)).toEqual(['read-1', null, 'Hello', { replyTo: null }])
+    await adapter.openThread()
+    expect(call(store.openThread.calls)).toEqual(['read-1', null])
     store.threads[threadKey('read-1', null)] = { messages: [], loaded: true, more: false, loading: false, marked: null }
     expect(adapter.paging()).toMatchObject({ loaded: true, room: true })
   })
 
-  it('sends only the reply, with no quote and no audience', async () => {
-    const { adapter, store } = fakeBuddy()
+  it('sends only the reply, with no quote and no audience, and has nothing to peek at in the room', async () => {
+    const { adapter, store, section } = fakeBuddy()
     await adapter.send('Hello', { replyToId: 'm1', quote: { kind: 'note' } })
     expect(call(store.send.calls)).toEqual(['read-1', 's1', 'Hello', { replyTo: 'm1' }])
     await adapter.sendVoice(voice, { replyToId: null, quote: null })
     expect(call(store.sendVoice.calls)).toEqual(['read-1', 's1', voice, { replyTo: null }])
+
+    adapter.peek()
+    expect(call(store.peek.calls)).toEqual(['s1'])
+    section.value = null
+    adapter.peek()
+    expect(store.peek.calls).toHaveLength(1)
+  })
+
+  it('round-trips retain and release over its own read', async () => {
+    const { adapter, store, releases } = fakeBuddy()
+    const letGo = await adapter.retain?.()
+    expect(store.retain).toHaveBeenCalledWith('read-1')
+    expect(releases).toEqual([])
+    letGo?.()
+    expect(releases).toEqual([1])
   })
 
   it('answers its report with the refusal’s code, and words a read’s own', async () => {
