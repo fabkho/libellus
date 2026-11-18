@@ -4,15 +4,25 @@ import { runCoverUpgrade, type UpgradeList } from '~/data/coverUpgrade'
 import { createUpgradeCatalogue, type UpgradeCatalogue } from '~/data/coverUpgradeCatalogue'
 import { probeImageInBrowser } from '~/data/covers'
 import { createDnb, DNB_IMPORT_GAP_MS } from '~/data/dnb'
+import { addedEntryIds } from '~/data/importJob'
 import { pacedFetch, type PacedFetch } from '~/data/bookImport'
 import { accessTokenOf, viaOwnServer } from '~/data/openLibraryProxy'
 import { createSearch, type Search } from '~/data/search'
+import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 import { makeUpgradeList, readUpgradeLists, writeUpgradeLists } from '~/utils/coverUpgradeList'
 import { parseAppConfig } from '~/utils/appConfig'
+import { writeImportHint } from '~/utils/importHint'
 
 /** An Apple upgrade that paused (a refusal) is tried again after this long, while the app stays open. */
 const UPGRADE_RETRY_MS = 600_000
+
+/**
+ * The jobs whose books the one-time Apple upgrade has been made a list for (once per job, on this device). The value is what
+ * real devices carry: an import done before this key existed must not be listed again, so it is never renamed (unlike the
+ * `libellus.` keys signing out clears, this one stays outside that prefix).
+ */
+const UPGRADED_KEY = 'libellus.import-jobs-upgraded'
 
 /**
  * The one-time Apple cover upgrade (data/coverUpgrade.ts, issue #366), after an import. The server job (#329) adds the books and never
@@ -21,9 +31,14 @@ const UPGRADE_RETRY_MS = 600_000
  * `data/importJob.ts` `addedEntryIds`), the list is worked off in the background, once, and resumes on the next app start until it is.
  * It runs only while no import job of hers is live. Nothing of it is shown: no pill, no error; an Apple refusal pauses it and it tries
  * again later. The device that read the file is the one that asks (Apple's limit is per address).
+ *
+ * `upgradeAfterJob` is what a job turning `done` calls (`stores/import.ts`'s watcher): the Library is read again, Home stops
+ * offering the import, and the list is made from the entries that job added — once per job on this device, whatever else
+ * happens. A job with nothing added makes no list at all.
  */
 export const useCoverUpgradeStore = defineStore('coverUpgrade', () => {
   const backend = useBackend()
+  const libraryStore = useLibraryStore()
   const session = useSessionStore()
   const searchLanguages = useSearchLanguages()
 
@@ -134,9 +149,42 @@ export const useCoverUpgradeStore = defineStore('coverUpgrade', () => {
   }
 
   /**
-   * The import is done: its list is made from the new entries it added (`entryIds`) and worked off. A list is only made from an
+   * The whole side quest of a done import, once per job on this device: the Library shows the new books, Home stops offering the
+   * import, and the list is made for the entries the job added (`addedEntryIds`) and worked off. A list is only made from an
    * import's own added rows, so a later import, or a book she adds, never makes or restarts one.
    */
+  async function upgradeAfterJob(jobId: string) {
+    const member = session.member?.id
+    const store = storage()
+    if (!store || !member || hasSeenUpgrade(store, jobId)) return
+    markUpgrade(store, jobId)
+    void libraryStore.load()
+    if (!backend) return
+    const ids = await addedEntryIds(backend, jobId)
+    if (!ids.data) return
+    // The import added books, so the offer on Home is over here too.
+    if (ids.data.length) writeImportHint(store, member, 'imported')
+    if (session.member?.id === member) void start(jobId, ids.data)
+  }
+
+  function hasSeenUpgrade(store: Pick<Storage, 'getItem'>, id: string): boolean {
+    try {
+      return (JSON.parse(store.getItem(UPGRADED_KEY) ?? '[]') as string[]).includes(id)
+    } catch {
+      return false
+    }
+  }
+
+  function markUpgrade(store: Pick<Storage, 'getItem' | 'setItem'>, id: string) {
+    try {
+      const kept = JSON.parse(store.getItem(UPGRADED_KEY) ?? '[]') as string[]
+      store.setItem(UPGRADED_KEY, JSON.stringify([...kept.filter((one) => one !== id), id].slice(-20)))
+    } catch {
+      // Storage refused: the list may be made twice, which `makeUpgradeList` and the list's id make harmless.
+    }
+  }
+
+  /** The list of one import's `entryIds`, worked off (`upgradeAfterJob` is the whole side quest a done job sets off). */
   async function start(jobId: string, entryIds: string[]) {
     const member = session.member?.id
     const store = storage()
@@ -155,5 +203,5 @@ export const useCoverUpgradeStore = defineStore('coverUpgrade', () => {
     else void work()
   }
 
-  return { start, work, stop, block }
+  return { upgradeAfterJob, start, work, stop, block }
 })

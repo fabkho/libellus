@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import {
-  addedEntryIds,
   cancelImportJob,
   hasSeen,
   importJobAhead,
@@ -17,16 +16,11 @@ import { createJobWatch, type JobWatch } from '~/data/importJobWatch'
 import { isJobError, startJobFromFile, type StartedJob } from '~/data/import/startJob'
 import type { FileError, FileErrorDetail } from '~/data/importUpload'
 import { useCoverUpgradeStore } from '~/stores/coverUpgrade'
-import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 import { isoDay } from '~/utils/dates'
-import { writeImportHint } from '~/utils/importHint'
 import { UPGRADE_LISTS_KEY } from '~/utils/coverUpgradeList'
 import { importAmbient } from '~/utils/importProgress'
 import { parseAppConfig } from '~/utils/appConfig'
-
-/** Jobs whose books the one-time Apple cover upgrade has been made a list for (once per job, on this device). */
-const UPGRADED_KEY = 'libellus.import-jobs-upgraded'
 
 /** Where the device-side import kept its lookups and its place in line (#371): gone with that path, cleaned once. */
 const LEGACY_KEYS = ['libellus.import-matches', 'libellus.import-matches.v2', 'libellus.import-holder', 'libellus.import-device-slot']
@@ -50,11 +44,12 @@ export type ImportPhase = 'pick' | 'reading' | 'starting' | 'job'
  * live, and the app reads the job once when it opens and again after every reconnect and when the server has her changes subscribed. Nothing polls;
  * the one fallback is the silence net (a read when the socket said nothing for 30 s while the job is live, data/importJobWatch.ts).
  *
- * A done job makes the one-time Apple cover upgrade's list on this device (stores/coverUpgrade.ts) from the books it added.
+ * A done job's side quest — the Library read again, Home done offering the import, the one-time Apple cover upgrade's
+ * list from the books it added — belongs to the upgrade's store (stores/coverUpgrade.ts, `upgradeAfterJob`), called here in
+ * one line when the watcher sees the job `done`.
  */
 export const useImportStore = defineStore('import', () => {
   const backend = useBackend()
-  const libraryStore = useLibraryStore()
   const session = useSessionStore()
   // Composables need the app (the config, the language); asked here, not after an `await`.
   const config = parseAppConfig(useRuntimeConfig().public)
@@ -104,7 +99,7 @@ export const useImportStore = defineStore('import', () => {
         if (next && phase.value !== 'reading' && phase.value !== 'starting') phase.value = 'job'
         else if (!next && phase.value === 'job') phase.value = 'pick'
         blockUpgrade(live.value)
-        if (next?.state === 'done') void finished(next)
+        if (next?.state === 'done') void upgradeAfterJob(next.id)
       },
       port: createRealtimePort({
         url: app.supabaseUrl,
@@ -131,37 +126,14 @@ export const useImportStore = defineStore('import', () => {
       return false
     }
   }
+  /** A done job's side quest (stores/coverUpgrade.ts): the upgrade's store is only built when there is one to do. */
+  async function upgradeAfterJob(jobId: string) {
+    return (await upgraderOf()).upgradeAfterJob(jobId)
+  }
+
   /** A job of hers is live (the upgrade waits for it) or not (it goes on with what is left). */
   function blockUpgrade(liveNow: boolean) {
     if (upgrader || liveNow || upgradeWaiting()) void upgraderOf().then((store) => store.block(liveNow))
-  }
-
-  /** A job that is done: the Library shows the new books, Home stops offering the import, the Apple upgrade lists what was added (once). */
-  async function finished(done: ImportJob) {
-    const store = storage()
-    const member = session.member?.id
-    if (!store || !member || hasSeenUpgrade(store, done.id)) return
-    markUpgrade(store, done.id)
-    if (done.added > 0) writeImportHint(store, member, 'imported')
-    void libraryStore.load()
-    if (!backend || !done.added) return
-    const ids = await addedEntryIds(backend, done.id)
-    if (ids.data && session.member?.id === member) void upgraderOf().then((store) => store.start(done.id, ids.data!))
-  }
-  function hasSeenUpgrade(store: Storage, id: string): boolean {
-    try {
-      return (JSON.parse(store.getItem(UPGRADED_KEY) ?? '[]') as string[]).includes(id)
-    } catch {
-      return false
-    }
-  }
-  function markUpgrade(store: Storage, id: string) {
-    try {
-      const kept = JSON.parse(store.getItem(UPGRADED_KEY) ?? '[]') as string[]
-      store.setItem(UPGRADED_KEY, JSON.stringify([...kept.filter((one) => one !== id), id].slice(-20)))
-    } catch {
-      // Storage refused: the list may be made twice, which `makeUpgradeList` and the list's id make harmless.
-    }
   }
 
   // ---------------------------------------------------------------------- actions
