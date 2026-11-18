@@ -270,7 +270,7 @@
       "updateCurrent": "Du hast die neueste Version.",
       "updateAvailable": "Ein Update ist bereit.",
       "updateFailed": "Das hat nicht geklappt. Prüfe deine Verbindung und versuch es nochmal.",
-      "updateShow": "Anzeigen"
+      "updateOnItsWay": "Ein Update ist unterwegs. Es wird beim nächsten Öffnen der App installiert."
     },
     "deleteAccount": {
       "title": "Dein Konto löschen?",
@@ -1774,13 +1774,6 @@
       "performance": "Schneller",
       "fixes": "Behoben"
     }
-  },
-  "update": {
-    "title": "Neue Version verfügbar",
-    "text": "Ein kurzer Neustart bringt alles auf den neuesten Stand.",
-    "action": "Jetzt aktualisieren",
-    "later": "Später",
-    "busy": "Aktualisiere …"
   },
   "genre": {
     "sci-fi": "Science-Fiction",

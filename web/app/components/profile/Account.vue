@@ -102,11 +102,25 @@ const UPDATE_RESULT: Record<UpdateResult, string> = {
   available: 'profile.account.updateAvailable',
   failed: 'profile.account.updateFailed',
 }
+/**
+ * "An update is ready" is only true when pressing will install it. With `skipWaiting` off an update that is
+ * merely deployed and has no waiting worker arrives by itself on a later start, so the row says that instead
+ * of offering a press that cannot work.
+ */
+const updateResultKey = computed(() =>
+  appUpdate.result === 'available' && !appUpdate.installable ? 'profile.account.updateOnItsWay' : UPDATE_RESULT[appUpdate.result],
+)
 
-/** "Check for new version": look now, say what it found, and offer the sheet when there is something. */
+/**
+ * "Check for new version": look now, then install it if a worker is waiting. There is no sheet any more (the
+ * owner, 2026-11-18): with `skipWaiting` off, only a *waiting* worker can be activated, so an update that is
+ * merely deployed cannot be installed by pressing — `apply()` then does nothing and the row says it is on its
+ * way, instead of reloading the same shell (the fifty-presses dead end, docs/proposals/app-update-2026-11-18.md).
+ */
 async function checkForUpdate() {
-  if (appUpdate.checking) return
-  if ((await appUpdate.check({ manual: true })) === 'available') appUpdate.reopen()
+  if (appUpdate.checking || appUpdate.applying) return
+  const found = await appUpdate.check({ manual: true })
+  if (found === 'available') await appUpdate.apply()
 }
 
 const ebooks = useEbooksStore()
@@ -251,8 +265,9 @@ const whatsNew = useWhatsNew()
         <span v-if="!online" class="text-ink-muted">{{ t('common.offline') }}</span>
       </UiRow>
     </UiRowGroup>
-    <!-- What the last look for a new version found (stores/appUpdate.ts); "Show" brings the sheet back
-         after "Later". Politeness per result: a failure is an alert, everything else is a status. -->
+    <!-- What the last look for a new version found (stores/appUpdate.ts). Politeness per result: a failure is
+         an alert, everything else is a status. With `skipWaiting` off, "an update is ready" is only said when a
+         press can actually install it; otherwise the line says it is on its way and arrives by itself. -->
     <div v-if="appUpdate.result !== 'idle'" class="flex items-center justify-between gap-sm px-inset">
       <p
         class="text-caption"
@@ -261,17 +276,8 @@ const whatsNew = useWhatsNew()
         :data-result="appUpdate.result"
         data-testid="profile.updateResult"
       >
-        {{ t(UPDATE_RESULT[appUpdate.result]) }}
+        {{ t(updateResultKey) }}
       </p>
-      <UiButton
-        v-if="appUpdate.available && !appUpdate.sheetOpen"
-        size="sm"
-        tone="secondary"
-        data-testid="profile.updateShow"
-        @click="appUpdate.reopen()"
-      >
-        {{ t('profile.account.updateShow') }}
-      </UiButton>
     </div>
     <button
       v-if="whatsNew.notes.version"

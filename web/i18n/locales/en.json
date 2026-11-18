@@ -270,7 +270,7 @@
       "updateCurrent": "You have the latest version.",
       "updateAvailable": "An update is ready.",
       "updateFailed": "That did not work. Check your connection and try again.",
-      "updateShow": "Show"
+      "updateOnItsWay": "An update is on its way. It will be installed the next time you open the app."
     },
     "deleteAccount": {
       "title": "Delete your account?",
@@ -1774,13 +1774,6 @@
       "performance": "Faster",
       "fixes": "Fixed"
     }
-  },
-  "update": {
-    "title": "New version available",
-    "text": "A short restart brings you the latest.",
-    "action": "Update now",
-    "later": "Later",
-    "busy": "Updating…"
   },
   "genre": {
     "sci-fi": "Science fiction",
