@@ -154,7 +154,13 @@ function act() {
         <UiIcon name="more" :size="20" />
       </button>
       <UiPressLink :to="`/book/${entry.book.id}`" v-on="flightOf(`/book/${entry.book.id}`)" class="flex flex-col gap-xs" :class="together && 'pr-ml'" :data-testid="`${scope}.entry`" @press="books.prefetch(entry.book.id)">
-        <span class="book-title line-clamp-2 text-book-title" :data-testid="`${scope}.entryTitle`">{{ entry.book.title }}</span>
+        <!-- One line, cut with an ellipsis, so every card is the same height (the owner's requirement): a wrapped title
+             grew the card, and the cover then sat centred in the taller one. `title-wrap` rather than `truncate` because
+             it keeps the accessibility rule for large text — at 22rem or less (200 % text on a phone) a title may take a
+             second line so it is not lost to "The Left Hand of …" (docs/ACCESSIBILITY.md, Text size: the Home card's
+             lines wrap there). That growth belongs to the text setting, not to the usual case. The prototype allowed two
+             lines unconditionally (card.css `.title`, `-webkit-line-clamp: 2`). -->
+        <span class="book-title title-wrap text-book-title" :data-testid="`${scope}.entryTitle`">{{ entry.book.title }}</span>
         <span class="flex min-w-0 items-center gap-xs">
           <span class="truncate text-body text-ink-muted">{{ authorLine }}</span>
           <EbooksMark :entry="entry" :testid="`${scope}.ebookMark`" />
