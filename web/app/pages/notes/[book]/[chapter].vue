@@ -19,14 +19,16 @@
 // "hidden" screen with "Show anyway", and only her yes (a peek, kept on this device; her chapter does not move) asks the database for it. There are no spoiler marks on single notes (a chapter is opened to be read).
 // Read when it opens, when the app comes back to the front and on Refresh: no Realtime (tests/notes-entry.test.ts).
 import type { BarAction } from '#layers/ui/app/components/ui/ReactionBar.vue'
-import { threadKey } from '#layers/chat/app/utils/thread'
-import { isRetryableNoteError, NOTE_EMOJI, type NoteErrorCode, type NoteQuote } from '~/data/notes'
+import { isRetryableNoteError, NOTE_EMOJI, type NoteQuote } from '~/data/notes'
 import type { ReportReason } from '~/data/buddyReads'
+import { threadKey } from '#layers/chat/app/utils/thread'
 import { isBookId, isChapterSegment, notesPath } from '~/utils/notesRoute'
-import { chapterOfSegment, noteErrorKey, noteItems, quoteSourceOf, type NoteItem } from '~/utils/notes'
-import { quoteOf, replyChipOf, sameAuthorRun } from '~/utils/roomThread'
+import { chapterOfSegment, noteErrorKey, type NoteItem } from '~/utils/notes'
+import { sameAuthorRun } from '~/utils/roomThread'
 import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
 import { clampToOffer, noteSendOptions, noteVoiceAllowed, settleLevel, startLevel, type NoteLevel } from '~/utils/noteVisibility'
+import { useThreadScreen } from '~/composables/useThreadScreen'
+import { notesThreadAdapter } from '~/utils/notesThreadAdapter'
 import { useBookStore } from '~/stores/book'
 import { useNotesStore } from '~/stores/notes'
 import { useSessionStore } from '~/stores/session'
@@ -119,47 +121,7 @@ const status = computed(() => {
 })
 useFocusHeading(() => missing.value || status.value === 'ready' || view.value?.veiled === true)
 
-// ------------------------------------------------------------------ the notes
-
-const items = computed<NoteItem[]>(() =>
-  room.value && chapter.value
-    ? noteItems(store.messagesOf(room.value.id, chapter.value.id), {
-        me: me.value,
-        open: view.value?.open === true,
-        nameOf: () => null,
-        previewOf: store.previewOf,
-        errorWord: (code) => t(noteErrorKey(code)),
-        retryable: isRetryableNoteError,
-      })
-    : [],
-)
-const byKey = computed(() => new Map(items.value.map((i) => [i.key, i])))
-const noteOf = (item: { key: string }): NoteItem => byKey.value.get(item.key)!
-
-/** The notes that came after the thread was shown: they play the arrival animation once. */
-const fresh = ref<ReadonlySet<string>>(new Set())
-const known = new Set<string>()
-let settled = false
-watch(
-  () => [status.value, items.value.map((i) => i.key)] as const,
-  ([now, keys]) => {
-    if (now !== 'ready') return
-    const added = keys.filter((k) => !known.has(k))
-    for (const k of keys) known.add(k)
-    if (settled && added.length) fresh.value = new Set([...fresh.value, ...added])
-    settled = true
-  },
-  { immediate: true },
-)
-
-const hasMore = computed(() => thread.value?.more === true)
-const olderStatus = computed(() => (thread.value?.loading && thread.value.loaded ? 'loading' : 'idle'))
-async function loadOlder(): Promise<boolean> {
-  if (!room.value || !chapter.value) return false
-  const before = items.value.length
-  await store.loadOlder(room.value.id, chapter.value.id)
-  return items.value.length > before
-}
+// ------------------------------------------------------------------ the thread screen
 
 const quoteWords = computed(() => ({
   deleted: t('uiText.chat.reply.deleted'),
@@ -168,7 +130,63 @@ const quoteWords = computed(() => ({
   hidden: t('notes.thread.hiddenQuote'),
   voice: t('notes.thread.voiceQuote'),
 }))
-const quoteFor = (item: NoteItem) => quoteOf(items.value, quoteSourceOf(item, me.value), quoteWords.value)
+const voicePlayer = useVoicePlayer()
+
+/** A note and its own audience: what the server's quote of an answer needs (the chat layer never looks a note up later). */
+function quoteOfNote(item: NoteItem | null): NoteQuote | null {
+  if (!item || !item.id) return null
+  return {
+    kind: 'note',
+    id: item.id,
+    author: { id: item.authorId ?? '', name: item.author, photo: null },
+    excerpt: item.voice ? '' : item.body.replace(/\s+/g, ' ').trim().slice(0, 140),
+    voice: item.voice,
+  }
+}
+
+/**
+ * The half of this screen a buddy read's thread has too (`composables/useThreadScreen.ts`): the messages, the send queue's three
+ * answers, the quotes, the action bar, the delete confirm, the veil's one way in, the load and the press on a voice note. The adapter
+ * closes over this chapter (`notesThreadAdapter`); what is here is what only Notes has — the audience and its flow, the microphone's
+ * gate, the edit flow, the Refresh and the visibility it is asked on.
+ */
+const screen = useThreadScreen(
+  notesThreadAdapter({
+    store,
+    bookId: () => bookId.value,
+    roomId: () => room.value?.id ?? '',
+    chapterId: () => chapter.value?.id ?? '',
+    hasRoom: () => !!room.value && !!chapter.value,
+    me: () => me.value,
+    isOpen: () => view.value?.open === true,
+    errorWord: (code) => t(noteErrorKey(code as NoteErrorCode)),
+    retryable: (code) => isRetryableNoteError(code as NoteErrorCode),
+    level: () => level.value,
+    voiceAllowed: () => noteVoiceAllowed(sendAs.value as NoteLevel, parentForVoice.value),
+    backTo: () => notesPath(bookId.value),
+  }),
+  {
+    emojis: NOTE_EMOJI,
+    likeEmoji: NOTE_EMOJI[0]!,
+    canLike: () => true,
+    canWrite: () => true,
+    quoteWords: () => quoteWords.value,
+    barWords: () => ({ report: t('notes.thread.report'), delete: t('notes.thread.delete') }),
+    extraActions: (item) => extraActions(item),
+    onAction: (id, item) => takesAction(id, item),
+    sendQuote: quoteOfNote,
+    deleteText: () => t('notes.thread.deleteText'),
+    offlineWord: () => t(noteErrorKey('offline')),
+    failedWord: () => t('notes.thread.voicePlayFailed'),
+    composerTestid: 'notesThread',
+    voicePlayer,
+  },
+)
+
+const { items, text, replyTo, notice, fresh, hasMore, olderStatus, loadOlder, quoteFor, replyChip, retry, discard, react, answer, actionsOf, action, deleteOpen, deleteBusy, deleteError, deleteText, confirmDelete, reportId, reportOpen, report, onPress: voicePress } = screen
+
+const byKey = computed(() => new Map(items.value.map((i) => [i.key, i])))
+const noteOf = (item: { key: string }): NoteItem => byKey.value.get(item.key)!
 
 // ------------------------------------------------------------------ title
 
@@ -176,19 +194,8 @@ const isEnd = computed(() => chapter.value?.kind === 'end')
 const title = computed(() => (!chapter.value ? '' : isEnd.value ? t('notes.wholeBook') : t('notes.chapter', { n: chapter.value.position })))
 useHead({ title: () => `${title.value || t('notes.title')} · ${t('app.name')}` })
 
-// ------------------------------------------------------------------ writing
+// ------------------------------------------------------------------ the audience, which no buddy read has
 
-const text = ref('')
-const replyTo = ref<NoteItem | null>(null)
-const notice = ref<string | null>(null)
-/**
- * The note whose words she is rewriting (`notes.thread.edit` in its bar). Its own composer reuse: the capsule over the thread becomes an edit
- * field holding her note, with Save and Cancel, and the thread's own composer steps aside while it is open (one line writes at a time).
- */
-const editing = ref<NoteItem | null>(null)
-const editText = ref('')
-const editBusy = ref(false)
-const editError = ref<NoteErrorCode | null>(null)
 const chat = useTemplateRef<{ jumpTo: (id: string) => Promise<void>; toNewest: () => void }>('chat')
 
 /** The audience of the note she is writing. */
@@ -224,103 +231,43 @@ function chooseLevel(next: NoteLevel) {
   store.remember(level.value)
 }
 
-const replyChip = computed(() => (replyTo.value ? replyChipOf(replyTo.value, quoteWords.value) : null))
-
-function quoteOfReply(item: NoteItem | null): NoteQuote | null {
-  if (!item || !item.id) return null
-  return {
-    kind: 'note',
-    id: item.id,
-    author: { id: item.authorId ?? '', name: item.author, photo: null },
-    excerpt: item.voice ? '' : item.body.replace(/\s+/g, ' ').trim().slice(0, 140),
-    voice: item.voice,
-  }
-}
-
-async function send() {
-  const body = text.value
-  if (!body.trim() || !room.value || !chapter.value) return
-  notice.value = null
-  const sent = await store.send(room.value.id, chapter.value.id, body, level.value, { replyTo: replyTo.value?.id ?? null, quote: quoteOfReply(replyTo.value) })
-  if (!sent.ok) {
-    notice.value = t(noteErrorKey(sent.error))
-    return
-  }
-  text.value = ''
-  replyTo.value = null
-  // Everyone was for this note: the control is back on what the device remembers.
-  level.value = clampToOffer(store.remembered, store.publicEnabled)
-  chat.value?.toNewest()
-}
+/** The note she answers, as the microphone's gate reads it (`noteVoiceAllowed`): hers, private and live, or nothing. */
+const parentForVoice = computed(() => (replyTo.value ? { mine: replyTo.value.mine, visibility: replyTo.value.visibility as NoteLevel, removed: replyTo.value.removed } : null))
 
 /**
  * The microphone: only while the split send button is on **Only me**, and only when the note is new or answers her own live private note (`noteVoiceAllowed`, tested in
  * Node). At Friends or Everyone the field is not offered a recording, so the capsule shows Send; an option that is not Only me takes the microphone away.
  */
-const voiceMaxMs = computed(() =>
-  noteVoiceAllowed(sendAs.value as NoteLevel, replyTo.value ? { mine: replyTo.value.mine, visibility: replyTo.value.visibility as NoteLevel, removed: replyTo.value.removed } : null) ? VOICE_MAX_MS : undefined,
-)
+const voiceMaxMs = computed(() => (noteVoiceAllowed(sendAs.value as NoteLevel, parentForVoice.value) ? VOICE_MAX_MS : undefined))
 
-/** A finished recording from the composer: a private voice note, a bubble at once (`store.sendVoice`). A refusal (too short, too big) is said above the thread. */
-async function sendVoice(voice: PreparedVoice) {
-  if (!room.value || !chapter.value) return
-  // Only me is the one audience of a recording: the microphone is not offered anywhere else, and one that arrives anyway (the option changed under a recording) is not posted.
-  if (!noteVoiceAllowed(sendAs.value as NoteLevel, replyTo.value ? { mine: replyTo.value.mine, visibility: replyTo.value.visibility as NoteLevel, removed: replyTo.value.removed } : null)) {
-    notice.value = t(noteErrorKey('voice_private_only'))
-    return
-  }
-  notice.value = null
-  const sent = await store.sendVoice(room.value.id, chapter.value.id, voice, { replyTo: replyTo.value?.id ?? null, quote: quoteOfReply(replyTo.value) })
-  if (!sent.ok) {
-    notice.value = t(noteErrorKey(sent.error))
-    return
-  }
-  replyTo.value = null
+/** The thread's own send, and then the two things only Notes does: the control back on what the device remembers, the thread at its newest. */
+async function send() {
+  const wrote = text.value
+  await screen.send()
+  if (!wrote.trim() || text.value) return
+  level.value = clampToOffer(store.remembered, store.publicEnabled)
   chat.value?.toNewest()
 }
-
-async function retry(key: string) {
-  const item = byKey.value.get(key)
-  if (item && !item.permanent && room.value && chapter.value) await store.retry(room.value.id, chapter.value.id, key)
-}
-/** A note that was refused (or still waits) is given up: the bubble goes, and the refusal the device kept with it. */
-function discard(key: string) {
-  if (room.value && chapter.value) store.discard(room.value.id, chapter.value.id, key)
-}
-async function react(noteId: string, emoji: string) {
-  if (!room.value || !chapter.value) return
-  const failed = await store.react(room.value.id, chapter.value.id, noteId, emoji)
-  notice.value = failed ? t(noteErrorKey(failed)) : null
-}
-function answer(key: string) {
-  const item = byKey.value.get(key)
-  if (item?.id && !item.removed) replyTo.value = item
+/** A finished recording: the screen's send, and the thread scrolled to its newest when it went. */
+async function sendVoice(voice: PreparedVoice) {
+  const before = notice.value
+  await screen.sendVoice(voice)
+  if (before === notice.value) chat.value?.toNewest()
 }
 
 // ------------------------------------------------------------------ the action bar
 
-function actionsOf(item: NoteItem): BarAction[] {
-  if (item.removed || !item.id) return []
+/** What only a note's bar offers: Edit and its audience on hers, Block on somebody else's. */
+function extraActions(item: NoteItem): BarAction[] {
+  if (!item.mine) return [{ id: 'block', label: t('notes.thread.block', { name: item.author?.trim() || t('member.someone') }), icon: 'ban' }]
   const list: BarAction[] = []
-  if (item.mine) {
-    // Her own live text note: its words can be corrected. A voice note is a recording and a tombstone stays one, so neither is offered it.
-    if (!item.voice && !item.removed) list.push({ id: 'edit', label: t('notes.thread.edit'), icon: 'pencil' })
-    // While the owner's switch is off her public note counts as a friends' one: the bar says so where she would change it.
-    list.push({ id: 'visibility', label: item.visibility === 'public' && !publicEnabled.value ? t('notes.level.paused') : t('notes.visibilitySheet.title'), icon: item.visibility === 'public' ? 'globe' : item.visibility === 'private' ? 'lock' : 'people' })
-    list.push({ id: 'delete', label: t('notes.thread.delete'), icon: 'trash' })
-  } else {
-    list.push({ id: 'report', label: t('notes.thread.report'), icon: 'flag' })
-    list.push({ id: 'block', label: t('notes.thread.block', { name: item.author?.trim() || t('member.someone') }), icon: 'ban' })
-  }
+  // Her own live text note: its words can be corrected. A voice note is a recording and a tombstone stays one, so neither is offered it.
+  if (!item.voice && !item.removed) list.push({ id: 'edit', label: t('notes.thread.edit'), icon: 'pencil' })
+  // While the owner's switch is off her public note counts as a friends' one: the bar says so where she would change it.
+  list.push({ id: 'visibility', label: item.visibility === 'public' && !publicEnabled.value ? t('notes.level.paused') : t('notes.visibilitySheet.title'), icon: item.visibility === 'public' ? 'globe' : item.visibility === 'private' ? 'lock' : 'people' })
   return list
 }
 
-const deleting = ref<NoteItem | null>(null)
-const deleteOpen = ref(false)
-const deleteBusy = ref(false)
-const deleteError = ref<NoteErrorCode | null>(null)
-const reportId = ref<string | null>(null)
-const reportOpen = ref(false)
 const levelNote = ref<NoteItem | null>(null)
 const levelOpen = ref(false)
 const blocking = ref<NoteItem | null>(null)
@@ -328,28 +275,36 @@ const blockOpen = ref(false)
 const blockBusy = ref(false)
 const blockError = ref<string | null>(null)
 
-function action(actionId: string, key: string) {
-  const item = byKey.value.get(key)
-  if (!item?.id) return
+/** The bar buttons that open a sheet of this page's own (Delete and Report are the screen's). */
+function takesAction(actionId: string, item: NoteItem): boolean {
   if (actionId === 'edit') {
     openEdit(item)
-  } else if (actionId === 'delete') {
-    deleting.value = item
-    deleteError.value = null
-    deleteOpen.value = true
-  } else if (actionId === 'report') {
-    reportId.value = item.id
-    reportOpen.value = true
-  } else if (actionId === 'visibility') {
+    return true
+  }
+  if (actionId === 'visibility') {
     levelNote.value = item
     levelOpen.value = true
-  } else if (actionId === 'block') {
+    return true
+  }
+  if (actionId === 'block') {
     blocking.value = item
     blockError.value = null
     blockOpen.value = true
+    return true
   }
+  return false
 }
+
 // ------------------------------------------------------------------ editing a note
+
+/**
+ * The note whose words she is rewriting (`notes.thread.edit` in its bar). Its own composer reuse: the capsule over the thread becomes an edit
+ * field holding her note, with Save and Cancel, and the thread's own composer steps aside while it is open (one line writes at a time).
+ */
+const editing = ref<NoteItem | null>(null)
+const editText = ref('')
+const editBusy = ref(false)
+const editError = ref<NoteErrorCode | null>(null)
 
 /** The capsule becomes the field of her note, holding what it says: `saveEdit` writes it, `cancelEdit` leaves it be. */
 function openEdit(item: NoteItem) {
@@ -390,17 +345,7 @@ watch(items, (now) => {
   if (!same || same.removed) cancelEdit()
 })
 
-async function confirmDelete() {
-  const item = deleting.value
-  if (!item?.id || deleteBusy.value || !room.value || !chapter.value) return
-  deleteBusy.value = true
-  deleteError.value = null
-  const failed = await store.deleteNote(room.value.id, chapter.value.id, item.id)
-  deleteBusy.value = false
-  if (failed) deleteError.value = failed
-  else deleteOpen.value = false
-}
-const reportNote = async (noteId: string, reason: ReportReason, note: string | null) => store.report(noteId, reason, note)
+const reportNote = screen.report
 
 /** Blocks the author of a note: silent, both ways, everywhere (the People screens' own call); what was hers on this page is gone when it is read again. */
 async function confirmBlock() {
@@ -419,28 +364,10 @@ async function confirmBlock() {
   blockOpen.value = false
 }
 
-// ------------------------------------------------------------------ playing a voice note
-
-const voicePlayer = useVoicePlayer()
-/** The whole press-to-play interaction, once for both threads (`composables/useVoicePress.ts`): what differs here is the ❤️ of the notes' bar, the veil, and the two sentences. */
-const { onPress: voicePress } = useVoicePress({
-  items: () => items.value,
-  isOpen: () => view.value?.open === true,
-  canLike: () => true,
-  likeEmoji: NOTE_EMOJI[0]!,
-  like: (id, emoji) => void react(id, emoji),
-  notice: (message) => (notice.value = message),
-  isPreview: (key) => !!store.previewOf(key),
-  voiceUrl: (path) => store.voiceUrl(path),
-  offlineWord: () => t(noteErrorKey('offline')),
-  failedWord: () => t('notes.thread.voicePlayFailed'),
-  voicePlayer,
-})
-
 // ------------------------------------------------------------------ the veil
 
 const showOpen = ref(false)
-/** She said "Show anyway": once the thread is up, focus goes to the composer (the quiet screen she tapped on is gone). */
+/** She said "Show anyway": once the thread is up, focus goes to the composer (the quiet screen she tapped on is gone; focus would be lost at the top of the page). */
 let focusComposerWhenReady = false
 function focusComposer() {
   if (!focusComposerWhenReady || status.value !== 'ready') return
@@ -463,7 +390,6 @@ function back() {
   if (window.history.state?.back) router.back()
   else void navigateTo(notesPath(bookId.value))
 }
-
 </script>
 
 <template>
@@ -678,7 +604,7 @@ function back() {
     <UiConfirm
       v-model:open="deleteOpen"
       :title="t('notes.thread.deleteTitle')"
-      :text="t('notes.thread.deleteText')"
+      :text="deleteText"
       :action="deleteBusy ? t('notes.thread.deleting') : t('notes.thread.delete')"
       :busy="deleteBusy"
       :error="deleteError ? t(noteErrorKey(deleteError)) : null"
