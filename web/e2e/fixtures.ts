@@ -1,4 +1,5 @@
 import { expect, test as base, type BrowserContext, type Locator, type Page } from '@playwright/test'
+import { isChunkError } from '../app/data/errorLog'
 import { appleCover } from '../tests/support/apple'
 import { stack } from '../tests/support/stack'
 import { isLocalAddress, isOwnRefusal } from './refusedRead'
@@ -109,7 +110,19 @@ const EXPECTED_PAGE_ERRORS: { match: RegExp; why: string }[] = []
  */
 const ownOrigins = (baseURL: string) => [new URL(baseURL).origin, new URL(stack.url).origin]
 
-export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void; stillSheets: void; noPageErrors: void }>({
+export const test = base.extend<{
+  noLiveApis: void
+  everyControlHasATestId: void
+  stillSheets: void
+  noPageErrors: void
+  /**
+   * Whether this flow takes chunks of the build away on purpose, so the app's own recovery can be proved
+   * (reader-stale-chunk.spec.ts fulfils the reader's files with 404 to pretend a release pruned them).
+   * `noPageErrors` refuses a missing chunk otherwise, because a build that lost one is a bug. Off by default:
+   * a spec that turns it on says so at its top, beside why.
+   */
+  chunksMayBeMissing: boolean
+}>({
   stillSheets: [
     async ({ page }, use) => {
       tapsWaitForSheets(page)
@@ -117,8 +130,9 @@ export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void
     },
     { auto: true },
   ],
+  chunksMayBeMissing: [false, { option: true }],
   noPageErrors: [
-    async ({ context, browser, baseURL }, use) => {
+    async ({ context, browser, baseURL, chunksMayBeMissing }, use) => {
       // An uncaught exception of any page (`pageerror`: Playwright reports an uncaught throw and an
       // unhandled rejection there, not as a `console` error) fails the test at its end, with each
       // one's message and stack. A feed refresh once threw on every load and the suite passed (social v1).
@@ -131,12 +145,38 @@ export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void
             if (EXPECTED_PAGE_ERRORS.some(({ match }) => match.test(text))) return
             // WebKit refusing a read of this app's own: nothing failed, nothing a member sees.
             if (isOwnRefusal(text, own)) return
+            // A chunk the page could not import, in the app's own definition of it (data/errorLog.ts,
+            // `isChunkError`): a document load cancelling an import the load before it started, which a page
+            // nulls out when it navigates away. The app treats these as a condition it recovers from (Nuxt
+            // reloads on the next navigation; plugins/error-log.client.ts files it as `chunk`, not as a bug), so
+            // a flow must not fail on one — otherwise the race lands on whichever spec is unlucky that run.
+            // A build that is genuinely missing a chunk still fails: `unservedChunks` below is the guard, and it
+            // fails with the chunk's own address instead of a stack about a cancelled import.
+            if (isChunkError(text)) return
             thrown.push(`${page.url()}\n${text}`)
           })
         }
         for (const page of ctx.pages()) onPage(page)
         ctx.on('page', onPage)
       }
+      // The guard that keeps the filter above honest: a chunk of the build the app asked for and did not get. A
+      // real missing chunk fails here, named by its address, rather than as a stack about a cancelled import.
+      //
+      // A flow that takes a chunk away on purpose is exempt and says so with
+      // `test.use({ chunksMayBeMissing: true })` (reader-stale-chunk.spec.ts, which fulfils the reader's files with
+      // 404 to prove the app's own recovery). Everything else: a `/_nuxt/` script or stylesheet that answered 404
+      // or 5xx is a chunk this build lost.
+      const unservedChunks: string[] = []
+      const watchChunks = (ctx: BrowserContext) => {
+        ctx.on('response', (response) => {
+          const url = response.url()
+          if (!/\/_nuxt\/.+\.(?:js|css)$/.test(url)) return
+          const status = response.status()
+          if (status !== 404 && status < 500) return
+          unservedChunks.push(`${status} ${url}`)
+        })
+      }
+      if (!chunksMayBeMissing) watchChunks(context)
       watch(context)
       // A flow that needs a second member makes her a context of her own (friends.spec.ts:
       // `browser.newContext`); every context made while the test runs is watched too.
@@ -144,6 +184,7 @@ export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void
       browser.newContext = async function (this: typeof browser, ...args: Parameters<typeof newContext>) {
         const made = await newContext.apply(this, args)
         watch(made)
+        if (!chunksMayBeMissing) watchChunks(made)
         return made
       } as typeof newContext
       try {
@@ -152,6 +193,7 @@ export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void
         browser.newContext = newContext
       }
       expect(thrown, 'uncaught errors in a page').toEqual([])
+      if (!chunksMayBeMissing) expect(unservedChunks, 'chunks of the build the app asked for and did not get').toEqual([])
     },
     { auto: true },
   ],
