@@ -60,25 +60,6 @@ export function dueForForegroundCheck(now: number, lastCheckAt: number | null, g
   return lastCheckAt === null || now - lastCheckAt >= gapMs
 }
 
-const NON_TEXT_INPUTS = new Set(['button', 'checkbox', 'radio', 'range', 'color', 'file', 'image', 'reset', 'submit'])
-
-/** A text field has the cursor (the keyboard is, or is about to be, up): nothing may take the screen then. */
-export function isTyping(active: Element | null): boolean {
-  if (!active) return false
-  const tag = active.tagName?.toLowerCase()
-  if (tag === 'textarea') return true
-  if (tag === 'input') return !NON_TEXT_INPUTS.has((active as HTMLInputElement).type?.toLowerCase() ?? 'text')
-  return (active as HTMLElement).isContentEditable === true
-}
-
-/**
- * The sheet may rise: nobody is typing and no layer of the app is on screen. `modalOpen` is
- * `useModalShown()` (the UI base's composables/useModalLayer.ts): a sheet, a confirm, the search palette or the reader —
- * the reader is a modal layer too (components/reader/Reader.vue), so a new version never interrupts a book.
- */
-export function canInterrupt(now: { typing: boolean; modalOpen: boolean }): boolean {
-  return !now.typing && !now.modalOpen
-}
 
 export interface UpdateCheck {
   /** A new worker has installed and waits for her go. */
@@ -164,16 +145,20 @@ export interface ApplyDeps {
 }
 
 /**
- * "Update now": make sure the newest worker waits (look once more if none does), let it take over and
- * reload. Nothing is unregistered or cleared, so her session stays and the registration keeps the caches
- * it owns. Without a worker to activate (dev; a deploy the browser has not picked up) it still reloads:
- * the next start then fetches the shell afresh.
+ * Profile → "Check for new version": make sure the newest worker waits (look once more if none
+ * does), let it take over and reload — but only when a worker waits. Nothing is unregistered
+ * or cleared, so her session stays and the registration keeps the caches it owns. With no
+ * worker to activate (dev; a deploy the browser has not picked up yet; an outdated build with
+ * no waiting worker) it does nothing: reloading the same old shell is the fifty-presses dead
+ * end (docs/proposals/app-update-2026-11-18.md). Returns whether it reloaded.
  */
-export async function applyUpdate(deps: ApplyDeps): Promise<void> {
+export async function applyUpdate(deps: ApplyDeps): Promise<boolean> {
   if (!deps.registration?.waiting) await deps.check()
   if (deps.registration?.waiting) {
     await deps.activateWaiting()
     await new Promise((resolve) => setTimeout(resolve, deps.reloadFallbackMs ?? RELOAD_FALLBACK_MS))
+    deps.reload()
+    return true
   }
-  deps.reload()
+  return false
 }
