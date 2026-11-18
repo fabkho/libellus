@@ -100,6 +100,17 @@ describe('when What’s new shows by itself', () => {
   const notes = (sections: ReleaseNotes['sections']): ReleaseNotes => ({ version: '1.9.0', date: '', sections })
   const features = notes([{ kind: 'features', items: ['A'] }])
 
+  // The notes are the *running* build's own (`appConfig.release`, embedded at build time from version.txt and
+  // CHANGELOG.md), so a device running an older build cannot be shown a newer version's notes — it does not carry
+  // them. That is what makes "show the announcement only after the new version was installed" true without any
+  // extra bookkeeping (the owner, 2026-11-18): the sheet cannot fire for a version that is merely deployed.
+  it('only ever for a version this build carries: an older build has no newer notes to show', () => {
+    // A build that predates the release it is told about: `notes.version` is its own, older than what the server
+    // deploys, and the device already saw it. Nothing to announce, because nothing new is running.
+    expect(shouldShowNotes('1.8.2', notes([{ kind: 'fixes', items: ['A'] }]))).toBe(false)
+    expect(shouldShowNotes('1.9.0', features)).toBe(false)
+  })
+
   it('after an update with something new', () => {
     expect(shouldShowNotes('1.8.2', features)).toBe(true)
     expect(shouldShowNotes('1.8.2', notes([{ kind: 'breaking', items: ['B'] }]))).toBe(true)
