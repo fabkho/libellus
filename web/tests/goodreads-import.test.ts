@@ -3,18 +3,8 @@ import { randomInt } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
 import { createCatalogueSearch } from '@/data/catalogueSearch'
-import {
-  createBookImport,
-  eachLimited,
-  entryFor,
-  findEdition,
-  importedKeys,
-  libraryTitleIndex,
-  pacedFetch,
-  type Edition,
-  type ImportRow,
-  type Lookups,
-} from '@/data/bookImport'
+import { createBookImport, eachLimited, findEdition, pacedFetch, type Edition, type ImportRow, type Lookups } from '@/data/bookImport'
+import { entryFor, importedKeys, libraryTitleIndex } from '@/data/import/dedupe'
 import { parseGoodreads } from '@/data/import/goodreads'
 import type { ImportBook } from '@/data/import/rows'
 import { createLibrary } from '@/data/library'
