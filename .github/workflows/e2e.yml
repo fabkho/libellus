@@ -54,7 +54,13 @@ jobs:
   e2e:
     name: user flows (shard ${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # The flows take ~14 minutes; the rest is setup. 45 rather than 30 because the browser install
+    # (`playwright install-deps`, apt fetching WebKit's system libraries) has twice stalled past the
+    # 30-minute mark on a healthy codebase (release v1.49.0, 2026-11-18: two runs killed at exactly
+    # 30:00 with every step before "User flows" still green), and a job timeout kills the run with no
+    # blob report — the same reason `globalTimeout` sits at 25 minutes inside the suite (playwright.config.ts).
+    # The suite's own ceiling is unchanged, so a hung *test* still ends before this does.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -119,8 +125,25 @@ jobs:
           # can't tell image versions apart), so a future image change misses this cache.
           key: playwright-webkit-chromium-${{ runner.os }}-ubuntu-24.04-${{ steps.playwright.outputs.version }}
 
+      # `install-deps` shells out to apt, whose http timeout is 30 s of silence and no retries. A slow
+      # or briefly unresponsive mirror then fails the apt call, or stalls it, which is what happened
+      # twice on 2026-11-18. Both are raised here rather than in the image, so it travels with the
+      # workflow; the downloads themselves are Playwright's own and unaffected.
+      - name: "Give apt room: a slow mirror must not fail the install"
+        run: |
+          printf '%s\n' \
+            'Acquire::http::Timeout "120";' \
+            'Acquire::https::Timeout "120";' \
+            'Acquire::Retries "3";' \
+            | sudo tee /etc/apt/apt.conf.d/99-network-timeout >/dev/null
+          echo "apt conf written; it reads:"
+          cat /etc/apt/apt.conf.d/99-network-timeout
+
+      # Server-side timeout as a floor: a step that stalls is killed here, with its log, rather than
+      # taking the whole job's budget with it (the job's is 45).
       - name: Install WebKit, Chromium and their system libraries
         working-directory: web
+        timeout-minutes: 20
         run: |
           if [ "${{ steps.browsers.outputs.cache-hit }}" = "true" ]; then
             pnpm exec playwright install-deps webkit chromium
