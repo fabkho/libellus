@@ -10,7 +10,7 @@
 // author (#167) the name is underlined like a link and a tap on it (the name
 // itself, not the row's width) opens the author's page (UiPressLink's
 // `data-press-to`); the rest of the row opens the Book.
-import { isNotFinished, type LibraryEntry } from '~/data/library'
+import type { LibraryEntry } from '~/data/library'
 import { useAuthorsStore } from '~/stores/authors'
 import { useBookStore } from '~/stores/book'
 import type { FriendsGroup } from '~/utils/friendsNames'
@@ -24,10 +24,11 @@ const props = defineProps<{ entry: LibraryEntry; eager?: boolean; friends?: Frie
 const { t, locale } = useI18n()
 const { formatDay } = useDays()
 const books = useBookStore()
-const authorLine = computed(() => formatAuthors(props.entry.book.authors, t('common.etAl')))
+// What the row shows of the Book and the entry (cover, title, author, shelf state), in the one place they are chosen.
+const { cover, title, author, status } = useShelfRow(() => props.entry.book, () => props.entry, 'sm', coverHosts)
+const notFinished = computed(() => status.value?.state === 'notFinished')
 const added = computed(() => t('common.dayMonth', dateParts(new Date(props.entry.addedAt), locale.value)))
 const latest = computed(() => props.entry.latestSession)
-const notFinished = computed(() => isNotFinished(props.entry))
 const authors = useAuthorsStore()
 onMounted(() => authors.want(props.entry.book.id))
 const authorKey = computed(() => rowAuthorKey(authors.ofBook(props.entry.book.id)))
@@ -46,7 +47,7 @@ const authorKey = computed(() => rowAuthorKey(authors.ofBook(props.entry.book.id
         decorative
         :title="entry.book.title"
         :authors="entry.book.authors"
-        v-bind="coverImage(entry.book, 'sm', coverHosts)"
+        v-bind="cover"
         :thumbhash="entry.book.coverThumbhash"
         :colors="entry.book.coverColors"
         size="sm"
@@ -54,14 +55,14 @@ const authorKey = computed(() => rowAuthorKey(authors.ofBook(props.entry.book.id
         :class="notFinished && 'dimmed'"
       />
       <span class="flex min-w-0 flex-1 flex-col gap-xxs">
-        <span class="book-title title-wrap text-body-large" :class="notFinished && 'text-ink-muted'" data-testid="library.entryTitle">{{ entry.book.title }}</span>
+        <span class="book-title title-wrap text-body-large" :class="notFinished && 'text-ink-muted'" data-testid="library.entryTitle">{{ title }}</span>
         <span class="flex min-w-0 items-center gap-xs">
           <span
             class="truncate text-caption"
             :class="[notFinished ? 'text-ink-faint' : 'text-ink-muted', authorKey && 'underline decoration-hairline-strong underline-offset-2']"
             :data-press-to="authorKey ? `/author/${authorKey}` : undefined"
             data-testid="library.entryAuthor"
-          >{{ authorLine }}</span>
+          >{{ author }}</span>
           <EbooksMark :entry="entry" testid="library.ebookMark" />
         </span>
         <span v-if="notFinished" class="figures mt-xxs flex items-center gap-xs text-meta text-ink-faint" data-testid="library.entryNotFinished">

@@ -24,25 +24,27 @@ defineEmits<{ add: []; pick: [] }>()
 
 const { t } = useI18n()
 const book = useBookStore()
-const authorLine = computed(() => formatAuthors(props.hit.book.authors, t('common.etAl')))
+// What the row shows of the Book and her entry in it (cover, title, author, Status), in the one place they are chosen:
+// `hit.entry` is the Library's own answer for this very Book (`data/search.ts`), or null for a catalogue-only one.
+const { cover, title, author, status } = useShelfRow(() => props.hit.book, () => props.hit.entry, 'sm', coverHosts)
 // Adding writes: offline the + stays, disabled, and says why (#15).
 const online = useOnline()
 const PressLink = resolveComponent('UiPressLink')
 /** What a tap on the row does while linking, as its accessible name. */
 const pickLabel = computed(() => {
-  const title = props.hit.book.title
-  if (props.hit.entry) return t('search.linkTo', { title })
-  if (props.hit.otherEdition) return t('search.linkOtherEdition', { title })
-  return t('search.addAndLink', { title })
+  const bookTitle = props.hit.book.title
+  if (props.hit.entry) return t('search.linkTo', { title: bookTitle })
+  if (props.hit.otherEdition) return t('search.linkOtherEdition', { title: bookTitle })
+  return t('search.addAndLink', { title: bookTitle })
 })
 
 /** The +: held while offline (a Book in the Library can still go onto a Collection, #93) or while its add is on its way. */
 const addDisabled = computed(() => Boolean(props.adding) || (!online.value && !(props.target && props.hit.entry)))
 const addLabel = computed(() => {
-  const title = props.hit.book.title
+  const bookTitle = props.hit.book.title
   if (!online.value && !(props.target && props.hit.entry)) return t('common.offline')
-  if (props.target) return t('search.addTo', { title, name: props.target })
-  return props.linking && props.hit.otherEdition ? pickLabel.value : t('search.add', { title })
+  if (props.target) return t('search.addTo', { title: bookTitle, name: props.target })
+  return props.linking && props.hit.otherEdition ? pickLabel.value : t('search.add', { title: bookTitle })
 })
 </script>
 
@@ -61,7 +63,7 @@ const addLabel = computed(() => {
         decorative
         :title="hit.book.title"
         :authors="hit.book.authors"
-        v-bind="coverImage(hit.book, 'sm', coverHosts)"
+        v-bind="cover"
         :thumbhash="hit.book.coverThumbhash"
         :colors="hit.book.coverColors"
         size="sm"
@@ -69,8 +71,8 @@ const addLabel = computed(() => {
         :priority="priority"
       />
       <span class="flex min-w-0 flex-1 flex-col gap-xxs">
-        <span class="book-title line-clamp-2 text-body" data-testid="search.resultTitle">{{ hit.book.title }}</span>
-        <span class="truncate text-caption text-ink-faint">{{ authorLine }}</span>
+        <span class="book-title line-clamp-2 text-body" data-testid="search.resultTitle">{{ title }}</span>
+        <span class="truncate text-caption text-ink-faint">{{ author }}</span>
         <span v-if="hit.book.year || hit.otherEdition" class="flex min-w-0 items-center gap-xs text-ink-faint">
           <span v-if="hit.book.year" class="figures shrink-0 text-meta">{{ hit.book.year }}</span>
           <span v-if="hit.book.year && hit.otherEdition" class="size-(--spacing-xxs) shrink-0 rounded-pill bg-current" aria-hidden="true" />
@@ -91,7 +93,7 @@ const addLabel = computed(() => {
       class="flex shrink-0 items-center gap-xs px-sm text-footnote text-ink-faint"
       data-testid="search.resultStatus"
     >
-      <UiIcon name="check" :size="13" bold />{{ target ? t('search.onCollection') : t(`status.${hit.entry!.status}`) }}
+      <UiIcon name="check" :size="13" bold />{{ target ? t('search.onCollection') : t(status!.labelKey) }}
     </span>
     <button
       v-else
