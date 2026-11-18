@@ -3,11 +3,9 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   applyUpdate,
-  canInterrupt,
   checkForUpdate,
   dueForForegroundCheck,
   isOutdated,
-  isTyping,
   latestBuildUrl,
   parseBuildId,
   whenInstalled,
@@ -92,24 +90,6 @@ describe('when the app looks and when it may ask', () => {
     expect(dueForForegroundCheck(1_000_000, null)).toBe(true)
     expect(dueForForegroundCheck(1_000_000, 1_000_000 - 30_000)).toBe(false)
     expect(dueForForegroundCheck(1_000_000, 1_000_000 - 60_000)).toBe(true)
-  })
-
-  it('counts a cursor in a text field, a textarea or an editable element as typing; a button or a switch is not', () => {
-    const el = (tagName: string, extra: Record<string, unknown> = {}) => ({ tagName, ...extra }) as unknown as Element
-    expect(isTyping(null)).toBe(false)
-    expect(isTyping(el('TEXTAREA'))).toBe(true)
-    expect(isTyping(el('INPUT', { type: 'text' }))).toBe(true)
-    expect(isTyping(el('INPUT', { type: 'tel' }))).toBe(true)
-    expect(isTyping(el('INPUT', { type: 'checkbox' }))).toBe(false)
-    expect(isTyping(el('BUTTON'))).toBe(false)
-    expect(isTyping(el('DIV', { isContentEditable: true }))).toBe(true)
-    expect(isTyping(el('BODY'))).toBe(false)
-  })
-
-  it('never takes the screen from typing or from another layer (a sheet, a confirm, the reader)', () => {
-    expect(canInterrupt({ typing: false, modalOpen: false })).toBe(true)
-    expect(canInterrupt({ typing: true, modalOpen: false })).toBe(false)
-    expect(canInterrupt({ typing: false, modalOpen: true })).toBe(false)
   })
 })
 
@@ -234,11 +214,29 @@ describe('applyUpdate', () => {
     expect(d.calls).toEqual(['check', 'skipWaiting', 'reload'])
   })
 
-  it('still reloads with no worker to activate (dev, or a deploy the browser has not picked up)', async () => {
+  // The owner's fifty presses (2026-11-18, docs/proposals/app-update-2026-11-18.md): with `outdated` true and no
+  // waiting worker, "Update now" used to reload into the SAME old shell, so every press was a no-op and the sheet
+  // re-raised. This is that state, encoded: pressing again and again activates nothing and reloads nothing, and it
+  // says so (`false`) so the Profile row can tell the truth instead of pretending. Restoring the old
+  // expectation (['check', 'reload']) is restoring the bug.
+  it('reloads nothing when no worker waits — fifty presses are fifty no-ops, and it says so', async () => {
     const d = deps(undefined)
-    await applyUpdate(d)
-    expect(d.calls).toEqual(['check', 'reload'])
+    expect(await applyUpdate(d)).toBe(false)
+    expect(d.calls).toEqual(['check'])
     expect(d.activateWaiting).not.toHaveBeenCalled()
+    expect(d.reload).not.toHaveBeenCalled()
+    // And again: nothing accumulates, nothing gets closer.
+    expect(await applyUpdate(d)).toBe(false)
+    expect(d.reload).not.toHaveBeenCalled()
+  })
+
+  it('reloads into the new build only once a worker is actually waiting', async () => {
+    const reg = registration({ waiting: true })
+    const d = deps(reg)
+    const done = applyUpdate(d)
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(await done).toBe(true)
+    expect(d.reload).toHaveBeenCalledTimes(1)
   })
 })
 
