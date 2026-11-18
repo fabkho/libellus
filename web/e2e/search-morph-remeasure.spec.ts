@@ -30,7 +30,10 @@ test('a mid-open viewport resize re-measures the search morph', async ({ page })
   test.slow()
   await recordedApple(page)
   await signedIn(page)
-  await page.goto('/')
+  // Home already: `signedIn` lands on it. Not a second `page.goto('/')` a moment later — a document
+  // load cancels the chunks the one before it is still importing, and the browser reports the cancelled
+  // import as an uncaught "Importing a module script failed" (the fixture fails a page that throws one;
+  // e2e/support.ts, `goto`). Release 1.48.0 lost exactly that, with no chunk missing from the build.
   await untilStill(page)
 
   await page.getByTestId('shell.tab.search').click()

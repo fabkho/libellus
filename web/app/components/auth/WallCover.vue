@@ -19,6 +19,12 @@ const drawn = ref(false)
 
 onMounted(() => {
   const image = new Image()
+  // Read with CORS, deliberately: the worker keeps every cover asked for without it (`libellus-covers`,
+  // nuxt.config.ts, `request.mode === 'no-cors'`), and the wall is decoration on a screen nobody is signed in
+  // on — it would put sixteen catalogue covers into the member's cache right after signing out emptied it
+  // (e2e/device-data.spec.ts). A CORS read goes to the network, as a thumbhash's does. Apple sends
+  // `access-control-allow-origin: *`; were it ever to stop, nothing is drawn and the board shows.
+  image.crossOrigin = 'anonymous'
   image.decoding = 'async'
   image.fetchPriority = 'low'
   image.onload = () => {
