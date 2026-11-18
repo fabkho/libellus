@@ -9,7 +9,11 @@
 // went. On a phone, holding a row still lifts it as well. Tapping a row opens
 // the book page. `sorted` (the page shows a sort of her order, not her order): the rows are not for
 // moving then, so there is no grip (nothing to focus or drag) and holding a row does nothing.
+//
+// The finger's physics are `composables/useDragReorder.ts`; this screen says what the rows are, what a
+// move means and what it is called in her words, and nothing about pointers.
 import type { LibraryEntry } from '~/data/library'
+import { offsetsFor, useDragReorder } from '~/composables/useDragReorder'
 import { useBookStore } from '~/stores/book'
 import { useCollectionsStore } from '~/stores/collections'
 
@@ -26,6 +30,50 @@ const books = useBookStore()
 const hintId = useId()
 
 const authorsOf = (entry: LibraryEntry) => formatAuthors(entry.book.authors, t('common.etAl'))
+/** The words of the Book on a row, for the live region. */
+const titleAt = (index: number) => props.entries[index]?.book.title ?? ''
+/** What the polite live region says: the drag, the hold and the keyboard all word it. */
+const announcement = ref('')
+
+// ------------------------------------------------------------------- drag
+
+const list = useTemplateRef<HTMLOListElement>('list')
+
+/**
+ * Each row's top and height in page coordinates, as laid out now: the `<ol>`'s own rows, nothing inside
+ * them. The composable reads this once, at the lift, and keeps it (see its own note on the drift that
+ * comes with it).
+ */
+function rowRects() {
+  const rows = list.value ? [...list.value.querySelectorAll<HTMLElement>(':scope > li')] : []
+  return rows.map((row) => {
+    const rect = row.getBoundingClientRect()
+    return { top: rect.top + window.scrollY, height: rect.height }
+  })
+}
+
+const { drag, settling, still, gripDown, rowDown, contextmenu, clickCapture, rowTouchmove } = useDragReorder({
+  count: () => props.entries.length,
+  rows: rowRects,
+  canLift: () => !props.sorted,
+  // The move reaches the store from here, never from the composable (which holds nothing of this app):
+  // `move` takes the entry's id, so a list that changed under the finger never moves the wrong Book.
+  onCommit: (from, to) => collections.move(props.collectionId, props.entries[from]!.id, to),
+  announce: (message) => (announcement.value = message),
+  title: titleAt,
+  msgs: {
+    lifted: (title) => t('collection.lifted', { title }),
+    moved: (title, _from, to) => t('collection.moved', { title, place: to + 1, count: props.entries.length }),
+    dropped: t('collection.dropped'),
+  },
+})
+
+// The list's own non-passive `touchmove`: while a row is lifted the finger moves the row, not the page. It
+// goes on here (the composable hands the handler over), and both listeners the composable made for the
+// window and this one are taken off in a single `onBeforeUnmount`.
+onMounted(() => list.value?.addEventListener('touchmove', rowTouchmove, { passive: false }))
+onBeforeUnmount(() => list.value?.removeEventListener('touchmove', rowTouchmove))
+
 /** A row's number: where it is, or while a row is being dragged, where it will be. */
 function place(index: number): string {
   const current = drag.value
@@ -38,263 +86,22 @@ function place(index: number): string {
   return String(at + 1).padStart(2, '0')
 }
 
-// ------------------------------------------------------------------- drag
-
-type Drag = {
-  index: number
-  entryId: string
-  pointerId: number
-  /** Where the finger went down, in page coordinates (so scrolling counts). */
-  startY: number
-  lastClientY: number
-  /** Each row's top and height in page coordinates, as laid out when the drag began. */
-  rows: { top: number; height: number }[]
-  target: number
-  dy: number
-}
-
-const drag = ref<Drag | null>(null)
-/** The lifted row gliding into its new place after the finger let go. */
-const settling = ref(false)
-/** For one frame after a move lands: no transitions, so nothing slides back. */
-const still = ref(false)
-
-const list = useTemplateRef<HTMLOListElement>('list')
-
-function rowRects() {
-  const rows = list.value ? [...list.value.querySelectorAll<HTMLElement>(':scope > li')] : []
-  return rows.map((row) => {
-    const rect = row.getBoundingClientRect()
-    return { top: rect.top + window.scrollY, height: rect.height }
-  })
-}
-
-function lift(element: HTMLElement, pointerId: number, clientY: number, index: number) {
-  const entry = props.entries[index]
-  if (!entry) return
-  try {
-    element.setPointerCapture(pointerId)
-  } catch {
-    // The pointer is gone already (lifted by a hold whose finger just left): nothing to drag.
-    return
-  }
-  drag.value = {
-    index,
-    entryId: entry.id,
-    pointerId,
-    startY: clientY + window.scrollY,
-    lastClientY: clientY,
-    rows: rowRects(),
-    target: index,
-    dy: 0,
-  }
-  announcement.value = t('collection.lifted', { title: entry.book.title })
-  autoScroll()
-}
-
-/** The grip lifts its row at once, for a mouse and a finger alike. */
-function onPointerdown(event: PointerEvent, index: number) {
-  if (event.button !== 0 || drag.value || settling.value) return
-  event.preventDefault()
-  event.stopPropagation()
-  swallowClick = false
-  cancelHold()
-  lift(event.currentTarget as HTMLElement, event.pointerId, event.clientY, index)
-}
-
-// Anywhere else on a row, a finger that holds still lifts it (D: "hold a row
-// to move it"); one that moves first is scrolling, and a quick tap opens the
-// book page as before. The mouse keeps to the grip.
-const HOLD_MS = 350
-const HOLD_SLOP = 8
-let hold: { timer: number; pointerId: number; x: number; y: number } | null = null
-/** Set when a hold lifted a row, so the tap that ends it does not open the book page. */
-let swallowClick = false
-
-function onRowPointerdown(event: PointerEvent, index: number) {
-  swallowClick = false
-  if (props.sorted || event.pointerType === 'mouse' || drag.value || settling.value) return
-  cancelHold()
-  const element = event.currentTarget as HTMLElement
-  const { pointerId, clientX, clientY } = event
-  hold = {
-    pointerId,
-    x: clientX,
-    y: clientY,
-    timer: window.setTimeout(() => {
-      hold = null
-      lift(element, pointerId, clientY, index)
-      swallowClick = Boolean(drag.value)
-      if (drag.value) navigator.vibrate?.(10)
-    }, HOLD_MS),
-  }
-}
-
-// Move, up and cancel are heard on the window: a finger that leaves the row
-// (or the hold that never captured it) still ends what it started.
-function onWindowPointermove(event: PointerEvent) {
-  if (hold && hold.pointerId === event.pointerId) {
-    if (Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > HOLD_SLOP) cancelHold()
-    return
-  }
-  onPointermove(event)
-}
-
-function cancelHold() {
-  if (hold) window.clearTimeout(hold.timer)
-  hold = null
-}
-
-function onRowClick(event: MouseEvent) {
-  if (!swallowClick) return
-  swallowClick = false
-  event.preventDefault()
-  event.stopPropagation()
-}
-
-// While a row is lifted, the finger moves the row, not the page.
-function onTouchmove(event: TouchEvent) {
-  if (drag.value) event.preventDefault()
-}
-onMounted(() => {
-  list.value?.addEventListener('touchmove', onTouchmove, { passive: false })
-  window.addEventListener('pointermove', onWindowPointermove)
-  window.addEventListener('pointerup', onWindowPointerup)
-  window.addEventListener('pointercancel', onWindowPointercancel)
-})
-onBeforeUnmount(() => {
-  list.value?.removeEventListener('touchmove', onTouchmove)
-  window.removeEventListener('pointermove', onWindowPointermove)
-  window.removeEventListener('pointerup', onWindowPointerup)
-  window.removeEventListener('pointercancel', onWindowPointercancel)
-  cancelHold()
-  cancelAnimationFrame(frame)
-  window.clearTimeout(settleTimer)
+/**
+ * Where every row sits, from `offsetsFor`: worked out once per change of the drag (the finger, a place, the
+ * landing), not once per row per render.
+ */
+const offsets = computed(() => {
+  const current = drag.value
+  return current ? offsetsFor(current.rows, current.index, current.target, current.dy) : []
 })
 
-function follow(clientY: number) {
-  const current = drag.value
-  if (!current) return
-  current.lastClientY = clientY
-  const first = current.rows[0]!
-  const last = current.rows.at(-1)!
-  const own = current.rows[current.index]!
-  // The row stays within the list.
-  const min = first.top - own.top
-  const max = last.top + last.height - own.height - own.top
-  current.dy = Math.min(max, Math.max(min, clientY + window.scrollY - current.startY))
-  const centre = own.top + current.dy + own.height / 2
-  let target = 0
-  current.rows.forEach((row, j) => {
-    if (j !== current.index && row.top + row.height / 2 < centre) target++
-  })
-  current.target = target
-}
-
-function onPointermove(event: PointerEvent) {
-  if (drag.value?.pointerId === event.pointerId) follow(event.clientY)
-}
-
-// Near the top or bottom of the screen the page scrolls on its own, so a Book
-// can travel further than one screen.
-let frame = 0
-function autoScroll() {
-  cancelAnimationFrame(frame)
-  frame = requestAnimationFrame(function step() {
-    const current = drag.value
-    if (!current) return
-    const edge = 2 * Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--size-touch') || '44')
-    const y = current.lastClientY
-    const speed = y > window.innerHeight - edge ? 1 : y < edge ? -1 : 0
-    if (speed) {
-      window.scrollBy(0, speed * 8)
-      follow(y)
-    }
-    frame = requestAnimationFrame(step)
-  })
-}
-
-function offsetOf(index: number): number {
-  const current = drag.value
-  if (!current) return 0
-  if (index === current.index) {
-    if (!settling.value) return current.dy
-    // Into its new place: the height of the rows it passed.
-    const span = (current.target > current.index ? current.rows.slice(current.index + 1, current.target + 1) : current.rows.slice(current.target, current.index))
-      .reduce((sum, row) => sum + row.height, 0)
-    return current.target > current.index ? span : -span
-  }
-  const height = current.rows[current.index]!.height
-  if (current.target > current.index && index > current.index && index <= current.target) return -height
-  if (current.target < current.index && index >= current.target && index < current.index) return height
-  return 0
-}
-
-function onWindowPointerup(event: PointerEvent) {
-  if (hold?.pointerId === event.pointerId) cancelHold()
-  onPointerup(event)
-}
-
-function onWindowPointercancel(event: PointerEvent) {
-  if (hold?.pointerId === event.pointerId) cancelHold()
-  onPointercancel(event)
-}
-
-/** A long press on a phone would open the link's menu; while holding a row, it does not. */
-function onContextmenu(event: Event) {
-  if (hold || drag.value) event.preventDefault()
-}
-
-function onPointerup(event: PointerEvent) {
-  const current = drag.value
-  if (!current || current.pointerId !== event.pointerId || settling.value) return
-  cancelAnimationFrame(frame)
-  settling.value = true
-  // Let the row glide into its place, then make the move real.
-  settleTimer = window.setTimeout(() => land(current), durationOf('--duration-quick'))
-}
-
-function onPointercancel(event: PointerEvent) {
-  const current = drag.value
-  if (!current || current.pointerId !== event.pointerId || settling.value) return
-  cancelAnimationFrame(frame)
-  current.target = current.index
-  settling.value = true
-  settleTimer = window.setTimeout(() => land(current), durationOf('--duration-quick'))
-}
-
-let settleTimer = 0
-
-function land(current: Drag) {
-  still.value = true
-  const { index, target, entryId } = current
-  drag.value = null
-  settling.value = false
-  if (target !== index) {
-    const title = props.entries.find((entry) => entry.id === entryId)?.book.title ?? ''
-    collections.move(props.collectionId, entryId, target)
-    announcement.value = t('collection.moved', { title, place: target + 1, count: props.entries.length })
-  } else {
-    announcement.value = t('collection.dropped')
-  }
-  requestAnimationFrame(() => requestAnimationFrame(() => (still.value = false)))
-}
-
-function durationOf(token: string): number {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 0
-  const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim()
-  return value.endsWith('ms') ? Number.parseFloat(value) : Number.parseFloat(value) * 1000 || 0
-}
-
-
+/** A row's style: its place in that table, or nothing at all while no row is lifted. */
 function rowStyle(index: number) {
-  const offset = offsetOf(index)
+  const offset = offsets.value[index] ?? 0
   return offset ? { transform: `translateY(${offset}px)` } : undefined
 }
 
 // --------------------------------------------------------------- keyboard
-
-const announcement = ref('')
 
 async function onKeydown(event: KeyboardEvent, index: number) {
   const count = props.entries.length
@@ -333,9 +140,9 @@ async function onKeydown(event: KeyboardEvent, index: number) {
         :style="rowStyle(index)"
         :data-entry="entry.id"
         data-testid="collection.entry"
-        @pointerdown="onRowPointerdown($event, index)"
-        @click.capture="onRowClick"
-        @contextmenu="onContextmenu"
+        @pointerdown="rowDown($event, index)"
+        @click.capture="clickCapture"
+        @contextmenu="contextmenu"
       >
         <UiPressLink
           :to="`/book/${entry.book.id}`"
@@ -373,7 +180,7 @@ async function onKeydown(event: KeyboardEvent, index: number) {
           :aria-describedby="hintId"
           data-grip
           data-testid="collection.grip"
-          @pointerdown="onPointerdown($event, index)"
+          @pointerdown="gripDown($event, index)"
           @keydown="onKeydown($event, index)"
           @click.prevent
         >
