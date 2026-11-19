@@ -16,12 +16,11 @@ import {
   saveCollectionSort,
   type CollectionSort,
 } from '~/data/collectionSort'
-import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
+import { useBookCovers } from '~/composables/useBookCovers'
 import { readCollections, saveCollections } from '~/data/deviceLibrary'
 import type { LibraryEntry } from '~/data/library'
 import { createFreshness } from '~/utils/fresh'
 import { useLibraryStore } from '~/stores/library'
-import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
 
@@ -60,7 +59,6 @@ export const useCollectionsStore = defineStore('collections', () => {
   const backend = useBackend()
   const session = useSessionStore()
   const library = useLibraryStore()
-  const search = useSearchStore()
   const sync = useSyncStore()
 
   let repository: Collections | null = null
@@ -265,17 +263,12 @@ export const useCollectionsStore = defineStore('collections', () => {
   /**
    * A search result may enter the Catalogue with this add, and the Catalogue
    * keeps its first snapshot: its Cover is resolved first, by the same chain
-   * as the Add sheet (stores/library.ts, confirmAdd; data/covers.ts,
-   * resolveBookCover): Apple artwork → Apple by ISBN → OpenLibrary → the
-   * Placeholder cover.
+   * as the Add sheet (stores/library.ts, confirmAdd; data/bookCovers.ts,
+   * `resolveCatalogue`), so the two cannot choose differently.
    */
   async function withCover(book: Book | BookSnapshot): Promise<Book | BookSnapshot> {
     if ('id' in book) return book
-    const cover = await resolveBookCover(book, {
-      probe: probeImageInBrowser,
-      lookupAppleIsbn: (isbn13) => search.repository().lookupAppleIsbn(isbn13),
-    })
-    return { ...book, ...cover }
+    return { ...book, ...(await useBookCovers().resolveCatalogue(book)) }
   }
 
   /**

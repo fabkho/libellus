@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
+import { useBookCovers } from '~/composables/useBookCovers'
 import { bookKey, parseBookKey, sourceKeys, type Book, type BookSnapshot } from '~/data/books'
-import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
 import { forgetLibrary, readDescriptions, readLibrary, saveDescriptions, saveLibrary } from '~/data/deviceLibrary'
 import {
   addWithFromDraft,
@@ -408,17 +408,13 @@ export const useLibraryStore = defineStore('library', () => {
 
   /**
    * A Book about to enter the Catalogue (an add, a new edition) gets its Cover
-   * resolved first, once: Apple artwork → Apple by ISBN → OpenLibrary by cover
-   * id or ISBN → the Placeholder cover (data/covers.ts, resolveBookCover), with
-   * its thumbhash and colours. A Catalogue Book keeps the Cover it has.
+   * resolved first, once: the whole chain behind `resolveCatalogue`
+   * (data/bookCovers.ts, composables/useBookCovers.ts), with its thumbhash and
+   * colours. A Catalogue Book keeps the Cover it has.
    */
   async function withCover(book: BookSnapshot | Book): Promise<BookSnapshot> {
     if ('id' in book) return { ...book }
-    const cover = await resolveBookCover(book, {
-      probe: probeImageInBrowser,
-      lookupAppleIsbn: (isbn13) => search.repository().lookupAppleIsbn(isbn13),
-    })
-    return { ...book, ...cover }
+    return { ...book, ...(await useBookCovers().resolveCatalogue(book)) }
   }
 
   /**

@@ -482,7 +482,8 @@ guard), in the order they can happen:
    `coverFallbacks` (OpenLibrary's cover by ISBN): another artwork. `fallbacks` was not part of the
    watch, so a stale attempt index also survived a changed list. With `srcset` (A7) a size of the
    same artwork can fail too, which would have been this path.
-3. **Not a cause of a swap.** `withCover` (`stores/library.ts`) runs only when a Book is added,
+3. **Not a cause of a swap.** `withCover` (`stores/library.ts`, over `resolveCatalogue` in
+   `data/bookCovers.ts`) runs only when a Book is added,
    before the Book has a cover: nothing mounted shows the old one. An add under a mounted cover of
    the same edition arrives as path 1.
 

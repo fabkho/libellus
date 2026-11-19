@@ -1,17 +1,16 @@
 import { defineStore } from 'pinia'
+import { useBookCovers } from '~/composables/useBookCovers'
 import { formatOf, type Book, type BookFormat, type BookSnapshot } from '~/data/books'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
 import { createDnb } from '~/data/dnb'
 import { createGoogleBooks } from '~/data/googleBooks'
 import { createEditions, type EditionCandidate, type Editions } from '~/data/editions'
 import { isAbort } from '~/data/fetching'
-import { probeImageInBrowser, resolveOwnCover } from '~/data/covers'
 import type { LibraryEntry, LibraryErrorCode, Result } from '~/data/library'
 import { editionKeys } from '~/data/merge'
 import { useBookStore } from '~/stores/book'
 import { useCollectionsStore } from '~/stores/collections'
 import { useLibraryStore } from '~/stores/library'
-import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
 
 /** A candidate's identity when picked: its first edition key (a Catalogue id, an ISBN-13, a source id). */
@@ -34,7 +33,6 @@ export const useEditionStore = defineStore('edition', () => {
   const books = useBookStore()
   const collections = useCollectionsStore()
   const session = useSessionStore()
-  const search = useSearchStore()
 
   const searchLanguages = useSearchLanguages()
   let source: Editions | null = null
@@ -318,16 +316,14 @@ export const useEditionStore = defineStore('edition', () => {
   /**
    * "My edition isn't listed", no source knowing it: makes her own edition
    * (data/ownEdition.ts) and moves the entry to it. Its Cover is the image she
-   * gave, else what her ISBN has at Apple or OpenLibrary (`resolveOwnCover`).
+   * gave, else what her ISBN has at Apple or OpenLibrary (`resolveOwn`, the
+   * chain behind the same door as an add: data/bookCovers.ts).
    */
   async function useOwn(entry: LibraryEntry, book: BookSnapshot): Promise<LibraryEntry | null> {
     const repo = library.library()
     if (!repo) return null
     return busyWith(async () => {
-      const cover = await resolveOwnCover(book, {
-        probe: probeImageInBrowser,
-        lookupAppleIsbn: (isbn13) => search.repository().lookupAppleIsbn(isbn13),
-      })
+      const cover = await useBookCovers().resolveOwn(book)
       return afterMove(entry, await repo.useOwnEdition(entry.id, { ...book, ...cover }))
     })
   }
