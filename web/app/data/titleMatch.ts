@@ -83,6 +83,24 @@ const COMPANION_WORDS = new Set([
   'zusammenfassung', 'sparknotes', 'cliffsnotes',
 ])
 
+/**
+ * Of those words, those that name the same books gathered together ("Box Set", "Omnibus"), filtered through the set so
+ * that a word it loses is not silently kept here.
+ */
+const BUNDLED = ['boxed', 'set', 'collection', 'bundle', 'omnibus', 'anthology'].filter((word) => COMPANION_WORDS.has(word))
+
+/**
+ * The marks that say a title is not the one book alone: those books gathered together, a reissue with extras
+ * ("Anniversary Edition") or an adaptation ("Movie Tie-in"). Read in what a title sets aside — brackets, or what follows
+ * a separator ("Ember Road (Box Set)", "Ember Road: Omnibus") — never in the title itself, which is what a caller
+ * compares ("Ember Road: Study Guide" is still that book). `COMPANION` (a whole title about the book) and
+ * `COMPANION_WORDS` (a longer title's one extra word) stay their own questions over the same words.
+ */
+const NOT_ALONE = new RegExp(`\\bbox(?:ed)?\\s+set\\b|\\b(?:${BUNDLED.join('|')})\\b|\\btie[- ]?in\\b|\\banniversary edition\\b`, 'i')
+
+/** Whether an aside or a trailing segment says the title is not the one book alone (a set, extras, an adaptation). */
+export const notAlone = (residue: string): boolean => NOT_ALONE.test(normaliseTitle(residue))
+
 type Parts = { whole: string[]; parts: string[][] }
 
 /** The words of a title once the aside, the volume mark, the credit and the descriptor are gone; its whole, and its parts either side of a separator. */

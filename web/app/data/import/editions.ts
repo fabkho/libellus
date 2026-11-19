@@ -1,5 +1,5 @@
 import type { BookSnapshot } from '../books.ts'
-import { COMPANION, fuzzyTitleMatch, sameVolume, volumeOf } from '../titleMatch.ts'
+import { COMPANION, fuzzyTitleMatch, notAlone, sameVolume, volumeOf } from '../titleMatch.ts'
 import { isbnLanguage, normalize, splitSeriesTitle, surname, workTitle } from './readingTracker.ts'
 import type { ImportBook } from './rows.ts'
 
@@ -310,6 +310,28 @@ export function sameAuthor(a: string, b: string): boolean {
 }
 
 /**
+ * What a title sets aside about itself, never the title itself: what it puts in brackets ("Ember Road (Box Set)", also
+ * the Goodreads series aside) and what it says after a separator ("Ember Road: Omnibus", "Ember Road - Anniversary
+ * Edition").
+ */
+const asides = (title: string): string[] => {
+  const unbracketed = title.replace(/\s*[([][^()[\]]*[)\]]/g, ' ')
+  const after = unbracketed.split(/[:|–—]|\s+-\s+/).slice(1).join(' ')
+  return [...title.matchAll(/[([]([^()[\]]*)[)\]]/g)].map(([, aside]) => aside!.trim()).concat(after)
+}
+
+/**
+ * Whether a title only says, in its brackets, what the book has always been called elsewhere: "Θνητοί Θεοί (Altered
+ * Carbon)" — a translation's own title next to the work's, in another script. The one aside a mark like "Box Set" must
+ * not be read from: a set of translated volumes is named after them in the same brackets.
+ */
+const LATIN = /\p{Script=Latin}/u
+const crossScript = (title: string): boolean => {
+  const own = LATIN.test(title.replace(/\s*[([][^()[\]]*[)\]]/g, ' '))
+  return [...title.matchAll(/[([]([^()[\]]*)[)\]]/g)].some(([, aside]) => Boolean(aside) && LATIN.test(aside!) !== own)
+}
+
+/**
  * THE rule of the import for "this edition is the row's book" (another edition,
  * any format, is fine), for the match, Choose edition and the cover fill alike:
  * the same title (`sameTitle`: a series prefix, a subtitle after a dash or the
@@ -317,11 +339,15 @@ export function sameAuthor(a: string, b: string): boolean {
  * author among the result's authors (`sameAuthor`: spelling, umlauts and a
  * typo aside). A title in another script whose brackets name the work
  * (`Θνητοί Θεοί (Altered Carbon)`) is a translation, not the same book; a summary, study guide or workbook
- * sold under the book's title is not the book.
+ * sold under the book's title is not the book, nor is a set, an omnibus, an anniversary edition or a tie-in of it.
  */
 export function isSameWork(row: Pick<ImportBook, 'title'> & { authors: readonly string[] }, found: Pick<BookSnapshot, 'title' | 'authors'>): boolean {
   // "Title (a Concise and Precise Summary)" is not the book, whatever its title and author say.
   if (COMPANION.test(found.title) && !COMPANION.test(row.title)) return false
+  // "Ember Road (Box Set)", "Ember Road: Omnibus", "Ember Road (Anniversary Edition)": what the title sets aside says
+  // it is not the book alone, which the title itself cannot show. Not read where the brackets are what names the work
+  // in another script ("Θνητοί Θεοί (Altered Carbon)"): that aside is the translation's, refused below instead.
+  if (!crossScript(found.title) && asides(found.title).some(notAlone) && !asides(row.title).some(notAlone)) return false
   const bare = splitSeriesTitle(found.title).title.replace(/\s*[([][^()[\]]*[)\]]/g, ' ')
   if (/\p{L}/u.test(bare) && !normalize(bare)) return false
   const wanted = row.authors[0]
