@@ -21,7 +21,7 @@ import type { EbookRecord } from '~/data/ebooks/ebooks'
 import type { LibraryEntry } from '~/data/library'
 import { pageCountOf, progressFraction } from '~/data/progress'
 import { isDefinable } from '~/data/reader/lookup'
-import { ProgressWriter, progressAt } from '~/data/reader/progress'
+import { progressAt } from '~/data/reader/progress'
 import { MARGINS, type ReaderTheme } from '~/data/reader/settings'
 import type { Highlight, HighlightColor } from '~/data/reader/device'
 import { REST, fitBox, poseOf, ratioOf, readerCoverCopy, rectOf } from '~/utils/readerFlight'
@@ -89,8 +89,6 @@ const flyLayer = useTemplateRef<HTMLElement>('flyLayer')
 const probe = useTemplateRef<HTMLElement>('probe')
 
 const engine = shallowRef<ReaderEngine | null>(null)
-const loc = ref<Relocation | null>(null)
-const ready = ref(false)
 const failed = ref<'missing' | 'failed' | null>(null)
 
 const chrome = ref(false)
@@ -211,12 +209,25 @@ function giveBackTheme() {
 
 // ------------------------------------------------------------------ progress and the place
 
-const writer = new ProgressWriter({
-  current: () => reader.progressFor(props.entry.id),
+/**
+ * The persistence lifecycle (the place, the progress, the opening place and highlights, the highlight poll and the
+ * writes on closing) is `useReaderSession`: this component draws the book and keeps the gestures
+ * (`composables/useReaderSession.ts`).
+ */
+const session = useReaderSession({
+  entryId: () => props.entry.id,
+  fileHash: () => props.record.hash,
+  progressFor: () => reader.progressFor(props.entry.id),
   pageCount: () => pageCount.value,
-  enabled: () => status.value === 'reading',
-  write: (value) => void reader.saveProgress(entryNow.value, value),
+  reading: () => status.value === 'reading',
+  saveProgress: (value) => void reader.saveProgress(entryNow.value, value),
+  openingPlaceFor: (entryId, fileHash) => reader.openingPlaceFor(entryId, fileHash),
+  leavePlace: (entryId, place, options) => reader.leavePlace(entryId, place, options),
+  openHighlights: (entryId, fileHash) => reader.openHighlights(entryId, fileHash),
+  followHighlights: (entryId, fileHash) => reader.followHighlights(entryId, fileHash),
+  highlightsFor: (entryId, fileHash) => reader.highlightsFor(entryId, fileHash),
 })
+const { loc, ready } = session
 
 const chapterFraction = ref(0)
 const info = computed<ChromeInfo>(() => {
@@ -246,19 +257,16 @@ function placeWords(fraction: number): string {
 }
 
 function onRelocate(at: Relocation) {
-  loc.value = at
+  // The session takes the place and the progress; what the chrome shows of it is this component's.
+  session.onRelocate(at)
   if (mode.value !== 'b') chapterFraction.value = at.sectionFraction
   // A chapter no taller than the screen (the cover, a title page) is read once it shows (Next chapter offers itself).
   else chapterFraction.value = at.fits ? 1 : at.sectionFraction
-  writer.saw(at.fraction)
-  if (ready.value) reader.leavePlace(props.entry.id, { cfi: at.cfi, fraction: at.fraction, fileHash: props.record.hash })
   if (mode.value === 'c') paintMargins()
 }
 
 /** The member reads on: from here places count as progress. */
-function readsOn() {
-  writer.reading()
-}
+const readsOn = session.readsOn
 /** "Set to p. 12": the member moves her progress back herself. */
 function setHere() {
   void reader.saveProgress(entryNow.value, progressAt(info.value.fraction, pageCount.value))
@@ -354,7 +362,7 @@ let lastIndex = -1
 let jumping = false
 function jump(go: () => Promise<unknown> | undefined) {
   jumping = true
-  writer.lookingUp()
+  session.lookingUp()
   void Promise.resolve(go()).finally(() => setTimeout(() => (jumping = false), 400))
 }
 function onScroll(offset: number, size: number, viewSize: number) {
@@ -553,15 +561,16 @@ function onRemove() {
   closeMenu()
 }
 
-/** What the page should draw: this copy's live highlights, from the device's list (which the server's joins). */
-const placedHighlights = computed(() => reader.highlightsFor(props.entry.id, props.record.hash))
 /** Highlights made in another file of this book (the Contents sheet lists them). */
 const otherCopyHighlights = computed(() => reader.highlightsFromAnotherCopy(props.entry.id, props.record.hash))
-/** A highlight that came from another device (or went) while the book is open is drawn (or lifted) in place. */
+/**
+ * A highlight that came from another device (or went) while the book is open is drawn (or lifted) in place. What the
+ * page should draw is `session.highlights`, which the session keeps current (`useReaderSession`).
+ */
 function reconcileHighlights() {
   const e = engine.value
   if (!e) return
-  const wanted = new Map(placedHighlights.value.map((h) => [h.cfi, h]))
+  const wanted = new Map(session.highlights.value.map((h) => [h.cfi, h]))
   for (const h of [...e.highlights]) {
     if (wanted.has(h.cfi)) continue
     if (tapped.value?.highlight.cfi === h.cfi) closeMenu()
@@ -572,8 +581,7 @@ function reconcileHighlights() {
     if (!have || have.color !== h.color) e.highlight(h)
   }
 }
-watch(placedHighlights, reconcileHighlights)
-let stopFollowing: (() => void) | null = null
+watch(session.highlights, reconcileHighlights)
 let toastTimer: ReturnType<typeof setTimeout> | undefined
 function showToast(text: string) {
   toast.value = text
@@ -694,16 +702,10 @@ async function openFlight(engineReady: Promise<ReaderEngine | null>) {
 let closing = false
 /** Unmounted without Back (signed out, another route): no flight home, but nothing is lost either. */
 let gone = false
-/** What leaving the book always does, once: the progress and the place written at once. */
-let left = false
+/** What leaving the book always does: the progress and the place written at once (`useReaderSession`), the screen let go. */
 function leave() {
-  if (left) return
-  left = true
-  writer.flush()
-  if (loc.value) reader.leavePlace(props.entry.id, { cfi: loc.value.cfi, fraction: loc.value.fraction, fileHash: props.record.hash }, { now: true })
+  session.close()
   releaseWake()
-  stopFollowing?.()
-  stopFollowing = null
 }
 function destroyEngine() {
   const e = engine.value
@@ -783,12 +785,10 @@ onMounted(async () => {
   window.addEventListener('resize', onResize)
   document.addEventListener('visibilitychange', onVisibility)
   const engineReady = (async () => {
-    const [file, at, highlights] = await Promise.all([
-      ebooks.fileOf(props.record),
-      reader.openingPlaceFor(props.entry.id, props.record.hash),
-      // The device's highlights, joined by the server's when they come in time (and, once any are uploaded, those from before the sync).
-      reader.openHighlights(props.entry.id, props.record.hash),
-    ])
+    // The copy of the book, its place and the highlights it opens with: the place and the highlights each wait at most
+    // 800 ms for the server (`useReaderSession`), the file for as long as this device takes.
+    const [file, opening] = await Promise.all([ebooks.fileOf(props.record), session.opening()])
+    const { at, highlights } = opening
     if (!file) {
       failed.value = 'missing'
       return null
@@ -820,9 +820,8 @@ onMounted(async () => {
       return null
     }
     engine.value = opened
-    // Highlights that arrived while the book was opening, and then every minute and on coming back.
+    // Highlights that arrived while the book was opening, and then every minute and on coming back (the session's poll).
     reconcileHighlights()
-    if (!left) stopFollowing = reader.followHighlights(props.entry.id, props.record.hash)
     if (import.meta.dev || __LIBELLUS_E2E__) (window as unknown as { __readerEngine?: unknown }).__readerEngine = opened
     return opened
   })().catch(() => {
@@ -832,7 +831,8 @@ onMounted(async () => {
   await openFlight(engineReady)
   // Back during the opening flight: the room was never taken over, and must not be after close() gave it back.
   if (closing || gone) return
-  ready.value = true
+  // The book has opened: from here the place counts, and its highlights keep being read (`useReaderSession`).
+  session.open()
   takeOverTheme()
   void applyWake()
   if (mode.value === 'c') paintMargins()
@@ -848,8 +848,9 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
   document.removeEventListener('visibilitychange', onVisibility)
   clearTimeout(toastTimer)
-  leave()
-  writer.dispose()
+  // Unmounted without a close (signed out, another route): the same writes, once — and the writer's timer let go.
+  session.release()
+  releaseWake()
   giveBackTheme()
   destroyEngine()
 })
