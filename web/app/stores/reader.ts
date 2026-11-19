@@ -22,6 +22,7 @@ import { isLocalId, uuid } from '~/data/queuedWrites'
 import { define as lookUpDefinition, translate as lookUpTranslation, type DeviceTranslator } from '~/data/reader/lookup'
 import { openingPlace, readHighlights, readPlace, writeHighlights, writePlace, type Highlight, type LocalHighlight, type Place } from '~/data/reader/device'
 import { readSettings, writeSettings, type ReaderSettings } from '~/data/reader/settings'
+import { pollHighlights } from '~/data/reader/session'
 import { isoDay } from '~/utils/dates'
 import { useLibraryStore } from '~/stores/library'
 import { useProgressDaysStore } from '~/stores/progressDays'
@@ -36,6 +37,12 @@ import { useSyncStore } from '~/stores/sync'
  * in the book, on the device and server-side (best effort, online only) so
  * another device with the same file opens there, and the highlights, kept on
  * the device first and synced through the outbox (data/readerHighlights.ts).
+ *
+ * It is the **record**, not the lifecycle: when the book opens the server may
+ * be asked, how long the book waits for it and when the highlights are read
+ * again are `composables/useReaderSession.ts`'s (the waits and the poll
+ * themselves, `data/reader/session.ts`), and the reader component only draws
+ * what this holds.
  */
 export const useReaderStore = defineStore('reader', () => {
   const library = useLibraryStore()
@@ -91,17 +98,17 @@ export const useReaderStore = defineStore('reader', () => {
     return places
   }
 
-  /** Where to open `entryId`'s copy (`fileHash`): the newer of the device's place and the server's. */
+  /**
+   * Where to open `entryId`'s copy (`fileHash`): the newer of the device's place
+   * and the server's. The read is awaited as it is; the reader gives it
+   * `SERVER_WAIT_MS` before it opens on the device's answer alone.
+   */
   async function openingPlaceFor(entryId: string, fileHash: string): Promise<{ cfi: string } | { fraction: number } | null> {
     const memberId = session.member?.id
     if (!memberId) return null
     const local = readPlace(window.localStorage, memberId, entryId)
     let remote: Place | null = null
-    // The server's answer only gets a moment: the book never waits for the network.
-    const answer = await Promise.race([
-      placesRepo().get(entryId),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 800)),
-    ])
+    const answer = await placesRepo().get(entryId)
     if (answer && !answer.error && answer.data) {
       remote = { cfi: answer.data.cfi, fraction: answer.data.fraction, fileHash: answer.data.fileHash, at: answer.data.updatedAt }
     }
@@ -229,34 +236,23 @@ export const useReaderStore = defineStore('reader', () => {
     return run
   }
 
-  /** How long the book waits for the server's highlights before it opens with the device's (the place waits as long). */
-  const HIGHLIGHTS_WAIT_MS = 800
-  /** While the reader stays open the server's list is read again this often. */
-  const HIGHLIGHTS_POLL_MS = 60_000
-
-  /** The highlights to open the copy `fileHash` with: the device's, joined by the server's if they come in time. */
+  /**
+   * The highlights to open the copy `fileHash` with: the device's, joined by the
+   * server's (one read, awaited; how long the book may wait for it is the
+   * reader's own — `composables/useReaderSession.ts`).
+   */
   async function openHighlights(entryId: string, fileHash: string): Promise<Highlight[]> {
-    await Promise.race([syncHighlights(entryId, fileHash).catch(() => undefined), new Promise((resolve) => setTimeout(resolve, HIGHLIGHTS_WAIT_MS))])
+    await syncHighlights(entryId, fileHash).catch(() => undefined)
     return highlightsFor(entryId, fileHash)
   }
 
-  /**
-   * Keeps the open book's highlights up to date in the background: read again
-   * every minute while the page is visible, when the app comes back to the
-   * foreground and when the connection returns. Returns how to stop.
-   */
+  /** Keeps the open book's highlights current in the background: the poll is `data/reader/session.ts`, which the reader stops on closing. */
   function followHighlights(entryId: string, fileHash: string): () => void {
-    const tick = () => {
-      if (document.visibilityState === 'visible' && isOnline()) void syncHighlights(entryId, fileHash).catch(() => undefined)
-    }
-    const timer = setInterval(tick, HIGHLIGHTS_POLL_MS)
-    document.addEventListener('visibilitychange', tick)
-    window.addEventListener('online', tick)
-    return () => {
-      clearInterval(timer)
-      document.removeEventListener('visibilitychange', tick)
-      window.removeEventListener('online', tick)
-    }
+    return pollHighlights(
+      () => void syncHighlights(entryId, fileHash).catch(() => undefined),
+      isOnline,
+      { document, window },
+    )
   }
 
   // ------------------------------------------------------------ Translate and Define (only the selected words leave the device)

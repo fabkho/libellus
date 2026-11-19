@@ -20,42 +20,22 @@ import newsreader600 from '@fontsource/newsreader/files/newsreader-latin-600-nor
 import geist400 from '@fontsource/geist/files/geist-latin-400-normal.woff2?url'
 import geist600 from '@fontsource/geist/files/geist-latin-600-normal.woff2?url'
 import { sourceLanguage } from '~/data/reader/lookup'
+import type { Highlight } from '~/data/reader/device'
+import { resourceType, sanitizeResource } from '~/data/reader/markup'
+import { describeSelection, type Box } from '~/data/reader/geometry'
+import { pageCss, type Flow, type PageColors, type PageFonts } from '~/data/reader/pageCss'
+import { normalizeRelocation, type RelocateDetail, type Relocation, type RelocationRenderer } from '~/data/reader/relocation'
+import type { ReaderSettings } from '~/data/reader/settings'
+import { findBodyEnd, flattenToc, type TocItem } from '~/data/reader/toc'
 import { makeBook, UnsupportedTypeError } from './foliate-js/view.js'
 import { EPUB } from './foliate-js/epub.js'
 import { frame } from './foliate-js/frame.js'
 import { compare as compareCfi } from './foliate-js/epubcfi.js'
 import { Overlayer } from './foliate-js/overlayer.js'
-import type { ReaderSettings } from '~/data/reader/settings'
-import { FONT_SIZES, LEADINGS } from '~/data/reader/settings'
-import type { Highlight } from '~/data/reader/device'
-import { resourceType, sanitizeResource } from '~/data/reader/markup'
 
-export interface TocItem {
-  label: string
-  href: string
-  depth: number
-  /** Where it starts, 0–1 of the body (for the page number in the Contents sheet). */
-  fraction: number | null
-}
-
-export interface Relocation {
-  /** How far through the body (the PG licence and other back matter after it do not count), 0–1. */
-  fraction: number
-  /** How far through the current section, 0–1. */
-  sectionFraction: number
-  sectionIndex: number
-  chapter: string | null
-  chapterHref: string | null
-  minutesLeftInChapter: number
-  minutesLeftInBook: number
-  cfi: string
-  /** On the last page of the body (or past it). */
-  atEnd: boolean
-  atStart: boolean
-  /** Scroll flow: the chapter is no taller than the screen (nothing to scroll). */
-  fits: boolean
-  reason: string | null
-}
+// The book's structure, its relocation and the page's typesetting are the reader's data layer (`data/reader/`,
+// tested there); this file is the DOM adapter over foliate-js that hands them what only the page can say.
+export type { Box, Flow, PageColors, Relocation, TocItem }
 
 export interface Timings {
   /** From the call to the engine being imported (the lazy chunk). */
@@ -83,13 +63,6 @@ export interface EngineHandlers {
   highlightTapped: (highlight: Highlight, rect: Box) => void
 }
 
-export interface Box {
-  left: number
-  top: number
-  width: number
-  height: number
-}
-
 /** What the member selected: its words, its place (a CFI) and where it is on screen. */
 export interface Selection {
   text: string
@@ -113,8 +86,6 @@ export interface SearchHit {
   chapter: string
 }
 
-export type Flow = 'paginated' | 'scrolled'
-
 export interface Layout {
   flow: Flow
   animated: boolean
@@ -124,16 +95,6 @@ export interface Layout {
   margin: number
   maxColumns: 1 | 2
   maxInlineSize: number
-}
-
-/** Colours the page takes, read from the reader's tokens (the iframe cannot see CSS variables). */
-export interface PageColors {
-  surface: string
-  ink: string
-  inkMuted: string
-  accent: string
-  hairline: string
-  scheme: 'light' | 'dark'
 }
 
 type FoliateView = HTMLElement & {
@@ -195,9 +156,6 @@ function text(value: unknown): string {
   return String(value)
 }
 
-/** Back matter that is not the book: Project Gutenberg's licence, and similar footers. */
-const BACK_MATTER = /footer|licen[cs]e|colophon|imprint|uncopyright/i
-
 export class ReaderEngine {
   readonly view: FoliateView
   title = ''
@@ -244,59 +202,26 @@ export class ReaderEngine {
     this.title = text(book.metadata?.title)
     this.author = text(book.metadata?.author)
     this.sectionFractions = this.view.getSectionFractions()
-    // The body ends before the first back-matter section after the last real one.
-    let end = book.sections.length - 1
-    while (end > 0 && (BACK_MATTER.test(book.sections[end]!.id) || book.sections[end]!.linear === 'no')) end--
-    this.bodyEndIndex = end
-    this.bodyEnd = this.sectionFractions[end + 1] ?? 1
-    const flat: TocItem[] = []
-    const walk = (items: { label: string; href: string; subitems?: unknown[] }[] | undefined, depth: number) => {
-      for (const item of items ?? []) {
-        const label = (item.label ?? '').trim()
-        if (BACK_MATTER.test(label) || /project gutenberg/i.test(label)) continue
-        let fraction: number | null = null
-        try {
-          const resolved = book.resolveHref(item.href)
-          if (resolved) fraction = Math.min(1, (this.sectionFractions[resolved.index] ?? 0) / this.bodyEnd)
-        } catch {
-          fraction = null
-        }
-        flat.push({ label, href: item.href, depth, fraction })
-        walk(item.subitems as typeof items, depth + 1)
-      }
-    }
-    walk(book.toc, 0)
-    this.toc = flat
+    // The body ends before the first back-matter section after the last real one (`data/reader/toc.ts`).
+    const body = findBodyEnd(book.sections, this.sectionFractions)
+    this.bodyEndIndex = body.index
+    this.bodyEnd = body.fraction
+    this.toc = flattenToc(book, this.sectionFractions, this.bodyEnd)
   }
 
-  onRelocate(detail: {
-    fraction: number
-    cfi: string
-    tocItem?: { label?: string; href?: string } | null
-    section?: { current: number }
-    time?: { section: number; total: number }
-    reason?: string
-  }, renderer: { fraction?: number; reason?: string; index?: number }) {
-    const index = detail.section?.current ?? 0
-    const fraction = Math.min(1, Math.max(0, detail.fraction / this.bodyEnd))
-    const r = this.view.renderer
-    const lastPage = r.getAttribute('flow') === 'scrolled' ? r.viewSize - r.end < 4 : r.page >= r.pages - 2
-    const atEnd = index > this.bodyEndIndex || (index === this.bodyEndIndex && lastPage)
-    const backMatterMinutes = Math.max(0, ((1 - this.bodyEnd) * (detail.time?.total ?? 0)) / Math.max(1e-6, 1 - detail.fraction))
-    this.last = {
-      fraction: atEnd ? 1 : fraction,
-      sectionFraction: renderer.fraction ?? 0,
-      sectionIndex: index,
-      chapter: detail.tocItem?.label?.trim() || null,
-      chapterHref: detail.tocItem?.href ?? null,
-      minutesLeftInChapter: Math.max(0, detail.time?.section ?? 0),
-      minutesLeftInBook: Math.max(0, (detail.time?.total ?? 0) - backMatterMinutes),
-      cfi: detail.cfi,
-      atEnd,
-      atStart: index === 0 && (renderer.fraction ?? 0) === 0,
-      fits: r.getAttribute('flow') === 'scrolled' && r.viewSize - r.size < 4,
-      reason: renderer.reason ?? null,
+  /** foliate's `relocate`: the paginator's numbers are read off the renderer element, `data/reader/relocation.ts` does the rest. */
+  onRelocate(detail: RelocateDetail) {
+    const renderer = this.view.renderer
+    const r: RelocationRenderer = {
+      flow: renderer.getAttribute('flow'),
+      page: renderer.page,
+      pages: renderer.pages,
+      size: renderer.size,
+      viewSize: renderer.viewSize,
+      end: renderer.end,
+      fraction: sectionFractionOf(renderer),
     }
+    this.last = normalizeRelocation(detail, r, this.bodyEnd, this.bodyEndIndex)
     this.handlers.relocate(this.last)
   }
 
@@ -330,7 +255,7 @@ export class ReaderEngine {
 
   setStyles(settings: ReaderSettings, colors: PageColors) {
     const flow = this.view.renderer.getAttribute('flow') === 'scrolled' ? 'scrolled' : 'paginated'
-    this.view.renderer.setStyles(pageCss(settings, colors, flow, this.touchSelection))
+    this.view.renderer.setStyles(pageCss(settings, colors, pageFonts(), flow, this.touchSelection))
   }
 
   highlight(highlight: Highlight) {
@@ -480,95 +405,22 @@ export class ReaderEngine {
   }
 }
 
-/** The fonts the page may use: the app's own families, with the text weights a book needs. */
-function fontFaces() {
-  const face = (family: string, url: string, weight: number, style = 'normal') =>
-    `@font-face { font-family: '${family}'; src: url('${new URL(url, location.href).href}') format('woff2'); font-weight: ${weight}; font-style: ${style}; font-display: block; }`
-  return [
-    face('Libellus Serif', newsreader400, 400),
-    face('Libellus Serif', newsreader400i, 400, 'italic'),
-    face('Libellus Serif', newsreader600, 600),
-    face('Libellus Sans', geist400, 400),
-    face('Libellus Sans', geist600, 600),
-  ].join('\n')
+/** The app's fonts as the page's frame needs them: absolute, because the book's document resolves URLs against its own blob. */
+function pageFonts(): PageFonts {
+  return {
+    serif: new URL(newsreader400, location.href).href,
+    serifItalic: new URL(newsreader400i, location.href).href,
+    serifBold: new URL(newsreader600, location.href).href,
+    sans: new URL(geist400, location.href).href,
+    sansBold: new URL(geist600, location.href).href,
+  }
 }
 
-/**
- * The page's stylesheet: the member's type settings over the book's own CSS.
- * Colours come in as values (the iframe sees no tokens); the book keeps its
- * own structure (headings, centring, images), its colours give way to the room.
- */
-export function pageCss(settings: ReaderSettings, colors: PageColors, flow: Flow = 'paginated', touchSelection = false): string {
-  const family = settings.font === 'serif' ? `'Libellus Serif', Georgia, serif` : `'Libellus Sans', system-ui, sans-serif`
-  const size = FONT_SIZES[settings.size] ?? 18
-  const leading = LEADINGS[settings.leading] ?? 1.55
-  // Edge to edge: paragraphs lose their first-line indent's extra and the space between them shrinks, for the most text per screen.
-  const dense = settings.margins === 0
-  return `
-${fontFaces()}
-@namespace epub "http://www.idpf.org/2007/ops";
-html {
-  color-scheme: ${colors.scheme};
-  background: ${colors.surface} !important;
-  color: ${colors.ink} !important;
-  font-size: ${size}px !important;
-  -webkit-text-size-adjust: none;
-  text-size-adjust: none;
-}
-body {
-  background: transparent !important;
-  color: inherit !important;
-  font-family: ${family} !important;
-  font-size: 1rem !important;
-  font-optical-sizing: auto;
-  font-kerning: normal;
-  font-variant-ligatures: common-ligatures;
-  text-rendering: optimizeLegibility;
-}
-body *:not(svg, svg *) {
-  font-family: inherit !important;
-  color: inherit !important;
-  background-color: transparent !important;
-  border-color: ${colors.hairline} !important;
-}
-p, li, blockquote, dd, div:not(:has(*)) {
-  line-height: ${leading} !important;
-  text-align: ${settings.justify ? 'justify' : 'start'};
-  hyphens: ${settings.justify ? 'auto' : 'manual'};
-  -webkit-hyphens: ${settings.justify ? 'auto' : 'manual'};
-  hanging-punctuation: allow-end last;
-  widows: 2;
-  orphans: 2;
-}
-${dense ? 'p { margin-top: 0 !important; margin-bottom: 0.35em !important; }' : ''}
-[align="left"] { text-align: left; }
-[align="right"] { text-align: right; }
-[align="center"] { text-align: center; }
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 600 !important;
-  line-height: 1.2 !important;
-  letter-spacing: -0.01em;
-  text-wrap: balance;
-  hyphens: manual;
-}
-a, a:link, a:visited { color: ${colors.accent} !important; text-decoration-thickness: 0.06em; text-underline-offset: 0.15em; }
-hr { border: 0 !important; border-top: 0.5px solid ${colors.hairline} !important; }
-img { max-width: 100%; height: auto; }
-${colors.scheme === 'dark' ? 'img:not([src$=".svg"]) { filter: brightness(0.86) contrast(1.05); }' : '/* On paper a picture\'s white is the page\'s own. */ img { mix-blend-mode: multiply; }'}
-pre { white-space: pre-wrap !important; }
-${touchSelection ? `/* The reader selects (long-press, its own handles): no browser selection, no callout, no tap flash. */
-html, body, body * { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; }
-* { -webkit-tap-highlight-color: transparent; }` : ''}
-${flow === 'paginated' ? `/* A cover page (one picture, no text) fills its page, centred, as a printed cover does. */
-body:has(> div:only-child > svg:only-child), body:has(> div:only-child > img:only-child), body:has(> img:only-child) {
-  height: 100vh !important; margin: 0 !important; padding: 0 !important;
-  display: flex !important; align-items: center; justify-content: center;
-}
-body:has(> div:only-child > svg:only-child) > div { width: 100%; height: 100%; }
-body:has(> div:only-child > img:only-child) img, body:has(> img:only-child) img { max-height: 100vh; width: auto; object-fit: contain; }` : ''}
-aside[epub|type~="endnote"], aside[epub|type~="footnote"], aside[epub|type~="note"], aside[epub|type~="rearnote"] { display: none; }
-::selection { background: color-mix(in srgb, ${colors.accent} 28%, transparent); }
-`
+/** How far through the section the paginator stands: its scroll offset in scroll flow, its text page in pages. */
+function sectionFractionOf(renderer: FoliateView['renderer']): number {
+  const scrolled = renderer.getAttribute('flow') === 'scrolled'
+  const fraction = scrolled ? renderer.start / Math.max(1, renderer.viewSize - renderer.size) : (renderer.page - 1) / Math.max(1, renderer.pages - 3)
+  return Math.min(1, Math.max(0, fraction))
 }
 
 /**
@@ -640,16 +492,19 @@ function installTouchSelection(engine: ReaderEngine, doc: Document) {
   win.addEventListener('touchcancel', end, { capture: true })
 }
 
-/** A range as the reader's menu needs it: words, place, boxes on screen. */
+/** A range as the reader's menu needs it: words, place, boxes on screen (the arithmetic is `data/reader/geometry.ts`). */
 function describeRange(engine: ReaderEngine, doc: Document, range: Range, custom: boolean): Selection | null {
-  const words = range.toString().replace(/\s+/g, ' ').trim()
-  if (!words) return null
-  const frame = doc.defaultView?.frameElement?.getBoundingClientRect()
-  const shift = (r: { left: number; top: number; width: number; height: number }) => ({ left: (frame?.left ?? 0) + r.left, top: (frame?.top ?? 0) + r.top, width: r.width, height: r.height })
-  const rects = [...range.getClientRects()].filter((r) => r.width > 0.5 && r.height > 0).map(shift)
   const index = engine.last?.sectionIndex ?? 0
-  const box = shift(range.getBoundingClientRect())
-  return { text: words, cfi: engine.view.getCFI(index, range), index, rect: box, first: rects[0] ?? box, last: rects.at(-1) ?? box, rects, custom }
+  const frame = doc.defaultView?.frameElement?.getBoundingClientRect()
+  return describeSelection(
+    range.toString(),
+    engine.view.getCFI(index, range),
+    index,
+    range.getBoundingClientRect(),
+    [...range.getClientRects()],
+    frame ? { left: frame.left, top: frame.top } : null,
+    custom,
+  )
 }
 
 /**
@@ -772,12 +627,7 @@ export async function openReader(
     if (url.protocol === 'https:' || url.protocol === 'http:') window.open(url.href, '_blank', 'noopener,noreferrer')
   })
 
-  view.addEventListener('relocate', (event) => {
-    const r = view.renderer
-    const scrolled = r.getAttribute('flow') === 'scrolled'
-    const sectionFraction = scrolled ? r.start / Math.max(1, r.viewSize - r.size) : (r.page - 1) / Math.max(1, r.pages - 3)
-    engine.onRelocate((event as CustomEvent).detail, { fraction: Math.min(1, Math.max(0, sectionFraction)) })
-  })
+  view.addEventListener('relocate', (event) => engine.onRelocate((event as CustomEvent<RelocateDetail>).detail))
   // Highlights: drawn in the room's way (a soft wash under the words), redrawn when a section loads again.
   view.addEventListener('draw-annotation', (event) => {
     const { draw, annotation } = (event as CustomEvent<{ draw: (f: unknown, o: unknown) => void; annotation: { color?: string } }>).detail
