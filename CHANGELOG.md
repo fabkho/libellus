@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.50.1](https://github.com/fabkho/libellus/compare/v1.50.0...v1.50.1) (2026-11-19)
+
+
+### Fixes
+
+* **import:** close two silent-mismatch holes in isSameWork ([#606](https://github.com/fabkho/libellus/issues/606)) ([7044cf0](https://github.com/fabkho/libellus/commit/7044cf0cae976e72359051d7e76d3d909c189599))
+* **import:** the zip flag is a boolean, not a getter ([#605](https://github.com/fabkho/libellus/issues/605)) ([60112dc](https://github.com/fabkho/libellus/commit/60112dce3d6af212cc3326678a3b0633632f53f0))
+
 ## [1.50.0](https://github.com/fabkho/libellus/compare/v1.49.0...v1.50.0) (2026-11-19)
 
 
