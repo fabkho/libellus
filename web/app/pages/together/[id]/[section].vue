@@ -33,10 +33,11 @@ import { BUDDY_EMOJI, type BuddyErrorCode, type ReportReason } from '~/data/budd
 import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
 import { isReadId, isSectionSegment, roomPath, sectionOfSegment } from '~/utils/buddyRoute'
 import { buddyErrorKey } from '~/utils/buddyRead'
-import { quoteOf, replyChipOf } from '~/utils/roomThread'
 import { sectionTitle } from '~/utils/buddySectionTitle'
 import { isRetryableBuddyError } from '~/data/buddyReads'
-import { sameAuthorRun, roomItems, type ThreadItem } from '~/utils/roomThread'
+import { sameAuthorRun, type ThreadItem } from '~/utils/roomThread'
+import { useThreadScreen } from '~/composables/useThreadScreen'
+import { buddyThreadAdapter } from '~/utils/buddyThreadAdapter'
 import { useBuddyReadStore } from '~/stores/buddyRead'
 import { useSessionStore } from '~/stores/session'
 
@@ -53,7 +54,6 @@ definePageMeta({
 
 const { t } = useI18n()
 const route = useRoute()
-const router = useRouter()
 const store = useBuddyReadStore()
 const session = useSessionStore()
 const online = useOnline()
@@ -71,106 +71,80 @@ const archived = computed(() => read.value?.status === 'archived')
 /** Live updates are paused: the channel has not been live for a while and the device is online (offline says its own). */
 const paused = computed(() => store.liveStuck && online.value)
 
-// ------------------------------------------------------------------ loading
-
-const error = ref<BuddyErrorCode | null>(null)
-let release: (() => void) | null = null
-let gone = false
-let opened = false
-
-async function load() {
-  error.value = await store.load(readId.value)
-}
-async function openThread() {
-  if (opened) return
-  opened = true
-  const failed = await store.openThread(readId.value, sectionId.value)
-  if (failed) {
-    opened = false
-    store.closeThread(readId.value, sectionId.value)
-    error.value = failed
-  }
-}
-
-onMounted(async () => {
-  // Never throws: a channel that cannot be had is `store.liveStuck`, said above the thread, and asked for again by the store.
-  const stop = await store.retain(readId.value)
-  if (gone) stop()
-  else release = stop
-})
-onMounted(async () => {
-  if (!read.value) await load()
-})
-// Nothing of a Section is read until it is open to her: her marker reached it, or she said "Show anyway".
-watch(() => view.value?.open === true, (open) => open && void openThread(), { immediate: true })
-onBeforeUnmount(() => {
-  gone = true
-  release?.()
-  if (opened) store.closeThread(readId.value, sectionId.value)
-})
-// Back online after a failure: asked again.
-watch(online, (now) => {
-  if (!now) return
-  if (!read.value) void load()
-  else if (error.value && view.value?.open) {
-    error.value = null
-    void openThread()
-  }
-})
-
-const thread = computed(() => store.threads[threadKey(readId.value, sectionId.value)] ?? null)
-// As the room's: the store forgetting the read (a live refresh, or the thread's own read) is as good as this page's own `not_found`.
+// The address names no thread of this read: she is not in it any more, or the Section is not its own.
 const missing = computed(() => (!read.value && (error.value === 'not_found' || store.forgotten[readId.value] === true)) || (!!read.value && !view.value))
-const status = computed(() => {
-  if (error.value && !thread.value?.loaded) return 'error'
-  if (!read.value) return 'loading'
-  return thread.value?.loaded ? 'ready' : 'loading'
-})
 
-// Entered with the keyboard (Enter on a row of the room), the focus would stay on <body>: it goes to the heading once the thread is drawn.
-useFocusHeading(() => missing.value || status.value === 'ready' || view.value?.veiled === true)
+// ------------------------------------------------------------------ the thread screen
 
-// ------------------------------------------------------------------ the messages
-
-const nameOf = (memberId: string | null) => read.value?.members.find((m) => m.id === memberId)?.name?.trim() || null
-const items = computed<ThreadItem[]>(() =>
-  roomItems(store.messagesOf(readId.value, sectionId.value), {
-    me: me.value,
-    open: view.value?.open === true,
-    nameOf,
-    errorWord: (code) => t(buddyErrorKey(code)),
-    retryable: (code) => isRetryableBuddyError(code as BuddyErrorCode),
-    previewOf: store.previewOf,
-  }),
-)
-
-/** The messages that came after the thread was shown: they play the arrival animation once. */
-const fresh = ref<ReadonlySet<string>>(new Set())
-const known = new Set<string>()
-let settled = false
-watch(
-  () => [status.value, items.value.map((i) => i.key)] as const,
-  ([now, keys]) => {
-    if (now !== 'ready') return
-    const added = keys.filter((k) => !known.has(k))
-    for (const k of keys) known.add(k)
-    if (settled && added.length) fresh.value = new Set([...fresh.value, ...added])
-    settled = true
-  },
-  { immediate: true },
-)
-
-const hasMore = computed(() => thread.value?.more === true)
-const olderStatus = computed(() => (thread.value?.loading && thread.value.loaded ? 'loading' : 'idle'))
-async function loadOlder(): Promise<boolean> {
-  const before = items.value.length
-  await store.loadOlder(readId.value, sectionId.value)
-  return items.value.length > before
-}
-
-const sectionWords = { whole: () => t('together.wholeBook'), label: (n: string) => t('together.sectionLabel', { n }) }
+const EMOJIS = BUDDY_EMOJI
 const quoteWords = computed(() => ({ deleted: t('uiText.chat.reply.deleted'), someone: t('member.someone'), you: t('uiText.chat.reply.you'), voice: t('uiText.chat.reply.voice') }))
-const quoteFor = (item: ThreadItem) => quoteOf(items.value, item.replyTo ? { kind: 'reply', replyTo: item.replyTo } : null, quoteWords.value)
+const voicePlayer = useVoicePlayer()
+
+/**
+ * The half of this screen a Book's chapter of Notes has too (`composables/useThreadScreen.ts`): the messages, the send queue's three
+ * answers, the quotes, the action bar, the delete confirm, the veil's one way in, the load and the press on a voice message. The
+ * adapter closes over this read and this Section (`buddyThreadAdapter`) and keeps the room's live channel; what is here is what only
+ * a read has — archived, the Host, the banners.
+ *
+ * The action bar: the database's six (`react_to_buddy_message`: ❤️ 😂 😮 😢 🔥 📚; ❤️ is also what a double tap puts on a message), then
+ * Reply, Copy (a text) and the app's own: Delete (her own message, or any as the host) and Report (somebody else's). The bar is as wide as
+ * its buttons (44 px each): six reactions and Reply fit a 360 px phone, and what follows scrolls (the style below).
+ */
+const screen = useThreadScreen(
+  buddyThreadAdapter({
+    store,
+    readId: () => readId.value,
+    sectionId: () => sectionId.value,
+    hasRoom: () => !!read.value && !!view.value,
+    me: () => me.value,
+    isOpen: () => view.value?.open === true,
+    missing: () => missing.value,
+    veiled: () => view.value?.veiled === true,
+    nameOf: (memberId) => read.value?.members.find((m) => m.id === memberId)?.name?.trim() || null,
+    errorWord: (code) => t(buddyErrorKey(code as BuddyErrorCode)),
+    retryable: (code) => isRetryableBuddyError(code as BuddyErrorCode),
+    backTo: () => roomPath(readId.value),
+  }),
+  {
+    emojis: EMOJIS,
+    likeEmoji: EMOJIS[0]!,
+    canLike: () => !archived.value,
+    canWrite: () => !archived.value,
+    quoteWords: () => quoteWords.value,
+    barWords: () => ({ report: t('together.thread.report'), delete: t('together.thread.delete') }),
+    // The Host removes anybody's message; an archived read's composer is a line, so nothing is offered there either.
+    extraActions: (item) => (!item.mine && isHost.value && !archived.value ? [{ id: 'delete', label: t('together.thread.delete'), icon: 'trash' }] : []),
+    deleteText: (item) => {
+      const host = !item.mine
+      if (item.voice) return t(host ? 'together.thread.deleteTextVoiceHost' : 'together.thread.deleteTextVoice')
+      return t(host ? 'together.thread.deleteTextHost' : 'together.thread.deleteText')
+    },
+    offlineWord: () => t(buddyErrorKey('offline')),
+    failedWord: () => t('together.thread.voice.playFailed'),
+    composerTestid: 'buddyThread',
+    voicePlayer,
+  },
+)
+
+const { items, text, replyTo, notice, fresh, hasMore, olderStatus, loadOlder, quoteFor, replyChip, send, sendVoice, retry, discard, react, answer, actionsOf, action, deleteOpen, deleteBusy, deleteError, deleteText, confirmDelete, reportId, reportOpen, onPress: voicePress, status, error, showOpen, showAnyway, back } = screen
+
+/** The report sheet's call (components/room/ReportSheet.vue): the buddy store's, answered with the refusal's code. */
+const reportMessage = screen.report
+
+// The read, the Section opening when her marker lets her in, and the room's live channel kept while this screen shows.
+screen.start()
+
+const chat = useTemplateRef<{ jumpTo: (id: string) => Promise<void>; toNewest: () => void }>('chat')
+
+/** The screen's send, and then the thread is at its newest (hers is the message that arrived). */
+async function sendMessage() {
+  await send()
+  chat.value?.toNewest()
+}
+async function sendVoiceMessage(voice: PreparedVoice) {
+  await sendVoice(voice)
+  chat.value?.toNewest()
+}
 
 // ------------------------------------------------------------------ title and banners
 
@@ -190,156 +164,7 @@ const reached = computed(() => {
 /** She opened a Section her marker has not reached ("Show anyway"): said once above the thread; her own Section is where it was. */
 const ahead = computed(() => view.value?.open === true && view.value.peeked && !reached.value)
 
-// ------------------------------------------------------------------ writing
 
-const text = ref('')
-const replyTo = ref<ThreadItem | null>(null)
-const notice = ref<string | null>(null)
-const chat = useTemplateRef<{ jumpTo: (id: string) => Promise<void>; toNewest: () => void }>('chat')
-
-const replyQuote = computed(() => (replyTo.value ? replyChipOf(replyTo.value, quoteWords.value) : null))
-
-async function send() {
-  const body = text.value
-  if (!body.trim()) return
-  notice.value = null
-  const sent = await store.send(readId.value, sectionId.value, body, { replyTo: replyTo.value?.id ?? null })
-  if (!sent.ok) {
-    notice.value = t(buddyErrorKey(sent.error))
-    return
-  }
-  text.value = ''
-  replyTo.value = null
-  chat.value?.toNewest()
-}
-
-/** A finished recording from the composer: a bubble at once, stored, then posted (`store.sendVoice`). A refusal (too short, too big) is said above the thread. */
-async function sendVoice(voice: PreparedVoice) {
-  notice.value = null
-  const sent = await store.sendVoice(readId.value, sectionId.value, voice, { replyTo: replyTo.value?.id ?? null })
-  if (!sent.ok) {
-    notice.value = t(buddyErrorKey(sent.error))
-    return
-  }
-  replyTo.value = null
-  chat.value?.toNewest()
-}
-
-async function retry(key: string) {
-  const item = items.value.find((i) => i.key === key)
-  // Refused for a reason a second try cannot change: the tap on the bubble leads nowhere, "Delete" is what is offered.
-  if (item && !item.permanent) await store.retry(readId.value, sectionId.value, key)
-}
-
-/** A message that was refused (or still waits) is given up: the bubble goes, and the refusal the device kept with it. */
-function discard(key: string) {
-  store.discard(readId.value, sectionId.value, key)
-}
-
-async function react(messageId: string, emoji: string) {
-  const failed = await store.react(readId.value, sectionId.value, messageId, emoji)
-  notice.value = failed ? t(buddyErrorKey(failed)) : null
-}
-
-// Reaction bar: the database's six (`react_to_buddy_message`: ❤️ 😂 😮 😢 🔥 📚; ❤️ is also what a double tap puts on a message), then Reply, Copy (a text) and the
-// app's own: Delete (her own message, or any as the host) and Report (somebody else's). The bar is as wide as its buttons (44 px each): six reactions and Reply
-// fit a 360 px phone, and what follows scrolls (the style below: the bar stops at the screen's edge, its arrow keys and its focus bring a button into view).
-const EMOJIS = BUDDY_EMOJI
-function actionsOf(item: ThreadItem): BarAction[] {
-  if (item.removed || !item.id || archived.value) return []
-  const list: BarAction[] = []
-  if (!item.mine) list.push({ id: 'report', label: t('together.thread.report'), icon: 'flag' })
-  if (item.mine || isHost.value) list.push({ id: 'delete', label: t('together.thread.delete'), icon: 'trash' })
-  return list
-}
-
-const deleting = ref<ThreadItem | null>(null)
-const deleteOpen = ref(false)
-const deleteBusy = ref(false)
-const deleteError = ref<BuddyErrorCode | null>(null)
-/** What the confirm says: it reads "Message removed" for everyone and, for a recording, the sound is deleted too. */
-const deleteText = computed(() => {
-  const host = !!deleting.value && !deleting.value.mine
-  if (deleting.value?.voice) return t(host ? 'together.thread.deleteTextVoiceHost' : 'together.thread.deleteTextVoice')
-  return t(host ? 'together.thread.deleteTextHost' : 'together.thread.deleteText')
-})
-/** The report sheet's call (components/room/ReportSheet.vue): the buddy store's, answered with the refusal's code. */
-const reportMessage = async (messageId: string, reason: ReportReason, note: string | null) => (await store.report(messageId, reason, note)).error
-const reportId = ref<string | null>(null)
-const reportOpen = ref(false)
-
-function action(actionId: string, key: string) {
-  const item = items.value.find((i) => i.key === key)
-  if (!item?.id) return
-  if (actionId === 'delete') {
-    deleting.value = item
-    deleteError.value = null
-    deleteOpen.value = true
-  } else if (actionId === 'report') {
-    reportId.value = item.id
-    reportOpen.value = true
-  }
-}
-async function confirmDelete() {
-  const item = deleting.value
-  if (!item?.id || deleteBusy.value) return
-  deleteBusy.value = true
-  deleteError.value = null
-  const failed = await store.deleteMessage(readId.value, sectionId.value, item.id)
-  deleteBusy.value = false
-  if (failed) deleteError.value = failed
-  else deleteOpen.value = false
-}
-
-function answer(key: string) {
-  const item = items.value.find((i) => i.key === key)
-  if (item?.id && !item.removed) replyTo.value = item
-}
-
-// ------------------------------------------------------------------ playing a voice message
-
-const voicePlayer = useVoicePlayer()
-/** The whole press-to-play interaction, once for both threads (`composables/useVoicePress.ts`): what differs here is the ❤️ of the bar, an archived room (nothing may be liked), the veil, and the two sentences. */
-const { onPress: voicePress } = useVoicePress({
-  items: () => items.value,
-  isOpen: () => view.value?.open === true,
-  canLike: () => !archived.value,
-  likeEmoji: EMOJIS[0]!,
-  like: (id, emoji) => void react(id, emoji),
-  notice: (message) => (notice.value = message),
-  isPreview: (key) => !!store.previewOf(key),
-  voiceUrl: (path) => store.voiceUrl(path),
-  offlineWord: () => t(buddyErrorKey('offline')),
-  failedWord: () => t('together.thread.voice.playFailed'),
-  voicePlayer,
-})
-
-// ------------------------------------------------------------------ the veil
-
-const showOpen = ref(false)
-/** She said "Show anyway": once the thread is up, focus goes to the composer (the quiet screen she tapped on is gone; focus would be lost at the top of the page). */
-let focusComposerWhenReady = false
-function focusComposer() {
-  if (!focusComposerWhenReady || status.value !== 'ready') return
-  const field = document.querySelector<HTMLElement>('[data-testid="buddyThread.composer"] textarea, [data-testid="buddyThread.composer"] input')
-  if (!field) return
-  focusComposerWhenReady = false
-  field.focus()
-}
-watch(status, () => void nextTick(focusComposer))
-async function showAnyway() {
-  if (!sectionId.value) return
-  focusComposerWhenReady = true
-  store.peek(sectionId.value)
-  await nextTick()
-  await nextTick()
-  focusComposer()
-}
-
-function back() {
-  if (window.history.state?.back) router.back()
-  else void navigateTo(roomPath(readId.value))
-}
 </script>
 
 <template>
@@ -470,11 +295,11 @@ function back() {
         :placeholder="sectionId === null ? t('together.thread.placeholderRoom') : t('together.thread.placeholder')"
         :label="t('together.thread.composerLabel')"
         :max="2000"
-        :quote="replyQuote"
+        :quote="replyChip"
         :voice-max-ms="VOICE_MAX_MS"
         testid="buddyThread"
-        @send="send"
-        @voice="sendVoice"
+        @send="sendMessage"
+        @voice="sendVoiceMessage"
         @voice-error="notice = $event"
         @cancel-quote="replyTo = null"
       />
