@@ -1,5 +1,5 @@
 import type { BookSnapshot } from '../books.ts'
-import { COMPANION, fuzzyTitleMatch, notAlone, sameVolume, volumeOf } from '../titleMatch.ts'
+import { COMPANION, fuzzyTitleMatch, notAlone, NUMBER_WORDS, sameVolume, volumeOf } from '../titleMatch.ts'
 import { isbnLanguage, normalize, splitSeriesTitle, surname, workTitle } from './readingTracker.ts'
 import type { ImportBook } from './rows.ts'
 
@@ -204,8 +204,16 @@ export function titleQuery(book: Pick<ImportBook, 'title' | 'authors'>): string 
   return [book.title, book.authors[0] ?? ''].join(' ').trim()
 }
 
-/** A volume's mark inside a series title: "T01", "Tome 01", "Band 2", "Book 3", "Vol. 4", "#1". Dropped from a title's forms. */
-const VOLUME_MARK = /\bt(?=\d)\d{1,3}\b|\b(?:tome|band|bd|book|buch|teil|vol|volume|part|folge)\.?\s*\d{1,3}\b|#\s*\d{1,3}\b/gi
+/**
+ * A volume's mark inside a series title: "T01", "Tome 01", "Band 2", "Book 3", "Vol. 4", "#1" — and, as `titleMatch.ts`
+ * reads it, the number spelled out ("Book Two", "Band zwei", "Volume IV"), in the words `NUMBER_WORDS` knows, so a
+ * spelled-out volume is dropped from a title's forms exactly as a digit is. Dropped from a title's forms.
+ */
+const NUMBER_WORDS_LIST = Object.keys(NUMBER_WORDS).sort((a, b) => b.length - a.length).join('|')
+const VOLUME_MARK = new RegExp(
+  `\\bt(?=\\d)\\d{1,3}\\b|\\b(?:tome|band|bd|book|buch|teil|vol|volume|part|folge)\\.?\\s*(?:\\d{1,3}|(?:${NUMBER_WORDS_LIST}))\\b|#\\s*\\d{1,3}\\b`,
+  'gi',
+)
 
 /**
  * The found title names a volume after the first (outside brackets, where a series' place is only an aside: "Title
