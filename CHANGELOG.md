@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.50.0](https://github.com/fabkho/libellus/compare/v1.49.0...v1.50.0) (2026-11-19)
+
+
+### Features
+
+* **shelf:** one status module and one shelf-row view model ([#601](https://github.com/fabkho/libellus/issues/601)) ([6ac74d4](https://github.com/fabkho/libellus/commit/6ac74d48fca7a4f6f33a7d055da58abb9e823074))
+
 ## [1.49.0](https://github.com/fabkho/libellus/compare/v1.48.2...v1.49.0) (2026-11-18)
 
 
