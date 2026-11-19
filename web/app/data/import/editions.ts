@@ -357,6 +357,10 @@ export function isSameWork(row: Pick<ImportBook, 'title'> & { authors: readonly 
   if (!sameTitle(row.title, found.title) && !(LOOSE_TITLES && fuzzyTitleMatch(row.title, found.title, byAuthor))) return false
   // "Heartstopper: Volume Three" is not "Heartstopper: Volume Two": the colon drops the volume from the work title.
   if (!sameVolume(row.title, found.title)) return false
+  // A row the file gives no author for matches on the full title alone, never on a head, a tail or a fuzzy form: a
+  // generic title ("Small Hours", "Quiet Rooms") would otherwise collapse into whoever holds a form of it. What it
+  // nearly matches stays for Choose edition (`isNearWork`).
+  if (!named && titleForms(row.title).full !== titleForms(found.title).full) return false
   return !named || byAuthor
 }
 

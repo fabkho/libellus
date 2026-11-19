@@ -82,8 +82,10 @@ describe('not the one book alone: a set, an omnibus, a reissue with extras, an a
 })
 
 describe('a row the file gives no author for matches nobody on a form of its title', () => {
-  it('does not take the title alone for any book that shares it', () => {
-    expect(isSameWork(row('Cold Water', []), book('someone-else', { title: 'Cold Water', authors: ['Anna Bramley'] }).book)).toBe(false)
+  it('does not take a form of the title for the book, only the full title', () => {
+    // The file names a generic title, no one to tell the books apart: the tail of another book's title is not it.
+    expect(isSameWork(row('Small Hours', []), book('tail', { title: 'Harbour Lights - Small Hours' }).book)).toBe(false)
+    expect(isSameWork(row('Small Hours', []), book('main', { title: 'Small Hours: A Novel' }).book)).toBe(false)
   })
 
   it('still takes the same full title', () => {
