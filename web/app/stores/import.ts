@@ -158,7 +158,7 @@ export const useImportStore = defineStore('import', () => {
     const bytes = new Uint8Array(await file.arrayBuffer().catch(() => new ArrayBuffer(0)))
     // Read on the device, counted against her Library and uploaded, all behind one door (data/import/startJob.ts): the file's
     // bytes, the day, whether a zip is read, and the app's languages.
-    const started = await startJobFromFile(backend, bytes, { today: isoDay(), zip: zip(), languages: searchLanguages() })
+    const started = await startJobFromFile(backend, bytes, { today: isoDay(), zip, languages: searchLanguages() })
     if (!started.ok) return refused(started)
     if (!started.total) {
       nothingNew.value = true
