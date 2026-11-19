@@ -1,5 +1,6 @@
 import { isNotFinished, type EntryStatus, type LibraryEntry } from './library'
 import { pageCountOf } from './progress'
+import { FINISHED_STATES, SEGMENTS, statusOf, type StatusState } from '../utils/bookStatus'
 
 /**
  * How the Library is looked at (issue #169, shared decisions in #166): the
@@ -28,8 +29,9 @@ export type Facet = 'status' | 'author' | 'rating' | 'year' | 'pages' | 'genre'
  * Finished's own status filter (it was the All / DNF pills): the entries whose latest read was
  * finished, or the ones whose latest read was given up (*Not finished*, `isNotFinished`).
  */
-export type FinishedStatus = 'finished' | 'notFinished'
-export const FINISHED_STATUSES: readonly FinishedStatus[] = ['finished', 'notFinished']
+export type FinishedStatus = Extract<StatusState, 'finished' | 'notFinished'>
+/** The same list the whole shelf is ordered by (utils/bookStatus.ts), so Finished and the segments cannot drift apart. */
+export const FINISHED_STATUSES: readonly FinishedStatus[] = FINISHED_STATES
 
 /** Rating: only the entries not rated, or at least this many quarter stars (4, 8, 12, 16, 20). */
 export type RatingChoice = 'unrated' | number
@@ -52,7 +54,11 @@ export type ListView = {
 
 export type LibraryViews = Record<EntryStatus, ListView>
 
-const STATUSES: readonly EntryStatus[] = ['want_to_read', 'reading', 'finished']
+/**
+ * The Status lists the views are kept for, in display order: the Library's own segments (utils/bookStatus.ts).
+ * A state added to the shelf grows here too, since `LibraryViews` is one view per Status.
+ */
+const STATUSES: readonly EntryStatus[] = SEGMENTS
 
 /** The sorts each Status offers, in the order the sheet lists them. */
 export const SORTS: Record<EntryStatus, readonly SortKey[]> = {
@@ -86,7 +92,8 @@ export function newListView(status: EntryStatus): ListView {
 }
 
 export function newLibraryViews(): LibraryViews {
-  return { want_to_read: newListView('want_to_read'), reading: newListView('reading'), finished: newListView('finished') }
+  // One view per Status, built in the shelf's order (utils/bookStatus.ts): a fourth segment brings its own.
+  return Object.fromEntries(STATUSES.map((status) => [status, newListView(status)])) as LibraryViews
 }
 
 /** The sort a Status can do: a remembered one it no longer offers is its own order. */
@@ -242,13 +249,14 @@ export function authorOptions(entries: readonly LibraryEntry[]): FacetOption[] {
   return tally(entries.flatMap((entry) => [...new Set(entry.book.authors)])).sort(byCountThenName)
 }
 
-/** Finished's two ways: how many of the entries were finished and how many were given up; only those that occur. */
+/**
+ * Finished's two ways: how many of the entries were finished and how many were given up; only those that occur,
+ * and in the shelf's own order (`FINISHED_STATUSES`): the finished reads first, the given-up ones under them.
+ * An entry is counted once, by `statusOf`'s answer, so this tally and a row's word can never disagree.
+ */
 export function statusOptions(entries: readonly LibraryEntry[]): FacetOption[] {
-  const given = entries.filter(isNotFinished).length
-  return [
-    { value: 'finished', count: entries.length - given },
-    { value: 'notFinished', count: given },
-  ].filter((option) => option.count > 0)
+  const states: FinishedStatus[] = entries.map((entry) => statusOf(entry, entry.latestSession).state as FinishedStatus)
+  return FINISHED_STATUSES.map((value) => ({ value, count: states.filter((state) => state === value).length })).filter((option) => option.count > 0)
 }
 
 /** The years the entries' reads ended in, newest first; `''` (undated) last. */

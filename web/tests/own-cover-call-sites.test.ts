@@ -43,9 +43,17 @@ const HAND_BOUND: Record<string, string> = {
 
 /**
  * The libraries that take the hosts as an argument instead of reading the switch: the helper itself, the shelf's document and
- * a section's prefetch (both built where no component is, so the caller passes `covers` / `hosts`).
+ * a section's prefetch (both built where no component is, so the caller passes `covers` / `hosts`), and the one row a shelf
+ * draws (`composables/useShelfRow.ts`: a Book, her entry in it and the hosts in, cover, title, author, Status and progress out).
  */
-const FOUNDATION = new Set(['utils/coverRef.ts', 'data/memberShelf.ts', 'utils/enrich.ts', 'data/bothReadReel.ts'])
+const FOUNDATION = new Set(['utils/coverRef.ts', 'data/memberShelf.ts', 'utils/enrich.ts', 'data/bothReadReel.ts', 'composables/useShelfRow.ts'])
+
+/**
+ * A screen that draws a Book's cover through the row's own view model instead of naming `coverImage` itself
+ * (`useShelfRow(<book>, <entry>, <size>, <hosts>)`, `shelfRowOf(<book>, <entry>, <size>, <hosts>, <words>)`): the hosts it
+ * hands on are the fourth argument, and the size the third, exactly where `coverImage` takes them.
+ */
+const ROW = /\b(?:useShelfRow|shelfRowOf)\(\s*[^,]+,\s*[^,]+,\s*([^,]+),\s*([A-Za-z_$][\w$]*)/
 
 const SOURCE_API = /\bcover(Src|For|Srcset|Chain)\(/g
 /** A file's own hosts: the whole `useCoverHosts()`, the direct spread, and the name it is kept under. */
@@ -92,22 +100,31 @@ function hostsOf(text: string): { proxy: boolean | null; hosts: string | null } 
 }
 
 /**
- * Every `coverImage(<book>, <size>, <hosts>)` and `coverPrefetch(<book>, <size>, <hosts>, <dpr>)` of a file: which helper, the
- * size it names, the hosts it hands on, and — for a prefetch — the pixel ratio it sizes by (2 where the file reads the
- * device's, the retina case the candidate matters in).
+ * Every way a file names a Book's cover image: `coverImage(<book>, <size>, <hosts>)` and
+ * `coverPrefetch(<book>, <size>, <hosts>, <dpr>)`, or the row's own view model, `useShelfRow` / `shelfRowOf` — the same
+ * Book and size, the hosts fourth. Which helper, the size it names, the hosts it hands on, and — for a prefetch, and a
+ * row whose size is the device's own — the pixel ratio it sizes by (2 where the file reads the device's, the retina case
+ * the candidate matters in).
  */
-function calls(text: string): { kind: 'coverImage' | 'coverPrefetch'; size: CoverSize | null; hosts: string; dpr: number }[] {
-  const found = [...text.matchAll(/cover(Image|Prefetch)\(\s*([^,()]*(?:\([^()]*\))?[^,()]*),\s*([^,]*),\s*([A-Za-z_$][\w$]*)(?:,\s*([^,)]+))?\s*\)/g)]
-  return found.map(([, kind, , size, hosts, dpr]) => {
-    const named = size!.trim().replaceAll("'", '')
-    const ratio = (dpr ?? '').trim()
-    return {
-      kind: kind === 'Prefetch' ? ('coverPrefetch' as const) : ('coverImage' as const),
-      size: (SIZES as string[]).includes(named) ? (named as CoverSize) : null,
-      hosts: hosts!,
-      dpr: /^\d+$/.test(ratio) ? Number(ratio) : /devicePixelRatio/.test(ratio) ? 2 : 1,
-    }
-  })
+function calls(text: string): { kind: 'coverImage' | 'coverPrefetch' | 'row'; size: CoverSize | null; hosts: string; dpr: number }[] {
+  const named = (size: string) => {
+    const name = size.trim().replaceAll("'", '')
+    return (SIZES as string[]).includes(name) ? (name as CoverSize) : null
+  }
+  const direct = [...text.matchAll(/cover(Image|Prefetch)\(\s*([^,()]*(?:\([^()]*\))?[^,()]*),\s*([^,]*),\s*([A-Za-z_$][\w$]*)(?:,\s*([^,)]+))?\s*\)/g)]
+  const rows = [...text.matchAll(new RegExp(ROW.source, 'g'))]
+  return [
+    ...direct.map(([, kind, , size, hosts, dpr]) => {
+      const ratio = (dpr ?? '').trim()
+      return {
+        kind: kind === 'Prefetch' ? ('coverPrefetch' as const) : ('coverImage' as const),
+        size: named(size!),
+        hosts: hosts!,
+        dpr: /^\d+$/.test(ratio) ? Number(ratio) : /devicePixelRatio/.test(ratio) ? 2 : 1,
+      }
+    }),
+    ...rows.map(([, size, hosts]) => ({ kind: 'row' as const, size: named(size!), hosts: hosts!, dpr: 1 })),
+  ]
 }
 
 /** The addresses of a `srcset`, without their widths. */
@@ -118,9 +135,10 @@ const files: File[] = sources(APP).map((path) => {
   return { path: path.slice(APP.length + 1), text, ...hostsOf(text) }
 })
 
-/** The screens that draw a Book's cover: every `.vue` that names one, plus the libraries that take the hosts in. */
+/** The screens that draw a Book's cover: every `.vue` that names one, through `coverImage` or through the row's view model. */
 const HELPER = /cover(Image|At|Prefetch)\(/
-const screens = files.filter((file) => file.path.endsWith('.vue') && HELPER.test(codeLines(file.text)))
+const drawsACover = (text: string) => HELPER.test(codeLines(text)) || ROW.test(codeLines(text))
+const screens = files.filter((file) => file.path.endsWith('.vue') && drawsACover(file.text))
 
 describe('every cover of a Book goes through coverImage', () => {
   it('binds no cover by hand: a UiCover of a Book names it with `v-bind="coverImage(…)"`', () => {
@@ -157,9 +175,11 @@ describe('every cover of a Book goes through coverImage', () => {
     (path, file) => {
       const asked = calls(file.text)
       expect(asked.length, `${path} has a coverImage call this test cannot read`).toBeGreaterThan(0)
+      // A screen drawing its rows through `useShelfRow` / `shelfRowOf` hands in its own declaration as well; one naming
+      // `coverImage` itself hands on that same one. Either way the file's one declaration decides every cover it draws.
+      const elsewhere = asked.filter((call) => call.hosts !== file.hosts).map((call) => call.kind)
+      expect(elsewhere, `${path} hands another hosts declaration on`).toEqual([])
       for (const call of asked) {
-        // The hosts the call is handed are the file's own, so the file's one declaration decides for every call on it.
-        expect(call.hosts, path).toBe(file.hosts)
         for (const size of call.size ? [call.size] : SIZES) {
           for (const url of [APPLE, OL]) {
             const hosts = { proxy: file.proxy!, own: false }

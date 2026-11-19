@@ -14,6 +14,7 @@
 // refresh quietly in the background.
 import type { EntryStatus, LibraryEntry } from '~/data/library'
 import { arrange, sortFor } from '~/data/libraryView'
+import { SEGMENTS } from '~/utils/bookStatus'
 import { useLibraryStore } from '~/stores/library'
 import { useGenresStore } from '~/stores/genres'
 import { useLibraryViewStore } from '~/stores/libraryView'
@@ -39,7 +40,6 @@ const sinceOf = (entry: LibraryEntry) => {
   return startedOn ? t('book.since', { date: formatDay(startedOn), day: dayOfRead(startedOn) }) : null
 }
 
-const SEGMENTS: readonly EntryStatus[] = ['want_to_read', 'reading', 'finished']
 const segment = ref<EntryStatus>('want_to_read')
 
 /**
