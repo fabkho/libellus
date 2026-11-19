@@ -1,5 +1,5 @@
 import type { BookSnapshot } from '../books.ts'
-import { COMPANION, fuzzyTitleMatch, sameVolume, volumeOf } from '../titleMatch.ts'
+import { COMPANION, fuzzyTitleMatch, notAlone, NUMBER_WORDS, sameVolume, volumeOf } from '../titleMatch.ts'
 import { isbnLanguage, normalize, splitSeriesTitle, surname, workTitle } from './readingTracker.ts'
 import type { ImportBook } from './rows.ts'
 
@@ -204,8 +204,16 @@ export function titleQuery(book: Pick<ImportBook, 'title' | 'authors'>): string 
   return [book.title, book.authors[0] ?? ''].join(' ').trim()
 }
 
-/** A volume's mark inside a series title: "T01", "Tome 01", "Band 2", "Book 3", "Vol. 4", "#1". Dropped from a title's forms. */
-const VOLUME_MARK = /\bt(?=\d)\d{1,3}\b|\b(?:tome|band|bd|book|buch|teil|vol|volume|part|folge)\.?\s*\d{1,3}\b|#\s*\d{1,3}\b/gi
+/**
+ * A volume's mark inside a series title: "T01", "Tome 01", "Band 2", "Book 3", "Vol. 4", "#1" — and, as `titleMatch.ts`
+ * reads it, the number spelled out ("Book Two", "Band zwei", "Volume IV"), in the words `NUMBER_WORDS` knows, so a
+ * spelled-out volume is dropped from a title's forms exactly as a digit is. Dropped from a title's forms.
+ */
+const NUMBER_WORDS_LIST = Object.keys(NUMBER_WORDS).sort((a, b) => b.length - a.length).join('|')
+const VOLUME_MARK = new RegExp(
+  `\\bt(?=\\d)\\d{1,3}\\b|\\b(?:tome|band|bd|book|buch|teil|vol|volume|part|folge)\\.?\\s*(?:\\d{1,3}|(?:${NUMBER_WORDS_LIST}))\\b|#\\s*\\d{1,3}\\b`,
+  'gi',
+)
 
 /**
  * The found title names a volume after the first (outside brackets, where a series' place is only an aside: "Title
@@ -310,6 +318,28 @@ export function sameAuthor(a: string, b: string): boolean {
 }
 
 /**
+ * What a title sets aside about itself, never the title itself: what it puts in brackets ("Ember Road (Box Set)", also
+ * the Goodreads series aside) and what it says after a separator ("Ember Road: Omnibus", "Ember Road - Anniversary
+ * Edition").
+ */
+const asides = (title: string): string[] => {
+  const unbracketed = title.replace(/\s*[([][^()[\]]*[)\]]/g, ' ')
+  const after = unbracketed.split(/[:|–—]|\s+-\s+/).slice(1).join(' ')
+  return [...title.matchAll(/[([]([^()[\]]*)[)\]]/g)].map(([, aside]) => aside!.trim()).concat(after)
+}
+
+/**
+ * Whether a title only says, in its brackets, what the book has always been called elsewhere: "Θνητοί Θεοί (Altered
+ * Carbon)" — a translation's own title next to the work's, in another script. The one aside a mark like "Box Set" must
+ * not be read from: a set of translated volumes is named after them in the same brackets.
+ */
+const LATIN = /\p{Script=Latin}/u
+const crossScript = (title: string): boolean => {
+  const own = LATIN.test(title.replace(/\s*[([][^()[\]]*[)\]]/g, ' '))
+  return [...title.matchAll(/[([]([^()[\]]*)[)\]]/g)].some(([, aside]) => Boolean(aside) && LATIN.test(aside!) !== own)
+}
+
+/**
  * THE rule of the import for "this edition is the row's book" (another edition,
  * any format, is fine), for the match, Choose edition and the cover fill alike:
  * the same title (`sameTitle`: a series prefix, a subtitle after a dash or the
@@ -317,11 +347,15 @@ export function sameAuthor(a: string, b: string): boolean {
  * author among the result's authors (`sameAuthor`: spelling, umlauts and a
  * typo aside). A title in another script whose brackets name the work
  * (`Θνητοί Θεοί (Altered Carbon)`) is a translation, not the same book; a summary, study guide or workbook
- * sold under the book's title is not the book.
+ * sold under the book's title is not the book, nor is a set, an omnibus, an anniversary edition or a tie-in of it.
  */
 export function isSameWork(row: Pick<ImportBook, 'title'> & { authors: readonly string[] }, found: Pick<BookSnapshot, 'title' | 'authors'>): boolean {
   // "Title (a Concise and Precise Summary)" is not the book, whatever its title and author say.
   if (COMPANION.test(found.title) && !COMPANION.test(row.title)) return false
+  // "Ember Road (Box Set)", "Ember Road: Omnibus", "Ember Road (Anniversary Edition)": what the title sets aside says
+  // it is not the book alone, which the title itself cannot show. Not read where the brackets are what names the work
+  // in another script ("Θνητοί Θεοί (Altered Carbon)"): that aside is the translation's, refused below instead.
+  if (!crossScript(found.title) && asides(found.title).some(notAlone) && !asides(row.title).some(notAlone)) return false
   const bare = splitSeriesTitle(found.title).title.replace(/\s*[([][^()[\]]*[)\]]/g, ' ')
   if (/\p{L}/u.test(bare) && !normalize(bare)) return false
   const wanted = row.authors[0]
@@ -331,6 +365,10 @@ export function isSameWork(row: Pick<ImportBook, 'title'> & { authors: readonly 
   if (!sameTitle(row.title, found.title) && !(LOOSE_TITLES && fuzzyTitleMatch(row.title, found.title, byAuthor))) return false
   // "Heartstopper: Volume Three" is not "Heartstopper: Volume Two": the colon drops the volume from the work title.
   if (!sameVolume(row.title, found.title)) return false
+  // A row the file gives no author for matches on the full title alone, never on a head, a tail or a fuzzy form: a
+  // generic title ("Small Hours", "Quiet Rooms") would otherwise collapse into whoever holds a form of it. What it
+  // nearly matches stays for Choose edition (`isNearWork`).
+  if (!named && titleForms(row.title).full !== titleForms(found.title).full) return false
   return !named || byAuthor
 }
 

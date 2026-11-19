@@ -22,7 +22,7 @@
  * series prefix ("Harbour Lights - Cold Water" / "Harbour Lights - Warm Sand") never meet through it.
  */
 
-const NUMBER_WORDS: Record<string, string> = {
+export const NUMBER_WORDS: Record<string, string> = {
   one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7', eight: '8', nine: '9', ten: '10',
   eins: '1', zwei: '2', drei: '3', vier: '4', fünf: '5', sechs: '6', sieben: '7', acht: '8', neun: '9', zehn: '10',
   i: '1', ii: '2', iii: '3', iv: '4', v: '5', vi: '6', vii: '7', viii: '8', ix: '9', x: '10',
@@ -63,8 +63,15 @@ export function normaliseTitle(text: string): string {
     .trim()
 }
 
-/** A volume's mark inside a series title: "T01", "Tome 01", "Band 2", "Book 3", "Vol. 4", "#1". */
-const VOLUME_MARK = /\bt(?=\d)\d{1,3}\b|\b(?:tome|band|bd|book|buch|teil|vol|volume|part|folge)\.?\s*(?:\d{1,3}|[ivx]{1,4})\b|#\s*\d{1,3}\b/gi
+/**
+ * A volume's mark inside a series title: "T01", "Tome 01", "Band 2", "Book 3", "Vol. 4", "#1" — and the number spelled
+ * out ("Book Two", "Band zwei", "Volume IV"), in the words `NUMBER_WORDS` knows, the ones `volumeOf` reads.
+ */
+const WORD_NUMBERS = Object.keys(NUMBER_WORDS).sort((a, b) => b.length - a.length).join('|')
+const VOLUME_MARK = new RegExp(
+  `\\bt(?=\\d)\\d{1,3}\\b|\\b(?:tome|band|bd|book|buch|teil|vol|volume|part|folge)\\.?\\s*(?:\\d{1,3}|[ivx]{1,4}|(?:${WORD_NUMBERS}))\\b|#\\s*\\d{1,3}\\b`,
+  'gi',
+)
 
 /** Where a series prefix ends or a subtitle begins: a dash between spaces, an en or em dash, a bar, or a colon. */
 const SEPARATOR = /\s+-\s+|\s*[–—|:]\s*/
@@ -82,6 +89,24 @@ const COMPANION_WORDS = new Set([
   'quiz', 'trivia', 'analysis', 'review', 'notes', 'calendar', 'boxed', 'set', 'collection', 'bundle', 'omnibus', 'anthology',
   'zusammenfassung', 'sparknotes', 'cliffsnotes',
 ])
+
+/**
+ * Of those words, those that name the same books gathered together ("Box Set", "Omnibus"), filtered through the set so
+ * that a word it loses is not silently kept here.
+ */
+const BUNDLED = ['boxed', 'set', 'collection', 'bundle', 'omnibus', 'anthology'].filter((word) => COMPANION_WORDS.has(word))
+
+/**
+ * The marks that say a title is not the one book alone: those books gathered together, a reissue with extras
+ * ("Anniversary Edition") or an adaptation ("Movie Tie-in"). Read in what a title sets aside — brackets, or what follows
+ * a separator ("Ember Road (Box Set)", "Ember Road: Omnibus") — never in the title itself, which is what a caller
+ * compares ("Ember Road: Study Guide" is still that book). `COMPANION` (a whole title about the book) and
+ * `COMPANION_WORDS` (a longer title's one extra word) stay their own questions over the same words.
+ */
+const NOT_ALONE = new RegExp(`\\bbox(?:ed)?\\s+set\\b|\\b(?:${BUNDLED.join('|')})\\b|\\btie[- ]?in\\b|\\banniversary edition\\b`, 'i')
+
+/** Whether an aside or a trailing segment says the title is not the one book alone (a set, extras, an adaptation). */
+export const notAlone = (residue: string): boolean => NOT_ALONE.test(normaliseTitle(residue))
 
 type Parts = { whole: string[]; parts: string[][] }
 
