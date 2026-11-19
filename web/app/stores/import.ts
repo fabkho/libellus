@@ -1,34 +1,26 @@
 import { defineStore } from 'pinia'
 import {
-  addedEntryIds,
   cancelImportJob,
-  deviceOf,
   hasSeen,
   importJobAhead,
   isLive,
   latestImportJob,
   markSeen,
   retryImportJob,
-  startImportJob,
   worthShowing,
   type ImportJob,
   type ImportJobError,
 } from '~/data/importJob'
 import { createRealtimePort, type RealtimeModule } from '~/data/importJobFeed'
 import { createJobWatch, type JobWatch } from '~/data/importJobWatch'
+import { isJobError, startJobFromFile, type StartedJob } from '~/data/import/startJob'
 import type { FileError, FileErrorDetail } from '~/data/importUpload'
 import { useCoverUpgradeStore } from '~/stores/coverUpgrade'
-import { prepareUpload } from '~/data/importUpload'
-import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 import { isoDay } from '~/utils/dates'
-import { writeImportHint } from '~/utils/importHint'
 import { UPGRADE_LISTS_KEY } from '~/utils/coverUpgradeList'
 import { importAmbient } from '~/utils/importProgress'
 import { parseAppConfig } from '~/utils/appConfig'
-
-/** Jobs whose books the one-time Apple cover upgrade has been made a list for (once per job, on this device). */
-const UPGRADED_KEY = 'libellus.import-jobs-upgraded'
 
 /** Where the device-side import kept its lookups and its place in line (#371): gone with that path, cleaned once. */
 const LEGACY_KEYS = ['libellus.import-matches', 'libellus.import-matches.v2', 'libellus.import-holder', 'libellus.import-device-slot']
@@ -44,24 +36,26 @@ export type ImportPhase = 'pick' | 'reading' | 'starting' | 'job'
 /**
  * The import screen (issues #40, #111) and the pill on every other screen, on the server job (proposal #329).
  *
- * The member picks a file; the app reads it on the device (data/importUpload.ts: which app wrote it is told by its header) and checks
- * what is in her Library already; the rows go up (`start_import_job`) and the app only watches from then on: the server looks the books
+ * The member picks a file; the device reads it, checks what is in her Library already and uploads its rows, all behind one door
+ * (data/import/startJob.ts: the file's app is told by its header), and the app only watches from then on: the server looks the books
  * up, decides their covers and writes them, while she uses the app, or closes it. There is no review step and no choice to
  * make: "Choose edition" lives on each Book's own page. What the screen and the pill show is the JOB's state (utils/importProgress.ts),
  * live over Supabase Realtime (data/importJobWatch.ts, data/importJobFeed.ts): the real client is loaded only while a job of hers is
  * live, and the app reads the job once when it opens and again after every reconnect and when the server has her changes subscribed. Nothing polls;
  * the one fallback is the silence net (a read when the socket said nothing for 30 s while the job is live, data/importJobWatch.ts).
  *
- * A done job makes the one-time Apple cover upgrade's list on this device (stores/coverUpgrade.ts) from the books it added.
+ * A done job's side quest — the Library read again, Home done offering the import, the one-time Apple cover upgrade's
+ * list from the books it added — belongs to the upgrade's store (stores/coverUpgrade.ts, `upgradeAfterJob`), called here in
+ * one line when the watcher sees the job `done`.
  */
 export const useImportStore = defineStore('import', () => {
   const backend = useBackend()
-  const libraryStore = useLibraryStore()
   const session = useSessionStore()
   // Composables need the app (the config, the language); asked here, not after an `await`.
   const config = parseAppConfig(useRuntimeConfig().public)
   const searchLanguages = useSearchLanguages()
-  // Whether a Hardcover zip is taken as well as a CSV (a build's flag, composables/useImportZip.ts).
+  // Whether a Hardcover zip is taken as well as a CSV (a build's flag, composables/useImportZip.ts): read here, as the
+  // other runtime config is, not after an `await`.
   const zip = useImportZip()
 
   const phase = ref<ImportPhase>('pick')
@@ -105,7 +99,7 @@ export const useImportStore = defineStore('import', () => {
         if (next && phase.value !== 'reading' && phase.value !== 'starting') phase.value = 'job'
         else if (!next && phase.value === 'job') phase.value = 'pick'
         blockUpgrade(live.value)
-        if (next?.state === 'done') void finished(next)
+        if (next?.state === 'done') void upgradeAfterJob(next.id)
       },
       port: createRealtimePort({
         url: app.supabaseUrl,
@@ -132,37 +126,14 @@ export const useImportStore = defineStore('import', () => {
       return false
     }
   }
+  /** A done job's side quest (stores/coverUpgrade.ts): the upgrade's store is only built when there is one to do. */
+  async function upgradeAfterJob(jobId: string) {
+    return (await upgraderOf()).upgradeAfterJob(jobId)
+  }
+
   /** A job of hers is live (the upgrade waits for it) or not (it goes on with what is left). */
   function blockUpgrade(liveNow: boolean) {
     if (upgrader || liveNow || upgradeWaiting()) void upgraderOf().then((store) => store.block(liveNow))
-  }
-
-  /** A job that is done: the Library shows the new books, Home stops offering the import, the Apple upgrade lists what was added (once). */
-  async function finished(done: ImportJob) {
-    const store = storage()
-    const member = session.member?.id
-    if (!store || !member || hasSeenUpgrade(store, done.id)) return
-    markUpgrade(store, done.id)
-    if (done.added > 0) writeImportHint(store, member, 'imported')
-    void libraryStore.load()
-    if (!backend || !done.added) return
-    const ids = await addedEntryIds(backend, done.id)
-    if (ids.data && session.member?.id === member) void upgraderOf().then((store) => store.start(done.id, ids.data!))
-  }
-  function hasSeenUpgrade(store: Storage, id: string): boolean {
-    try {
-      return (JSON.parse(store.getItem(UPGRADED_KEY) ?? '[]') as string[]).includes(id)
-    } catch {
-      return false
-    }
-  }
-  function markUpgrade(store: Storage, id: string) {
-    try {
-      const kept = JSON.parse(store.getItem(UPGRADED_KEY) ?? '[]') as string[]
-      store.setItem(UPGRADED_KEY, JSON.stringify([...kept.filter((one) => one !== id), id].slice(-20)))
-    } catch {
-      // Storage refused: the list may be made twice, which `makeUpgradeList` and the list's id make harmless.
-    }
   }
 
   // ---------------------------------------------------------------------- actions
@@ -185,33 +156,34 @@ export const useImportStore = defineStore('import', () => {
     fileName.value = file.name
     phase.value = 'reading'
     const bytes = new Uint8Array(await file.arrayBuffer().catch(() => new ArrayBuffer(0)))
-    const prepared = await prepareUpload(backend, bytes, isoDay(), { zip })
-    if (!prepared.ok) {
-      fileError.value = prepared.error
-      if (prepared.detail) fileErrorDetail.value = prepared.detail
-      phase.value = 'pick'
-      return
-    }
-    if (!prepared.rows.length) {
+    // Read on the device, counted against her Library and uploaded, all behind one door (data/import/startJob.ts): the file's
+    // bytes, the day, whether a zip is read, and the app's languages.
+    const started = await startJobFromFile(backend, bytes, { today: isoDay(), zip: zip(), languages: searchLanguages() })
+    if (!started.ok) return refused(started)
+    if (!started.total) {
       nothingNew.value = true
       phase.value = 'pick'
       return
     }
     phase.value = 'starting'
-    const started = await startImportJob(backend, {
-      rows: prepared.rows,
-      source: prepared.source,
-      device: deviceOf(storage(), () => crypto.randomUUID()),
-      already: prepared.already,
-      languages: searchLanguages(),
-      collectionOrder: prepared.collectionOrder,
-      emptyCollections: prepared.emptyCollections,
-    })
-    await settle(started)
+    await settle({ data: started.jobId, error: null })
+  }
+
+  /** The file's or the server's refusal: told on the screen, back at the picker. */
+  function refused(answer: Extract<StartedJob, { ok: false }>) {
+    if (isJobError(answer.error)) {
+      startError.value = answer.error
+      // A job of hers is live already (another device started it, or this was pressed twice): that one is what to show.
+      if (answer.error === 'import_running') void refresh()
+    } else {
+      fileError.value = answer.error
+      if (answer.detail) fileErrorDetail.value = answer.detail
+    }
+    phase.value = 'pick'
   }
 
   /** The start's (or the retry's) answer: the job is shown and followed, or the refusal is told. */
-  async function settle(started: Awaited<ReturnType<typeof startImportJob>>) {
+  async function settle(started: Awaited<ReturnType<typeof retryImportJob>>) {
     if (started.error) {
       startError.value = started.error
       phase.value = 'pick'

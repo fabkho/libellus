@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { importedKeys, libraryTitleIndex } from './bookImport'
+import { importedKeys, libraryTitleIndex } from './import/dedupe'
 import { createCatalogueSearch } from './catalogueSearch'
 import { decodeExport, NotACsvFileError } from './import/csv'
 import { parseExport } from './import/detect'
