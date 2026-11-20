@@ -32,10 +32,17 @@ const chrome = useSearchChrome()
 const modal = useModalShown()
 
 const { hidden: scrolledAway, reveal } = useHideOnScroll(() => !search.isOpen && chrome.value === 'tabs' && !modal.value)
-// A screen that fills the room (`immersive`: Your shelf, #23) has the bar away for as long as it shows.
-const away = computed(() => scrolledAway.value || Boolean(route.meta.immersive))
-/** Search is taking the bar over: it is where it rests at once, for the morph to measure. */
-const still = computed(() => search.isOpen || chrome.value !== 'tabs')
+/**
+ * Whether the bar is out of the way, and whether it belongs where it is at once (`utils/tabBar.ts`). A
+ * screen that fills the room (`immersive`: Your shelf, a Book's chapter of Notes, a buddy read's thread)
+ * draws it away from its first frame instead of sliding it away over the new page's own first frames: entered
+ * from a tab, the bar left across the thread's composer for the length of `exit` — a flash of the old chrome
+ * over the new screen — while the same screen entered from a reload showed nothing of the kind
+ * (docs/MOTION.md, "Tab bar away").
+ */
+const bar = computed(() =>
+  barOnScreen({ immersive: Boolean(route.meta.immersive), scrolledAway: scrolledAway.value, searchOpen: search.isOpen, morphing: chrome.value !== 'tabs' }),
+)
 
 // Home, Library and, while its setting is on (Profile → Account), Friends: the feed as a tab of its own.
 // Search comes after them: it is an action, the bar's detached last place.
@@ -64,8 +71,8 @@ function tapped(event: MouseEvent, to: string) {
   <nav
     :aria-label="t('shell.tabsLabel')"
     class="bar float-bottom glass fixed left-1/2 z-20 flex -translate-x-1/2 rounded-pill px-xs edge shadow-float"
-    :class="[chrome === 'palette' && 'invisible', away && 'away', still && 'still']"
-    :data-away="away || undefined"
+    :class="[chrome === 'palette' && 'invisible', bar.away && 'away', bar.still && 'still']"
+    :data-away="bar.away || undefined"
     data-morph="capsule"
     data-testid="shell.tabs"
     @focusin="reveal"
