@@ -19,6 +19,8 @@
 // "hidden" screen with "Show anyway", and only her yes (a peek, kept on this device; her chapter does not move) asks the database for it. There are no spoiler marks on single notes (a chapter is opened to be read).
 // Read when it opens, when the app comes back to the front and on Refresh: no Realtime (tests/notes-entry.test.ts).
 import type { BarAction } from '#layers/ui/app/components/ui/ReactionBar.vue'
+import { durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
+import { revealThread } from '~/utils/threadReveal'
 import { isRetryableNoteError, NOTE_EMOJI, type NoteQuote } from '~/data/notes'
 import type { ReportReason } from '~/data/buddyReads'
 import { isBookId, isChapterSegment, notesPath } from '~/utils/notesRoute'
@@ -140,7 +142,7 @@ useHead({ title: () => `${title.value || t('notes.title')} · ${t('app.name')}` 
 
 // ------------------------------------------------------------------ the audience, which no buddy read has
 
-const chat = useTemplateRef<{ jumpTo: (id: string) => Promise<void>; toNewest: () => void }>('chat')
+const chat = useTemplateRef<{ scroller: HTMLElement | null; jumpTo: (id: string) => Promise<void>; toNewest: () => void }>('chat')
 
 /** The audience of the note she is writing. */
 const level = ref<NoteLevel>(clampToOffer(store.remembered, store.publicEnabled))
@@ -314,6 +316,21 @@ async function confirmBlock() {
 // the front (this page has no channel): the screen mounts all of it and releases it when the page goes.
 screen.start()
 // What this page asks besides its thread: the Book (its title over the thread) and the Everyone switch.
+// The reveal (docs/MOTION.md, "A chapter's notes"; utils/threadReveal.ts): a thread the store already held is
+// drawn in its first frame, so it is revealed then — one motion for the whole thread, in place, never a
+// per-message cascade (six notes and forty take the same `standard`). A thread that had to be read is left to
+// the motion its own arrival plays, and a reload therefore still shows the skeletons.
+onMounted(() => {
+  if (!screen.revealed.value) return
+  const reduced = prefersReducedMotion()
+  // The scroller itself, never the list inside it: a `translateY` on the list would grow the scroller's own
+  // content by that much and it would slide back at the end (utils/threadReveal.ts).
+  revealThread(chat.value?.scroller ?? null, {
+    duration: durationToken(reduced ? 'quick' : 'standard'),
+    easing: easingToken('standard'),
+    reduced,
+  })
+})
 onMounted(() => {
   void books.load(bookId.value)
   void store.loadConfig()
