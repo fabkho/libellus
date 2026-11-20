@@ -139,6 +139,12 @@ export type ThreadScreen<Item extends ThreadItem> = {
   /** The page's or the read's own refusal, as a code (a send that was refused is `notice`, already worded). */
   error: Ref<ThreadError | null>
   status: ComputedRef<'loading' | 'ready' | 'error'>
+  /**
+   * The thread was in the store when the screen mounted: its first frame is `ready`, and the page plays
+   * the thread's reveal *instead of* the skeleton (docs/MOTION.md, "A chapter's notes"). False for a thread
+   * that had to be read: its messages arrive with the motion of their own arrival.
+   */
+  revealed: ComputedRef<boolean>
   hasMore: ComputedRef<boolean>
   olderStatus: ComputedRef<'idle' | 'loading'>
   /** The page before the oldest message: whether the list grew. */
@@ -382,6 +388,19 @@ export function useThreadScreen<Bubble, Item extends ThreadItem>(adapter: Thread
     return paging.loaded ? 'ready' : 'loading'
   })
 
+  /**
+   * Whether this mount opened on a thread the store already held, read once: `adapter.paging()` is asked
+   * synchronously here, in setup, before the open the watch below starts — so the first frame of a
+   * re-entry is `ready`, and the page reveals what it drew instead of the skeleton (the reveal, and how it
+   * is keyed, are the page's own: `pages/notes/[book]/[chapter].vue`).
+   *
+   * Only the mount counts. A thread that had to be read is false for good: its messages come in from
+   * under the skeleton, with the motion of their own arrival, and a second animation over those would be
+   * one too many.
+   */
+  const revealed = computed(() => held)
+  const held = adapter.paging().loaded && !adapter.missing()
+
   /** Back to the page's own list when the history has nowhere to go (a link opened straight into the thread). */
   function back(): void {
     if (window.history.state?.back) useRouter().back()
@@ -494,6 +513,7 @@ export function useThreadScreen<Bubble, Item extends ThreadItem>(adapter: Thread
     items,
     error,
     status,
+    revealed,
     hasMore,
     olderStatus,
     loadOlder,
