@@ -28,7 +28,17 @@ export type BarOnScreen = {
  * `searchOpen` and `morphing` (the palette is taking it over: where it rests, with no transition, for
  * the morph to measure).
  */
-export function barOnScreen({ immersive, scrolledAway, searchOpen, morphing }: { immersive: boolean; scrolledAway: boolean; searchOpen: boolean; morphing: boolean }): BarOnScreen {
+export function barOnScreen({
+  immersive,
+  scrolledAway,
+  searchOpen,
+  morphing,
+}: {
+  immersive: boolean
+  scrolledAway: boolean
+  searchOpen: boolean
+  morphing: boolean
+}): BarOnScreen {
   if (immersive) return { away: true, still: true }
   return { away: scrolledAway, still: searchOpen || morphing }
 }
