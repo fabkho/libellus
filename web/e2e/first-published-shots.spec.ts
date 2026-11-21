@@ -6,7 +6,8 @@ import { goto, signedIn, untilStill } from './support'
 
 /**
  * The pull request's screenshots (they assert nothing the other flows do not): a Book whose work was first published in
- * 1949, in a 2023 Penguin edition — the facts row at the top, the edition line under About — in both themes.
+ * 1949, in a 2023 Penguin edition — the metadata block under About, its first cell the work's year and its second this
+ * edition's publisher and year — in both themes.
  *
  * Run by hand, against a **throwaway stack**: it renames and republishes the Book so the shot reads like a real one, which
  * takes it out of the run's sweep (`tests/support/stack.ts`, by publisher and title tag).
@@ -43,11 +44,11 @@ for (const theme of ['light', 'dark'] as const) {
   test.describe(`${theme}`, () => {
     test.use({ colorScheme: theme, viewport: { width: 393, height: 852 } })
 
-    test(`the Book page: 1949 in the facts row, "This edition: Penguin, 2023" under About (${theme})`, async ({ page }) => {
+    test(`the Book page: 1949 in the block under About, and "This edition · Penguin, 2023" beside it (${theme})`, async ({ page }) => {
       const member = await signedIn(page)
       const bookId = await shelf(member)
       await goto(page, `/book/${bookId}`)
-      await expect(page.getByTestId('book.facts')).toContainText(String(FIRST_YEAR))
+      await expect(page.getByTestId('book.firstPublished')).toHaveText(String(FIRST_YEAR))
       await expect(page.getByTestId('book.thisEdition')).toBeVisible()
       await untilStill(page)
       await page.evaluate(() => window.scrollTo(0, 0))

@@ -246,7 +246,7 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
       await held
       await route.continue().catch(() => {})
     })
-    // From Home: the card's title, cover and series are the hero; authors, facts, the action and the description wait.
+    // From Home: the card's title, cover and series are the hero; authors, the action and the description wait.
     await page.getByTestId('home.nextLink').first().click()
     await expect(page.getByTestId('book.title')).toHaveText(next!.next)
     await expect(page.getByTestId('book.actionsLoading')).toBeVisible()

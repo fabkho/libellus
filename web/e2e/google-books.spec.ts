@@ -89,12 +89,12 @@ test('a book only Google knows is found in Search, opened and added; nothing say
   expect(asked.map((body) => body.action)).toEqual(['search'])
   expect(asked[0]).toMatchObject({ query: 'Leuchten der Nordsee Beispiel' })
 
-  // Opened: the page shows its facts, and still not a word about the source.
+  // Opened: the page shows the work's year in its metadata block, and still not a word about the source.
   await results.first().click()
   await expect(page).toHaveURL(new RegExp(`/book/isbn-${ISBN13}$`))
   await expect(page.getByTestId('book.title')).toHaveText('Das Leuchten der Nordsee')
   await expect(page.getByTestId('book.authors')).toHaveText('Ida Beispiel')
-  await expect(page.getByTestId('book.facts')).toContainText('2019')
+  await expect(page.getByTestId('book.firstPublished')).toHaveText('2019')
   await expect(page.getByTestId('book.notInLibrary')).toHaveText(en.book.notInLibrary)
   await expect(page.locator('main, body').first()).not.toContainText(/google/i)
 

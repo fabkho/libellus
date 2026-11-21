@@ -148,7 +148,6 @@ export function bookOpenFlows() {
       await expect(page.getByTestId('book.hero').locator('[data-cover]')).toBeVisible()
       await expect(page.getByTestId('book.seriesPreview')).toContainText('Book 2 of 2')
       await expect(page.getByTestId('book.authorsLoading')).toBeVisible()
-      await expect(page.getByTestId('book.factsLoading')).toBeVisible()
       await expect(page.getByTestId('book.actionsLoading')).toBeVisible()
       await expect(page.getByTestId('book.aboutLoading')).toBeVisible()
       await expect(page.getByTestId('book.loading')).toHaveCount(0)
@@ -158,10 +157,11 @@ export function bookOpenFlows() {
       await untilStill(page)
       await page.screenshot({ path: testInfo.outputPath('hero-mid-load.png') })
       await testInfo.attach('hero-mid-load', { path: testInfo.outputPath('hero-mid-load.png'), contentType: 'image/png' })
+      // The hero's own boxes: the facts row is gone (docs/plans/book-hero-metadata.md) and the metadata block that took it
+      // sits under About, below everything measured here, so it is no longer one of them.
       const loadingBoxes = {
         title: await boxOf(page, 'book.title'),
         series: await boxOf(page, 'book.seriesPreview'),
-        facts: await boxOf(page, 'book.factsLoading'),
         button: await page.getByTestId('book.actionsLoading').evaluate((el) => {
           const box = el.lastElementChild!.getBoundingClientRect()
           return { top: Math.round(box.top + scrollY), height: Math.round(box.height) }
@@ -179,11 +179,9 @@ export function bookOpenFlows() {
       const loaded = {
         title: await boxOf(page, 'book.title'),
         series: await boxOf(page, 'book.series'),
-        facts: await boxOf(page, 'book.facts'),
       }
       expect(loaded.title).toEqual(loadingBoxes.title)
       expect(Math.abs(loaded.series.top - loadingBoxes.series.top), 'the series line').toBeLessThanOrEqual(1)
-      expect(Math.abs(loaded.facts.top - loadingBoxes.facts.top), 'the facts line').toBeLessThanOrEqual(1)
       // The action is where its skeleton was, with the height of it.
       const button = await boxOf(page, 'book.add')
       expect(Math.abs(button.top - loadingBoxes.button.top), 'the action').toBeLessThanOrEqual(1)

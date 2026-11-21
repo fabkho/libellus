@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // The book page (D's book-new / book-reading / book-finished): the cover
-// lights the room. Under it the title, the author, the facts in small mono,
+// lights the room. Under it the title, the author, the genres and the Goodreads line and nothing else,
 // then the Book's state and the one action it asks for — Add to Library for a
 // Book that is not in the Library, Start reading on Want to read, Update
 // progress while it is being read (under its progress; Finish and DNF live in
@@ -19,7 +19,7 @@
 // now is the lit action on Want to read and Reading and opens the built-in
 // reader over the page, its cover flying from this one (components/reader/Reader.vue).
 // How she read it (Read as, #169) is set in the options sheet.
-import { formatOf, sourceKeys } from '~/data/books'
+import { sourceKeys } from '~/data/books'
 import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useEditionStore } from '~/stores/edition'
@@ -31,7 +31,6 @@ import { useReadingStore } from '~/stores/reading'
 import { bookPageKey, followEdition } from '~/utils/bookPageKey'
 import { onIdle } from '~/utils/idle'
 import { previewOf } from '~/utils/bookPreview'
-import { editionLine, firstPublishedYear } from '~/utils/publishedYear'
 import { afterMotion } from '#layers/ui/app/utils/motion'
 import { loadReader, prefetchReader } from '~/utils/readerChunks'
 
@@ -157,34 +156,6 @@ useHead({ title: () => (heroBook.value ? `${heroBook.value.title} · ${t('app.na
 
 /** The Book's id in the Catalogue (none yet for a search result): what its authors and series are asked by. */
 const catalogueId = computed(() => (book.value && 'id' in book.value ? book.value.id : null))
-const facts = computed(() => {
-  const b = book.value
-  // Until the Book is there, only the one fact a list may have carried of this very edition (its page count).
-  if (!b) return preview?.pageCount ? [t('book.pages', { count: preview.pageCount })] : []
-  // The format that counts: her own word on her edition, else what its source said.
-  const format = formatOf(b, entry.value?.formatOverride)
-  // When the work was first published, not when this copy was printed (utils/publishedYear.ts: the edition's year falls
-  // back where there is no trustworthy work, and says so in the edition line under About).
-  const published = firstPublishedYear(b)
-  return [
-    published ? String(published) : null,
-    b.pageCount ? t('book.pages', { count: b.pageCount }) : null,
-    format ? t(`book.formatFact.${format}`) : null,
-    b.publisher,
-  ].filter((fact): fact is string => Boolean(fact))
-})
-/**
- * The edition line under About ("This edition: Penguin, 2023"): what the facts row's year deliberately stops saying now
- * that it is the work's first publication. `editionLine` decides when it adds something (utils/publishedYear.ts), and
- * the one key it uses collapses a publisher or a year that is unknown.
- */
-const printedAs = computed(() => {
-  const parts = book.value ? editionLine(book.value) : null
-  if (!parts) return ''
-  if (parts.publisher && parts.year) return t('book.thisEdition', parts)
-  if (parts.publisher) return t('book.thisEditionPublisherOnly', parts)
-  return t('book.thisEditionYearOnly', parts)
-})
 const latest = computed(() => entry.value?.latestSession ?? null)
 /** Finished because the read was given up, not because the book was done. */
 const notFinished = computed(() => (entry.value ? isNotFinished(entry.value) : false))
@@ -341,22 +312,11 @@ function back() {
       />
       <span v-else class="line body-line mt-xs w-1/2" aria-hidden="true" data-testid="book.authorsLoading"><span class="skeleton wave w-full" :style="{ '--wave': 0.1 }" /></span>
       <SeriesLine :book-id="catalogueId" :entry="entry" :preview="preview?.series ?? null" />
-      <p v-if="facts.length" class="eyebrow mt-sm flex items-center gap-sm" data-testid="book.facts">
-        <!-- Drawn with dots between them; assistive tech reads them as one phrase with commas, or they run
-             together ("2012240 pages") or, split up, make TalkBack stop on every piece. -->
-        <span class="sr-only">{{ facts.join(t('common.listSeparator')) }}</span>
-        <template v-for="(fact, i) in facts" :key="fact">
-          <span v-if="i" class="dot" aria-hidden="true" /><span aria-hidden="true">{{ fact }}</span>
-        </template>
-      </p>
-      <span v-else-if="loading" class="line eyebrow-line mt-sm w-1/3" aria-hidden="true" data-testid="book.factsLoading"><span class="skeleton wave w-full" :style="{ '--wave': 0.2 }" /></span>
       <template v-if="book">
         <!-- Its genres, up to three, and the way to set them (#168). -->
         <BookGenres :book="book" :entry="entry" />
         <!-- Goodreads' rating, once known (#69). -->
         <BookGoodreads :book="book" />
-        <!-- Book links, the instance's and the member's own (#116). -->
-        <BookLinks :book="book" />
       </template>
       <!-- The old edition, over the new one while a change of edition plays. -->
       <div ref="heroWas" class="pointer-events-none absolute inset-0" data-edition-was aria-hidden="true" inert />
@@ -437,7 +397,11 @@ function back() {
       <span class="skeleton wave block h-(--size-button) w-full rounded-pill" :style="{ '--wave': 0.5 }" />
     </div>
 
-    <section v-if="description" class="relative px-ml pt-xl" data-testid="book.about">
+    <!-- What the Book is about, and — under its text, inside the same section — the metadata block (the year the work was
+         first published, which edition this is, its format, its pages and its links; components/book/Meta.vue, and the settled
+         mock docs/prototypes/book-detail/m5.html). The action, About and the pair after them are three sections with room
+         between them: 48 above About, 32 above the pair. -->
+    <section v-if="description" class="relative px-ml pt-xxl" data-testid="book.about">
       <h2 class="eyebrow mb-ms">{{ t('book.about') }}</h2>
       <p class="text-subhead whitespace-pre-line text-ink-muted wrap-anywhere" :class="long && !expanded && 'clamped'" data-testid="book.description">
         {{ description }}
@@ -451,15 +415,17 @@ function back() {
       >
         {{ t('book.more') }}
       </button>
+      <!-- 16 under the text, or under More's own 44 px box when the button is there (the mock measures the same gap either way). -->
+      <BookMeta v-if="book" class="mt-md" :book="book" :entry="entry" />
     </section>
-    <section v-else-if="loading" class="relative px-ml pt-xl" aria-hidden="true" data-testid="book.aboutLoading">
+    <section v-else-if="loading" class="relative px-ml pt-xxl" aria-hidden="true" data-testid="book.aboutLoading">
       <span class="line eyebrow-line mb-ms w-1/4"><span class="skeleton wave w-full" :style="{ '--wave': 0.6 }" /></span>
       <span v-for="i in 4" :key="i" class="line subhead-line" :class="i === 4 ? 'w-2/3' : 'w-full'"><span class="skeleton wave w-full" :style="{ '--wave': 0.6 + i * 0.1 }" /></span>
     </section>
-    <!-- Which edition this is and when it was printed, where the facts row no longer says it: that year is the work's
-         first publication now (utils/publishedYear.ts, `printedAs`). Its own line rather than part of About, because a
-         Book without a description (a Catalogue row the check has not written yet) still has an edition to name. -->
-    <p v-if="printedAs" class="relative px-ml mt-ms text-caption text-ink-faint" data-testid="book.thisEdition">{{ printedAs }}</p>
+    <!-- A Book with no description (a Catalogue row the check has not written yet) has no About to head, and still has an
+         edition to name: the block stands alone, 12 under the action, where the quiet "This edition:" line used to (the
+         mock's panel C, `.cardmeta.alone`). -->
+    <BookMeta v-else-if="book" class="relative px-ml mt-ms" :book="book" :entry="entry" />
 
     <!-- V4 (docs/plans/book-actions.md; docs/parity.md, the Book page's layout): *Notes* and *Read together* are the pair directly under the About text and
          above the reading log — one box with two ways in (components/book/ActionPair.vue owns the fill, the radius, the hairline edge and the hairline

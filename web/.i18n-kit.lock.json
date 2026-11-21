@@ -633,6 +633,11 @@
           "de"
         ]
       },
+      "book.firstPublished": {
+        "05b999139309f9d4": [
+          "de"
+        ]
+      },
       "book.format.audiobook": {
         "8716cb3d8010144e": [
           "de"
@@ -673,6 +678,11 @@
           "de"
         ]
       },
+      "book.formatLabel": {
+        "2f343666aaa88c44": [
+          "de"
+        ]
+      },
       "book.goodreads.name": {
         "7acf32567a4af700": [
           "de"
@@ -695,6 +705,11 @@
       },
       "book.goodreads.reviews": {
         "52b20687d2731031": [
+          "de"
+        ]
+      },
+      "book.language": {
+        "a4fe65264ef7dbb3": [
           "de"
         ]
       },
@@ -755,6 +770,11 @@
       },
       "book.pages": {
         "d46e57d6ac42cf6a": [
+          "de"
+        ]
+      },
+      "book.pagesLabel": {
+        "9046da16aea909ba": [
           "de"
         ]
       },
@@ -1365,6 +1385,11 @@
       },
       "book.thisEdition": {
         "aacaf506201082b5": [
+          "de"
+        ]
+      },
+      "book.thisEditionLabel": {
+        "731ecec543b713f5": [
           "de"
         ]
       },
