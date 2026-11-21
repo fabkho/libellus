@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.51.0](https://github.com/fabkho/libellus/compare/v1.50.2...v1.51.0) (2026-11-21)
+
+
+### Features
+
+* **book:** the metadata piles out of the hero and under About ([#611](https://github.com/fabkho/libellus/issues/611)) ([aaec716](https://github.com/fabkho/libellus/commit/aaec7165605872393872141fd8a4e024d8d92986))
+
 ## [1.50.2](https://github.com/fabkho/libellus/compare/v1.50.1...v1.50.2) (2026-11-21)
 
 
