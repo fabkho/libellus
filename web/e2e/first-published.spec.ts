@@ -7,8 +7,8 @@ import { goto, signedIn, untilStill } from './support'
 
 /**
  * The two years on the Book page (docs/proposals/first-published-data-2026-11-15.md §4, `utils/publishedYear.ts`):
- * the facts row says when the *work* was first published, and a quiet line under About says which edition this is and
- * when it was printed — but only where the two differ, so nothing is said twice.
+ * the metadata block under About says when the *work* was first published, and the cell beside it which edition this is
+ * and when it was printed — the edition's year only where the two differ, so nothing is said twice.
  *
  * A Book that enrich matched is what this needs: a Book in the Catalogue with a `book_works` row whose work carries an
  * earlier `first_year` than the edition's `published_year`. Nothing in the e2e fixtures made one (they cover reading,
@@ -33,34 +33,35 @@ async function linkWork(bookId: string, title: string, firstYear: number) {
 
 test.describe.configure({ mode: 'serial' })
 
-test('a Book whose work predates its edition shows the work’s year, and the edition line under About', async ({ page }) => {
+test('a Book whose work predates its edition shows the work’s year, and which edition it is under About', async ({ page }) => {
   const member = await signedIn(page)
 
   const snapshot = sharedBook('First Published')
   const title = snapshot.title
   const bookId = await shelveBook(member, snapshot, 'reading')
-  // A publisher and a year this edition really has, so the line has both parts and the facts row has a contrast.
+  // A publisher and a year this edition really has, so the edition's cell has both parts and the work's year a contrast.
   await sql('update public.books set published_year = $2, publisher = $3 where id = $1', [bookId, EDITION_YEAR, 'Penguin'])
   await linkWork(bookId, `${title} (the work)`, FIRST_YEAR)
 
   await goto(page, `/book/${bookId}`)
-  // The facts row says the work's year, not the edition's.
-  await expect(page.getByTestId('book.facts')).toContainText(String(FIRST_YEAR))
-  await expect(page.getByTestId('book.facts')).not.toContainText(String(EDITION_YEAR))
-  // …and the line under About says which edition this is and when it was printed.
-  await expect(page.getByTestId('book.thisEdition')).toHaveText(
-    en.book.thisEdition.replace('{publisher}', 'Penguin').replace('{year}', String(EDITION_YEAR)),
-  )
+  // The block under About says the work's year, and the edition's cell does not repeat it.
+  await expect(page.getByTestId('book.firstPublished')).toHaveText(String(FIRST_YEAR))
+  await expect(page.getByTestId('book.thisEditionCell')).not.toContainText(String(FIRST_YEAR))
+  // …and the same block says which edition this is and when it was printed, label over value.
+  await expect(page.getByTestId('book.thisEdition')).toContainText(en.book.thisEditionLabel)
+  await expect(page.getByTestId('book.thisEditionCell')).toContainText('Penguin')
+  await expect(page.getByTestId('book.thisEditionCell')).toContainText(String(EDITION_YEAR))
   await untilStill(page)
 
-  // G1: a work dated after its own edition is a wrong link, so the hero keeps the edition's year and the line says nothing.
+  // G1: a work dated after its own edition is a wrong link, so the block keeps the edition's year, and the edition's cell
+  // says the publisher alone rather than the same number twice.
   await sql('update public.works set first_year = $2 where title = $1', [`${title} (the work)`, EDITION_YEAR + 10])
   await goto(page, `/book/${bookId}`)
-  await expect(page.getByTestId('book.facts')).toContainText(String(EDITION_YEAR))
-  await expect(page.getByTestId('book.thisEdition')).toHaveCount(0)
+  await expect(page.getByTestId('book.firstPublished')).toHaveText(String(EDITION_YEAR))
+  await expect(page.getByTestId('book.thisEditionCell')).toHaveText('Penguin')
 })
 
-test('a Book no work was ever matched to keeps today’s year and has no edition line', async ({ page }) => {
+test('a Book no work was ever matched to keeps today’s year, and its edition cell says only the publisher', async ({ page }) => {
   const member = await signedIn(page)
 
   const snapshot = sharedBook('No Work')
@@ -69,7 +70,8 @@ test('a Book no work was ever matched to keeps today’s year and has no edition
   await goto(page, `/book/${bookId}`)
   // The edition's own year, as before: no work, so nothing better to show.
   await expect(page.getByTestId('book.title')).toHaveText(snapshot.title)
-  await expect(page.getByTestId('book.facts')).toContainText(String(snapshot.year))
-  // The same number would only be repeated under the description, so there is no line at all.
-  await expect(page.getByTestId('book.thisEdition')).toHaveCount(0)
+  await expect(page.getByTestId('book.firstPublished')).toHaveText(String(snapshot.year))
+  // The same number would only be said twice, so the edition's cell keeps its publisher alone.
+  await expect(page.getByTestId('book.thisEditionCell')).toHaveText(snapshot.publisher!)
+  await expect(page.getByTestId('book.thisEdition')).toContainText(en.book.thisEditionLabel)
 })

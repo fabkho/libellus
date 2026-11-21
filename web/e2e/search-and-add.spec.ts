@@ -54,7 +54,7 @@ test('a member finds a book, opens it, adds it and sees it on Want to read', asy
   await expect(page.getByTestId('search.overlay')).toBeHidden()
   await expect(page.getByTestId('book.title')).toHaveText('Piranesi')
   await expect(page.getByTestId('book.authors')).toHaveText('Susanna Clarke')
-  await expect(page.getByTestId('book.facts')).toContainText('2020')
+  await expect(page.getByTestId('book.firstPublished')).toHaveText('2020')
   await expect(page.getByTestId('book.description')).toContainText('Piranesi')
   await expect(page.getByTestId('book.notInLibrary')).toHaveText(en.book.notInLibrary)
 

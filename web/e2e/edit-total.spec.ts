@@ -125,7 +125,7 @@ test('the Book page follows her count, and the Profile\'s Pages figure with it',
   await page.getByTestId('editSession.submit').click()
   await expect(page.getByTestId('editSession')).toBeHidden()
 
-  // The Book's own count is the edition's, which is not hers to change (book.facts keeps 144).
+  // The Book's own count is the edition's, which is not hers to change (the metadata block's Pages keeps 144).
   // The entry's count is what the Library lists and the Profile's Pages figure count.
   await page.getByTestId('book.back').click()
   await page.getByTestId('shell.avatar').click()
