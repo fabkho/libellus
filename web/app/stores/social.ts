@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import {
   createSocial,
   PEOPLE_PAGE,
+  type FinishedCursor,
   type FollowTarget,
   type MemberCard,
   type MemberProfile,
@@ -294,6 +295,9 @@ export const useSocialStore = defineStore('social', () => {
   const profile = async (member: string): Promise<SocialResult<MemberProfile | null>> => repo()?.profile(member) ?? { data: null, error: 'unknown' }
   const bothRead = async (member: string, year: number | null = null) => repo()?.bothRead(member, year) ?? { data: null, error: 'unknown' as const }
   const want = async (member: string) => repo()?.want(member) ?? { data: null, error: 'unknown' as const }
+  /** Her whole finished history, one page at a time (her shelf's Stack): her profile stops at twelve. */
+  const memberFinished = async (member: string, after: FinishedCursor | null = null, limit?: number) =>
+    repo()?.memberFinished(member, after, limit) ?? { data: null, error: 'unknown' as const }
 
   function clearError(action?: SocialAction) {
     errors.value = action ? { ...errors.value, [action]: undefined } : {}
@@ -353,6 +357,7 @@ export const useSocialStore = defineStore('social', () => {
     block,
     profile,
     want,
+    memberFinished,
     bothRead,
     clearError,
     reset,

@@ -62,8 +62,9 @@ describe('her shelf on her profile', () => {
     const shelf = section()
     expect(shelf).toMatch(/<UiSeeAll\b[^>]*:to="`\/friends\/\$\{id\}\/shelf`"/)
     expect(shelf).toMatch(/<UiSeeAll\b[^>]*data-testid="member\.shelfAll"/)
-    // Its own name for a screen reader: the shelf is hers, not the caller's (`shelf.card.allLabel` says "your shelf").
-    expect(shelf).toMatch(/:aria-label="t\('member\.shelfAllLabel', \{ name, count: count\(shelfBooks\.length\) \}/)
+    // Its own name for a screen reader: the shelf is hers, not the caller's (`shelf.card.allLabel` says "your shelf"),
+    // with the count of her whole shelf (`counts.read`), not of the newest twelve this page carries.
+    expect(shelf).toMatch(/:aria-label="t\('member\.shelfAllLabel', \{ name, count: count\(shelfTotal\) \}/)
     // The page is still there.
     expect(read(SHELF_PAGE)).toContain("screen: 'memberShelf'")
   })
@@ -88,5 +89,44 @@ describe('ShelfRowCard can be handed its document', () => {
     expect(year).not.toContain(':library=')
     // And the reading page still shows the owner's published file.
     expect(read('pages/r/[token]/index.vue')).toMatch(/<ShelfRowCard\b[\s\S]{0,200}published/)
+  })
+})
+
+describe('her shelf page reads her whole history, and the row stays a glance', () => {
+  it('asks for the first page once her profile says her *Finished* switch is on', () => {
+    const page = read(SHELF_PAGE)
+    // The pages are the store's (`stores/memberProfile.ts` `loadShelf`), never a Supabase call in the page.
+    expect(page).toMatch(/members\.loadShelf\(id\.value\)/)
+    expect(page).not.toMatch(/rpc\(|createSocial|useBackend/)
+    // Gated on her switch, the way the document is: nothing is asked for a member it is not hers to show.
+    expect(page).toMatch(/watch\(\s*\(\) => open\.value\?\.sections\.finished,\s*\(finished\) => finished && void members\.loadShelf\(id\.value\),/)
+  })
+
+  it('asks for the pages behind the first one per idle turn, never all at once and never at the end', () => {
+    const page = read(SHELF_PAGE)
+    // One idle tick, one page, and the next queued only once that page came back: a member with hundreds of
+    // finished reads costs one request per idle turn, not a wall of them when the page opens.
+    expect(page).toMatch(/cancelMore = onIdle\(pullMore\)/)
+    expect(page).toMatch(/void members\.loadMoreShelf\(id\.value\)\.then\(\(\) => \{/)
+    // `ended` is the store's keyset: null is the end, so nothing is asked past it (`pullMore` returns first).
+    expect(page).toMatch(/const ended = computed\(\(\) => !view\.value\.shelf\.next\)/)
+    expect(page).toMatch(/if \(stopped \|\| ended\.value \|\| morePending\.value\) return/)
+    // Leaving the page stops the chain where it stands; what was read stays in the store for the next visit.
+    expect(page).toMatch(/onDeactivated\(\(\) => \{\s*stopped = true\s*cancelMore\?\.\(\)/)
+  })
+
+  it('builds the document from her whole history once it is read, and from the profile\'s twelve until then', () => {
+    const page = read(SHELF_PAGE)
+    expect(page).toMatch(/const books = computed\(\(\) => \{[\s\S]{0,200}shelf\.items\.length \? shelf\.items : open\.value\.finished/)
+    // The count is her whole shelf, not the part that is drawn yet (her profile knows the total).
+    expect(page).toMatch(/const total = computed\(\(\) => view\.value\.shelf\.total \?\? books\.value\.length\)/)
+    expect(page).toMatch(/t\('shelf\.count', \{ count: count\(total\.value\) \}, total\.value\)/)
+  })
+
+  it('says so where a page of her history could not be read, and asks again on a tap', () => {
+    const page = read(SHELF_PAGE)
+    expect(page).toMatch(/const shelfFailed = computed\(\(\) => !!view\.value\.shelf\.error && !ended\.value\)/)
+    expect(page).toMatch(/members\.loadShelf\(id\.value, \{ again: true \}\)/)
+    expect(page).toContain('data-testid="memberShelf.moreRetry"')
   })
 })

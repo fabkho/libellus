@@ -114,8 +114,15 @@ const wantAll = computed(() => view.value.want ?? open.value?.want ?? [])
  * Her shelf's Books (wave E): the finished reads her profile carries, newest first, and only where she
  * shows her *Finished* (the database sends none otherwise, so the row is not there for her either), in
  * a build with Regal (`appConfig.regal`, regal.config.ts): without it there is no shelf to draw or open.
+ * The newest twelve: a row is a glance. The full-screen Stack (`/friends/<id>/shelf`) reads her whole history
+ * page by page there (`stores/memberProfile.ts` `loadShelf`), so this page's payload is what it always was.
  */
 const shelfBooks = computed(() => (useAppConfig().regal === true && open.value?.sections.finished ? open.value.finished : []))
+/**
+ * How many Books her shelf holds in all — the figure beside the row's eyebrow, which her profile knows even
+ * where it carries only the newest twelve (`counts.read`), so the row's glance and the count agree.
+ */
+const shelfTotal = computed(() => open.value?.counts.read ?? shelfBooks.value.length)
 // The covers' hosts and the page's origin, exactly as her shelf page asks for them (`pages/friends/[member]/shelf.vue`):
 // the hosts direct, as this screen asked before own covers, our stored copies made absolute against the origin.
 const covers = { ...useCoverHosts(), proxy: false }
@@ -383,12 +390,12 @@ function back() {
             <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
               <h2 id="memberShelfTitle" class="eyebrow">
                 {{ t('member.shelf') }}
-                <span class="figures ml-xs text-ink-faint" data-testid="member.shelfCount">{{ count(shelfBooks.length) }}</span>
+                <span class="figures ml-xs text-ink-faint" data-testid="member.shelfCount">{{ count(shelfTotal) }}</span>
               </h2>
               <UiSeeAll
                 v-if="shelfBooks.length"
                 :to="`/friends/${id}/shelf`"
-                :aria-label="t('member.shelfAllLabel', { name, count: count(shelfBooks.length) }, shelfBooks.length)"
+                :aria-label="t('member.shelfAllLabel', { name, count: count(shelfTotal) }, shelfTotal)"
                 data-testid="member.shelfAll"
               >
                 {{ t('shelf.card.all') }}

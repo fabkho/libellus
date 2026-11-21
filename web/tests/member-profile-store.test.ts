@@ -5,6 +5,13 @@ import type { MemberProfile } from '../app/data/socialShapes'
 
 /** The member profile store follows a change of relation at once (social v1, gate 2, M4), with the auto-imports stood in. */
 
+/**
+ * The shapes of a page of her history, as the repository hands them out (`MemberFinishedPage`): the fields the
+ * store reads are all this test needs of a row.
+ */
+type Page = { total: number; items: { book: { id: string } }[]; next: { day: string; at: string; entry: string } | null }
+type Pages = { data: Page | null; error: string | null }
+
 const card = { id: 'ida', name: 'Ida', photo: null }
 const OPEN = { reading: true, want: true, finished: true, ratings: true, reviews: true, abandoned: true, year: true }
 const followed: MemberProfile = {
@@ -29,6 +36,11 @@ let bothGate: Promise<void> | null = null
 let answerGate: Promise<void> | null = null
 const bothCalls: (number | null)[] = []
 let recordAnswer: { data: unknown; error: unknown; status: number } = { data: null, error: null, status: 200 }
+/** `member_finished`: the pages it answers, in order, and the cursors it was asked with (null: the first page). */
+let finishedAnswers: Pages[] = []
+const finishedCalls: (Page['next'])[] = []
+/** While set, a page of her history does not answer until it is released. */
+let finishedGate: Promise<void> | null = null
 vi.mock('~/stores/session', () => ({ useSessionStore: () => reactive({ member: { id: 'ada' } }) }))
 vi.mock('~/stores/social', () => ({
   useSocialStore: () => ({
@@ -41,6 +53,11 @@ vi.mock('~/stores/social', () => ({
       bothCalls.push(year)
       if (bothGate) await bothGate
       return bothAnswer
+    },
+    memberFinished: async (_id: string, after: Page['next'] = null) => {
+      finishedCalls.push(after)
+      if (finishedGate) await finishedGate
+      return finishedAnswers.length > 0 ? finishedAnswers.shift()! : { data: null, error: null }
     },
   }),
 }))
@@ -84,6 +101,9 @@ afterEach(() => {
   answerGate = null
   bothCalls.length = 0
   recordAnswer = { data: null, error: null, status: 200 }
+  finishedAnswers = []
+  finishedCalls.length = 0
+  finishedGate = null
 })
 
 describe('relationChanged', () => {
@@ -324,5 +344,130 @@ describe('You both read, asked for ahead and kept on the device', () => {
     await members.load('ida')
     expect(data.size).toBe(0)
     answer = followed
+  })
+})
+
+describe("her whole finished history, a page at a time (her shelf's Stack)", () => {
+  /** A page of her history: `n` rows from the `from`th on, of `total` in all, and the cursor after them. */
+  const page = (n: number, from: number, total: number, next: Page['next'] = null): Page => ({
+    total,
+    items: Array.from({ length: n }, (_, i) => ({ book: { id: `b${from + i}` } })),
+    next,
+  })
+
+  it('reads the first page once her profile says her Finished switch is on, and keeps it', async () => {
+    const first = page(3, 1, 5, { day: '2026-01-01', at: '2026-01-01T00:00:00Z', entry: 'b3' })
+    finishedAnswers = [{ data: first, error: null }]
+    const members = await store()
+    // Nothing is asked before her profile is read: who may see her and whether it is hers to show is its answer.
+    expect(finishedCalls).toEqual([])
+    await members.load('ida')
+    await members.loadShelf('ida')
+    expect(finishedCalls).toEqual([null])
+    expect(members.viewOf('ida').shelf).toMatchObject({ items: first.items, total: 5, loading: false, error: null })
+    // A re-entry of the page takes what the session holds: no second request for the same page.
+    await members.loadShelf('ida')
+    expect(finishedCalls).toEqual([null])
+    // `again` asks afresh (the page's Try again).
+    finishedAnswers = [{ data: first, error: null }]
+    await members.loadShelf('ida', { again: true })
+    expect(finishedCalls).toEqual([null, null])
+  })
+
+  it('asks nothing for a member it is not hers to show, or with her Finished switch off', async () => {
+    const members = await store()
+    answer = { ...followed, sections: { ...OPEN, finished: false } }
+    await members.load('ida')
+    await members.loadShelf('ida')
+    await members.loadMoreShelf('ida')
+    expect(finishedCalls).toEqual([])
+    expect(members.viewOf('ida').shelf).toMatchObject({ items: [], total: null })
+
+    // A closed profile, or a member never read: nothing either.
+    answer = { member: card, private: true, state: 'none', visible: false }
+    await members.load('ida')
+    await members.loadShelf('ida')
+    expect(finishedCalls).toEqual([])
+    answer = followed
+  })
+
+  it('walks the pages after the rows it holds, and never past the end', async () => {
+    const next = { day: '2026-01-01', at: '2026-01-01T00:00:00Z', entry: 'b2' }
+    finishedAnswers = [{ data: page(2, 1, 3, next), error: null }, { data: page(1, 3, 3), error: null }]
+    const members = await store()
+    await members.load('ida')
+    await members.loadShelf('ida')
+    expect(members.viewOf('ida').shelf.next).toEqual(next)
+    await members.loadMoreShelf('ida')
+    expect(finishedCalls).toEqual([null, next])
+    expect(members.viewOf('ida').shelf.items.map((item) => item.book.id)).toEqual(['b1', 'b2', 'b3'])
+    expect(members.viewOf('ida').shelf).toMatchObject({ total: 3, next: null, more: false })
+    // The end: another scroll asks nothing.
+    await members.loadMoreShelf('ida')
+    expect(finishedCalls).toEqual([null, next])
+  })
+
+  it('never holds a Book twice, however the pages overlap', async () => {
+    // The first page is her profile's newest 12 as well: a page read after a profile that moved must not repeat one.
+    finishedAnswers = [{ data: page(3, 1, 4, { day: '2026-01-01', at: '2026-01-01T00:00:00Z', entry: 'b1' }), error: null }]
+    const members = await store()
+    await members.load('ida')
+    // The page the page's first read holds, and a page behind it that starts one row early.
+    finishedAnswers = [
+      { data: page(3, 1, 4, { day: '2026-01-01', at: '2026-01-01T00:00:00Z', entry: 'b3' }), error: null },
+      { data: { ...page(2, 3, 4), next: null }, error: null },
+    ]
+    await members.loadShelf('ida')
+    await members.loadMoreShelf('ida')
+    expect(members.viewOf('ida').shelf.items.map((item) => item.book.id)).toEqual(['b1', 'b2', 'b3', 'b4'])
+  })
+
+  it('keeps the rows it has when a page is refused, and says so with no first page at all', async () => {
+    finishedAnswers = [{ data: page(2, 1, 3, { day: '2026-01-01', at: '2026-01-01T00:00:00Z', entry: 'b2' }), error: null }]
+    const members = await store()
+    await members.load('ida')
+    await members.loadShelf('ida')
+    finishedAnswers = [{ data: null, error: 'offline' }]
+    await members.loadMoreShelf('ida')
+    expect(members.viewOf('ida').shelf).toMatchObject({ items: expect.any(Array), more: false, error: null })
+    expect(members.viewOf('ida').shelf.items).toHaveLength(2)
+
+    // The first page failing leaves nothing to draw behind the twelve her profile carries, so the page says why.
+    finishedAnswers = [{ data: null, error: 'unknown' }]
+    const other = await store()
+    await other.load('ida')
+    await other.loadShelf('ida')
+    expect(other.viewOf('ida').shelf).toMatchObject({ items: [], total: null, loading: false, error: 'unknown' })
+  })
+
+  it('asks for one page at a time, however many scrolls ask at once', async () => {
+    let release = () => {}
+    finishedGate = new Promise<void>((resolve) => (release = resolve))
+    finishedAnswers = [{ data: page(2, 1, 3, { day: '2026-01-01', at: '2026-01-01T00:00:00Z', entry: 'b2' }), error: null }]
+    const members = await store()
+    await members.load('ida')
+    const first = members.loadShelf('ida')
+    const double = members.loadShelf('ida')
+    release()
+    finishedGate = null
+    await Promise.all([first, double])
+    expect(finishedCalls).toEqual([null])
+    // A page behind it: asked once, whichever way the scrolls come in.
+    finishedAnswers = [{ data: page(1, 3, 3), error: null }]
+    const more = members.loadMoreShelf('ida')
+    const moreAgain = members.loadMoreShelf('ida')
+    await Promise.all([more, moreAgain])
+    expect(finishedCalls.filter(Boolean)).toHaveLength(1)
+  })
+
+  it('forgets her history with her, on another member', async () => {
+    finishedAnswers = [{ data: page(2, 1, 2), error: null }]
+    const members = await store()
+    await members.load('ida')
+    await members.loadShelf('ida')
+    expect(members.viewOf('ida').shelf.items).toHaveLength(2)
+    // Nothing of her shelf stays when the relation ends (a block, an unfollow, a removed follower).
+    members.relationChanged('ida', { kind: 'block' })
+    expect(members.viewOf('ida').shelf).toEqual({ items: [], total: null, next: null, loading: false, more: false, error: null })
   })
 })

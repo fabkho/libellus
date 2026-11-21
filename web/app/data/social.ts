@@ -8,6 +8,8 @@ import {
   circleBookFromJson,
   likeFieldsFromJson,
   mapSocialError,
+  memberFinishedFromJson,
+  memberFinishedPageFromJson,
   recentLikeFromJson,
   reviewFlagsFromJson,
   socialBookFromJson,
@@ -18,9 +20,12 @@ import {
   type BothReadJson,
   type CircleBook,
   type CircleBookJson,
+  type FinishedCursor,
   type FollowState,
   type LikeResult,
   type MemberCard,
+  type MemberFinishedPage,
+  type MemberFinishedPageJson,
   type MemberProfile,
   type ReadersCursor,
   type RecentLike,
@@ -54,11 +59,13 @@ export type {
   BookReadersPage,
   BothRead,
   CircleBook,
+  FinishedCursor,
   FollowState,
   LikeFields,
   LikeResult,
   MemberCard,
   MemberFinished,
+  MemberFinishedPage,
   MemberProfile,
   RecentLike,
   ReadersCursor,
@@ -149,10 +156,21 @@ export interface Social {
    * `next`; `limit`: at most `READERS_PAGE`. An empty page for a Manual book, one she cannot read, or nobody.
    */
   bookReaders(book: string, after?: ReadersCursor | null, limit?: number): Promise<SocialResult<BookReadersPage>>
+  /**
+   * Her whole finished history, a page at a time — the read her shelf's full-screen Stack uses, where
+   * `profile()` stops at her newest 12 rows. The same rows, in the same order, behind the same guards (who may
+   * see her at all, her *Finished* switch, a hidden entry), so a page can be handed straight to the document a
+   * shelf is built from (`data/memberShelf.ts`). `after`: the previous page's `next`; `limit`: at most
+   * `SHELF_PAGE`. Null when she is not visible or her *Finished* switch is off (nothing may be read then).
+   */
+  memberFinished(member: string, after?: FinishedCursor | null, limit?: number): Promise<SocialResult<MemberFinishedPage | null>>
 }
 
 /** The most readers one `bookReaders` call returns (the database's limit too); the See-all sheet pages by it. */
 export const READERS_PAGE = 50
+
+/** The most finished rows one `memberFinished` call returns (the database's limit too, 150): the shelf page's page. */
+export const SHELF_PAGE = 100
 
 /** `https://<site>/f/<token>`: the link the share sheet hands out. */
 export function followLink(origin: string, token: string): string {
@@ -188,13 +206,7 @@ type ProfileJson =
       counts: { read: number | null; reading: number | null; want: number | null }
       reading: { book: BookJson; startedOn: string | null }[]
       want: { book: BookJson; addedOn: string }[]
-      finished: (Parameters<typeof reviewFlagsFromJson>[0] &
-        Parameters<typeof likeFieldsFromJson>[0] & {
-          book: BookJson
-          endedOn: string | null
-          rating: number | null
-          review: string | null
-        })[]
+      finished: MemberFinishedPageJson['items']
     }
 
 function mySocialFromJson(json: MySocialJson): MySocial {
@@ -232,14 +244,8 @@ function profileFromJson(json: ProfileJson): MemberProfile {
     counts: { read: json.counts.read ?? null, reading: json.counts.reading ?? null, want: json.counts.want ?? null },
     reading: json.reading.map((r) => ({ book: socialBookFromJson(r.book), startedOn: r.startedOn ?? null })),
     want: json.want.map((w) => ({ book: socialBookFromJson(w.book), addedOn: w.addedOn })),
-    finished: json.finished.map((f) => ({
-      book: socialBookFromJson(f.book),
-      endedOn: f.endedOn ?? null,
-      rating: f.rating ?? null,
-      review: f.review ?? null,
-      ...reviewFlagsFromJson(f),
-      ...likeFieldsFromJson(f),
-    })),
+    // The same row `member_finished` hands out, mapped once (socialShapes.ts `memberFinishedFromJson`).
+    finished: json.finished.map(memberFinishedFromJson),
   }
 }
 
@@ -308,6 +314,12 @@ export function createSocial(client: SupabaseClient, { online = () => true }: { 
     myRecentLikes: () => call<RecentLikeJson[], RecentLike[]>('my_recent_likes', {}, (j) => j.map(recentLikeFromJson)),
     bothRead: (member, year = null) =>
       call<BothReadJson[], BothRead[]>('both_read', { p_member: member, p_year: year }, (j) => j.map(bothReadFromJson)),
+    memberFinished: (member, after = null, limit = SHELF_PAGE) =>
+      call<MemberFinishedPageJson | null, MemberFinishedPage | null>(
+        'member_finished',
+        { p_member: member, p_after: after, p_limit: Math.min(Math.max(1, limit), SHELF_PAGE) },
+        (j) => (j ? memberFinishedPageFromJson(j) : null),
+      ),
     bookReaders: (book, after = null, limit = READERS_PAGE) =>
       call<BookReadersPageJson, BookReadersPage>(
         'book_readers',

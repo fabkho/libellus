@@ -2023,7 +2023,8 @@
     "shelf": "Regal",
     "shelfTitle": "{name} · Regal",
     "shelfAllLabel": "Alle {count} Buch in {name}s Regal anzeigen | Alle {count} Bücher in {name}s Regal anzeigen",
-    "shelfEmpty": "{name} hat noch kein Buch beendet, das du sehen kannst."
+    "shelfEmpty": "{name} hat noch kein Buch beendet, das du sehen kannst.",
+    "shelfMore": "Ein Teil von {name}s Regal konnte nicht geladen werden. Erneut versuchen"
   },
   "follow": {
     "loading": "Wird geöffnet …",
