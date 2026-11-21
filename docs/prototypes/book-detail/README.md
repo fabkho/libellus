@@ -1,84 +1,64 @@
-# The Book page's hero — three answers to the pile
+# The Book page's hero, and three answers for the metadata under About
 
-What sits between the cover and the first action button on the Book page (`web/app/pages/book/[key].vue`) is,
-today, four stacked centred rows of small quiet text: the facts (year · pages · publisher), the genre chips with
-a quiet **Edit**, the Goodreads figures with a quiet **on Goodreads**, and the links with a quiet **More** — each
-with its own dot-separated list and its own little text button. That is what these three mocks rearrange.
+The hero is settled: **the genre pills and the Goodreads row, and nothing else.** Everything that describes the
+copy — when the work was first published, when this edition was printed, which format it is, how long it is, and
+the Book's own links — now sits under About, in the line that was already saying the edition. What is left above
+the status line is only what is about *this reading*.
 
-The owner's constraint for this round: **the genres and the Goodreads data stay in the hero in every variant.** None
-of the three moves them down into About. What changes between them is how much else shares their space, and what
-kind of object that space is. Everything else is fixed in all three: the cover, the title, the author and the series
-line are untouched (the owner said they are fine); the status line, the progress block and the one filled action keep
-their places under the pile; About, its text, the edition line and the Notes / Read together pair keep theirs.
+That was the owner's call after four rounds: v1 (a hairline strip), v2 (the average as a headline figure) and v3
+(the metadata behind a **Details** door) all lost to v4-a, which is this header. So this folder is now about the
+one thing still open: **how the metadata block under About reads.**
 
-Two things do move out of the hero in all three, because they were pure repetition or pure furniture:
+Two things leave the header for good in every variant here:
 
-- **The publisher.** The facts row stops saying it: the edition line under About already says "This edition: Fleet,
-  2024". One less item in the pile, and no information lost.
-- **The underlined micro-buttons.** **Edit** sat on the chip row's second line at 390 px (three pills plus a word do
-  not fit); **More** was a dot-separated link inside the links' own run. The pills themselves become the way into the
-  genres sheet — a tap anywhere on the row, and the sheet it opens is unchanged — and the links move behind the **⋯**
-  in the top bar, which already opens a sheet of the Book's own things (Share, Hide, Change edition, Series, the
-  ebook). In `v1` and `v2` that ⋯ carries a small lamp dot while links are behind it, so nothing is hidden unmarked;
-  `v3` keeps the links in the hero and has no mark.
+- **The publisher.** The edition line already names it.
+- **The year, the page count and the format.** They move under About, where the copy is described. The page count
+  was the last orphan in the header — it sat under the Goodreads row with nothing to bind it to, and on a Book
+  being read the same 416 is in the progress block two lines down.
 
-Shots are in `docs/images/book-detail/` — dark 390 EN, dark 360 DE, and every state panel at 390 EN. Dark is the only
-room these are shot in: the owner judged this round in dark alone, so `node shoot.cjs` writes dark and nothing else.
+Shots are in `docs/images/book-metadata/` — dark 390 EN, dark 360 DE, and every state panel at 390 EN (A, B, F,
+and C, the Book with no description yet). Dark is the only room these are shot in: the owner judged this round in
+dark alone, so `node shoot.cjs` writes dark and nothing else. `STATE C` matters because the app draws the
+edition line *outside* the About section when a Book has no description, so the block has to stand alone too.
 
 ---
 
-## v1 — the strip
+## m1 — the index
 
-**The idea:** the four rows become one hairline group in the language the page already uses for the Notes / Read
-together pair — a surface in `fill`, a half-pixel hairline ring, a hairline between its rows. **Moves:** the genres
-keep their pills and become the group's first row (the row is the button that opens the genres sheet); the year, the
-pages and the format become one faint mono line, the Goodreads figure with its two counts a second one under it,
-dot-separated, the average
-in `inkMuted` and its counts in `inkFaint`. The publisher goes to the edition line; the links to the ⋯ sheet.
-**Gains:** a clear edge — the eye sees *one* object under the series line instead of four loose rows, and the status
-line under it then reads as the start of the reading part of the page. The pills are the only thing with height, so
-genre recognition is instant, and Goodreads is a single scannable line. **Loses:** the average, the two counts and
-the Goodreads link are one dense dot-separated run, so a member who came for "6.1K reviews" has to scan a
-sentence-shaped line rather than find the figure on its own row;
-and the links are one tap further away than today. **Risk:** a filled box in a hero that is otherwise hairlines and
-type can read as a card the page did not need, and it is the same shape as the Notes / Read together box further down.
+**The idea:** one row per fact, its name on the left in the page's micro-caps, its value on the right, a hairline
+between the rows — the shape of a colophon. **Moves:** nothing but placement; the five facts and the two links are
+the same ones in all three. **Gains:** the fastest of the three to scan for one number, because "Pages" is where a
+list's fifth row is, and the block reads as a list of the copy rather than as prose. **Loses:** five rows of
+hairlines under an About paragraph is a lot of rules on a page that already draws a box and a hairline under it;
+and a two-value-per-line label column is the densest thing on the screen. **Risk:** it can read as a settings
+screen — a table of properties — where the page is trying to be a book.
 
-## v2 — the number leads
+## m2 — the spec strip
 
-**The idea:** no box and no pills — type alone, with one figure the eye lands on. **Moves:** Goodreads stops being a
-metadata row and becomes the hero's second focal point: **4.3★** set as a figure (mono, 24, light, tabular), its two
-counts in a faint mono line under it with `on Goodreads` as the one link; then the genres as a single line of words in
-ink; then the year, the pages and the format as the last and faintest mono line. The publisher goes to the edition
-line; the links to the ⋯ sheet; the genres' sheet opens from the ⋯ too. **Gains:** hierarchy, unmistakably — figure,
-then community, then what the book *is*, then its facts, in a scale that descends the way interest does. It is the
-calmest of the three and the shortest vertically, and it is the only one where the Goodreads number is big enough to
-read at arm's length. **Loses:** the genres stop being three separable, tappable things and become a sentence
-fragment, so the eye must read instead of scan; the way into the genres sheet is now the ⋯, one tap further from the
-word it edits. **Risk:** it makes the *community's* opinion the loudest thing after the title, on a page whose whole
-purpose is the member's own reading — the owner asked for less noise about ratings, and this makes one of them a
-headline.
+**The idea:** the same five facts as one row of cells divided by hairlines, each value in the readable ink with its
+name under it in micro-caps. No box, no rows. **Moves:** values first, names second, so the eye lands on `2023 ·
+Fleet, 2024 · hardcover · 416` and only reads the names if it needs them. **Gains:** the shortest of the three and
+the only one that never wraps at 360 px, since every cell is a fixed column; it stays a strip of type, which is the
+language the hero above it now speaks. **Loses:** five cells across a phone is tight, and the last one (the two
+links) is wider than the rest, so the dividers are not evenly spaced. **Risk:** at 360 px in German the cells crowd
+— `ERSTMALS ERSCHIENEN` is much wider than `FIRST PUBLISHED`, and the strip has no room left to give.
 
-## v3 — two things and a door
+## m3 — the shelf card
 
-**The idea:** the hero keeps exactly the two things the owner wants — the genre pills and the Goodreads figure — and
-everything else waits behind one quiet **Details**. **Moves:** the chips are the first row (the row opens the genres
-sheet); the second row is one faint mono run, **4.3★ · 138K ratings**, ending in a **Details ⌄** button. That button
-opens a hairline group in place (the pair's shape once more) holding the year, the pages, the format, the two
-Goodreads counts with their link, and the Book's links. Closed by default; `STATE A2` is the same Book open.
-**Gains:** the worst case (State A, everything present) is as short as the sparsest one, so the progress block and the
-action sit high on the page on every Book — that is the owner's actual complaint answered directly. Nothing is lost,
-only deferred, and the door is a word, not an icon. **Loses:** the year and the counts are now one tap from the first
-look, and a member who wants the year will not know it is there unless she opens the door. **Risk:** a second fold on a
-page whose hero was already called cluttered can read as the app hiding what it knows; and if the block does not
-remember being open, it costs her a tap on every visit.
+**The idea:** the same facts in one filled box on the pair's own terms — the fill, the radius, the half-pixel
+hairline — a two-column grid of name over value, the links on their own row last. **Moves:** only the container;
+the values are the same. **Gains:** the easiest to find when the eye comes back down the page for one number, and
+it groups the copy's facts the way the Notes / Read together pair below it groups her own — the page's one existing
+language for "a set of things". **Loses:** it is a second box on a page that already has one, which is the
+criticism that killed v1's strip; and a filled block under a text paragraph can look like a footer of chips.
+**Risk:** the box competes with the pair directly under it, and two boxes with the same radius and fill, a few
+lines apart, is exactly the "card the page did not need" the owner disliked in v1.
 
 ---
 
 ## What the current hero already does that the pile hides
 
-The status line is not part of the metadata pile, and it already carries the member's own rating: on a rated Book the
-app draws the stars *in the status line*, before the word "Finished". So "the ratings row of my own rating" in the
-complaint is a different problem from the four metadata rows — her stars sit in a line that also says the status and
-the date, so they read as decoration rather than as a rating. All three mocks leave that line exactly as it is (it is
-shown with four stars in every State A and State B panel); if the owner wants her rating to read as a rating, it
-should come out of the status line into something of its own, which is a separate decision from this one.
+The status line is not part of the metadata, and it already carries the member's own rating: on a rated Book the
+app draws the stars *in the status line*, before the word "Finished". All three variants leave that line exactly as
+it is. If the owner wants her rating to read as a rating, it should come out of the status line into something of
+its own, which is a separate decision from this one.

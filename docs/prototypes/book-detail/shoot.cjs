@@ -1,12 +1,11 @@
 // Screenshots of the static mock-ups: node shoot.cjs [only]
 //   PLAYWRIGHT=<path to a playwright package> when playwright is not installed beside this folder.
-// Writes docs/images/book-detail/<name>.jpg at 2x, WebKit at iPhone size, in the dark room only: dark is
+// Writes docs/images/book-metadata/<name>.jpg at 2x, WebKit at iPhone size, in the dark room only: dark is
 // the room these mocks are judged in (D's Night), and the owner asked for dark alone. The set is dark 390
-// EN, dark 360 DE, plus every state panel of every variant at 390 EN. Any light shot left in the folder is
-// stale; delete it rather than regenerate it.
+// EN, dark 360 DE, plus every state panel of every variant at 390 EN.
 const path = require('node:path')
 const { webkit } = require(process.env.PLAYWRIGHT || 'playwright')
-const FILES = ['v1', 'v2', 'v3']
+const FILES = ['m1', 'm3', 'm4', 'm5']
 const SHOTS = FILES.flatMap((file) => [
   [`${file}-dark-en`, `${file}.html`, 'dark', 'en', 390],
   [`${file}-dark-de-360`, `${file}.html`, 'dark', 'de', 360],
@@ -14,7 +13,7 @@ const SHOTS = FILES.flatMap((file) => [
 ;(async () => {
   const only = process.argv[2]
   const browser = await webkit.launch()
-  const out = path.resolve(__dirname, '../../images/book-detail')
+  const out = path.resolve(__dirname, '../../images/book-metadata')
   require('node:fs').mkdirSync(out, { recursive: true })
   for (const [name, file, theme, lang, w] of SHOTS) {
     if (only && !name.startsWith(only)) continue
@@ -24,7 +23,7 @@ const SHOTS = FILES.flatMap((file) => [
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(400)
     await page.locator('.phone').first().screenshot({ path: path.join(out, `${name}.jpg`), type: 'jpeg', quality: 86 })
-    // states A, B and F (and A2, the metadata block open): the panels a variant is judged on, 390 EN only
+    // states A, B, F and C (no description, the block stands alone): the panels a variant is judged on, 390 EN
     if (w === 390 && lang === 'en') {
       const panels = page.locator('.phone')
       const n = await panels.count()

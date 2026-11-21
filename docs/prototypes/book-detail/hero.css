@@ -1,5 +1,5 @@
-/* Static mock-ups for the three hero directions in README.md beside this file: the Book page from the cover to the one action, and the
-   About block under it. Not app code. On top of base.css (a copy of book-actions/base.css) and
+/* Static mock-ups for the Book page's hero and the metadata block under About (README.md beside this
+   file): the page from the cover to the one action, and the About block under it. Not app code. On top of base.css (a copy of book-actions/base.css) and
    tokens.css (a copy of the app's generated theme); every value below is a token or a class the app
    already has. Each variant adds its own <style> block for the part that is its own. */
 
@@ -118,3 +118,27 @@ body { display: flex; flex-direction: column; align-items: center; gap: 32px; pa
 .chips-edit { position: relative; padding: 0; }
 .chips-edit::after { content: ''; position: absolute; inset: 50% 0 auto; height: var(--size-touch); transform: translateY(-50%); }
 .chips-edit .chip { color: var(--color-ink); }
+
+/* the hero the owner kept (v4-a): what is about this reading and nothing else — the three genre pills,
+   then the Goodreads figure with its counts. Everything that describes the copy is under About. */
+.glance { display: flex; flex-direction: column; align-items: center; margin-top: var(--spacing-md); }
+.glance .chips { justify-content: center; gap: var(--spacing-xs); }
+.glance .chip { padding-inline: var(--spacing-sm); }
+.glimpse { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; margin-top: var(--spacing-sm);
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 11px; line-height: 14px; color: var(--color-ink-faint); }
+.glimpse .facts { display: inline-flex; flex-wrap: wrap; align-items: center; }
+.glimpse .avg { color: var(--color-ink-muted); }
+.glimpse .gstar { color: var(--color-star); }
+.glimpse .sep { margin: 0 6px; }
+.glimpse .link { color: var(--color-ink-muted); }
+
+/* what every variant of the metadata block under About puts its data in: one eyebrow label and one
+   row of values, both on the block's own left edge. No variant draws a box. */
+.meta { margin-top: var(--spacing-sm); display: grid; grid-template-columns: 1fr; row-gap: 3px; text-align: left; }
+.meta .k { font-family: var(--font-mono); font-size: 10px; line-height: 13px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--color-ink-faint); }
+.meta .row { display: flex; flex-wrap: wrap; align-items: baseline; gap-x: var(--spacing-sm); gap-y: 2px;
+  font-size: 13px; line-height: 18px; color: var(--color-ink-muted); }
+.meta .figures { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--color-ink-faint); }
+.meta .sep { margin: 0 var(--spacing-sm); }
+.meta .link { color: var(--color-ink-muted); text-decoration: underline; text-decoration-color: var(--color-hairline-strong); text-underline-offset: 2px; }
