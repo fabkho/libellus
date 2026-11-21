@@ -217,6 +217,8 @@ grant execute on function public.mark_buddy_read(uuid,uuid,timestampwithtimezone
 grant execute on function public.mark_notes_read(uuid,uuid,timestampwithtimezone) to authenticated;
 grant execute on function public.mark_notes_read(uuid,uuid,timestampwithtimezone) to service_role;
 grant execute on function public.match_text(text) to service_role;
+grant execute on function public.member_finished(uuid,jsonb,integer) to authenticated;
+grant execute on function public.member_finished(uuid,jsonb,integer) to service_role;
 grant execute on function public.member_profile(uuid) to authenticated;
 grant execute on function public.member_profile(uuid) to service_role;
 grant execute on function public.member_reading_record(uuid) to authenticated;
