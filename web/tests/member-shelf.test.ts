@@ -264,6 +264,33 @@ describe('memberShelfFromFinished', () => {
     for (const spine of spines) expect(spine).toMatch(/^#[\da-f]{6}$/)
   })
 
+  it('stands up every row it is given, in the order it is given them (her history, page by page)', () => {
+    // What the shelf page hands in: the pages `memberFinished` answered, already newest first, read up to
+    // wherever her history has come. A page boundary is nothing to the document: no row is reformatted, and the
+    // pile keeps the order the pages were concatenated in.
+    const reads = [finishedRead({ endedOn: '2026-01-15' }), finishedRead({ endedOn: '2026-01-14' }), finishedRead({ endedOn: '2026-01-13' })]
+    const file = memberShelfFromFinished(reads, OPTIONS)
+    expect(validateLibraryFile(file).ok).toBe(true)
+    expect(file.books.map((book) => book.id)).toEqual(reads.map((read) => read.book.id))
+    expect(shelfOf(file).books.map((book) => book.dateRead)).toEqual(['2026-01-15', '2026-01-14', '2026-01-13'])
+  })
+
+  it('leaves out a Book the server could not confirm, wherever in her history it stands', () => {
+    // A row whose Book is not shown has no title and no cover at all (`shownBook`, utils/unverifiedBook.ts):
+    // Regal needs a title to stand one up, so it is dropped — the pages behind it still build.
+    const hidden = finishedRead({ book: socialBook({ title: '', unverified: true }) })
+    const file = memberShelfFromFinished([finishedRead(), hidden, finishedRead()], OPTIONS)
+    expect(file.books).toHaveLength(2)
+    expect(file.books.some((book) => book.id === hidden.book.id)).toBe(false)
+  })
+
+  it('is the same document whether a read comes from her profile or from her history\'s pages', () => {
+    // One read, handed in twice: once as `member_profile`'s `finished` carries it, once as `member_finished`'s
+    // `items` does. The page boundary must never be what a row looks like.
+    const read = finishedRead({ endedOn: '2025-11-03', rating: 15, review: 'Lovely.', spoilers: true })
+    expect(memberShelfFromFinished([read], OPTIONS)).toEqual(memberShelfFromFinished([{ ...read }], OPTIONS))
+  })
+
   it('yields a valid empty document when she has finished nothing', () => {
     const file = memberShelfFromFinished([], OPTIONS)
     expect(validateLibraryFile(file).ok).toBe(true)

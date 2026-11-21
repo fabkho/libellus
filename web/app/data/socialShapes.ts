@@ -216,6 +216,45 @@ export function bookReadersPageFromJson(json: BookReadersPageJson): BookReadersP
   return { total: Number(json.total), items: json.items.map(bookReaderFromJson), next: json.next ?? null }
 }
 
+/**
+ * The keyset the next page of a member's finished history starts after (opaque to the screen: the database's
+ * `next`): the read's end (`day`, the sentinel `0001-01-01` when it has none), when its row was written (`at`),
+ * and the Library entry's id — the three keys `member_finished` orders by, so no row is repeated or skipped.
+ */
+export type FinishedCursor = { day: string; at: string; entry: string }
+
+/** One page of a member's finished history, as her shelf's stack reads it (`member_finished`). */
+export type MemberFinishedPage = { total: number; items: MemberFinished[]; next: FinishedCursor | null }
+
+type FinishedCursorJson = FinishedCursor
+type MemberFinishedPageJson = {
+  total: number
+  items: (Parameters<typeof reviewFlagsFromJson>[0] &
+    Parameters<typeof likeFieldsFromJson>[0] & {
+      book: BookJsonOf
+      endedOn: string | null
+      rating: number | null
+      review: string | null
+    })[]
+  next: FinishedCursorJson | null
+}
+
+/** One of her finished rows, as `member_profile` and `member_finished` carry it (the same mapping both ways). */
+export function memberFinishedFromJson(json: MemberFinishedPageJson['items'][number]): MemberFinished {
+  return {
+    book: socialBookFromJson(json.book),
+    endedOn: json.endedOn ?? null,
+    rating: json.rating ?? null,
+    review: json.review ?? null,
+    ...reviewFlagsFromJson(json),
+    ...likeFieldsFromJson(json),
+  }
+}
+
+export function memberFinishedPageFromJson(json: MemberFinishedPageJson): MemberFinishedPage {
+  return { total: Number(json.total), items: json.items.map(memberFinishedFromJson), next: json.next ?? null }
+}
+
 /** The most Books `circleReading` / `circleWant` look at in one call (the database's limit too). */
 export const CIRCLE_BOOKS_MAX = 50
 

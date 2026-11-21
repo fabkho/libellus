@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { forgetBothRead, readBothRead, sameBothRead, saveBothRead } from '~/data/bothReadDevice'
 import { createMemberStats, type MemberRecord, type MemberStats } from '~/data/memberStats'
-import type { BothRead, MemberProfile, SocialBook, SocialErrorCode } from '~/data/social'
+import type { BothRead, FinishedCursor, MemberFinished, MemberProfile, SocialBook, SocialErrorCode } from '~/data/social'
 import type { StatsYear } from '~/data/stats'
 import { defaultRange, type ChartRange } from '~/data/statsChart'
 import { useSessionStore } from '~/stores/session'
@@ -12,6 +12,28 @@ import { createRereads } from '~/utils/rereads'
 
 /** Her whole Want to read, newest first (*See all*). */
 export type MemberWant = { book: SocialBook; addedOn: string }[]
+
+/**
+ * Her whole finished history, as her shelf's Stack reads it (`social.memberFinished`): the pages read so far,
+ * newest first, and the keyset of the page after them (null: the end, or nothing read yet). Kept per member for
+ * the session, so scrolling back up the pile costs nothing.
+ */
+export type MemberShelf = {
+  /** The rows read so far, in her profile's order. */
+  items: MemberFinished[]
+  /** How many finished rows she has in all (her profile's `counts.read`), or null while the first page is on its way. */
+  total: number | null
+  /** The keyset of the page after these rows; null: the end, or no first page yet. */
+  next: FinishedCursor | null
+  /** The first page is on its way. */
+  loading: boolean
+  /** A page after the first is on its way. */
+  more: boolean
+  /** The last refusal, with the first page still unread: the shelf page says so rather than showing nothing. */
+  error: SocialErrorCode | null
+}
+
+const emptyShelf = (): MemberShelf => ({ items: [], total: null, next: null, loading: false, more: false, error: null })
 
 /** The key of `MemberView.bothRead`: one year, or `all`. */
 export const bothReadKey = (year: number | null): string => (year === null ? 'all' : String(year))
@@ -47,6 +69,8 @@ export type MemberView = {
   busy: boolean
   /** The last refusal of a follow or a withdrawal. */
   failed: SocialErrorCode | null
+  /** Her finished history, a page at a time: her shelf's Stack, where her profile stops at 12. */
+  shelf: MemberShelf
 }
 
 const fresh = (): MemberView => ({
@@ -63,6 +87,7 @@ const fresh = (): MemberView => ({
   loaded: false,
   busy: false,
   failed: null,
+  shelf: emptyShelf(),
 })
 
 /**
@@ -130,6 +155,73 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
   }
 
   const views = ref<Record<string, MemberView>>({})
+
+  /**
+   * Her finished history's pages in flight, one request per page (the shelf page may ask again while it shows,
+   * and a scroll or a re-entry must not double it).
+   */
+  const shelfAsks = new Set<string>()
+
+  /**
+   * Her whole finished history, one `SHELF_PAGE` page at a time, for her shelf's Stack: her profile's `finished`
+   * stops at 12, the pile must not. The first page is read by the shelf page when it mounts (`loadShelf`), and
+   * the pages behind it as it comes near the end of what it holds (`loadMoreShelf`): both are kept for the
+   * session, so going back never asks again.
+   *
+   * Online only, and refused where it is not hers to show: her profile is what says she may be seen at all and
+   * that her *Finished* switch is on, so nothing is asked before it is read, and nothing is kept for a member it
+   * would not be (an unfollow, a block).
+   */
+  function mayReadShelf(id: string): boolean {
+    const profile = viewOf(id).profile
+    return !!profile && profile.visible && profile.sections.finished
+  }
+
+  async function loadShelf(id: string, { again = false }: { again?: boolean } = {}): Promise<void> {
+    if (!mayReadShelf(id) || !isOnline()) return
+    const had = viewOf(id).shelf
+    // Read already (or on its way): a re-entry of the page takes what the session holds, not a second request.
+    if (!again && (had.loading || had.total !== null)) return
+    const run = generation
+    const member = session.member?.id
+    const key = `${id}:first`
+    if (shelfAsks.has(key)) return
+    shelfAsks.add(key)
+    patch(id, { shelf: { ...had, loading: true, error: null } })
+    const answer = await social.memberFinished(id)
+    shelfAsks.delete(key)
+    if (run !== generation || member !== session.member?.id) return
+    if (answer.error) return patch(id, { shelf: { ...viewOf(id).shelf, loading: false, error: answer.error } })
+    // Null: she is not there any more, or her switch went off: nothing of her shelf stays.
+    if (!answer.data) return patch(id, { shelf: emptyShelf() })
+    // A page that came after this one (a re-read raced a first read) keeps what it added.
+    const now = viewOf(id).shelf
+    const items = now.items.length > answer.data.items.length ? now.items : answer.data.items
+    patch(id, { shelf: { ...now, items, total: answer.data.total, next: answer.data.next, loading: false, error: null } })
+  }
+
+  /** The page after the rows held, when the pile comes near their end. Never past the end, never twice. */
+  async function loadMoreShelf(id: string): Promise<void> {
+    const had = viewOf(id).shelf
+    if (!had.next || had.more || had.loading || !isOnline() || !mayReadShelf(id)) return
+    const run = generation
+    const member = session.member?.id
+    const cursor: FinishedCursor = had.next
+    const key = `${id}:${cursor.entry}`
+    if (shelfAsks.has(key)) return
+    shelfAsks.add(key)
+    patch(id, { shelf: { ...had, more: true } })
+    const answer = await social.memberFinished(id, cursor)
+    shelfAsks.delete(key)
+    if (run !== generation || member !== session.member?.id) return
+    // A refusal leaves the page to the next scroll's ask; the rows already held are hers to show.
+    if (answer.error || !answer.data) return patch(id, { shelf: { ...viewOf(id).shelf, more: false } })
+    const now = viewOf(id).shelf
+    // One row per Book: a page read after her profile's 12 (or after another page) must not repeat one.
+    const seen = new Set(now.items.map((item) => item.book.id))
+    const items = [...now.items, ...answer.data.items.filter((item) => !seen.has(item.book.id))]
+    patch(id, { shelf: { ...now, items, total: answer.data.total, next: answer.data.next, more: false } })
+  }
   /** Bumped when the member changes: an answer that began before it is thrown away. */
   let generation = 0
 
@@ -290,6 +382,7 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     views.value = {}
     asked.clear()
     rereads.clear()
+    shelfAsks.clear()
   }
 
   watch(
@@ -305,5 +398,19 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     for (const [id, view] of Object.entries(views.value)) if (view.error === 'offline' && !view.loaded) void load(id)
   })
 
-  return { views, viewOf, load, loadBothRead, prefetchBothRead, setYear, setChart, follow, withdraw, relationChanged, forget }
+  return {
+    views,
+    viewOf,
+    load,
+    loadBothRead,
+    prefetchBothRead,
+    loadShelf,
+    loadMoreShelf,
+    setYear,
+    setChart,
+    follow,
+    withdraw,
+    relationChanged,
+    forget,
+  }
 })

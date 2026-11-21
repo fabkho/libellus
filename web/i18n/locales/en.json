@@ -2028,7 +2028,8 @@
     "shelf": "Shelf",
     "shelfTitle": "{name} · Shelf",
     "shelfAllLabel": "Show all {count} book on {name}'s shelf | Show all {count} books on {name}'s shelf",
-    "shelfEmpty": "{name} hasn't finished a book you can see."
+    "shelfEmpty": "{name} hasn't finished a book you can see.",
+    "shelfMore": "Some of {name}’s shelf could not be read. Try again"
   },
   "follow": {
     "loading": "Opening…",
