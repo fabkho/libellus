@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.50.2](https://github.com/fabkho/libellus/compare/v1.50.1...v1.50.2) (2026-11-21)
+
+
+### Fixes
+
+* **notes:** reveal a chapter's thread, and stop the tab bar flashing over it ([b5a67c2](https://github.com/fabkho/libellus/commit/b5a67c266834742efdc9999acf56b9892b3dfb7f))
+
 ## [1.50.1](https://github.com/fabkho/libellus/compare/v1.50.0...v1.50.1) (2026-11-19)
 
 
