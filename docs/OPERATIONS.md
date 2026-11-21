@@ -75,7 +75,7 @@ In the repository's settings (the workflow does not change them):
 | `production` → environment secret `SUPABASE_DB_PASSWORD` (optional) | The database password, only if the temporary role ever fails; the CLI then uses it instead. |
 | `production` → environment variable `SUPABASE_PROJECT_REF` | `ltedflcewdcqtqzcjeyr` |
 | `production` → environment secret `PRODUCTION_DEPLOY_KEY` | The private half of an SSH key whose public half is a **deploy key with write access** (Settings → Deploy keys). It moves the branch `production`: the run's own `GITHUB_TOKEN` stays read-only, and GitHub refuses a `GITHUB_TOKEN` push that brings changed workflow files to a branch. `ssh-keygen -t ed25519 -N '' -C 'libellus production' -f prod-deploy-key`. |
-| `production` → environment secret `SENTRY_AUTH_TOKEN`, variables `SENTRY_ORG`, `SENTRY_PROJECT` (optional) | Readable stack traces: the job "source maps to Sentry" builds the tag once more with hidden maps and uploads them to Sentry (EU, `de.sentry.io`). Without all three it does nothing. "Sentry" below. |
+| `production` → environment secret `SENTRY_AUTH_TOKEN`, variables `SENTRY_ORG`, `SENTRY_PROJECT` (optional) | Readable stack traces: the job "source maps to Sentry" builds the tag once more with hidden maps and uploads each map under the **name the live deployment serves that chunk by** (a second build does not reproduce Pages' names, so they are looked up, not derived). Without all three it does nothing. "Sentry" below. |
 | Cloudflare Pages → libellus → Settings → Builds → Branch control | **Production branch: `production`**. Previews stay on for every other branch, `main` included (`main.libellus-3q1.pages.dev`). |
 
 Only the deploy job reads the environment's secrets; the release-please job has
@@ -348,8 +348,13 @@ notice's Sentry text is approved. Removing the variable and redeploying turns Se
 **Source maps (optional).** GitHub → Settings → Environments → `production`: secret `SENTRY_AUTH_TOKEN` (an organisation
 token, scopes `project:releases`, `org:read`) and variables `SENTRY_ORG=bookretreats-jx`, `SENTRY_PROJECT=libellus`. The
 release workflow's job "source maps to Sentry" then builds the released commit once more with hidden maps
-(`SENTRY_SOURCEMAPS=1`, the same Regal inputs as Pages) and uploads them for the release; without them it does nothing and
-stays green. The maps are never deployed.
+(`SENTRY_SOURCEMAPS=1`, the same Regal inputs as Pages) and uploads them for the release. **The map is uploaded under the
+name the live deployment serves that chunk by, which is not the name this build emitted** — a second build of a commit does
+not reproduce Pages' chunk names (the build cache, the toolchain, and @nuxtjs/i18n hashing a locale file's absolute path,
+which differs per machine), and Sentry looks a map up by release + file name: this is what left every stack trace minified
+before. So the job fetches the served chunks and pairs them with its own by content (`scripts/sentry-sourcemaps.mjs`); when
+nothing pairs, it uploads nothing. Without the secret and both variables the job does nothing and stays green. The maps are
+never deployed.
 
 ## Waitlist
 

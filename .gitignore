@@ -22,6 +22,8 @@ web/.output/
 # The Playwright flows' build (LIBELLUS_E2E=1, web/e2e/build.ts).
 web/.output-e2e/
 web/dist
+# The release job's upload payload: this build's maps under the served names (scripts/sentry-sourcemaps.mjs).
+web/sentry-maps/
 web/test-results/
 web/playwright-report/
 # `npx wrangler pages dev dist` keeps its local state here (docs/HOSTING.md).

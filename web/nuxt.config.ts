@@ -104,8 +104,9 @@ export default defineNuxtConfig({
     },
   },
   // Source maps only for the one build that uploads them to Sentry (.github/workflows/release.yml, "Source maps to
-  // Sentry"): `hidden` writes the `.map` files without a `sourceMappingURL` comment, so no chunk changes and the
-  // names equal those of Cloudflare's own build of the same commit. Pages' build never sets this: members get no maps.
+  // Sentry"): `hidden` writes the `.map` files without a `sourceMappingURL` comment, so no chunk changes. Pages' build
+  // never sets this: members get no maps. It does not make the names equal to Pages' build of the same commit — they
+  // are not, and scripts/sentry-sourcemaps.mjs looks the served ones up for the upload.
   sourcemap: process.env.SENTRY_SOURCEMAPS ? { client: 'hidden', server: false } : undefined,
   modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt', regalContainment, entryGuard],
   // Accessibility and hints in Nuxt DevTools (docs/ACCESSIBILITY.md): `nuxt dev` only, never in a
