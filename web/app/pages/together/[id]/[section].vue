@@ -28,6 +28,7 @@
 // real buttons of 44 px with labels and announced states; Reduce Motion cuts the base's motion; the page reflows at 200 % text (the base's
 // chat screen is fixed to the viewport).
 import type { BarAction } from '#layers/ui/app/components/ui/ReactionBar.vue'
+import { durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
 import { threadKey } from '#layers/chat/app/utils/thread'
 import { BUDDY_EMOJI, type BuddyErrorCode, type ReportReason } from '~/data/buddyReads'
 import { VOICE_MAX_MS, type PreparedVoice } from '~/data/buddyVoice'
@@ -37,6 +38,7 @@ import { sectionTitle } from '~/utils/buddySectionTitle'
 import { isRetryableBuddyError } from '~/data/buddyReads'
 import { sameAuthorRun, type ThreadItem } from '~/utils/roomThread'
 import { useThreadScreen } from '~/composables/useThreadScreen'
+import { revealThread } from '~/utils/threadReveal'
 import { buddyThreadAdapter } from '~/utils/buddyThreadAdapter'
 import { useBuddyReadStore } from '~/stores/buddyRead'
 import { useSessionStore } from '~/stores/session'
@@ -134,7 +136,22 @@ const reportMessage = screen.report
 // The read, the Section opening when her marker lets her in, and the room's live channel kept while this screen shows.
 screen.start()
 
-const chat = useTemplateRef<{ jumpTo: (id: string) => Promise<void>; toNewest: () => void }>('chat')
+const chat = useTemplateRef<{ scroller: HTMLElement | null; jumpTo: (id: string) => Promise<void>; toNewest: () => void }>('chat')
+
+// The reveal (docs/MOTION.md, "A chapter's notes"; utils/threadReveal.ts): the same rule as a Book's chapter of
+// Notes, since it is the same thread on the same screen. A thread the store already held is revealed in its
+// first frame, one motion for the whole thread; one that had to be read keeps the motion its arrival plays.
+onMounted(() => {
+  if (!screen.revealed.value) return
+  const reduced = prefersReducedMotion()
+  // The scroller itself, never the list inside it: a `translateY` on the list would grow the scroller's own
+  // content by that much and it would slide back at the end (utils/threadReveal.ts).
+  revealThread(chat.value?.scroller ?? null, {
+    duration: durationToken(reduced ? 'quick' : 'standard'),
+    easing: easingToken('standard'),
+    reduced,
+  })
+})
 
 /** The screen's send, and then the thread is at its newest (hers is the message that arrived). */
 async function sendMessage() {

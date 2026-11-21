@@ -697,4 +697,56 @@ describe('the shell of a thread screen', () => {
     expect(fake.made.status.value).toBe('ready')
     fake.stop()
   })
+
+  it('is ready on the very first frame of a re-entry, and says "loading" only for a thread that must be read', async () => {
+    // The owner's re-entry: the store already holds the thread (`loaded: true`), so the screen the page
+    // mounts with is `ready` before any tick, and `loading` — the skeleton — is never drawn over it. The
+    // old flap wrote `loading` on the mount's first tick (the watch that opens the thread had not run yet)
+    // and `ready` on the next, and the skeleton showed for a frame over a thread the store held.
+    const reentry = mounted()
+    expect(reentry.made.status.value, 'the first status the page draws').toBe('ready')
+    await settle()
+    expect(reentry.made.status.value).toBe('ready')
+    reentry.stop()
+
+    // A thread the device does not hold starts loading, and becomes ready when its page comes in.
+    const fetched = (() => {
+      const fake = fakeAdapter()
+      fake.state.loaded = false
+      const made = useThreadScreen(fake.adapter, opts().words)
+      const scope = effectScope()
+      scope.run(() => made.start())
+      return { ...fake, made, stop: () => scope.stop() }
+    })()
+    expect(fetched.made.status.value).toBe('loading')
+    await settle()
+    expect(fetched.made.status.value).toBe('loading')
+    fetched.state.loaded = true
+    await nextTick()
+    expect(fetched.made.status.value, 'the page came in').toBe('ready')
+    fetched.stop()
+  })
+
+  it('tells a thread the store already held (the reveal) from one it had to read', async () => {
+    // The page reveals a thread it drew at once, and leaves a thread that came in from the network to the
+    // motion its own arrival already played. So the screen says which of the two the mount was.
+    const reentry = mounted()
+    expect(reentry.made.revealed.value, 'a thread the store held, ready on the first frame').toBe(true)
+    reentry.stop()
+
+    const fetched = (() => {
+      const fake = fakeAdapter()
+      fake.state.loaded = false
+      const made = useThreadScreen(fake.adapter, opts().words)
+      const scope = effectScope()
+      scope.run(() => made.start())
+      return { ...fake, made, stop: () => scope.stop() }
+    })()
+    expect(fetched.made.revealed.value, 'a thread that had to load').toBe(false)
+    fetched.state.loaded = true
+    await nextTick()
+    await settle()
+    expect(fetched.made.revealed.value, 'and one that loaded never counts as revealed').toBe(false)
+    fetched.stop()
+  })
 })

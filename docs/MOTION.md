@@ -379,7 +379,24 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   moving into it (a screen reader's, a keyboard's) brings it back: search opened with the bar away puts
   it in its resting place first, with no transition, and the morph grows out of it there. A change
   of page (Back included) brings it back on the way. A screen that fills the room (`immersive`:
-  Your shelf, #23) has it away for as long as it shows, the same slide.
+  Your shelf, a Book's chapter of Notes, a buddy read's thread) has it away for as long as it shows,
+  and **draws it away from its first frame** — no slide over that screen's own content (`utils/tabBar.ts`).
+  The bar belongs to the page being left and leaves with it: entered from a tab it used to stay where the
+  old page rested and animate out over the thread's composer for `exit`, so the same screen entered from a
+  reload (nothing had to change for it to be away, so nothing was drawn) and from a tab looked like two
+  different screens. Reduce Motion and the `immersive` rule reach the same result: the bar is not drawn.
+- **A chapter's notes** (a Book's chapter of Notes, a buddy read's Section). A thread the **store already
+  held** — the chapter opened before, back to the overview, and in again: the page is destroyed and built
+  again (`definePageMeta` `key`), and the store answers `loaded: true` in the first frame — is revealed as
+  it arrives: the thread fades in and rises the last `xs` over `standard` on the `standard` curve, **one
+  motion for the whole thread**, the same for six notes and for forty, never a per-message cascade
+  (`utils/threadReveal.ts`). Keyed on that one case only (`useThreadScreen`'s `revealed`, read
+  synchronously at setup): a thread that had to be read arrives from under its skeleton with the motion its
+  own arrival already plays (the base's `chat-arrive`), so a reload is unchanged. **The scroll does not
+  move**: the motion is on the thread's scroller, not on the list inside it — a `translateY` on the list
+  grows the scroller's own content by its 4 px and the scroller slides them back as it ends (measured on
+  the production build) — and `transform`/`opacity` lay nothing out, so the newest note stays where the
+  base put it. Reduce Motion: no travel, the state arrives over `quick`.
 - **You both read** (a member's profile; docs/plans/shared-books-slideshow.md, B and H; `components/friends/BothRead*.vue`,
   Regal's `RegalBooksReel`). An exception to "nothing moves for its own sake", granted by the owner (variation A,
   the Reel, exactly as mocked): after the section has come into view, once per app session for each friend (coming back to her page finds it resting), the Books stand on an arc
@@ -705,7 +722,9 @@ stand at rest at once. Your shelf: no entrance, the Stack stands in its place as
 as it has drawn. The Profile's loading: the placeholders stand still (no wave; the chart's bars at
 half their wave), and the figures replace them at once. The reader: no cover flies (the reader
 cross-fades in and out in place), the printed page turns at once, and its search palette
-cross-fades like the app's. The sign-in wall's covers do not fade (they are there at once). The hero cover does not lean: it is a picture like any other, and the
+cross-fades like the app's. The sign-in wall's covers do not fade (they are there at once). A chapter's
+notes: the thread does not rise and nothing travels, the notes stand where the base put them and only the
+opacity arrives, over `quick`. The hero cover does not lean: it is a picture like any other, and the
 page scrolls from it.
 
 ## Non-motions
