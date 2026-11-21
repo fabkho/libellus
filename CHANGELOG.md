@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.51.1](https://github.com/fabkho/libellus/compare/v1.51.0...v1.51.1) (2026-11-21)
+
+
+### Fixes
+
+* **shelf:** a friend's shelf holds her whole finished history, not the newest 12 ([#613](https://github.com/fabkho/libellus/issues/613)) ([1125ef8](https://github.com/fabkho/libellus/commit/1125ef8076d26ae8d3cec85f7ebd696fa5b9a78d))
+
 ## [1.51.0](https://github.com/fabkho/libellus/compare/v1.50.2...v1.51.0) (2026-11-21)
 
 
