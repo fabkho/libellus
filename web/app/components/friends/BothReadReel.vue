@@ -35,9 +35,16 @@
 // the Book in front) and `manual` (the reader took over); the still emits neither of the last two.
 import '#build/nuxt-fonts-global.css'
 import '~/assets/css/regal-themed.css'
+import { Timer } from 'three'
 import type { RegalLibraryFile } from '~/data/export/regalLibraryFile'
 import type { BothRead, MemberCard } from '~/data/socialShapes'
 import { bookPathOf } from '~/utils/memberProfile'
+import { guardTimerVisibility } from '~/utils/threeTimer'
+
+// Three's `Timer`, which TresJS drives the canvas's loop with, leaks its `visibilitychange` listener and then throws
+// from inside it (utils/threeTimer.ts: the whole defect). Guarded before Regal's component renders below, so every
+// canvas the app builds is covered. Delete with the util once TresJS balances its own connect/disconnect.
+guardTimerVisibility(Timer)
 
 const props = defineProps<{ items: readonly BothRead[]; library: RegalLibraryFile; name: string; card: MemberCard | null; autoplay?: boolean; reducedMotion?: boolean; still?: boolean }>()
 const emit = defineEmits<{ mounted: []; focus: [index: number]; manual: [] }>()

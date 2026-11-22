@@ -25,7 +25,14 @@
 // app's sheets, where the shelf page's Stack (ShelfStage) uses D's pills.
 import '#build/nuxt-fonts-global.css'
 import '~/assets/css/regal-themed.css'
+import { Timer } from 'three'
 import type { RegalLibraryFile } from '~/data/export/regalLibraryFile'
+import { guardTimerVisibility } from '~/utils/threeTimer'
+
+// Three's `Timer`, which TresJS drives the canvas's loop with, leaks its `visibilitychange` listener and then throws
+// from inside it (utils/threeTimer.ts: the whole defect). Guarded before Regal's component renders below, so every
+// canvas the app builds is covered. Delete with the util once TresJS balances its own connect/disconnect.
+guardTimerVisibility(Timer)
 
 const props = defineProps<{
   /** Only the Books finished in this year, starting at January; null for the newest of all. */
