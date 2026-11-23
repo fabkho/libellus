@@ -413,9 +413,14 @@ jobs:
   # the job is green. A failure here never fails the release (`continue-on-error`): it only means readable stack
   # traces are missing for this version.
   #
-  # Cloudflare Pages builds the live site itself, so this job builds the same commit once more with
-  # `SENTRY_SOURCEMAPS=1` (web/nuxt.config.ts: hidden maps, no change to any chunk) and uploads only the maps,
-  # matched to the live files by release + URL (`~/_nuxt/<same file name>`). Nothing built here is deployed.
+  # Cloudflare Pages builds the live site itself, and a second build of the same commit does not reliably produce
+  # the same chunk names. Anything that differs — the build cache, the toolchain, @nuxtjs/i18n keying a locale's
+  # loader by the hash of the locale file's absolute path (a different one on Pages) — renames chunks, and
+  # @nuxtjs/i18n's key makes at least one name underivable off the build machine at all. Sentry matches an uploaded
+  # map to a reported frame by release + file name only (`~/_nuxt/<file name>`), so maps uploaded under the names
+  # this build emitted are never found. The job therefore uploads them under the names the live deployment actually
+  # serves (`scripts/sentry-sourcemaps.mjs`): it fetches the served chunks and pairs them with this build's by
+  # content. Nothing built here is deployed.
   sentry-sourcemaps:
     name: source maps to Sentry
     needs: deploy
@@ -462,7 +467,8 @@ jobs:
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
 
-      # The same inputs as Cloudflare's build (docs/HOSTING.md, table): with Regal, so the chunks are the live ones.
+      # Cloudflare's build inputs (docs/HOSTING.md, table), so almost every chunk comes out byte-identical to the
+      # served one: with Regal, whose layer the build fetches through GIGET_AUTH.
       - name: Build with source maps
         if: steps.enabled.outputs.on == 'true'
         working-directory: web
@@ -475,6 +481,14 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm generate
 
+      # Names are looked up, not derived: waits until the live site serves a build this one pairs with (up to 20 min),
+      # then writes every map under the name that build uses (scripts/sentry-sourcemaps.mjs; it exits non-zero when
+      # nothing pairs, and then no map is uploaded — a wrong name is worse than none). Waiting on the pairing rather
+      # than on a build id also covers a re-run against a tag Pages has already built.
+      - name: Match the maps to the served files
+        if: steps.enabled.outputs.on == 'true'
+        run: node scripts/sentry-sourcemaps.mjs web/sentry-maps
+
       # The release is the app's version (version.txt), the name the app reports (web/app/plugins/sentry.client.ts).
       - name: Upload the maps
         if: steps.enabled.outputs.on == 'true'
@@ -483,6 +497,6 @@ jobs:
           VERSION="$(tr -d '[:space:]' < version.txt)"
           cli() { npx --yes "@sentry/cli@$SENTRY_CLI" "$@"; }
           cli releases new "$VERSION"
-          cli sourcemaps upload --release "$VERSION" --url-prefix '~/_nuxt' --ext js --ext map web/dist/_nuxt
+          cli sourcemaps upload --release "$VERSION" --url-prefix '~/_nuxt' --ext js --ext map web/sentry-maps
           cli releases finalize "$VERSION"
           echo "Source maps of $VERSION uploaded to Sentry ($SENTRY_ORG/$SENTRY_PROJECT)."
