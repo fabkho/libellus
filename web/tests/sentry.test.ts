@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { sentryDsn, sentryEnvironment } from '~/utils/sentryConfig'
 import { clickPath, deviceContexts, scrubEvent, scrubString } from '~/utils/sentryScrub'
-import { FROZEN_MS, MAX_PLAUSIBLE_MS, MAX_REPORTS, WATCH_TICK_MS, watchFrozen } from '~/utils/uiFrozen'
+import { FROZEN_MS, MAX_PLAUSIBLE_MS, MAX_REPORTS, WATCH_TICK_MS, frozenEvent, type FrozenEvent, watchFrozen } from '~/utils/uiFrozen'
 
 /** Sentry: what may leave the phone, when Sentry runs at all, and the „UI frozen“ watchdog. */
 
@@ -317,5 +317,87 @@ describe('watchFrozen', () => {
     expect(w.reports).toHaveLength(MAX_REPORTS)
     w.stop()
     expect(w.stops).toEqual({ timer: 1, visibility: 1 })
+  })
+})
+
+/**
+ * What a freeze sends (`frozenEvent`, which `sentryInit.ts` hands to `withScope`/`captureException`, and which the
+ * development probe `window.__uiFrozenProbe()` sends too). The audit of the 90 days to 2026-11 found no `UIFrozen`
+ * event at all in the project, and that silence was the open question: either nothing ever blocked the main thread
+ * for five seconds, or the reporter never fires. `watchFrozen` was pinned above; these pin the event itself, so the
+ * only thing left to prove is the delivery (the DSN and the send), which is what the probe is for.
+ */
+describe('the UIFrozen event', () => {
+  it('is one warning with the fingerprint `ui-frozen`, the route and the block', () => {
+    expect(frozenEvent(5_000, '/book/:id')).toEqual({
+      level: 'warning',
+      fingerprint: ['ui-frozen'],
+      tags: { 'ui.frozen': 'true', route: '/book/:id' },
+      extra: { blockedMs: 5_000 },
+      exception: { type: 'UIFrozen', value: 'UI frozen for 5 s (more than 5 s)' },
+    })
+    expect(frozenEvent(12_400, '/').exception.value).toBe('UI frozen for 12 s (more than 5 s)')
+    expect(frozenEvent(5_000, '/').extra.blockedMs).toBe(5_000)
+    // No router (a start that never got one) is `unknown`, as before: never a guessed route.
+    expect(frozenEvent(5_000, '').tags.route).toBe('unknown')
+  })
+
+  it('keeps the fingerprint the history groups by, and the cap it was reported under', () => {
+    // A changed fingerprint splits the project's history in two: the old „UI frozen“ issues stay where they are.
+    expect(frozenEvent(5_000, '/book/:id').fingerprint).toEqual(['ui-frozen'])
+    expect(MAX_REPORTS).toBe(3)
+  })
+
+  it('comes from the watcher, once for a block that satisfies the thresholds', () => {
+    // The whole chain the app runs: the watch reports, the reporter builds the event. One block, one event.
+    const events: FrozenEvent[] = []
+    let t = 0
+    let tick = () => {}
+    const stop = watchFrozen(
+      (ms) => events.push(frozenEvent(ms, '/book/:id')),
+      { now: () => t, every: (fn) => { tick = fn; return () => {} }, onVisibility: () => () => {}, isVisible: () => true, longWork: (from, to) => to - from },
+    )
+    t += WATCH_TICK_MS + FROZEN_MS
+    tick()
+    stop()
+    expect(events).toHaveLength(1)
+    expect(events[0]).toEqual(frozenEvent(5_000, '/book/:id'))
+  })
+
+  it('sends nothing for a gap the sleep signals cover, however long it is', () => {
+    // A locked phone: timers stop, `performance.now()` keeps counting, and Android does not always fire
+    // `visibilitychange`. Production 1.30.2 answered „UI frozen for 227 s“ to exactly this. No event, no matter how
+    // long the gap, when a sleep signal came first.
+    const events: FrozenEvent[] = []
+    let t = 0
+    let tick = () => {}
+    let sleeping = () => {}
+    let visible = true
+    const stop = watchFrozen(
+      (ms) => events.push(frozenEvent(ms, '/book/:id')),
+      {
+        now: () => t,
+        every: (fn) => { tick = fn; return () => {} },
+        onVisibility: (fn) => { sleeping = fn; return () => {} },
+        isVisible: () => visible,
+        longWork: (from, to) => to - from,
+      },
+    )
+    t += WATCH_TICK_MS
+    tick()
+    // Put away for four minutes, then back: `resume`/`pageshow` fires before the next tick does.
+    t += 227_000
+    sleeping()
+    t += WATCH_TICK_MS
+    tick()
+    expect(events).toEqual([])
+    // The same four minutes in the background.
+    visible = false
+    t += 227_000
+    sleeping()
+    t += WATCH_TICK_MS
+    tick()
+    expect(events).toEqual([])
+    stop()
   })
 })

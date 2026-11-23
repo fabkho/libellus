@@ -337,6 +337,14 @@ log"), which stays as it is.
   `ui-frozen`) when the main thread was blocked 5 s or more, at most 3 per page load. Sleep is not a freeze: sleep signals reset
   the clock, and where the browser has long tasks / long animation frames they must cover half the gap; iOS Safari has
   neither, so there gaps over 60 s count as sleep.
+  **Its silence proves nothing by itself:** as of the 90-day audit to 2026-11 the project had no `UIFrozen` event at all, which
+  is also what a reporter that never fires looks like. So the dev server (`nuxt dev`, never a build) has a probe:
+  `window.__uiFrozenProbe()` in the console reports one synthetic freeze through the reporter the watcher calls
+  (`reportFrozen`; level, fingerprint `ui-frozen` and text are the ones a real freeze sends), and
+  `window.__uiFrozenProbe(12_000)` reports a twelve-second one. It exists only with a DSN set and `import.meta.dev`, and
+  one arrives in Sentry → Issues → `libellus` → environment `dev` within a minute; its message is
+  „UI frozen for 5 s (more than 5 s)“, which is the proof that the reporter, the scrubber and the DSN all work.
+  `web/tests/sentry.test.ts` pins what the event says and that a gap under a sleep signal sends nothing at all.
 
 **Where the DSN goes.** The app is built by Cloudflare Pages from the branch `production` (docs/HOSTING.md), so the DSN
 must be in that build's environment: Cloudflare → Workers & Pages → `libellus` → Settings → Variables and Secrets →

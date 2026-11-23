@@ -8,7 +8,7 @@ import type { Router } from 'vue-router'
 import { browserTracingIntegration, captureException, getClient, init, withScope } from '@sentry/nuxt'
 import { DENIED_URLS, IGNORED_ERRORS, TRACES_SAMPLE_RATE } from './sentryConfig'
 import { clickPath, deviceContexts, scrubEvent } from './sentryScrub'
-import { FROZEN_MS, watchFrozen } from './uiFrozen'
+import { FROZEN_MS, frozenEvent, watchFrozen } from './uiFrozen'
 
 export interface SentryStart {
   dsn: string
@@ -77,22 +77,43 @@ export function startSentry(nuxtApp: NuxtApp, { dsn, environment, release }: Sen
   // Long tasks / long animation frames prove a real block (uiFrozen.ts); without the API (iOS Safari) the
   // watchdog falls back to its time-only rule.
   const longWork = observeLongWork()
+  // The reporter itself, apart from the watch: what a real freeze sends, and what the development probe below sends
+  // through the same function, so what is proven is this path and not a copy of it.
+  const reportFrozen = (blockedMs: number) => {
+    const event = frozenEvent(blockedMs, router?.currentRoute.value.matched.at(-1)?.path ?? 'unknown')
+    withScope((scope) => {
+      scope.setLevel(event.level)
+      scope.setFingerprint(event.fingerprint)
+      scope.setTag('ui.frozen', event.tags['ui.frozen'])
+      scope.setTag('route', event.tags.route)
+      scope.setExtra('blockedMs', event.extra.blockedMs)
+      // An exception with its own type and value: a message with a synthetic stack was titled by a minified
+      // function name („Os“). The stack points at this reporter, not at the block, so it goes.
+      const error = new Error(event.exception.value)
+      error.name = event.exception.type
+      error.stack = undefined
+      captureException(error, { mechanism: { type: 'ui-frozen', handled: true } })
+    })
+  }
+  // Development only, stripped from a build (`import.meta.dev` is `false` there, so this branch goes): a way to prove
+  // the reporter before a real freeze ever happens, which is the only way to tell „no freeze on this phone“ from „the
+  // reporter never fires“ (docs/OPERATIONS.md, „Sentry“).
+  //
+  // It exists only where Sentry runs at all (no `if (!client) return` above, so no DSN means no probe) and it sends
+  // through `reportFrozen`, the function the watcher calls. What it proves: the level, the fingerprint `ui-frozen`, the
+  // tags, the text, the mechanism, the scrubber and the DSN, all the way to the project. What it does not: the watch's
+  // own rules (the tick, sleep signals, long-work coverage, the cap), which `tests/sentry.test.ts` pins instead.
+  if (import.meta.dev) {
+    const probe = (blockedMs: number = FROZEN_MS) => {
+      // Below the threshold nothing would ever be reported, so the probe refuses to invent a freeze under it.
+      const claimed = Math.max(FROZEN_MS, Math.round(blockedMs))
+      reportFrozen(claimed)
+      return claimed
+    }
+    ;(window as unknown as { __uiFrozenProbe?: typeof probe }).__uiFrozenProbe = probe
+  }
   watchFrozen(
-    (blockedMs) => {
-      withScope((scope) => {
-        scope.setLevel('warning')
-        scope.setFingerprint(['ui-frozen'])
-        scope.setTag('ui.frozen', 'true')
-        scope.setTag('route', router?.currentRoute.value.matched.at(-1)?.path ?? 'unknown')
-        scope.setExtra('blockedMs', blockedMs)
-        // An exception with its own type and value: a message with a synthetic stack was titled by a minified
-        // function name („Os“). The stack points at this reporter, not at the block, so it goes.
-        const error = new Error(`UI frozen for ${Math.round(blockedMs / 1000)} s (more than ${FROZEN_MS / 1000} s)`)
-        error.name = 'UIFrozen'
-        error.stack = undefined
-        captureException(error, { mechanism: { type: 'ui-frozen', handled: true } })
-      })
-    },
+    reportFrozen,
     {
       now: () => performance.now(),
       every: (fn, ms) => {

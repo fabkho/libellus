@@ -44,9 +44,6 @@ const label = computed(() =>
   reading.finishBusy ? t('finish.busy') : reading.finishError ? t('finish.retry') : t('finish.action'),
 )
 const reviewId = useId()
-watch(open, (isOpen) => {
-  if (isOpen) spoilers.value = false
-})
 
 const summary = computed(() => {
   const startedOn = entry.value?.latestSession?.startedOn
