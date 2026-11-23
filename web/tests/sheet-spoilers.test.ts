@@ -33,7 +33,9 @@ function vueSources(dir = app, found: [string, string][] = []): [string, string]
 
 /** A sheet's two script blocks joined: the setup's own declarations and everything the file names. */
 function scriptOf(source: string): string {
-  return [...source.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map((block) => block[1] ?? '').join('\n')
+  // Case-insensitive on purpose (CodeQL's js/bad-tag-filter): a `.vue` file's `<script>` is lower case here, but a
+  // pattern that only matches `<script>` would silently skip a `<SCRIPT>` in one that is not.
+  return [...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)].map((block) => block[1] ?? '').join('\n')
 }
 
 /** The script without its comments: the prose around a name is not a use of it (the sources keep theirs). */
