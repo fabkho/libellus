@@ -77,6 +77,18 @@ pnpm dev
 
 With the flag set and the layer or the library file missing, `dev` and `generate` stop and say so.
 
+**A known TresJS defect the app guards.** `@tresjs/core` drives every canvas's render loop with three's `Timer`
+(`utils/createTimer.ts`, `useCreateRafLoop`) and calls `connect()` on every `start()` but `disconnect()` only on a
+`stop()`, while three's `connect()` remembers only the newest `visibilitychange` handler it made. The earlier ones stay
+on `document`, bound to a `Timer` whose `_document` a later `disconnect()` set to `null`, and throw
+`TypeError: Cannot read properties of null (reading 'hidden')` from inside the browser's dispatch (Sentry LIBELLUS-1 and
+LIBELLUS-5, 22 releases, on a friend's profile and her shelf). Nothing of ours reaches that `Timer` instance, so
+`web/app/utils/threeTimer.ts` makes `connect`/`disconnect` idempotent on three's own prototype, and the three app files
+that mount a Regal canvas call it before the component renders (`web/app/components/shelf/{Stage,Row}.vue`,
+`web/app/components/friends/BothReadReel.vue`; `web/tests/regal-timer-guard.test.ts`). **The upstream fix belongs in
+TresJS**: `useCreateRafLoop`'s `start` must connect once per connection instead of on every call. When it lands,
+delete `threeTimer.ts`, the three imports of it and their test.
+
 ### README screenshots
 
 `docs/images/*.jpg` come from the running app, never by hand: with the stack and a dev server up,
