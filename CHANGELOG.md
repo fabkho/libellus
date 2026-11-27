@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.51.2](https://github.com/fabkho/libellus/compare/v1.51.1...v1.51.2) (2026-11-23)
+
+
+### Fixes
+
+* **book:** the Finish sheet's stale `spoilers` watch, and a way to prove UIFrozen ([#617](https://github.com/fabkho/libellus/issues/617)) ([64c89fb](https://github.com/fabkho/libellus/commit/64c89fb0d03607671bcd3f4f032819f0528593cd))
+* **sentry:** upload source maps under the names the live site serves ([#615](https://github.com/fabkho/libellus/issues/615)) ([9134beb](https://github.com/fabkho/libellus/commit/9134beb01fc28be2b6aa73abd8a918bb6fb45976))
+* **shelf:** balance three's Timer so no visibilitychange listener is stranded ([#616](https://github.com/fabkho/libellus/issues/616)) ([fa4e7a8](https://github.com/fabkho/libellus/commit/fa4e7a811193513c560172a100e5439f2d31a8d1))
+
 ## [1.51.1](https://github.com/fabkho/libellus/compare/v1.51.0...v1.51.1) (2026-11-21)
 
 
