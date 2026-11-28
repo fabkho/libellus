@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.51.3](https://github.com/fabkho/libellus/compare/v1.51.2...v1.51.3) (2026-11-28)
+
+
+### Fixes
+
+* **sentry:** build the maps job with Pages' public config, or name which variable is missing ([#621](https://github.com/fabkho/libellus/issues/621)) ([21a2471](https://github.com/fabkho/libellus/commit/21a2471e80477702b4ed4d2d84018d6a511803c3))
+
 ## [1.51.2](https://github.com/fabkho/libellus/compare/v1.51.1...v1.51.2) (2026-11-23)
 
 
