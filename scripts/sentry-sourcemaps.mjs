@@ -21,6 +21,14 @@
 // Exits non-zero when the live site cannot be read within the deadline, or when too few chunks pair: a map under
 // the wrong name is worse than no map, so the job then uploads nothing (it is `continue-on-error`, so this never
 // fails a release).
+//
+// What the pairing needs (measured against v1.51.2, 2026-11): the job's own build must reproduce Pages' bytes, and
+// `runtimeConfig.public` is inlined into the chunks that read it — so one missing `NUXT_PUBLIC_*` changes every
+// chunk that names it. Built with the job's old environment: 51 of 211 served chunks paired (24 %). Built with
+// Pages' public config: 211 of 211 (100 %). Regal is part of it too, and it must be the *same copy*: the layer's
+// path decides the `data-v-*` scope id of its scoped styles, so a checkout pairs worse than the downloaded one.
+// Hence the required build inputs are asserted below before anything is fetched, and a poll whose pairing stops
+// improving while still under MIN_AGREEMENT ends the job right there, not at the deadline.
 import { copyFile, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -32,11 +40,27 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const ORIGIN = process.env.SENTRY_SOURCEMAPS_ORIGIN ?? 'https://betterreads.de'
 const OUT = process.argv[2] ?? join(ROOT, 'web/sentry-maps')
 const DIST = join(ROOT, 'web/dist/_nuxt')
-/** How long to wait for Pages to publish the deployment this build is for. */
-const WAIT_MS = Number(process.env.SENTRY_SOURCEMAPS_WAIT_MS ?? 20 * 60 * 1000)
+/** How long to wait for Pages to publish the deployment this build is for (Pages takes one to two minutes). */
+const WAIT_MS = Number(process.env.SENTRY_SOURCEMAPS_WAIT_MS ?? 5 * 60 * 1000)
 const POLL_MS = Number(process.env.SENTRY_SOURCEMAPS_POLL_MS ?? 20 * 1000)
 /** Below this share of paired served chunks, the served build is not this one. */
 const MIN_AGREEMENT = Number(process.env.SENTRY_SOURCEMAPS_MIN_AGREEMENT ?? 0.9)
+/** Consecutive polls with no gain under MIN_AGREEMENT before the pairing is called a mismatch. */
+const PLATEAU_POLLS = Number(process.env.SENTRY_SOURCEMAPS_PLATEAU_POLLS ?? 3)
+/**
+ * What the build this script reads must have been given, or its bytes cannot be the served ones. The `NUXT_PUBLIC_*`
+ * ones are the ones the live site is built with (docs/HOSTING.md, the Pages table; docs/OPERATIONS.md, "Source
+ * maps"): they are inlined, so a build without one differs from the served build in every chunk naming it.
+ */
+const REQUIRED_BUILD_ENV = [
+  ['LIBELLUS_REGAL', 'without it the shelf is not built and Regal\'s chunks are missing'],
+  ['GIGET_AUTH', 'without it the Regal layer cannot be fetched'],
+  ['NUXT_PUBLIC_REGAL_LIBRARY_SRC', 'the shelf\'s library file, inlined into the shelf\'s chunks'],
+  ['NUXT_PUBLIC_SUPABASE_URL', 'inlined into the Supabase client, the entry and the page head'],
+  ['NUXT_PUBLIC_SUPABASE_ANON_KEY', 'inlined next to the URL, in the same chunks'],
+  ['NUXT_PUBLIC_SHELF_OWNER_ID', 'inlined into the shelf\'s stores and screens'],
+  ['NUXT_PUBLIC_SENTRY_DSN', 'inlined into the Sentry chunk: without it Sentry is off and that chunk differs'],
+]
 
 const log = (msg) => console.log(`[sourcemaps] ${msg}`)
 const die = (msg) => {
@@ -115,7 +139,44 @@ function pair(local, served) {
   return renames
 }
 
+/**
+ * The build and the served site do not agree: say how far off it is, which variables it was built with, and exit 1
+ * now rather than waiting out the deadline. `best` is the best pairing any poll reached.
+ *
+ * The environment is listed because that is what moves these bytes without touching a line of source: the public
+ * config is inlined, and Regal's copy decides its scope ids.
+ */
+function serveMismatch(best) {
+  const share = best.of > 0 ? `${best.paired} of ${best.of} served chunks paired (${(best.agreement * 100).toFixed(0)} %)` : 'no served chunk was read'
+  const missing = REQUIRED_BUILD_ENV.filter(([name]) => !process.env[name]?.trim())
+  die(
+    `the served build differs from this one (${share}), so no map can be named after it and nothing is uploaded.\n` +
+      'The public config is inlined into the chunks, so a build without it differs in every chunk naming it:\n' +
+      REQUIRED_BUILD_ENV.map(
+        ([name]) => `  ${name}: ${process.env[name]?.trim() ? 'set' : 'NOT SET'}`,
+      ).join('\n') +
+      (missing.length > 0
+        ? `\nSet the missing ones from the GitHub Environment \`production\` (docs/OPERATIONS.md, "Source maps").`
+        : '\nAll of them are set, so the difference is elsewhere: a different copy of the Regal layer (its path decides\n' +
+          'the scope ids of its styles, so `GIGET_AUTH` and not `REGAL_LAYER`), a different install (the lock file), or\n' +
+          'the live site still serving another release.') +
+      '\nA map under the wrong name is worse than none (docs/OPERATIONS.md, "Source maps").',
+  )
+}
+
 async function main() {
+  // The build this reads has to be Pages' build, and Pages' build is its environment (docs/OPERATIONS.md, "Source
+  // maps"): a missing `NUXT_PUBLIC_*` is inlined as a different value, or as nothing, into every chunk naming it, and
+  // no fixpoint over import names recovers that. Say which one before spending minutes fetching the served chunks.
+  const unset = REQUIRED_BUILD_ENV.filter(([name]) => !process.env[name]?.trim())
+  if (unset.length > 0) {
+    die(
+      'this build is missing the public config Pages builds with, so it cannot pair with the served chunks\n' +
+        `(nothing is uploaded). Unset: ${unset.map(([name]) => name).join(', ')}.\n` +
+        unset.map(([name, why]) => `  ${name}: ${why}.`).join('\n') +
+        '\nThey come from the GitHub Environment `production` (docs/OPERATIONS.md, "Source maps"), never from a .env.',
+    )
+  }
   if (!existsSync(DIST)) die(`${DIST} is missing: run \`pnpm generate\` first.`)
 
   const local = new Map()
@@ -132,6 +193,9 @@ async function main() {
   let renames = null
   let served = null
   let last = null
+  // The best pairing seen so far: what the mismatch report names when the wait ends, and what the plateau counts.
+  let best = { paired: 0, of: 0, agreement: 0 }
+  let plateaus = 0
   while (Date.now() < deadline) {
     const paths = await crawl()
     if (paths !== null) {
@@ -149,6 +213,18 @@ async function main() {
           served = now
           break
         }
+        // Below MIN_AGREEMENT: a deployment Pages is still publishing changes from poll to poll. One that repeats
+        // the same pairing is not going to become this build by waiting — every further poll sees the same bytes.
+        if (found.size > best.paired) {
+          best = { paired: found.size, of: now.size, agreement }
+          plateaus = 0
+        } else {
+          plateaus += 1
+          log(`no gain since the last poll (${plateaus}/${PLATEAU_POLLS})`)
+          if (plateaus >= PLATEAU_POLLS) {
+            serveMismatch(best)
+          }
+        }
       }
       last = fingerprint
     }
@@ -156,12 +232,7 @@ async function main() {
     await new Promise((r) => setTimeout(r, POLL_MS))
   }
   if (renames === null) {
-    die(
-      `the served site did not match this build within ${Math.round(WAIT_MS / 1000)} s, so no map can be named after\n` +
-        'it and nothing is uploaded. Either Pages had not published the deployment yet, or the build differs from the\n' +
-        'Pages one — the public config is inlined into the chunks, so it changes every name: NUXT_PUBLIC_SUPABASE_URL,\n' +
-        'NUXT_PUBLIC_SUPABASE_ANON_KEY, NUXT_PUBLIC_SHELF_OWNER_ID, NUXT_PUBLIC_SENTRY_DSN.',
-    )
+    serveMismatch(best)
   }
 
   // Assemble the upload directory: the served name for every chunk that paired. `sentry-cli sourcemaps upload
