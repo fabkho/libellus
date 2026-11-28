@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Genres mock-up 3: adding her own tag</title>
+<link rel="stylesheet" href="base.css" />
+<style>
+  .bookline { display: flex; align-items: center; gap: 12px; }
+  .sec { margin-top: 22px; }
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .kbd { position: absolute; left: 0; right: 0; bottom: 0; height: 291px; z-index: 12; background: color-mix(in srgb, var(--color-surface-stage) 12%, var(--color-surface-raised));
+    display: grid; grid-template-rows: repeat(4, 1fr); padding: 10px 4px 40px; gap: 10px; }
+  [data-theme='dark'] .kbd { background: #262320; }
+  .kbd div { display: flex; gap: 6px; justify-content: center; }
+  .kbd span { flex: 0 0 33px; border-radius: 6px; background: var(--color-surface-raised); box-shadow: 0 1px 0 rgb(0 0 0 / 0.25); }
+  [data-theme='dark'] .kbd span { background: #4a4643; }
+  .kbd .wide { flex-basis: 180px; }
+  .s .also { display: block; font-size: 12.5px; color: var(--color-ink-faint); margin-top: 1px; }
+  .s .plus { width: 22px; height: 22px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 0.5px var(--color-hairline-strong); font-size: 14px; color: var(--color-ink-muted); }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar"><span>9:41</span><span class="mono" style="font-size:12px;letter-spacing:2px">▪▪▪ ▮</span></div>
+  <div class="scrim"></div>
+
+  <section class="sheet" style="top:58px; bottom:291px; padding-bottom:0">
+    <div class="grabber"></div>
+    <div class="head">
+      <button class="cancel" data-en="Cancel" data-de="Abbrechen"></button>
+      <span class="title">Tags</span>
+      <button class="action" data-en="Save" data-de="Speichern"></button>
+    </div>
+    <div class="body">
+      <div class="bookline">
+        <div class="cover sm c2"><span class="t">Snowed In at Larkspur Lane</span><span class="a">Jo Whitcombe</span></div>
+        <div><p class="serif callout">Snowed In at Larkspur Lane</p><p class="caption faint">Jo Whitcombe</p></div>
+      </div>
+      <div class="sec">
+        <div class="sec-head">
+          <h3 class="eyebrow" data-en="Your tags" data-de="Deine Tags"></h3>
+          <span class="mono caption muted" data-en="1 of 10" data-de="1 von 10"></span>
+        </div>
+        <ul class="chips left" style="list-style:none">
+          <li class="chip mine"><span data-en="Hot chocolate read" data-de="Kakao-Buch"></span><span class="x">×</span></li>
+        </ul>
+        <div class="field focus" style="margin-top:10px"><span class="input" data-en="cosy" data-de="Weihnachtsrom"></span><span class="caret"></span></div>
+
+        <!-- EN: "cosy" -->
+        <div class="suggest" data-en-html='
+          <div class="s lit"><span><b>Cosy</b></span><span class="k">Mood</span></div>
+          <div class="s"><span><b>Cosy</b> mystery</span><span class="k">Sub-genre</span></div>
+          <div class="s"><span><b>Cosy</b> fantasy</span><span class="k">Sub-genre</span></div>
+          <div class="s"><span><b>cosy</b> winter nights</span><span class="k">Your tag</span></div>
+          <div class="s"><span class="plus">＋</span><span>Add “cosy” as your own tag</span></div>'
+          data-de-html='
+          <div class="s lit"><span><b>Weihnachten</b><span class="also">auch: Weihnachtsroman, Christmas</span></span><span class="k">Jahreszeit</span></div>
+          <div class="s"><span><b>Weihnachtsrom</b>antik mit Mama</span><span class="k">Dein Tag</span></div>
+          <div class="s"><span class="plus">＋</span><span>„Weihnachtsrom“ als eigenen Tag anlegen</span></div>'></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="kbd" aria-hidden="true">
+    <div><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <div><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <div><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <div><span></span><span class="wide"></span><span></span></div>
+  </div>
+</div>
+<script src="mock.js"></script>
+</body>
+</html>

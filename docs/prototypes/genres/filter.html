@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Genres mock-up 5: the Library filter by tag</title>
+<link rel="stylesheet" href="base.css" />
+<style>
+  .lib { position: absolute; inset: 0; padding: 92px 20px 0; }
+  .viewbar { display: flex; gap: 6px; margin-top: 16px; flex-wrap: wrap; }
+  .sec { margin-top: 22px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .search { min-height: 44px; border-bottom: 1px solid var(--color-hairline-strong); display: flex; align-items: center; margin-bottom: 10px; }
+  .countrow { display: flex; justify-content: space-between; align-items: center; height: 40px; }
+  .group { margin: 12px 0 6px; font-size: 12.5px; color: var(--color-ink-faint); }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar"><span>9:41</span><span class="mono" style="font-size:12px;letter-spacing:2px">▪▪▪ ▮</span></div>
+  <div class="lib">
+    <h1 style="font-size:28px;line-height:34px;font-weight:500;letter-spacing:-0.03em" data-en="Library" data-de="Bibliothek"></h1>
+  </div>
+  <div class="scrim"></div>
+
+  <section class="sheet" style="top:70px">
+    <div class="grabber"></div>
+    <div class="head">
+      <button class="cancel" data-en="Cancel" data-de="Abbrechen"></button>
+      <span class="title">Filter</span>
+      <button class="action" data-en="Apply" data-de="Anwenden"></button>
+    </div>
+    <div class="body" style="padding-top:8px">
+      <div class="countrow"><span class="mono caption muted" data-en="Show 8 books" data-de="8 Bücher zeigen"></span><span class="body muted" data-en="Clear all" data-de="Alle löschen"></span></div>
+
+      <div class="sec" style="margin-top:14px">
+        <h3 class="eyebrow" style="margin-bottom:8px">Genre</h3>
+        <div class="pills">
+          <span class="pill on"><span data-en="Romance" data-de="Liebesroman"></span><span class="count">41</span></span>
+          <span class="pill">Fantasy<span class="count">18</span></span>
+          <span class="pill"><span data-en="Crime &amp; mystery" data-de="Krimi &amp; Mystery"></span><span class="count">6</span></span>
+          <span class="pill">Thriller<span class="count">4</span></span>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h3 class="eyebrow" style="margin-bottom:4px">Tags</h3>
+        <div class="search"><span class="input faint" data-en="Search tags" data-de="Tags suchen"></span></div>
+        <p class="caption muted" style="margin-bottom:10px" data-en="Books with every tag you choose." data-de="Bücher mit allen gewählten Tags."></p>
+        <div class="pills">
+          <span class="pill mine"><span data-en="Comfort read" data-de="Seelentröster"></span><span class="count">7</span></span>
+          <span class="pill on"><span data-en="Christmas" data-de="Weihnachten"></span><span class="count">8</span></span>
+          <span class="pill"><span data-en="New adult" data-de="New Adult"></span><span class="count">19</span></span>
+          <span class="pill"><span data-en="Enemies to lovers" data-de="Enemies to Lovers"></span><span class="count">12</span></span>
+          <span class="pill"><span data-en="Slow burn" data-de="Slow Burn"></span><span class="count">9</span></span>
+          <span class="pill"><span data-en="Small town" data-de="Kleinstadt"></span><span class="count">6</span></span>
+          <span class="pill">Romantasy<span class="count">5</span></span>
+          <span class="pill"><span data-en="Fake dating" data-de="Fake Dating"></span><span class="count">5</span></span>
+          <span class="pill"><span data-en="Summer" data-de="Sommer"></span><span class="count">4</span></span>
+          <span class="pill"><span data-en="Cosy mystery" data-de="Cosy Crime"></span><span class="count">3</span></span>
+          <span class="pill"><span data-en="Found family" data-de="Found Family"></span><span class="count">3</span></span>
+          <span class="pill">Halloween<span class="count">2</span></span>
+        </div>
+        <button class="body muted" style="margin-top:12px; text-decoration:underline; text-decoration-color:var(--color-ink-ghost); text-underline-offset:3px" data-en="All 46 tags" data-de="Alle 46 Tags"></button>
+      </div>
+
+      <div class="sec">
+        <h3 class="eyebrow" data-en="Pages" data-de="Seiten"></h3>
+      </div>
+    </div>
+  </section>
+</div>
+<script src="mock.js"></script>
+</body>
+</html>
