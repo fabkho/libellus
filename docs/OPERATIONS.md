@@ -356,13 +356,35 @@ notice's Sentry text is approved. Removing the variable and redeploying turns Se
 **Source maps (optional).** GitHub → Settings → Environments → `production`: secret `SENTRY_AUTH_TOKEN` (an organisation
 token, scopes `project:releases`, `org:read`) and variables `SENTRY_ORG=bookretreats-jx`, `SENTRY_PROJECT=libellus`. The
 release workflow's job "source maps to Sentry" then builds the released commit once more with hidden maps
-(`SENTRY_SOURCEMAPS=1`, the same Regal inputs as Pages) and uploads them for the release. **The map is uploaded under the
-name the live deployment serves that chunk by, which is not the name this build emitted** — a second build of a commit does
-not reproduce Pages' chunk names (the build cache, the toolchain, and @nuxtjs/i18n hashing a locale file's absolute path,
-which differs per machine), and Sentry looks a map up by release + file name: this is what left every stack trace minified
-before. So the job fetches the served chunks and pairs them with its own by content (`scripts/sentry-sourcemaps.mjs`); when
-nothing pairs, it uploads nothing. Without the secret and both variables the job does nothing and stays green. The maps are
-never deployed.
+(`SENTRY_SOURCEMAPS=1`) and uploads them for the release. **The map is uploaded under the name the live deployment serves
+that chunk by, which is not the name this build emitted** — a second build of a commit does not reproduce Pages' chunk
+names (the build cache, the toolchain, and @nuxtjs/i18n hashing a locale file's absolute path, which differs per machine),
+and Sentry looks a map up by release + file name: this is what left every stack trace minified before. So the job fetches
+the served chunks and pairs them with its own by content (`scripts/sentry-sourcemaps.mjs`); when fewer than 90 % pair it
+uploads nothing. Without the secret and both variables the job does nothing and stays green. The maps are never deployed.
+
+**The job's build must be Pages' build, byte for byte, or nothing pairs.** `runtimeConfig.public` is *inlined* into the
+chunks that read it, so one missing value is a different byte in every chunk naming it. Alongside the two above, the
+`production` environment therefore also needs these as **variables** (public by nature — they end up in the shipped JS,
+so never put them in secrets), passed into the job's `env:` from `vars.*`:
+
+| variable | without it |
+|---|---|
+| `NUXT_PUBLIC_SUPABASE_URL` | the Supabase client, the entry and the page head differ |
+| `NUXT_PUBLIC_SUPABASE_ANON_KEY` | the same chunks differ again |
+| `NUXT_PUBLIC_SHELF_OWNER_ID` | the shelf's stores and screens differ |
+| `NUXT_PUBLIC_SENTRY_DSN` | the Sentry chunk differs (and Sentry would be off in that build) |
+| `NUXT_PUBLIC_REGAL_LIBRARY_SRC` | the shelf's chunks differ |
+| `LIBELLUS_REGAL=1`, `GIGET_AUTH` | no Regal at all, so its chunks are missing |
+
+The Regal layer must also be the *same copy* Pages fetched: its path decides the `data-v-*` scope ids of its scoped
+styles, so `GIGET_AUTH` is used and never `REGAL_LAYER` (measured: a local checkout paired 171 of 211 chunks, 81 %,
+against 211 of 211 with the download).
+
+Measured on v1.51.2 (2026-11): with only the Regal inputs, **51 of 211 served chunks paired (24 %)** and the job waited out
+its deadline and was cancelled; with the public config above, **211 of 211 (100 %)**. The script now asserts the required
+inputs before fetching anything, and a poll whose pairing stops improving under the threshold ends the job in seconds with
+the list of variables and whether each is set — so a misconfiguration says which one, rather than costing twenty minutes.
 
 ## Waitlist
 

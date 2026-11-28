@@ -421,6 +421,17 @@ jobs:
   # this build emitted are never found. The job therefore uploads them under the names the live deployment actually
   # serves (`scripts/sentry-sourcemaps.mjs`): it fetches the served chunks and pairs them with this build's by
   # content. Nothing built here is deployed.
+  #
+  # The pairing is by content, so this build must be Pages' build down to the byte: the same public config, from the
+  # same place. `runtimeConfig.public` is inlined into the chunks that read it, and a build without it differs in
+  # every one of them — with only the Regal inputs (all this job used to pass) v1.51.2 paired 51 of 211 served
+  # chunks (24 %), waited out its deadline and was cancelled; with the four `NUXT_PUBLIC_*` below it paired 211 of
+  # 211 (100 %). They are environment *variables* on `production` (public by nature: they end up in the shipped JS;
+  # docs/OPERATIONS.md, "Source maps", says what to set and what each missing one costs).
+  #
+  # Regal is fetched through `GIGET_AUTH` and not from a checkout on purpose: the layer's path decides the
+  # `data-v-*` scope ids of its scoped styles, so a checkout under another path does not pair as well (measured: 171
+  # of 211, 81 %, with the same public config).
   sentry-sourcemaps:
     name: source maps to Sentry
     needs: deploy
@@ -440,6 +451,14 @@ jobs:
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
       SENTRY_URL: https://de.sentry.io # the EU region
       SENTRY_CLI: 3.8.1 # pinned
+      # Pages' public config (docs/HOSTING.md, the Pages table), so this build's chunks are the served ones: all of
+      # it is inlined into the shipped JS, so a missing one is a different byte in every chunk naming it. Public by
+      # nature, hence variables and not secrets. A missing one makes the pairing step fail loudly in seconds
+      # (scripts/sentry-sourcemaps.mjs) instead of waiting out its deadline.
+      NUXT_PUBLIC_SUPABASE_URL: ${{ vars.NUXT_PUBLIC_SUPABASE_URL }}
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NUXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NUXT_PUBLIC_SHELF_OWNER_ID: ${{ vars.NUXT_PUBLIC_SHELF_OWNER_ID }}
+      NUXT_PUBLIC_SENTRY_DSN: ${{ vars.NUXT_PUBLIC_SENTRY_DSN }}
     steps:
       - name: Is there a token?
         id: enabled
@@ -467,8 +486,9 @@ jobs:
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
 
-      # Cloudflare's build inputs (docs/HOSTING.md, table), so almost every chunk comes out byte-identical to the
-      # served one: with Regal, whose layer the build fetches through GIGET_AUTH.
+      # Cloudflare's build inputs (docs/HOSTING.md, table), so every chunk comes out byte-identical to the served
+      # one: with Regal, whose layer the build fetches through GIGET_AUTH, and with the public config from the job's
+      # `env:` above (it has to be in the build's environment: it is inlined into the chunks).
       - name: Build with source maps
         if: steps.enabled.outputs.on == 'true'
         working-directory: web
